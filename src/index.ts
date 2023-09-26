@@ -1,23 +1,32 @@
 import { Browser, mobileBrowser } from './Browser'
-import { getDashboardData, goHome } from './BrowserFunc'
-import { doDailySet } from './functions/DailySet'
+import { getDashboardData, getEarnablePoints, goHome } from './BrowserFunc'
+import { log } from './util/Logger'
+
 import { login } from './functions/Login'
+import { doDailySet } from './functions/DailySet'
 import { doMorePromotions } from './functions/MorePromotions'
 import { doSearch } from './functions/activities/Search'
-import { log } from './util/Logger'
-import accounts from './accounts.json'
 
 import { Account } from './interface/Account'
 
-async function init() {
+import accounts from './accounts.json'
+import { runOnZeroPoints, searches } from './config.json'
 
+let collectedPoints = 0
+
+async function main() {
     log('MAIN', 'Bot started')
 
     for (const account of accounts) {
         log('MAIN', `Started tasks for account ${account.email}`)
 
-        // DailySet, MorePromotions and Desktop Searches
+        // Desktop Searches, DailySet and More Promotions
         await Desktop(account)
+
+        // If runOnZeroPoints is false and 0 points to earn, stop and try the next account
+        if (!runOnZeroPoints && collectedPoints === 0) {
+            continue
+        }
 
         // Mobile Searches
         await Mobile(account)
@@ -26,14 +35,18 @@ async function init() {
     }
 
     // Clean exit
+    log('MAIN', 'Completed tasks for ALL accounts')
     log('MAIN', 'Bot exited')
-    process.exit()
+    process.exit(0)
 }
+
 
 // Desktop
 async function Desktop(account: Account) {
     const browser = await Browser(account.email)
     const page = await browser.newPage()
+
+    log('MAIN', 'Starting DESKTOP browser')
 
     // Login into MS Rewards
     await login(page, account.email, account.password)
@@ -41,19 +54,30 @@ async function Desktop(account: Account) {
     await goHome(page)
 
     const data = await getDashboardData(page)
-    log('MAIN', `Current point count: ${data.userStatus.availablePoints}`)
+    log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
+
+    const earnablePoints = await getEarnablePoints(data)
+    collectedPoints = earnablePoints
+    log('MAIN-POINTS', `You can earn ${earnablePoints} points today`)
+
+    // If runOnZeroPoints is false and 0 points to earn, don't continue
+    if (!runOnZeroPoints && collectedPoints === 0) {
+        log('MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping')
+
+        // Close desktop browser
+        return await browser.close()
+    }
 
     // Complete daily set
     await doDailySet(page, data)
-    log('MAIN', `Current point count: ${data.userStatus.availablePoints}`)
 
     // Complete more promotions
     await doMorePromotions(page, data)
-    log('MAIN', `Current point count: ${data.userStatus.availablePoints}`)
 
     // Do desktop searches
-    await doSearch(page, data, false)
-    log('MAIN', `Current point count: ${data.userStatus.availablePoints}`)
+    if (searches.doDesktop) {
+        await doSearch(page, data, false)
+    }
 
     // Close desktop browser
     await browser.close()
@@ -63,20 +87,29 @@ async function Mobile(account: Account) {
     const browser = await mobileBrowser(account.email)
     const page = await browser.newPage()
 
+    log('MAIN', 'Starting MOBILE browser')
+
     // Login into MS Rewards
     await login(page, account.email, account.password)
 
     await goHome(page)
 
     const data = await getDashboardData(page)
-    log('MAIN', `Current point count: ${data.userStatus.availablePoints}`)
 
     // Do mobile searches
-    await doSearch(page, data, true)
-    log('MAIN', `Current point count: ${data.userStatus.availablePoints}`)
+    if (searches.doMobile) {
+        await doSearch(page, data, true)
+    }
+    
+    // Fetch new points
+    const earnablePoints = await getEarnablePoints(data, page)
+    // If the new earnable is 0, means we got all the points, else retract
+    collectedPoints = earnablePoints === 0 ? collectedPoints : (collectedPoints - earnablePoints)
+    log('MAIN-POINTS', `The script collected ${collectedPoints} points today`)
 
     // Close mobile browser
     await browser.close()
 }
 
-init()
+// Run main script
+main()

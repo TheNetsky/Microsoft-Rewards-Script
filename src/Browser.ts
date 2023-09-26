@@ -4,13 +4,15 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { getUserAgent } from './util/UserAgent'
 import { loadSesion } from './BrowserFunc'
 
+import { headless } from './config.json'
+
 puppeteer.use(StealthPlugin())
 
-export async function Browser(email: string, headless = false) {
+export async function Browser(email: string) {
     const userAgent = await getUserAgent(false)
 
     const browser = await puppeteer.launch({
-        headless: headless, // Set to true for a headless browser
+        headless: headless,
         userDataDir: await loadSesion(email),
         args: [
             '--no-sandbox',
@@ -22,11 +24,11 @@ export async function Browser(email: string, headless = false) {
     return browser
 }
 
-export async function mobileBrowser(email: string, headless = false) {
+export async function mobileBrowser(email: string) {
     const userAgent = await getUserAgent(true)
 
     const browser = await puppeteer.launch({
-        headless: headless, // Set to true for a headless browser,
+        headless: headless,
         userDataDir: await loadSesion(email),
         args: [
             '--no-sandbox',

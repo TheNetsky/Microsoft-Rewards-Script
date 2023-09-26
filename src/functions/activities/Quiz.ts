@@ -47,10 +47,12 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
                     }
                 }
 
+                // Click the answers
                 for (const answer of answers) {
+                    await wait(2000)
+
                     // Click the answer on page
                     await quizPage.click(answer)
-                    await wait(1500)
 
                     const refreshSuccess = await waitForQuizRefresh(quizPage)
                     if (!refreshSuccess) {
@@ -72,7 +74,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
                     if (dataOption === correctOption) {
                         // Click the answer on page
                         await quizPage.click(`#rqAnswerOption${i}`)
-                        await wait(1500)
+                        await wait(2000)
 
                         const refreshSuccess = await waitForQuizRefresh(quizPage)
                         if (!refreshSuccess) {
@@ -88,6 +90,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
         }
 
         // Done with
+        await wait(2000)
         await quizPage.close()
         log('QUIZ', 'Completed the quiz successfully')
     } catch (error) {

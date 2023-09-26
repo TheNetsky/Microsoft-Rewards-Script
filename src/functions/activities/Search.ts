@@ -2,7 +2,7 @@ import { Page } from 'puppeteer'
 import axios from 'axios'
 
 import { log } from '../../util/Logger'
-import { shuffleArray, wait } from '../../util/Utils'
+import { wait } from '../../util/Utils'
 import { getSearchPoints } from '../../BrowserFunc'
 
 import { DashboardData, DashboardImpression } from '../../interface/DashboardData'
@@ -29,7 +29,8 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
     }
 
     // Generate search queries 
-    const googleSearchQueries = shuffleArray(await getGoogleTrends(locale, missingPoints))
+    const googleSearchQueries = await getGoogleTrends(locale, missingPoints)
+    //const googleSearchQueries = shuffleArray(await getGoogleTrends(locale, missingPoints))
 
     // Open a new tab
     const browser = page.browser()
@@ -162,7 +163,7 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
 }
 
 async function getGoogleTrends(locale: string, queryCount: number): Promise<string[]> {
-    const queryTerms: string[] = []
+    let queryTerms: string[] = []
     let i = 0
 
     while (queryCount > queryTerms.length) {
@@ -193,10 +194,7 @@ async function getGoogleTrends(locale: string, queryCount: number): Promise<stri
             }
 
             // Deduplicate the search terms
-            const uniqueSearchTerms = Array.from(new Set(queryTerms))
-            queryTerms.length = 0
-            queryTerms.push(...uniqueSearchTerms)
-
+            queryTerms = [...new Set(queryTerms)]
         } catch (error) {
             log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
         }

@@ -1,4 +1,10 @@
 {
-    "baseURL" : "https://rewards.bing.com",
-    "sessionPath": "sessions"
+    "baseURL": "https://rewards.bing.com",
+    "sessionPath": "sessions",
+    "headless": false,
+    "runOnZeroPoints": false,
+    "searches": {
+        "doMobile": true,
+        "doDesktop": true
+    }
 }

@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { baseURL, sessionPath } from './config.json'
-import { wait } from './util/Utils'
+import { getFormattedDate, wait } from './util/Utils'
 import { tryDismissAllMessages, tryDismissCookieBanner } from './BrowserUtil'
 import { log } from './util/Logger'
 
@@ -13,7 +13,7 @@ import { QuizData } from './interface/QuizData'
 export async function goHome(page: Page): Promise<void> {
 
     try {
-        const targetUrl = new URL(baseURL)
+        const dashboardURL = new URL(baseURL)
 
         await page.goto(baseURL)
 
@@ -32,9 +32,9 @@ export async function goHome(page: Page): Promise<void> {
                 // Continue if element is not found
             }
 
-            const currentUrl = new URL(page.url())
+            const currentURL = new URL(page.url())
 
-            if (currentUrl.hostname !== targetUrl.hostname) {
+            if (currentURL.hostname !== dashboardURL.hostname) {
                 await tryDismissAllMessages(page)
 
                 await wait(2000)
@@ -42,7 +42,7 @@ export async function goHome(page: Page): Promise<void> {
             }
 
             await wait(5000)
-            log('MAIN', 'Visited homepage successfully')
+            log('GO-HOME', 'Visited homepage successfully')
         }
 
     } catch (error) {
@@ -51,6 +51,16 @@ export async function goHome(page: Page): Promise<void> {
 }
 
 export async function getDashboardData(page: Page): Promise<DashboardData> {
+    const dashboardURL = new URL(baseURL)
+    const currentURL = new URL(page.url())
+
+    // Should never happen since tasks are opened in a new tab!
+    if (currentURL.hostname !== dashboardURL.hostname) {
+        log('DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
+        await goHome(page)
+    }
+
+    // Reload the page to get new data
     await page.reload({ waitUntil: 'networkidle2' })
 
     const scriptContent = await page.evaluate(() => {
@@ -60,7 +70,7 @@ export async function getDashboardData(page: Page): Promise<DashboardData> {
         if (targetScript) {
             return targetScript.innerText
         } else {
-            throw new Error('Script containing dashboard data not found')
+            throw log('GET-DASHBOARD-DATA', 'Script containing dashboard data not found', 'error')
         }
     })
 
@@ -73,17 +83,11 @@ export async function getDashboardData(page: Page): Promise<DashboardData> {
         if (match && match[1]) {
             return JSON.parse(match[1])
         } else {
-            throw new Error('Dashboard data not found in the script')
+            throw log('GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
         }
     }, scriptContent)
 
     return dashboardData
-}
-
-export async function getSearchPoints(page: Page): Promise<Counters> {
-    const dashboardData = await getDashboardData(page)
-
-    return dashboardData.userStatus.counters
 }
 
 export async function getQuizData(page: Page): Promise<QuizData> {
@@ -94,7 +98,7 @@ export async function getQuizData(page: Page): Promise<QuizData> {
         if (targetScript) {
             return targetScript.innerText
         } else {
-            throw new Error('Script containing quiz data not found')
+            throw log('GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
         }
     })
 
@@ -106,11 +110,46 @@ export async function getQuizData(page: Page): Promise<QuizData> {
         if (match && match[1]) {
             return JSON.parse(match[1])
         } else {
-            throw new Error('Dashboard data not found in the script')
+            throw log('GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
         }
     }, scriptContent)
 
     return quizData
+}
+
+export async function getSearchPoints(page: Page): Promise<Counters> {
+    const dashboardData = await getDashboardData(page) // Always fetch newest data
+
+    return dashboardData.userStatus.counters
+}
+
+export async function getEarnablePoints(data: DashboardData, page: null | Page = null): Promise<number> {
+    // Fetch new data if page is provided
+    if (page) {
+        data = await getDashboardData(page)
+    }
+
+    // These only include the points from tasks that the script can complete!
+    let totalEarnablePoints = 0
+
+    // Desktop Search Points
+    data.userStatus.counters.pcSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+
+    // Mobile Search Points
+    data.userStatus.counters.mobileSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+
+    // Daily Set
+    data.dailySetPromotions[getFormattedDate()]?.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+
+    // More Promotions
+    data.morePromotions.forEach(x => {
+        // Only count points from supported activities
+        if (['quiz', 'urlreward'].includes(x.activityType)) {
+            totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
+        }
+    })
+
+    return totalEarnablePoints
 }
 
 export async function loadSesion(email: string): Promise<string> {
