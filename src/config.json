@@ -6,5 +6,9 @@
     "searches": {
         "doMobile": true,
         "doDesktop": true
+    },
+    "webhook": {
+        "enabled": true,
+        "url": ""
     }
 }
