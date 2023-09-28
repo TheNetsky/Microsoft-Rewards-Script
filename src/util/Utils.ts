@@ -13,7 +13,8 @@ export function getFormattedDate(ms = Date.now()) {
     return `${month}/${day}/${year}`
 }
 
-export function shuffleArray(array: string[]): string[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function shuffleArray(array: any[]): any[] {
     const shuffledArray = array.slice()
 
     shuffledArray.sort(() => Math.random() - 0.5)

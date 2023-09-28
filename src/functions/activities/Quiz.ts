@@ -84,6 +84,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
                         }
                     }
                 }
+                await wait(2000)
 
             }
 

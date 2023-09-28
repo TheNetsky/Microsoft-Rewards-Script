@@ -51,7 +51,10 @@ async function Desktop(account: Account) {
     // Login into MS Rewards
     await login(page, account.email, account.password)
 
-    await goHome(page)
+    const wentHome = await goHome(page)
+    if (!wentHome) {
+        throw log('MAIN', 'Unable to get dashboard page', 'error')
+    }
 
     const data = await getDashboardData(page)
     log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
@@ -100,7 +103,7 @@ async function Mobile(account: Account) {
     if (searches.doMobile) {
         await doSearch(page, data, true)
     }
-    
+
     // Fetch new points
     const earnablePoints = await getEarnablePoints(data, page)
     // If the new earnable is 0, means we got all the points, else retract

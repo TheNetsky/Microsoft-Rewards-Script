@@ -2,11 +2,14 @@ import { Page } from 'puppeteer'
 import axios from 'axios'
 
 import { log } from '../../util/Logger'
-import { wait } from '../../util/Utils'
+import { shuffleArray, wait } from '../../util/Utils'
 import { getSearchPoints } from '../../BrowserFunc'
+
+import { searches } from '../../config.json'
 
 import { DashboardData, DashboardImpression } from '../../interface/DashboardData'
 import { GoogleTrends } from '../../interface/GoogleDailyTrends'
+import { GoogleSearch } from '../../interface/Search'
 
 export async function doSearch(page: Page, data: DashboardData, mobile: boolean) {
     const locale = await page.evaluate(() => {
@@ -29,8 +32,11 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
     }
 
     // Generate search queries 
-    const googleSearchQueries = await getGoogleTrends(locale, missingPoints)
-    //const googleSearchQueries = shuffleArray(await getGoogleTrends(locale, missingPoints))
+    let googleSearchQueries = await getGoogleTrends(locale, missingPoints) as GoogleSearch[]
+    googleSearchQueries = shuffleArray(googleSearchQueries)
+
+    // Deduplicate the search terms
+    googleSearchQueries = [...new Set(googleSearchQueries)]
 
     // Open a new tab
     const browser = page.browser()
@@ -41,9 +47,12 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
 
     let maxLoop = 0 // If the loop hits 20 this when not gaining any points, we're assuming it's stuck.
 
+    const queries: string[] = []
+    googleSearchQueries.forEach(x => queries.push(x.topic, ...x.related))
+
     // Loop over Google search queries
-    for (let i = 0; i < googleSearchQueries.length; i++) {
-        const query = googleSearchQueries[i] as string
+    for (let i = 0; i < queries.length; i++) {
+        const query = queries[i] as string
 
         log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${mobile}`)
 
@@ -83,15 +92,15 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
 
         let i = 0
         while (missingPoints > 0) {
-            const query = googleSearchQueries[i++] as string
+            const query = googleSearchQueries[i++] as GoogleSearch
 
             // Get related search terms to the Google search queries
-            const relatedTerms = await getRelatedTerms(query)
+            const relatedTerms = await getRelatedTerms(query?.topic)
             if (relatedTerms.length > 3) {
                 // Search for the first 2 related terms
                 for (const term of relatedTerms.slice(1, 3)) {
                     log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${mobile}`)
-                    const newData = await bingSearch(page, searchPage, query)
+                    const newData = await bingSearch(page, searchPage, query.topic)
 
                     const newMobileData = newData.mobileSearch[0] as DashboardImpression  // Mobile searches
                     const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
@@ -138,10 +147,20 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
             await wait(500)
             await searchPage.keyboard.down('Control')
             await searchPage.keyboard.press('A')
-            await searchPage.keyboard.press('Backspace') // Delete the selected text
+            await searchPage.keyboard.press('Backspace')
             await searchPage.keyboard.up('Control')
             await searchPage.keyboard.type(query)
             await searchPage.keyboard.press('Enter')
+
+            if (searches.scrollRandomResults) {
+                await wait(2000)
+                await randomScroll(searchPage)
+            }
+
+            if (searches.clickRandomResults) {
+                await wait(2000)
+                await clickRandomLink(searchPage)
+            }
 
             await wait(Math.floor(Math.random() * (20_000 - 10_000) + 1) + 10_000)
 
@@ -162,8 +181,8 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
     return await getSearchPoints(page)
 }
 
-async function getGoogleTrends(locale: string, queryCount: number): Promise<string[]> {
-    let queryTerms: string[] = []
+async function getGoogleTrends(locale: string, queryCount: number): Promise<GoogleSearch[]> {
+    const queryTerms: GoogleSearch[] = []
     let i = 0
 
     while (queryCount > queryTerms.length) {
@@ -186,21 +205,18 @@ async function getGoogleTrends(locale: string, queryCount: number): Promise<stri
             const data: GoogleTrends = JSON.parse((await response.data).slice(5))
 
             for (const topic of data.default.trendingSearchesDays[0]?.trendingSearches ?? []) {
-                queryTerms.push(topic.title.query.toLowerCase())
-
-                for (const relatedTopic of topic.relatedQueries) {
-                    queryTerms.push(relatedTopic.query.toLowerCase())
-                }
+                queryTerms.push({
+                    topic: topic.title.query.toLowerCase(),
+                    related: topic.relatedQueries.map(x => x.query.toLocaleLowerCase())
+                })
             }
 
-            // Deduplicate the search terms
-            queryTerms = [...new Set(queryTerms)]
         } catch (error) {
             log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
         }
     }
 
-    return queryTerms.slice(0, queryCount)
+    return queryTerms
 }
 
 async function getRelatedTerms(term: string): Promise<string[]> {
@@ -228,4 +244,20 @@ function formatDate(date: Date): string {
     const day = String(date.getDate()).padStart(2, '0')
 
     return `${year}${month}${day}`
+}
+
+async function randomScroll(page: Page) {
+    const randomNumber = Math.random() * (50 - 5 + 1) + 5
+
+    // Press the arrow down key to scroll
+    for (let i = 0; i < randomNumber; i++) {
+        await page.keyboard.press('ArrowDown')
+    }
+}
+
+async function clickRandomLink(page: Page) {
+    await page.click('#b_results h2')
+
+    await wait(3000)
+    await page.goBack()
 }

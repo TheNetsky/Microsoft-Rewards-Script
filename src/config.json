@@ -5,10 +5,12 @@
     "runOnZeroPoints": false,
     "searches": {
         "doMobile": true,
-        "doDesktop": true
+        "doDesktop": true,
+        "scrollRandomResults": true,
+        "clickRandomResults": true
     },
     "webhook": {
-        "enabled": true,
+        "enabled": false,
         "url": ""
     }
 }

@@ -10,7 +10,7 @@ import { log } from './util/Logger'
 import { Counters, DashboardData } from './interface/DashboardData'
 import { QuizData } from './interface/QuizData'
 
-export async function goHome(page: Page): Promise<void> {
+export async function goHome(page: Page): Promise<boolean> {
 
     try {
         const dashboardURL = new URL(baseURL)
@@ -22,6 +22,13 @@ export async function goHome(page: Page): Promise<void> {
         for (let iteration = 1; iteration <= maxIterations; iteration++) {
             await wait(3000)
             await tryDismissCookieBanner(page)
+
+            // Check if account is suspended
+            const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
+            if (isSuspended) {
+                log('GO-HOME', 'This account is suspended!')
+                throw new Error('Account has been suspended!')
+            }
 
             try {
                 // If activities are found, exit the loop
@@ -47,7 +54,10 @@ export async function goHome(page: Page): Promise<void> {
 
     } catch (error) {
         console.error('An error occurred:', error)
+        return false
     }
+
+    return true
 }
 
 export async function getDashboardData(page: Page): Promise<DashboardData> {
