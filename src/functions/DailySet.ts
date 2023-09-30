@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer'
 import { DashboardData } from '../interface/DashboardData'
 import { doPoll } from './activities/Poll'
-import { getFormattedDate } from '../util/Utils'
+import { getFormattedDate, wait } from '../util/Utils'
 import { doQuiz } from './activities/Quiz'
 import { log } from '../util/Logger'
 import { doUrlReward } from './activities/UrlReward'
@@ -47,7 +47,7 @@ export async function doDailySet(page: Page, data: DashboardData) {
             default:
                 break
         }
-
+        await wait(1500)
     }
 
     log('DAILY-SET', 'Daily set items have been completed')

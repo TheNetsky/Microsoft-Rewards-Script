@@ -2,7 +2,7 @@ import { Page } from 'puppeteer'
 import axios from 'axios'
 
 import { log } from '../../util/Logger'
-import { shuffleArray, wait } from '../../util/Utils'
+import { randomNumber, shuffleArray, wait } from '../../util/Utils'
 import { getSearchPoints } from '../../BrowserFunc'
 
 import { searches } from '../../config.json'
@@ -10,6 +10,7 @@ import { searches } from '../../config.json'
 import { DashboardData, DashboardImpression } from '../../interface/DashboardData'
 import { GoogleTrends } from '../../interface/GoogleDailyTrends'
 import { GoogleSearch } from '../../interface/Search'
+import { getLatestTab } from '../../BrowserUtil'
 
 export async function doSearch(page: Page, data: DashboardData, mobile: boolean) {
     const locale = await page.evaluate(() => {
@@ -56,7 +57,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
 
         log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${mobile}`)
 
-        const newData = await bingSearch(page, searchPage, query)
+        const newData = await bingSearch(page, searchPage, query, mobile)
 
         const newMobileData = newData.mobileSearch[0] as DashboardImpression  // Mobile searches
         const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
@@ -100,7 +101,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
                 // Search for the first 2 related terms
                 for (const term of relatedTerms.slice(1, 3)) {
                     log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${mobile}`)
-                    const newData = await bingSearch(page, searchPage, query.topic)
+                    const newData = await bingSearch(page, searchPage, query.topic, mobile)
 
                     const newMobileData = newData.mobileSearch[0] as DashboardImpression  // Mobile searches
                     const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
@@ -137,7 +138,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
     log('SEARCH-BING', 'Completed searches')
 }
 
-async function bingSearch(page: Page, searchPage: Page, query: string) {
+async function bingSearch(page: Page, searchPage: Page, query: string, mobile: boolean) {
     // Try a max of 5 times
     for (let i = 0; i < 5; i++) {
         try {
@@ -159,10 +160,10 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
 
             if (searches.clickRandomResults) {
                 await wait(2000)
-                await clickRandomLink(searchPage)
+                await clickRandomLink(searchPage, mobile)
             }
 
-            await wait(Math.floor(Math.random() * (20_000 - 10_000) + 1) + 10_000)
+            await wait(Math.floor(randomNumber(10_000, 20_000)))
 
             return await getSearchPoints(page)
 
@@ -171,8 +172,9 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
                 log('SEARCH-BING', 'Failed after 5 retries... An error occurred:' + error, 'error')
                 return await getSearchPoints(page)
             }
+            log('SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
+            log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
-            log('SEARCH-BING', 'Search failed, retrying...', 'warn')
             await wait(4000)
         }
     }
@@ -247,17 +249,58 @@ function formatDate(date: Date): string {
 }
 
 async function randomScroll(page: Page) {
-    const randomNumber = Math.random() * (50 - 5 + 1) + 5
-
-    // Press the arrow down key to scroll
-    for (let i = 0; i < randomNumber; i++) {
-        await page.keyboard.press('ArrowDown')
+    try {
+        // Press the arrow down key to scroll
+        for (let i = 0; i < randomNumber(5, 50); i++) {
+            await page.keyboard.press('ArrowDown')
+        }
+    } catch (error) {
+        log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
     }
 }
 
-async function clickRandomLink(page: Page) {
-    await page.click('#b_results h2')
+async function clickRandomLink(page: Page, mobile: boolean) {
+    try {
+        const searchListingURL = new URL(page.url()) // Get page info before clicking
 
-    await wait(3000)
-    await page.goBack()
+        await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
+        await wait(3000)
+
+        const newTab = await getLatestTab(page) // Will get current tab if no new one is created
+
+        // Check if the tab is closed or not
+        if (!newTab.isClosed()) {
+            const newTabURL = new URL(newTab.url()) // Get new tab info
+
+            // Check if the URL is different from the original one
+            if (newTabURL.href !== searchListingURL.href) {
+                // Mobile is always same tab
+                if (mobile) {
+                    await page.goBack()
+
+                    const currentURL = new URL(page.url())
+                    // If "goBack" didn't return to search listing (due to redirects)
+                    if (currentURL.hostname !== searchListingURL.hostname) {
+                        await page.goto(searchListingURL.href)
+                    }
+
+                    // Still on bing, go back (news/images pages on bing search)
+                } else if (newTabURL.hostname == searchListingURL.hostname) {
+                    await page.goBack()
+
+                    const currentURL = new URL(page.url())
+                    // If "goBack" didn't return to search listing (due to redirects)
+                    if (currentURL.hostname !== searchListingURL.hostname) {
+                        await page.goto(searchListingURL.href)
+                    }
+
+                    // No longer on bing, likely opened a new tab, close this tab
+                } else {
+                    await newTab.close()
+                }
+            }
+        }
+    } catch (error) {
+        log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
+    }
 }

@@ -2,7 +2,7 @@ import { Page } from 'puppeteer'
 import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
 import { getLatestTab } from '../../BrowserUtil'
 import { log } from '../../util/Logger'
-import { wait } from '../../util/Utils'
+import { randomNumber, wait } from '../../util/Utils'
 
 export async function doPoll(page: Page, data: PromotionalItem | MorePromotion) {
     log('POLL', 'Trying to complete poll')
@@ -16,11 +16,11 @@ export async function doPoll(page: Page, data: PromotionalItem | MorePromotion) 
 
         const pollPage = await getLatestTab(page)
 
-        const buttonId = `#btoption${Math.floor(Math.random() * 2)}`
+        const buttonId = `#btoption${Math.floor(randomNumber(0, 1))}`
 
         await pollPage.waitForSelector(buttonId)
         await pollPage.click(buttonId)
-        
+
         await wait(2000)
         await pollPage.close()
 

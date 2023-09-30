@@ -4,6 +4,7 @@ import { doPoll } from './activities/Poll'
 import { doQuiz } from './activities/Quiz'
 import { log } from '../util/Logger'
 import { doUrlReward } from './activities/UrlReward'
+import { wait } from '../util/Utils'
 
 
 export async function doMorePromotions(page: Page, data: DashboardData) {
@@ -46,6 +47,6 @@ export async function doMorePromotions(page: Page, data: DashboardData) {
             default:
                 break
         }
-
+        await wait(1500)
     }
 }
