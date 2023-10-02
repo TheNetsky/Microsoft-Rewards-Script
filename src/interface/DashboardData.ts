@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface DashboardData {
     userStatus: UserStatus;
     promotionalItem: PromotionalItem;
     dailySetPromotions: { [key: string]: PromotionalItem[] };
     streakPromotion: StreakPromotion;
     streakBonusPromotions: StreakBonusPromotion[];
-    punchCards: any[];
+    punchCards: PunchCard[];
     dashboardFlights: DashboardFlights;
     morePromotions: MorePromotion[];
     suggestedRewards: AutoRedeemItem[];
@@ -188,7 +187,7 @@ export interface Slide {
     aboutPageLink: null;
     redeemLink: null;
     rewardsLink: null;
-    quizLinks?: any[];
+    quizLinks?: string[];
     quizCorrectAnswerTitle?: string;
     quizWrongAnswerTitle?: string;
     quizAnswerDescription?: string;
@@ -210,7 +209,7 @@ export interface PromotionalItem {
     activityProgressMax: number;
     pointProgressMax: number;
     pointProgress: number;
-    promotionType: string;
+    promotionType: Type;
     promotionSubtype: string;
     title: string;
     extBannerTitle: string;
@@ -248,9 +247,9 @@ export interface PromotionalItem {
 }
 
 export interface PromotionalItemAttributes {
-    animated_icon: string;
+    animated_icon?: string;
     bg_image: string;
-    complete: string;
+    complete: GiveEligible;
     daily_set_date?: string;
     description: string;
     destination: string;
@@ -263,22 +262,43 @@ export interface PromotionalItemAttributes {
     sc_bg_image: string;
     sc_bg_large_image: string;
     small_image: string;
-    state: string;
+    state: State;
     title: string;
-    type: string;
-    give_eligible: string;
-    sc_title?: string;
-    sc_description?: string;
-    legal_text?: string;
-    legal_link_text?: string;
-    promotional?: string;
+    type: Type;
+    give_eligible: GiveEligible;
+    activity_max?: string;
+    activity_progress?: string;
+    is_wot?: GiveEligible;
+    offer_counter?: string;
+    promotional?: GiveEligible;
+    parentPunchcards?: string;
+    'classification.DescriptionText'?: string;
+    'classification.PunchcardChildrenCount'?: string;
+    'classification.PunchcardEndDate'?: Date;
+    'classification.Template'?: string;
+    'classification.TitleText'?: string;
+}
+
+export enum GiveEligible {
+    False = 'False',
+    True = 'True'
+}
+
+export enum State {
+    Default = 'Default'
+}
+
+export enum Type {
+    Quiz = 'quiz',
+    Urlreward = 'urlreward',
+    UrlrewardUrlrewardUrlrewardUrlrewardUrlreward = 'urlreward,urlreward,urlreward,urlreward,urlreward'
 }
 
 export interface DashboardFlights {
     dashboardbannernav: string;
     togglegiveuser: string;
     spotifyRedirect: string;
-    give_eligible: string;
+    give_eligible: GiveEligible;
     destination: string;
 }
 
@@ -333,6 +353,12 @@ export interface MorePromotion {
     deviceType: string;
 }
 
+export interface PunchCard {
+    name: string;
+    parentPromotion: PromotionalItem;
+    childPromotions: PromotionalItem[];
+}
+
 export interface StreakBonusPromotion {
     name: string;
     priority: number;
@@ -382,17 +408,18 @@ export interface StreakBonusPromotion {
 }
 
 export interface StreakBonusPromotionAttributes {
-    hidden: string;
+    hidden: GiveEligible;
     type: string;
     title: string;
     description: string;
+    description_localizedkey: string;
     image: string;
     animated_icon: string;
     activity_progress: string;
     activity_max: string;
     bonus_earned: string;
     break_description: string;
-    give_eligible: string;
+    give_eligible: GiveEligible;
     destination: string;
 }
 
@@ -449,7 +476,7 @@ export interface StreakPromotion {
 }
 
 export interface StreakPromotionAttributes {
-    hidden: string;
+    hidden: GiveEligible;
     type: string;
     title: string;
     image: string;
@@ -458,7 +485,7 @@ export interface StreakPromotionAttributes {
     break_image: string;
     lifetime_max: string;
     bonus_points: string;
-    give_eligible: string;
+    give_eligible: GiveEligible;
     destination: string;
 }
 
@@ -511,8 +538,8 @@ export interface UserInterests {
 }
 
 export interface UserInterestsAttributes {
-    hidden: string;
-    give_eligible: string;
+    hidden: GiveEligible;
+    give_eligible: GiveEligible;
     destination: string;
 }
 
@@ -543,10 +570,9 @@ export interface UserProfileAttributes {
     epuid_upd: Date;
     waitlistattributes: string;
     waitlistattributes_upd: Date;
-    serpbotscore: string;
-    serpbotscore_upd: Date;
-    iscashbackeligible: string;
-    give_user: string;
+    cbedc: GiveEligible;
+    iscashbackeligible: GiveEligible;
+    give_user: GiveEligible;
 }
 
 export interface UserStatus {
@@ -571,7 +597,7 @@ export interface UserStatus {
 
 export interface Counters {
     pcSearch: DashboardImpression[];
-    mobileSearch: DashboardImpression[];
+    mobileSearch?: DashboardImpression[];
     shopAndEarn: DashboardImpression[];
     activityAndQuiz: ActivityAndQuiz[];
     dailyPoint: DashboardImpression[];
@@ -634,9 +660,9 @@ export interface ActivityAndQuizAttributes {
     image: string;
     recurring: string;
     destination: string;
-    'classification.ShowProgress': string;
-    hidden: string;
-    give_eligible: string;
+    'classification.ShowProgress': GiveEligible;
+    hidden: GiveEligible;
+    give_eligible: GiveEligible;
 }
 
 export interface LastOrder {
@@ -669,5 +695,5 @@ export interface ReferrerProgressInfo {
     pointsEarned: number;
     pointsMax: number;
     isComplete: boolean;
-    promotions: any[];
+    promotions: string[];
 }

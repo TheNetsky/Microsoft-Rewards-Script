@@ -1,14 +1,16 @@
 import { Page } from 'puppeteer'
 import fs from 'fs'
 import path from 'path'
+import { load } from 'cheerio'
 
-import { baseURL, sessionPath } from './config.json'
-import { getFormattedDate, wait } from './util/Utils'
 import { tryDismissAllMessages, tryDismissCookieBanner } from './BrowserUtil'
+import { getFormattedDate, wait } from './util/Utils'
 import { log } from './util/Logger'
 
 import { Counters, DashboardData } from './interface/DashboardData'
 import { QuizData } from './interface/QuizData'
+
+import { baseURL, sessionPath } from './config.json'
 
 export async function goHome(page: Page): Promise<boolean> {
 
@@ -53,7 +55,7 @@ export async function goHome(page: Page): Promise<boolean> {
         }
 
     } catch (error) {
-        console.error('An error occurred:', error)
+        console.error('An error occurred:', JSON.stringify(error, null, 2))
         return false
     }
 
@@ -101,30 +103,32 @@ export async function getDashboardData(page: Page): Promise<DashboardData> {
 }
 
 export async function getQuizData(page: Page): Promise<QuizData> {
-    const scriptContent = await page.evaluate(() => {
-        const scripts = Array.from(document.querySelectorAll('script'))
-        const targetScript = scripts.find(script => script.innerText.includes('_w.rewardsQuizRenderInfo'))
+    try {
+        const html = await page.content()
+        const $ = load(html)
 
-        if (targetScript) {
-            return targetScript.innerText
+        const scriptContent = $('script').filter((index, element) => {
+            return $(element).text().includes('_w.rewardsQuizRenderInfo')
+        }).text()
+
+        if (scriptContent) {
+            const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
+            const match = regex.exec(scriptContent)
+
+            if (match && match[1]) {
+                const quizData = JSON.parse(match[1])
+                return quizData
+            } else {
+                throw log('GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
+            }
         } else {
             throw log('GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
         }
-    })
 
-    const quizData = await page.evaluate(scriptContent => {
-        // Extract the dashboard object using regex
-        const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
-        const match = regex.exec(scriptContent)
+    } catch (error) {
+        throw log('GET-QUIZ-DATA', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+    }
 
-        if (match && match[1]) {
-            return JSON.parse(match[1])
-        } else {
-            throw log('GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
-        }
-    }, scriptContent)
-
-    return quizData
 }
 
 export async function getSearchPoints(page: Page): Promise<Counters> {
@@ -134,32 +138,38 @@ export async function getSearchPoints(page: Page): Promise<Counters> {
 }
 
 export async function getEarnablePoints(data: DashboardData, page: null | Page = null): Promise<number> {
-    // Fetch new data if page is provided
-    if (page) {
-        data = await getDashboardData(page)
-    }
-
-    // These only include the points from tasks that the script can complete!
-    let totalEarnablePoints = 0
-
-    // Desktop Search Points
-    data.userStatus.counters.pcSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
-
-    // Mobile Search Points
-    data.userStatus.counters.mobileSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
-
-    // Daily Set
-    data.dailySetPromotions[getFormattedDate()]?.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
-
-    // More Promotions
-    data.morePromotions.forEach(x => {
-        // Only count points from supported activities
-        if (['quiz', 'urlreward'].includes(x.activityType)) {
-            totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
+    try {
+        // Fetch new data if page is provided
+        if (page) {
+            data = await getDashboardData(page)
         }
-    })
 
-    return totalEarnablePoints
+        // These only include the points from tasks that the script can complete!
+        let totalEarnablePoints = 0
+
+        // Desktop Search Points
+        data.userStatus.counters.pcSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+
+        // Mobile Search Points
+        if (data.userStatus.counters.mobileSearch?.length) {
+            data.userStatus.counters.mobileSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+        }
+
+        // Daily Set
+        data.dailySetPromotions[getFormattedDate()]?.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+
+        // More Promotions
+        data.morePromotions.forEach(x => {
+            // Only count points from supported activities
+            if (['quiz', 'urlreward'].includes(x.activityType)) {
+                totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
+            }
+        })
+
+        return totalEarnablePoints
+    } catch (error) {
+        throw log('GET-EARNABLE-POINTS', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+    }
 }
 
 export async function loadSesion(email: string): Promise<string> {
@@ -175,5 +185,24 @@ export async function loadSesion(email: string): Promise<string> {
 
     } catch (error) {
         throw new Error(error as string)
+    }
+}
+
+export async function waitForQuizRefresh(page: Page) {
+    try {
+        await page.waitForSelector('#rqHeaderCredits', { timeout: 5000 })
+        return true
+    } catch (error) {
+        log('QUIZ-REFRESH', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        return false
+    }
+}
+
+export async function checkQuizCompleted(page: Page) {
+    try {
+        await page.waitForSelector('#quizCompleteContainer', { timeout: 1000 })
+        return true
+    } catch (error) {
+        return false
     }
 }

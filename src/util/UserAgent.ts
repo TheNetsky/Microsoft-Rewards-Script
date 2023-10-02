@@ -1,5 +1,7 @@
 import axios from 'axios'
+
 import { log } from './Logger'
+
 import { ChromeVersion, EdgeVersion } from '../interface/UserAgentUtil'
 
 export async function getUserAgent(mobile: boolean) {
@@ -49,7 +51,7 @@ export async function getChromeVersion(): Promise<string> {
         return data.channels.Stable.version
 
     } catch (error) {
-        throw log('USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
+        throw log('USERAGENT-CHROME-VERSION', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
 }
 
@@ -73,7 +75,7 @@ export async function getEdgeVersions() {
 
 
     } catch (error) {
-        throw log('USERAGENT-EDGE-VERSION', 'An error occurred:' + error, 'error')
+        throw log('USERAGENT-EDGE-VERSION', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
 }
 

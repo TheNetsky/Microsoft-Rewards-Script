@@ -1,9 +1,11 @@
 import { Page } from 'puppeteer'
-import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
-import { getQuizData } from '../../BrowserFunc'
-import { wait } from '../../util/Utils'
+
 import { getLatestTab } from '../../BrowserUtil'
+import { getQuizData, waitForQuizRefresh } from '../../BrowserFunc'
+import { wait } from '../../util/Utils'
 import { log } from '../../util/Logger'
+
+import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
 
 export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) {
     log('QUIZ', 'Trying to complete quiz')
@@ -28,7 +30,6 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
         await wait(2000)
 
         const quizData = await getQuizData(quizPage)
-
         const questionsRemaining = quizData.maxQuestions - quizData.CorrectlyAnsweredQuestionCount // Amount of questions remaining
 
         // All questions
@@ -38,7 +39,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
                 const answers: string[] = []
 
                 for (let i = 0; i < quizData.numberOfOptions; i++) {
-                    const answerSelector = await quizPage.waitForSelector(`#rqAnswerOption${i}`)
+                    const answerSelector = await quizPage.waitForSelector(`#rqAnswerOption${i}`, { visible: true, timeout: 5000 })
                     const answerAttribute = await answerSelector?.evaluate(el => el.getAttribute('iscorrectoption'))
                     await wait(500)
 
@@ -49,7 +50,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
 
                 // Click the answers
                 for (const answer of answers) {
-                    await wait(2000)
+                    await quizPage.waitForSelector(answer, { visible: true, timeout: 2000 })
 
                     // Click the answer on page
                     await quizPage.click(answer)
@@ -68,7 +69,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
 
                 for (let i = 0; i < quizData.numberOfOptions; i++) {
 
-                    const answerSelector = await quizPage.waitForSelector(`#rqAnswerOption${i}`)
+                    const answerSelector = await quizPage.waitForSelector(`#rqAnswerOption${i}`, { visible: true, timeout: 5000 })
                     const dataOption = await answerSelector?.evaluate(el => el.getAttribute('data-option'))
 
                     if (dataOption === correctOption) {
@@ -97,27 +98,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
     } catch (error) {
         const quizPage = await getLatestTab(page)
         await quizPage.close()
-        log('QUIZ', 'An error occurred:' + error, 'error')
+        log('QUIZ', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
 
 }
-
-async function waitForQuizRefresh(page: Page) {
-    try {
-        await page.waitForSelector('#rqHeaderCredits', { timeout: 5000 })
-        return true
-    } catch (error) {
-        log('QUIZ-REFRESH', 'An error occurred:' + error, 'error')
-        return false
-    }
-}
-
-async function checkQuizCompleted(page: Page) {
-    try {
-        await page.waitForSelector('#quizCompleteContainer', { timeout: 1000 })
-        return true
-    } catch (error) {
-        return false
-    }
-}
-checkQuizCompleted

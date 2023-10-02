@@ -1,8 +1,9 @@
 import { Page } from 'puppeteer'
+
 import { getLatestTab } from '../../BrowserUtil'
 import { log } from '../../util/Logger'
-import { PromotionalItem, MorePromotion } from '../../interface/DashboardData'
 
+import { PromotionalItem, MorePromotion } from '../../interface/DashboardData'
 
 export async function doUrlReward(page: Page, data: PromotionalItem | MorePromotion) {
     log('URL-REWARD', 'Trying to complete UrlReward')
@@ -20,7 +21,7 @@ export async function doUrlReward(page: Page, data: PromotionalItem | MorePromot
 
         log('URL-REWARD', 'Completed the UrlReward successfully')
     } catch (error) {
-        log('URL-REWARD', 'An error occurred:' + error, 'error')
+        log('URL-REWARD', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
 
 }

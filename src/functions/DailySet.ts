@@ -1,11 +1,14 @@
 import { Page } from 'puppeteer'
-import { DashboardData } from '../interface/DashboardData'
-import { doPoll } from './activities/Poll'
-import { getFormattedDate, wait } from '../util/Utils'
-import { doQuiz } from './activities/Quiz'
-import { log } from '../util/Logger'
-import { doUrlReward } from './activities/UrlReward'
 
+import { doPoll } from './activities/Poll'
+import { doQuiz } from './activities/Quiz'
+import { doUrlReward } from './activities/UrlReward'
+import { doThisOrThat } from './activities/ThisOrThat'
+
+import { getFormattedDate, wait } from '../util/Utils'
+import { log } from '../util/Logger'
+
+import { DashboardData } from '../interface/DashboardData'
 
 export async function doDailySet(page: Page, data: DashboardData) {
     const todayData = data.dailySetPromotions[getFormattedDate()]
@@ -19,6 +22,12 @@ export async function doDailySet(page: Page, data: DashboardData) {
 
     for (const activity of activitiesUncompleted) {
         log('DAILY-SET', 'Started doing daily set items')
+
+        // If activity does not give points, skip
+        if (activity.pointProgressMax <= 0) {
+            continue
+        }
+
         switch (activity.promotionType) {
             // Quiz (Poll/Quiz)
             case 'quiz':
@@ -28,6 +37,12 @@ export async function doDailySet(page: Page, data: DashboardData) {
                     case 10:
                         log('ACTIVITY', 'Found daily activity type: Poll')
                         await doPoll(page, activity)
+                        break
+
+                    // This Or That Quiz (Usually 50 points)
+                    case 50:
+                        log('ACTIVITY', 'Found daily activity type: ThisOrThat')
+                        await doThisOrThat(page, activity)
                         break
 
                     // Quizzes are usually 30-40 points

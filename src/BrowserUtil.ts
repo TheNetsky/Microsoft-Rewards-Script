@@ -1,4 +1,5 @@
 import { Page } from 'puppeteer'
+
 import { wait } from './util/Utils'
 
 export async function tryDismissAllMessages(page: Page): Promise<boolean> {
@@ -15,7 +16,7 @@ export async function tryDismissAllMessages(page: Page): Promise<boolean> {
 
     for (const button of buttons) {
         try {
-            const element = await page.waitForSelector(button.selector, { timeout: 1000 })
+            const element = await page.waitForSelector(button.selector, { visible: true, timeout: 1000 })
             if (element) {
                 await element.click()
                 result = true

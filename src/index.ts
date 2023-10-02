@@ -99,6 +99,14 @@ async function Mobile(account: Account) {
 
     const data = await getDashboardData(page)
 
+    // If no mobile searches data found, stop (Does not exist on new accounts)
+    if (!data.userStatus.counters.mobileSearch) {
+        log('MAIN', 'No mobile searches found, stopping')
+
+        // Close mobile browser
+        return await browser.close()
+    }
+
     // Do mobile searches
     if (searches.doMobile) {
         await doSearch(page, data, true)

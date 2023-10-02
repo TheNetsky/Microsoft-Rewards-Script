@@ -1,16 +1,16 @@
 import { Page } from 'puppeteer'
 import axios from 'axios'
 
+import { getLatestTab } from '../../BrowserUtil'
+import { getSearchPoints } from '../../BrowserFunc'
 import { log } from '../../util/Logger'
 import { randomNumber, shuffleArray, wait } from '../../util/Utils'
-import { getSearchPoints } from '../../BrowserFunc'
 
 import { searches } from '../../config.json'
 
 import { DashboardData, DashboardImpression } from '../../interface/DashboardData'
 import { GoogleTrends } from '../../interface/GoogleDailyTrends'
 import { GoogleSearch } from '../../interface/Search'
-import { getLatestTab } from '../../BrowserUtil'
 
 export async function doSearch(page: Page, data: DashboardData, mobile: boolean) {
     const locale = await page.evaluate(() => {
@@ -19,11 +19,11 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
 
     log('SEARCH-BING', 'Starting bing searches')
 
-    const mobileData = data.userStatus.counters.mobileSearch[0] as DashboardImpression  // Mobile searches
+    const mobileData = data.userStatus.counters?.mobileSearch ? data.userStatus.counters.mobileSearch[0] : null // Mobile searches
     const edgeData = data.userStatus.counters.pcSearch[1] as DashboardImpression // Edge searches
     const genericData = data.userStatus.counters.pcSearch[0] as DashboardImpression  // Normal searches
 
-    let missingPoints = mobile ?
+    let missingPoints = (mobile && mobileData) ?
         (mobileData.pointProgressMax - mobileData.pointProgress) :
         (edgeData.pointProgressMax - edgeData.pointProgress) + (genericData.pointProgressMax - genericData.pointProgress)
 
@@ -32,7 +32,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
         return
     }
 
-    // Generate search queries 
+    // Generate search queries
     let googleSearchQueries = await getGoogleTrends(locale, missingPoints) as GoogleSearch[]
     googleSearchQueries = shuffleArray(googleSearchQueries)
 
@@ -59,11 +59,11 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
 
         const newData = await bingSearch(page, searchPage, query, mobile)
 
-        const newMobileData = newData.mobileSearch[0] as DashboardImpression  // Mobile searches
+        const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
         const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
         const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
 
-        const newMissingPoints = mobile ?
+        const newMissingPoints = (mobile && newMobileData) ?
             (newMobileData.pointProgressMax - newMobileData.pointProgress) :
             (newEdgeData.pointProgressMax - newEdgeData.pointProgress) + (newGenericData.pointProgressMax - newGenericData.pointProgress)
 
@@ -103,11 +103,11 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
                     log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${mobile}`)
                     const newData = await bingSearch(page, searchPage, query.topic, mobile)
 
-                    const newMobileData = newData.mobileSearch[0] as DashboardImpression  // Mobile searches
+                    const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
                     const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
                     const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
 
-                    const newMissingPoints = mobile ?
+                    const newMissingPoints = (mobile && newMobileData) ?
                         (newMobileData.pointProgressMax - newMobileData.pointProgress) :
                         (newEdgeData.pointProgressMax - newEdgeData.pointProgress) + (newGenericData.pointProgressMax - newGenericData.pointProgress)
 
@@ -143,7 +143,7 @@ async function bingSearch(page: Page, searchPage: Page, query: string, mobile: b
     for (let i = 0; i < 5; i++) {
         try {
             const searchBar = '#sb_form_q'
-            await searchPage.waitForSelector(searchBar, { timeout: 3000 })
+            await searchPage.waitForSelector(searchBar, { visible: true, timeout: 3000 })
             await searchPage.click(searchBar) // Focus on the textarea
             await wait(500)
             await searchPage.keyboard.down('Control')
@@ -169,10 +169,11 @@ async function bingSearch(page: Page, searchPage: Page, query: string, mobile: b
 
         } catch (error) {
             if (i === 5) {
-                log('SEARCH-BING', 'Failed after 5 retries... An error occurred:' + error, 'error')
-                return await getSearchPoints(page)
+                log('SEARCH-BING', 'Failed after 5 retries... An error occurred:' + JSON.stringify(error, null, 2), 'error')
+                break
+
             }
-            log('SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
+            log('SEARCH-BING', 'Search failed, An error occurred:' + JSON.stringify(error, null, 2), 'error')
             log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
             await wait(4000)
@@ -214,7 +215,7 @@ async function getGoogleTrends(locale: string, queryCount: number): Promise<Goog
             }
 
         } catch (error) {
-            log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
+            log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
         }
     }
 
@@ -235,7 +236,7 @@ async function getRelatedTerms(term: string): Promise<string[]> {
 
         return response.data[1] as string[]
     } catch (error) {
-        log('SEARCH-BING-RELTATED', 'An error occurred:' + error, 'error')
+        log('SEARCH-BING-RELTATED', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
     return []
 }
@@ -255,7 +256,7 @@ async function randomScroll(page: Page) {
             await page.keyboard.press('ArrowDown')
         }
     } catch (error) {
-        log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
+        log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
 }
 
@@ -301,6 +302,6 @@ async function clickRandomLink(page: Page, mobile: boolean) {
             }
         }
     } catch (error) {
-        log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
+        log('SEARCH-RANDOM-CLICK', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
     }
 }
