@@ -11,6 +11,20 @@ Under development, however mainly for personal use!
 5. Run `npm run build` to build the script
 6. Run `nom run start` to start the built script
 
+## Features ##
+- [x] Desktop Searches
+- [x] Mobile Searches
+- [x] Completing Daily Set
+- [x] Completing More Promotions
+- [x] Solving Quiz (10 point variant)
+- [x] Solving Quiz (30-40 point variant)
+- [x] Completing Click Rewards
+- [x] Completing Polls
+- [ ] Completing Punchcards
+- [ ] Solving This Or That Quiz
+- [ ] Clicking Promotional Items
+- [ ] Completing Shop And Earn
+
 ## Disclaimer ##
 Your account may be at risk of getting banned or suspended using this script, you've been warned!
 <br /> 
