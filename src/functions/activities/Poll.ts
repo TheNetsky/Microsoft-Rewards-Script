@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer'
 
-import { getLatestTab } from '../../BrowserUtil'
+import { getLatestTab } from '../../browser/BrowserUtil'
 import { log } from '../../util/Logger'
 import { randomNumber, wait } from '../../util/Utils'
 
@@ -20,7 +20,9 @@ export async function doPoll(page: Page, data: PromotionalItem | MorePromotion) 
 
         const buttonId = `#btoption${Math.floor(randomNumber(0, 1))}`
 
+        await pollPage.waitForNetworkIdle({ timeout: 5000 })
         await pollPage.waitForSelector(buttonId, { visible: true, timeout: 5000 })
+        
         await pollPage.click(buttonId)
 
         await wait(2000)
@@ -28,6 +30,8 @@ export async function doPoll(page: Page, data: PromotionalItem | MorePromotion) 
 
         log('POLL', 'Completed the poll successfully')
     } catch (error) {
-        log('POLL', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        const pollPage = await getLatestTab(page)
+        await pollPage.close()
+        log('POLL', 'An error occurred:' + error, 'error')
     }
 }

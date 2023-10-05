@@ -1,6 +1,7 @@
 import { Page } from 'puppeteer'
 
-import { wait } from './util/Utils'
+import { wait } from './../util/Utils'
+import { log } from './../util/Logger'
 
 export async function tryDismissAllMessages(page: Page): Promise<boolean> {
     const buttons = [
@@ -62,10 +63,19 @@ export async function tryDismissBingCookieBanner(page: Page): Promise<void> {
 }
 
 export async function getLatestTab(page: Page) {
-    await wait(2000)
-    const browser = page.browser()
-    const pages = await browser.pages()
-    const newTab = pages[pages.length - 1] as Page
+    try {
+        await wait(500)
 
-    return newTab
+        const browser = page.browser()
+        const pages = await browser.pages()
+        const newTab = pages[pages.length - 1]
+
+        if (newTab) {
+            return newTab
+        }
+
+        throw log('GET-NEW-TAB', 'Unable to get latest tab', 'error')
+    } catch (error) {
+        throw log('GET-NEW-TAB', 'An error occurred:' + error, 'error')
+    }
 }

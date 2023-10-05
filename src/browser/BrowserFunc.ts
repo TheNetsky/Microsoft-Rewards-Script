@@ -4,13 +4,13 @@ import path from 'path'
 import { load } from 'cheerio'
 
 import { tryDismissAllMessages, tryDismissCookieBanner } from './BrowserUtil'
-import { getFormattedDate, wait } from './util/Utils'
-import { log } from './util/Logger'
+import { getFormattedDate, wait } from './../util/Utils'
+import { log } from './../util/Logger'
 
-import { Counters, DashboardData } from './interface/DashboardData'
-import { QuizData } from './interface/QuizData'
+import { Counters, DashboardData } from './../interface/DashboardData'
+import { QuizData } from './../interface/QuizData'
 
-import { baseURL, sessionPath } from './config.json'
+import { baseURL, sessionPath } from './../config.json'
 
 export async function goHome(page: Page): Promise<boolean> {
 
@@ -55,7 +55,7 @@ export async function goHome(page: Page): Promise<boolean> {
         }
 
     } catch (error) {
-        console.error('An error occurred:', JSON.stringify(error, null, 2))
+        console.error('An error occurred:', error)
         return false
     }
 
@@ -126,7 +126,7 @@ export async function getQuizData(page: Page): Promise<QuizData> {
         }
 
     } catch (error) {
-        throw log('GET-QUIZ-DATA', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        throw log('GET-QUIZ-DATA', 'An error occurred:' + error, 'error')
     }
 
 }
@@ -168,7 +168,20 @@ export async function getEarnablePoints(data: DashboardData, page: null | Page =
 
         return totalEarnablePoints
     } catch (error) {
-        throw log('GET-EARNABLE-POINTS', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        throw log('GET-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
+    }
+}
+
+export async function getCurrentPoints(data: DashboardData, page: null | Page = null): Promise<number> {
+    try {
+        // Fetch new data if page is provided
+        if (page) {
+            data = await getDashboardData(page)
+        }
+
+        return data.userStatus.availablePoints
+    } catch (error) {
+        throw log('GET-CURRENT-POINTS', 'An error occurred:' + error, 'error')
     }
 }
 
@@ -193,7 +206,7 @@ export async function waitForQuizRefresh(page: Page) {
         await page.waitForSelector('#rqHeaderCredits', { timeout: 5000 })
         return true
     } catch (error) {
-        log('QUIZ-REFRESH', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('QUIZ-REFRESH', 'An error occurred:' + error, 'error')
         return false
     }
 }

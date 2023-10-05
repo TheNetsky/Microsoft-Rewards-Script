@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer'
 
-import { getLatestTab } from '../../BrowserUtil'
+import { getLatestTab } from '../../browser/BrowserUtil'
 import { log } from '../../util/Logger'
 
 import { PromotionalItem, MorePromotion } from '../../interface/DashboardData'
@@ -17,11 +17,14 @@ export async function doUrlReward(page: Page, data: PromotionalItem | MorePromot
 
         // After waiting, close the page
         const visitPage = await getLatestTab(page)
+        await visitPage.waitForNetworkIdle({ timeout: 5000 })
         await visitPage.close()
 
         log('URL-REWARD', 'Completed the UrlReward successfully')
     } catch (error) {
-        log('URL-REWARD', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        const visitPage = await getLatestTab(page)
+        await visitPage.close()
+        log('URL-REWARD', 'An error occurred:' + error, 'error')
     }
 
 }

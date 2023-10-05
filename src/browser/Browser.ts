@@ -1,10 +1,10 @@
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
-import { getUserAgent } from './util/UserAgent'
+import { getUserAgent } from '../util/UserAgent'
 import { loadSesion } from './BrowserFunc'
 
-import { headless } from './config.json'
+import { headless } from '../config.json'
 
 puppeteer.use(StealthPlugin())
 

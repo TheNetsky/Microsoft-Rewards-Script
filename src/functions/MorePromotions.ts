@@ -8,10 +8,15 @@ import { doThisOrThat } from './activities/ThisOrThat'
 import { wait } from '../util/Utils'
 import { log } from '../util/Logger'
 
-import { DashboardData } from '../interface/DashboardData'
+import { DashboardData, MorePromotion } from '../interface/DashboardData'
 
 export async function doMorePromotions(page: Page, data: DashboardData) {
     const morePromotions = data.morePromotions
+
+    // Check if there is a promotional item
+    if (data.promotionalItem) { // Convert and add the promotional item to the array
+        morePromotions.push(data.promotionalItem as unknown as MorePromotion)
+    }
 
     const activitiesUncompleted = morePromotions?.filter(x => !x.complete) ?? []
 

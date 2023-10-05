@@ -22,8 +22,9 @@ Under development, however mainly for personal use!
 - [x] Completing Polls
 - [ ] Completing Punchcards
 - [ ] Solving This Or That Quiz
-- [ ] Clicking Promotional Items
+- [x] Clicking Promotional Items
 - [ ] Completing Shop And Earn
+- [ ] Proxy Support
 
 ## Disclaimer ##
 Your account may be at risk of getting banned or suspended using this script, you've been warned!

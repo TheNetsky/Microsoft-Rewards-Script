@@ -51,7 +51,7 @@ export async function getChromeVersion(): Promise<string> {
         return data.channels.Stable.version
 
     } catch (error) {
-        throw log('USERAGENT-CHROME-VERSION', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        throw log('USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
     }
 }
 
@@ -75,7 +75,7 @@ export async function getEdgeVersions() {
 
 
     } catch (error) {
-        throw log('USERAGENT-EDGE-VERSION', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        throw log('USERAGENT-EDGE-VERSION', 'An error occurred:' + error, 'error')
     }
 }
 

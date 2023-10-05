@@ -1,8 +1,8 @@
 import { Page } from 'puppeteer'
 import axios from 'axios'
 
-import { getLatestTab } from '../../BrowserUtil'
-import { getSearchPoints } from '../../BrowserFunc'
+import { getLatestTab } from '../../browser/BrowserUtil'
+import { getSearchPoints } from '../../browser/BrowserFunc'
 import { log } from '../../util/Logger'
 import { randomNumber, shuffleArray, wait } from '../../util/Utils'
 
@@ -169,11 +169,11 @@ async function bingSearch(page: Page, searchPage: Page, query: string, mobile: b
 
         } catch (error) {
             if (i === 5) {
-                log('SEARCH-BING', 'Failed after 5 retries... An error occurred:' + JSON.stringify(error, null, 2), 'error')
+                log('SEARCH-BING', 'Failed after 5 retries... An error occurred:' + error, 'error')
                 break
 
             }
-            log('SEARCH-BING', 'Search failed, An error occurred:' + JSON.stringify(error, null, 2), 'error')
+            log('SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
             log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
             await wait(4000)
@@ -215,7 +215,7 @@ async function getGoogleTrends(locale: string, queryCount: number): Promise<Goog
             }
 
         } catch (error) {
-            log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+            log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
         }
     }
 
@@ -236,7 +236,7 @@ async function getRelatedTerms(term: string): Promise<string[]> {
 
         return response.data[1] as string[]
     } catch (error) {
-        log('SEARCH-BING-RELTATED', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('SEARCH-BING-RELTATED', 'An error occurred:' + error, 'error')
     }
     return []
 }
@@ -256,7 +256,7 @@ async function randomScroll(page: Page) {
             await page.keyboard.press('ArrowDown')
         }
     } catch (error) {
-        log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
     }
 }
 
@@ -302,6 +302,6 @@ async function clickRandomLink(page: Page, mobile: boolean) {
             }
         }
     } catch (error) {
-        log('SEARCH-RANDOM-CLICK', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
     }
 }

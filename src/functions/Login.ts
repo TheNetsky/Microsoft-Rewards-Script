@@ -6,7 +6,7 @@ const rl = readline.createInterface({
     output: process.stdout
 })
 
-import { tryDismissAllMessages, tryDismissBingCookieBanner } from '../BrowserUtil'
+import { tryDismissAllMessages, tryDismissBingCookieBanner } from '../browser/BrowserUtil'
 import { wait } from '../util/Utils'
 import { log } from '../util/Logger'
 
@@ -34,7 +34,7 @@ export async function login(page: Page, email: string, password: string) {
         log('LOGIN', 'Logged in successfully')
 
     } catch (error) {
-        log('LOGIN', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('LOGIN', 'An error occurred:' + error, 'error')
     }
 }
 
@@ -103,7 +103,7 @@ async function checkBingLogin(page: Page): Promise<void> {
         }
 
     } catch (error) {
-        log('LOGIN-BING', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('LOGIN-BING', 'An error occurred:' + error, 'error')
     }
 }
 

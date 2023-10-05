@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer'
 
-import { getLatestTab } from '../../BrowserUtil'
-import { getQuizData, waitForQuizRefresh } from '../../BrowserFunc'
+import { getLatestTab } from '../../browser/BrowserUtil'
+import { getQuizData, waitForQuizRefresh } from '../../browser/BrowserFunc'
 import { wait } from '../../util/Utils'
 import { log } from '../../util/Logger'
 
@@ -18,6 +18,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
         await page.click(selector)
 
         const quizPage = await getLatestTab(page)
+        await quizPage.waitForNetworkIdle({ timeout: 5000 })
 
         // Check if the quiz has been started or not
         const quizNotStarted = await quizPage.waitForSelector('#rqStartQuiz', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
@@ -29,7 +30,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
 
         await wait(2000)
 
-        const quizData = await getQuizData(quizPage)
+        let quizData = await getQuizData(quizPage)
         const questionsRemaining = quizData.maxQuestions - quizData.CorrectlyAnsweredQuestionCount // Amount of questions remaining
 
         // All questions
@@ -41,7 +42,6 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
                 for (let i = 0; i < quizData.numberOfOptions; i++) {
                     const answerSelector = await quizPage.waitForSelector(`#rqAnswerOption${i}`, { visible: true, timeout: 5000 })
                     const answerAttribute = await answerSelector?.evaluate(el => el.getAttribute('iscorrectoption'))
-                    await wait(500)
 
                     if (answerAttribute && answerAttribute.toLowerCase() === 'true') {
                         answers.push(`#rqAnswerOption${i}`)
@@ -65,6 +65,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
 
                 // Other type quiz
             } else if ([2, 3, 4].includes(quizData.numberOfOptions)) {
+                quizData = await getQuizData(quizPage) // Refresh Quiz Data
                 const correctOption = quizData.correctAnswer
 
                 for (let i = 0; i < quizData.numberOfOptions; i++) {
@@ -75,7 +76,6 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
                     if (dataOption === correctOption) {
                         // Click the answer on page
                         await quizPage.click(`#rqAnswerOption${i}`)
-                        await wait(2000)
 
                         const refreshSuccess = await waitForQuizRefresh(quizPage)
                         if (!refreshSuccess) {
@@ -98,7 +98,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
     } catch (error) {
         const quizPage = await getLatestTab(page)
         await quizPage.close()
-        log('QUIZ', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        log('QUIZ', 'An error occurred:' + error, 'error')
     }
 
 }

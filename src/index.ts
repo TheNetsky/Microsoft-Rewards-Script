@@ -1,5 +1,5 @@
-import { Browser, mobileBrowser } from './Browser'
-import { getDashboardData, getEarnablePoints, goHome } from './BrowserFunc'
+import { Browser, mobileBrowser } from './browser/Browser'
+import { getDashboardData, getEarnablePoints, goHome } from './browser/BrowserFunc'
 import { log } from './util/Logger'
 
 import { login } from './functions/Login'

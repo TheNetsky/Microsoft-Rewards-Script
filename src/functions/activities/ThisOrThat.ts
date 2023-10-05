@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer'
 
-import { getLatestTab } from '../../BrowserUtil'
+import { getLatestTab } from '../../browser/BrowserUtil'
 import { wait } from '../../util/Utils'
 import { log } from '../../util/Logger'
 
@@ -18,6 +18,7 @@ export async function doThisOrThat(page: Page, data: PromotionalItem | MorePromo
         await page.click(selector)
 
         const thisorthatPage = await getLatestTab(page)
+        await thisorthatPage.waitForNetworkIdle({ timeout: 5000 })
 
         // Check if the quiz has been started or not
         const quizNotStarted = await thisorthatPage.waitForSelector('#rqStartQuiz', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
@@ -33,7 +34,9 @@ export async function doThisOrThat(page: Page, data: PromotionalItem | MorePromo
 
         log('THIS-OR-THAT', 'Completed the ThisOrthat successfully')
     } catch (error) {
-        log('THIS-OR-THAT', 'An error occurred:' + JSON.stringify(error, null, 2), 'error')
+        const thisorthatPage = await getLatestTab(page)
+        await thisorthatPage.close()
+        log('THIS-OR-THAT', 'An error occurred:' + error, 'error')
     }
 
 }
