@@ -57,7 +57,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
 
         log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${mobile}`)
 
-        const newData = await bingSearch(page, searchPage, query, mobile)
+        const newData = await bingSearch(page, searchPage, query)
 
         const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
         const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
@@ -101,7 +101,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
                 // Search for the first 2 related terms
                 for (const term of relatedTerms.slice(1, 3)) {
                     log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${mobile}`)
-                    const newData = await bingSearch(page, searchPage, query.topic, mobile)
+                    const newData = await bingSearch(page, searchPage, query.topic)
 
                     const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
                     const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
@@ -138,7 +138,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
     log('SEARCH-BING', 'Completed searches')
 }
 
-async function bingSearch(page: Page, searchPage: Page, query: string, mobile: boolean) {
+async function bingSearch(page: Page, searchPage: Page, query: string) {
     // Try a max of 5 times
     for (let i = 0; i < 5; i++) {
         try {
@@ -160,7 +160,7 @@ async function bingSearch(page: Page, searchPage: Page, query: string, mobile: b
 
             if (searches.clickRandomResults) {
                 await wait(2000)
-                await clickRandomLink(searchPage, mobile)
+                await clickRandomLink(searchPage)
             }
 
             await wait(Math.floor(randomNumber(10_000, 20_000)))
@@ -260,10 +260,10 @@ async function randomScroll(page: Page) {
     }
 }
 
-async function clickRandomLink(page: Page, mobile: boolean) {
+async function clickRandomLink(page: Page) {
     try {
         const searchListingURL = new URL(page.url()) // Get page info before clicking
-        mobile
+
         await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
 
        
