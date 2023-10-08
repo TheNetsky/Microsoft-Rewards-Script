@@ -263,41 +263,57 @@ async function randomScroll(page: Page) {
 async function clickRandomLink(page: Page, mobile: boolean) {
     try {
         const searchListingURL = new URL(page.url()) // Get page info before clicking
-
+        mobile
         await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
+
+       
         await wait(3000)
 
-        const newTab = await getLatestTab(page) // Will get current tab if no new one is created
-
+        let lastTab = await getLatestTab(page) // Will get current tab if no new one is created
+        await lastTab.waitForNetworkIdle() // Wait for page to load
+        
         // Check if the tab is closed or not
-        if (!newTab.isClosed()) {
-            const newTabURL = new URL(newTab.url()) // Get new tab info
+        if (!lastTab.isClosed()) {
+            let lastTabURL = new URL(lastTab.url()) // Get new tab info
 
             // Check if the URL is different from the original one
-            if (newTabURL.href !== searchListingURL.href) {
-                // Mobile is always same tab
-                if (mobile) {
-                    await page.goBack()
+            while (lastTabURL.href !== searchListingURL.href) {
 
-                    const currentURL = new URL(page.url())
+                // If hostname is still bing, (Bing images/news etc)
+                if (lastTabURL.hostname == searchListingURL.hostname) {
+                    await lastTab.goBack()
+
+                    lastTab = await getLatestTab(page) // Get last opened tab
+                    lastTabURL = new URL(lastTab.url())
+
                     // If "goBack" didn't return to search listing (due to redirects)
-                    if (currentURL.hostname !== searchListingURL.hostname) {
-                        await page.goto(searchListingURL.href)
+                    if (lastTabURL.hostname !== searchListingURL.hostname) {
+                        await lastTab.goto(searchListingURL.href)
                     }
 
-                    // Still on bing, go back (news/images pages on bing search)
-                } else if (newTabURL.hostname == searchListingURL.hostname) {
-                    await page.goBack()
+                    break
+                } else { // No longer on bing, likely opened a new tab, close this tab
+                    lastTab = await getLatestTab(page) // Get last opened tab
+                    lastTabURL = new URL(lastTab.url())
 
-                    const currentURL = new URL(page.url())
-                    // If "goBack" didn't return to search listing (due to redirects)
-                    if (currentURL.hostname !== searchListingURL.hostname) {
-                        await page.goto(searchListingURL.href)
+                    const tabs = await (page.browser()).pages() // Get all tabs open
+
+                    // If the browser has more than 3 tabs open, it has opened a new one, we need to close this one.
+                    if (tabs.length > 3) {
+                        await lastTab.close()
+                    } else {
+                        await lastTab.goBack()
+
+                        lastTab = await getLatestTab(page) // Get last opened tab
+                        lastTabURL = new URL(lastTab.url())
+
+                        // If "goBack" didn't return to search listing (due to redirects)
+                        if (lastTabURL.hostname !== searchListingURL.hostname) {
+                            await lastTab.goto(searchListingURL.href)
+                        }
                     }
 
-                    // No longer on bing, likely opened a new tab, close this tab
-                } else {
-                    await newTab.close()
+                    break
                 }
             }
         }

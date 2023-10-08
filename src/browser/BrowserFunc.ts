@@ -219,3 +219,10 @@ export async function checkQuizCompleted(page: Page) {
         return false
     }
 }
+
+export async function refreshCheerio(page: Page) {
+    const html = await page.content()
+    const $ = load(html)
+
+    return $
+}

@@ -19,6 +19,7 @@ export async function doQuiz(page: Page, data: PromotionalItem | MorePromotion) 
 
         const quizPage = await getLatestTab(page)
         await quizPage.waitForNetworkIdle({ timeout: 5000 })
+        await wait(2000)
 
         // Check if the quiz has been started or not
         const quizNotStarted = await quizPage.waitForSelector('#rqStartQuiz', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)

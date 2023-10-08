@@ -22,10 +22,11 @@ export async function doPoll(page: Page, data: PromotionalItem | MorePromotion) 
 
         await pollPage.waitForNetworkIdle({ timeout: 5000 })
         await pollPage.waitForSelector(buttonId, { visible: true, timeout: 5000 })
-        
+        await wait(2000)
+
         await pollPage.click(buttonId)
 
-        await wait(2000)
+        await wait(4000)
         await pollPage.close()
 
         log('POLL', 'Completed the poll successfully')

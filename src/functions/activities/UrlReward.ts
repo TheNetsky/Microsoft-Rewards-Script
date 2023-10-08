@@ -17,7 +17,7 @@ export async function doUrlReward(page: Page, data: PromotionalItem | MorePromot
 
         // After waiting, close the page
         const visitPage = await getLatestTab(page)
-        await visitPage.waitForNetworkIdle({ timeout: 5000 })
+        await visitPage.waitForNetworkIdle({ timeout: 10_000 })
         await visitPage.close()
 
         log('URL-REWARD', 'Completed the UrlReward successfully')

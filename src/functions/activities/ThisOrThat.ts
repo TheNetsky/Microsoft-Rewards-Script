@@ -19,6 +19,7 @@ export async function doThisOrThat(page: Page, data: PromotionalItem | MorePromo
 
         const thisorthatPage = await getLatestTab(page)
         await thisorthatPage.waitForNetworkIdle({ timeout: 5000 })
+        await wait(2000)
 
         // Check if the quiz has been started or not
         const quizNotStarted = await thisorthatPage.waitForSelector('#rqStartQuiz', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)

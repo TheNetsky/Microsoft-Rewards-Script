@@ -23,6 +23,7 @@ Under development, however mainly for personal use!
 - [ ] Completing Punchcards
 - [ ] Solving This Or That Quiz
 - [x] Clicking Promotional Items
+- [x] Solving ABC quiz
 - [ ] Completing Shop And Earn
 - [ ] Proxy Support
 
