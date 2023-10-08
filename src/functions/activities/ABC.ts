@@ -21,7 +21,10 @@ export async function doABC(page: Page, data: PromotionalItem | MorePromotion) {
         await wait(2000)
         let $ = await refreshCheerio(abcPage)
 
-        while (!$('span.rw_icon').length) {
+        // Don't loop more than 15 in case unable to solve, would lock otherwise
+        const maxIterations = 15
+        let i
+        for (i = 0; i < maxIterations && !$('span.rw_icon').length; i++) {
             await abcPage.waitForSelector('.wk_OptionClickClass', { visible: true, timeout: 5000 })
 
             const answers = $('.wk_OptionClickClass')
@@ -44,7 +47,12 @@ export async function doABC(page: Page, data: PromotionalItem | MorePromotion) {
         await wait(4000)
         await abcPage.close()
 
-        log('ABC', 'Completed the ABC successfully')
+        if (i === maxIterations) {
+            log('ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
+        } else {
+            log('ABC', 'Completed the ABC successfully')
+        }
+
     } catch (error) {
         const abcPage = await getLatestTab(page)
         await abcPage.close()
