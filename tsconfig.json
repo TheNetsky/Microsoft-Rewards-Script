@@ -63,7 +63,8 @@
         "resolveJsonModule": true
     },
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "src/accounts.json"
     ],
     "exclude": [
         "node_modules"
