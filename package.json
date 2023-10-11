@@ -1,12 +1,15 @@
 {
   "name": "microsoft-rewards-script",
-  "version": "1.0.7",
-  "description": "Automatically do tasks for Microsoft Rewards but in TS",
+  "version": "1.1.0",
+  "description": "Automatically do tasks for Microsoft Rewards but in TS!",
   "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node ./dist/index.js",
-    "dev": "ts-node ./src/index.ts"
+    "dev": "ts-node ./src/index.ts -dev"
   },
   "keywords": [
     "Bing Rewards",

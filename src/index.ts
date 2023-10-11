@@ -1,15 +1,15 @@
 import Browser from './browser/Browser'
 import { getDashboardData, getEarnablePoints, goHome } from './browser/BrowserFunc'
 import { log } from './util/Logger'
+import { loadAccounts } from './util/Account'
 
 import { login } from './functions/Login'
-import { doDailySet, doMorePromotions } from './functions/Workers'
+import { doDailySet, doMorePromotions, doPunchCard } from './functions/Workers'
 import { doSearch } from './functions/activities/Search'
 
 import { Account } from './interface/Account'
 
-import accounts from './accounts.json'
-import { runOnZeroPoints, searches } from './config.json'
+import { runOnZeroPoints, workers } from './config.json'
 
 // Main bot class
 class MicrosoftRewardsBot {
@@ -18,6 +18,8 @@ class MicrosoftRewardsBot {
 
     async run() {
         log('MAIN', 'Bot started')
+
+        const accounts = await loadAccounts()
 
         for (const account of accounts) {
             log('MAIN', `Started tasks for account ${account.email}`)
@@ -74,13 +76,22 @@ class MicrosoftRewardsBot {
         }
 
         // Complete daily set
-        await doDailySet(page, data)
+        if (workers.doDailySet) {
+            await doDailySet(page, data)
+        }
 
         // Complete more promotions
-        await doMorePromotions(page, data)
+        if (workers.doMorePromotions) {
+            await doMorePromotions(page, data)
+        }
+
+        // Complete punch cards
+        if (workers.doPunchCards) {
+            await doPunchCard(page, data)
+        }
 
         // Do desktop searches
-        if (searches.doDesktop) {
+        if (workers.doDesktopSearch) {
             await doSearch(page, data, false)
         }
 
@@ -110,7 +121,7 @@ class MicrosoftRewardsBot {
         }
 
         // Do mobile searches
-        if (searches.doMobile) {
+        if (workers.doMobileSearch) {
             await doSearch(page, data, true)
         }
 

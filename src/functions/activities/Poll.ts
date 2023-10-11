@@ -1,38 +1,26 @@
 import { Page } from 'puppeteer'
 
-import { getLatestTab } from '../../browser/BrowserUtil'
 import { log } from '../../util/Logger'
 import { randomNumber, wait } from '../../util/Utils'
 
-import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
-
-export async function doPoll(page: Page, data: PromotionalItem | MorePromotion) {
+export async function doPoll(page: Page) {
     log('POLL', 'Trying to complete poll')
 
     try {
-        const selector = `[data-bi-id="${data.offerId}"]`
-
-        // Wait for page to load and click to load the quiz in a new tab
-        await page.waitForSelector(selector, { timeout: 5000 })
-        await page.click(selector)
-
-        const pollPage = await getLatestTab(page)
-
         const buttonId = `#btoption${Math.floor(randomNumber(0, 1))}`
 
-        await pollPage.waitForNetworkIdle({ timeout: 5000 })
-        await pollPage.waitForSelector(buttonId, { visible: true, timeout: 5000 })
+        await page.waitForNetworkIdle({ timeout: 5000 })
+        await page.waitForSelector(buttonId, { visible: true, timeout: 5000 })
         await wait(2000)
 
-        await pollPage.click(buttonId)
+        await page.click(buttonId)
 
         await wait(4000)
-        await pollPage.close()
+        await page.close()
 
         log('POLL', 'Completed the poll successfully')
     } catch (error) {
-        const pollPage = await getLatestTab(page)
-        await pollPage.close()
+        await page.close()
         log('POLL', 'An error occurred:' + error, 'error')
     }
 }

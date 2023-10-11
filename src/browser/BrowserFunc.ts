@@ -7,7 +7,7 @@ import { tryDismissAllMessages, tryDismissCookieBanner } from './BrowserUtil'
 import { getFormattedDate, wait } from './../util/Utils'
 import { log } from './../util/Logger'
 
-import { Counters, DashboardData } from './../interface/DashboardData'
+import { Counters, DashboardData, MorePromotion, PromotionalItem } from './../interface/DashboardData'
 import { QuizData } from './../interface/QuizData'
 
 import { baseURL, sessionPath } from './../config.json'
@@ -195,7 +195,6 @@ export async function loadSesion(email: string): Promise<string> {
         }
 
         return sessionDir
-
     } catch (error) {
         throw new Error(error as string)
     }
@@ -203,7 +202,9 @@ export async function loadSesion(email: string): Promise<string> {
 
 export async function waitForQuizRefresh(page: Page) {
     try {
-        await page.waitForSelector('#rqHeaderCredits', { timeout: 5000 })
+        await page.waitForSelector('#rqHeaderCredits', { visible: true, timeout: 5000 })
+        await wait(2000)
+
         return true
     } catch (error) {
         log('QUIZ-REFRESH', 'An error occurred:' + error, 'error')
@@ -213,7 +214,9 @@ export async function waitForQuizRefresh(page: Page) {
 
 export async function checkQuizCompleted(page: Page) {
     try {
-        await page.waitForSelector('#quizCompleteContainer', { timeout: 1000 })
+        await page.waitForSelector('#quizCompleteContainer', { visible: true, timeout: 1000 })
+        await wait(2000)
+
         return true
     } catch (error) {
         return false
@@ -225,4 +228,21 @@ export async function refreshCheerio(page: Page) {
     const $ = load(html)
 
     return $
+}
+
+export async function getPunchCardActivity(page: Page, activity: PromotionalItem | MorePromotion) {
+    let selector = ''
+    try {
+        const html = await page.content()
+        const $ = load(html)
+
+        const element = $('.offer-cta').toArray().find(x => x.attribs.href?.includes(activity.offerId))
+        if (element) {
+            selector = `a[href*="${element.attribs.href}"]`
+        }
+    } catch (error) {
+        log('GET-PUNCHCARD-ACTIVITY', 'An error occurred:' + error, 'error')
+    }
+
+    return selector
 }

@@ -6,7 +6,7 @@ import { getSearchPoints } from '../../browser/BrowserFunc'
 import { log } from '../../util/Logger'
 import { randomNumber, shuffleArray, wait } from '../../util/Utils'
 
-import { searches } from '../../config.json'
+import { searchSettings } from '../../config.json'
 
 import { DashboardData, DashboardImpression } from '../../interface/DashboardData'
 import { GoogleTrends } from '../../interface/GoogleDailyTrends'
@@ -153,12 +153,12 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
             await searchPage.keyboard.type(query)
             await searchPage.keyboard.press('Enter')
 
-            if (searches.scrollRandomResults) {
+            if (searchSettings.scrollRandomResults) {
                 await wait(2000)
                 await randomScroll(searchPage)
             }
 
-            if (searches.clickRandomResults) {
+            if (searchSettings.clickRandomResults) {
                 await wait(2000)
                 await clickRandomLink(searchPage)
             }
@@ -266,12 +266,15 @@ async function clickRandomLink(page: Page) {
 
         await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
 
-       
+        // Wait for website to load
         await wait(3000)
 
-        let lastTab = await getLatestTab(page) // Will get current tab if no new one is created
-        await lastTab.waitForNetworkIdle() // Wait for page to load
-        
+        // Will get current tab if no new one is created
+        let lastTab = await getLatestTab(page)
+
+        // Wait for website to finish loading, don't break loop however
+        await lastTab.waitForNetworkIdle({ idleTime: 1000, timeout: 5000 }).catch(() => { })
+
         // Check if the tab is closed or not
         if (!lastTab.isClosed()) {
             let lastTabURL = new URL(lastTab.url()) // Get new tab info

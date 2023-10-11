@@ -3,9 +3,14 @@
     "sessionPath": "sessions",
     "headless": false,
     "runOnZeroPoints": false,
-    "searches": {
-        "doMobile": true,
-        "doDesktop": true,
+    "workers": {
+        "doDailySet": true,
+        "doMorePromotions": true,
+        "doPunchCards": true,
+        "doDesktopSearch": true,
+        "doMobileSearch": true
+    },
+    "searchSettings": {
         "scrollRandomResults": true,
         "clickRandomResults": true
     },

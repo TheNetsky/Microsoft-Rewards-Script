@@ -35,8 +35,7 @@ export async function doThisOrThat(page: Page, data: PromotionalItem | MorePromo
 
         log('THIS-OR-THAT', 'Completed the ThisOrthat successfully')
     } catch (error) {
-        const thisorthatPage = await getLatestTab(page)
-        await thisorthatPage.close()
+        await page.close()
         log('THIS-OR-THAT', 'An error occurred:' + error, 'error')
     }
 
