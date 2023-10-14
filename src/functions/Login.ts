@@ -21,7 +21,7 @@ export async function login(page: Page, email: string, password: string) {
         if (!isLoggedIn) {
             const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { visible: true, timeout: 5000 }).then(() => true).catch(() => false)
             if (isLocked) {
-                log('LOGIN', 'This account is suspended!', 'error')
+                log('LOGIN', 'This account has been locked!', 'error')
                 throw new Error('Account has been locked!')
             }
 
