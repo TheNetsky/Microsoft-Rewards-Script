@@ -13,8 +13,7 @@ export function getFormattedDate(ms = Date.now()) {
     return `${month}/${day}/${year}`
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function shuffleArray(array: any[]): any[] {
+export function shuffleArray<T>(array: T[]): T[] {
     const shuffledArray = array.slice()
 
     shuffledArray.sort(() => Math.random() - 0.5)
@@ -24,4 +23,16 @@ export function shuffleArray(array: any[]): any[] {
 
 export function randomNumber(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+export function chunkArray<T>(arr: T[], numChunks: number): T[][] {
+    const chunkSize = Math.ceil(arr.length / numChunks)
+    const chunks: T[][] = []
+
+    for (let i = 0; i < arr.length; i += chunkSize) {
+        const chunk = arr.slice(i, i + chunkSize)
+        chunks.push(chunk)
+    }
+
+    return chunks
 }

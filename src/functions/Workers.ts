@@ -14,6 +14,7 @@ import { log } from '../util/Logger'
 
 import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../interface/DashboardData'
 
+import { baseURL } from '../config.json'
 
 // Daily Set
 export async function doDailySet(page: Page, data: DashboardData) {
@@ -55,7 +56,7 @@ export async function doPunchCard(page: Page, data: DashboardData) {
         page = await browser.newPage()
 
         // Got to punch card index page in a new tab
-        await page.goto(punchCard.parentPromotion.destinationUrl, { referer: 'https://rewards.bing.com/' })
+        await page.goto(punchCard.parentPromotion.destinationUrl, { referer: baseURL })
 
         await solveActivities(page, activitiesUncompleted, punchCard)
 
@@ -94,23 +95,28 @@ export async function doMorePromotions(page: Page, data: DashboardData) {
 
 // Solve all the different types of activities
 async function solveActivities(page: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
-    try {
-        for (const activity of activities) {
+    for (const activity of activities) {
+        try {
+
+            let selector = `[data-bi-id="${activity.offerId}"]`
 
             if (punchCard) {
-                const selector = await getPunchCardActivity(page, activity)
+                selector = await getPunchCardActivity(page, activity)
 
-                // Wait for page to load and click to load the activity in a new tab
-                await page.waitForSelector(selector, { timeout: 5000 })
-                await page.click(selector)
+            } else if (activity.name.toLowerCase().includes('membercenter')) {
 
-            } else {
-                const selector = `[data-bi-id="${activity.offerId}"]`
-
-                // Wait for page to load and click to load the activity in a new tab
-                await page.waitForSelector(selector, { timeout: 5000 })
-                await page.click(selector)
+                // Promotion
+                if (activity.priority === 1) {
+                    selector = '#promo-item'
+                } else {
+                    selector = `[data-bi-id="${activity.name}"]`
+                }
             }
+
+            // Wait for element to load
+            await page.waitForSelector(selector, { timeout: 5000 })
+            // Click element, it will be opened in a new tab
+            await page.click(selector)
 
             // Select the new activity page
             const activityPage = await getLatestTab(page)
@@ -134,7 +140,7 @@ async function solveActivities(page: Page, activities: PromotionalItem[] | MoreP
                         // This Or That Quiz (Usually 50 points)
                         case 50:
                             log('ACTIVITY', `Found activity type: "ThisOrThat" title: "${activity.title}"`)
-                            await doThisOrThat(activityPage, activity)
+                            await doThisOrThat(activityPage)
                             break
 
                         // Quizzes are usually 30-40 points
@@ -151,13 +157,16 @@ async function solveActivities(page: Page, activities: PromotionalItem[] | MoreP
                     await doUrlReward(activityPage)
                     break
 
+                // Misc
                 default:
+                    log('ACTIVITY', `Found activity type: "Misc" title: "${activity.title}"`)
+                    await doUrlReward(activityPage)
                     break
             }
-            await wait(1500)
-        }
 
-    } catch (error) {
-        log('ACTIVITY', 'An error occurred:' + error, 'error')
+            await wait(1500)
+        } catch (error) {
+            log('ACTIVITY', 'An error occurred:' + error, 'error')
+        }
     }
 }

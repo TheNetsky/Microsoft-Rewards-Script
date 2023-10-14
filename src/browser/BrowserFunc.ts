@@ -28,7 +28,7 @@ export async function goHome(page: Page): Promise<boolean> {
             // Check if account is suspended
             const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
             if (isSuspended) {
-                log('GO-HOME', 'This account is suspended!')
+                log('GO-HOME', 'This account is suspended!', 'error')
                 throw new Error('Account has been suspended!')
             }
 

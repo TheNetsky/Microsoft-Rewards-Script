@@ -46,7 +46,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
     // Go to bing
     await searchPage.goto('https://bing.com')
 
-    let maxLoop = 0 // If the loop hits 20 this when not gaining any points, we're assuming it's stuck.
+    let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
 
     const queries: string[] = []
     googleSearchQueries.forEach(x => queries.push(x.topic, ...x.related))
@@ -80,8 +80,9 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
             break
         }
 
-        if (maxLoop > 20) {
-            log('SEARCH-BING', 'Search didn\'t gain point for 20 iterations aborting searches', 'warn')
+        // If we didn't gain points for 10 iterations, assume it's stuck
+        if (maxLoop > 10) {
+            log('SEARCH-BING', 'Search didn\'t gain point for 10 iterations aborting searches', 'warn')
             maxLoop = 0 // Reset to 0 so we can retry with related searches below
             break
         }
@@ -125,10 +126,10 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
                         break
                     }
 
-                    // Try 5 more times
+                    // Try 5 more times, then we tried a total of 15 times, fair to say it's stuck
                     if (maxLoop > 5) {
                         log('SEARCH-BING-EXTRA', 'Search didn\'t gain point for 5 iterations aborting searches', 'warn')
-                        break
+                        return
                     }
                 }
             }
@@ -143,7 +144,7 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
     for (let i = 0; i < 5; i++) {
         try {
             const searchBar = '#sb_form_q'
-            await searchPage.waitForSelector(searchBar, { visible: true, timeout: 3000 })
+            await searchPage.waitForSelector(searchBar, { visible: true, timeout: 10_000 })
             await searchPage.click(searchBar) // Focus on the textarea
             await wait(500)
             await searchPage.keyboard.down('Control')
@@ -252,7 +253,7 @@ function formatDate(date: Date): string {
 async function randomScroll(page: Page) {
     try {
         // Press the arrow down key to scroll
-        for (let i = 0; i < randomNumber(5, 50); i++) {
+        for (let i = 0; i < randomNumber(5, 100); i++) {
             await page.keyboard.press('ArrowDown')
         }
     } catch (error) {
@@ -262,7 +263,7 @@ async function randomScroll(page: Page) {
 
 async function clickRandomLink(page: Page) {
     try {
-        const searchListingURL = new URL(page.url()) // Get page info before clicking
+        const searchListingURL = new URL(page.url()) // Get searchPage info before clicking
 
         await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
 
@@ -272,15 +273,16 @@ async function clickRandomLink(page: Page) {
         // Will get current tab if no new one is created
         let lastTab = await getLatestTab(page)
 
-        // Wait for website to finish loading, don't break loop however
-        await lastTab.waitForNetworkIdle({ idleTime: 1000, timeout: 5000 }).catch(() => { })
+        // Wait for the body of the new page to be loaded
+        await lastTab.waitForSelector('body', { timeout: 10_000 }).catch(() => { })
 
         // Check if the tab is closed or not
         if (!lastTab.isClosed()) {
             let lastTabURL = new URL(lastTab.url()) // Get new tab info
 
-            // Check if the URL is different from the original one
-            while (lastTabURL.href !== searchListingURL.href) {
+            // Check if the URL is different from the original one, don't loop more than 5 times.
+            let i = 0
+            while (lastTabURL.href !== searchListingURL.href && i < 5) {
 
                 // If hostname is still bing, (Bing images/news etc)
                 if (lastTabURL.hostname == searchListingURL.hostname) {
@@ -294,7 +296,6 @@ async function clickRandomLink(page: Page) {
                         await lastTab.goto(searchListingURL.href)
                     }
 
-                    break
                 } else { // No longer on bing, likely opened a new tab, close this tab
                     lastTab = await getLatestTab(page) // Get last opened tab
                     lastTabURL = new URL(lastTab.url())
@@ -303,8 +304,13 @@ async function clickRandomLink(page: Page) {
 
                     // If the browser has more than 3 tabs open, it has opened a new one, we need to close this one.
                     if (tabs.length > 3) {
-                        await lastTab.close()
-                    } else {
+                        // Make sure the page is still open!
+                        if (!lastTab.isClosed()) {
+                            await lastTab.close()
+                        }
+
+                    } else if (lastTabURL.href !== searchListingURL.href) {
+
                         await lastTab.goBack()
 
                         lastTab = await getLatestTab(page) // Get last opened tab
@@ -315,10 +321,11 @@ async function clickRandomLink(page: Page) {
                             await lastTab.goto(searchListingURL.href)
                         }
                     }
-
-                    break
                 }
             }
+
+            lastTab = await getLatestTab(page) // Finally update the lastTab var again
+            i++
         }
     } catch (error) {
         log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')

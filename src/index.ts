@@ -1,7 +1,10 @@
+import cluster from 'cluster'
+
 import Browser from './browser/Browser'
 import { getDashboardData, getEarnablePoints, goHome } from './browser/BrowserFunc'
 import { log } from './util/Logger'
 import { loadAccounts } from './util/Account'
+import { chunkArray } from './util/Utils'
 
 import { login } from './functions/Login'
 import { doDailySet, doMorePromotions, doPunchCard } from './functions/Workers'
@@ -9,20 +12,74 @@ import { doSearch } from './functions/activities/Search'
 
 import { Account } from './interface/Account'
 
-import { runOnZeroPoints, workers } from './config.json'
+import { runOnZeroPoints, workers, clusters } from './config.json'
 
 // Main bot class
 class MicrosoftRewardsBot {
+    private activeWorkers: number = clusters
     private collectedPoints: number = 0
     private browserFactory: Browser = new Browser()
+    private accounts: Account[]
+
+    constructor() {
+        this.accounts = []
+    }
+
+    async initialize() {
+        this.accounts = await loadAccounts()
+    }
 
     async run() {
-        log('MAIN', 'Bot started')
+        log('MAIN', `Bot started with ${clusters} clusters`)
 
-        const accounts = await loadAccounts()
+        // Only cluster when there's more than 1 cluster demanded
+        if (clusters > 1) {
+            if (cluster.isPrimary) {
+                this.runMaster()
+            } else {
+                this.runWorker()
+            }
+        } else {
+            this.runTasks(this.accounts)
+        }
+    }
 
+    private runMaster() {
+        log('MAIN-PRIMARY', 'Primary process started')
+
+        const accountChunks = chunkArray(this.accounts, clusters)
+
+        for (let i = 0; i < accountChunks.length; i++) {
+            const worker = cluster.fork()
+            const chunk = accountChunks[i]
+            worker.send({ chunk })
+        }
+
+        cluster.on('exit', (worker, code) => {
+            this.activeWorkers -= 1
+
+            log('MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
+
+            // Check if all workers have exited
+            if (this.activeWorkers === 0) {
+                log('MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                process.exit(0)
+            }
+        })
+    }
+
+    private runWorker() {
+        log('MAIN-WORKER', `Worker ${process.pid} spawned`)
+
+        // Receive the chunk of accounts from the master
+        process.on('message', async ({ chunk }) => {
+            await this.runTasks(chunk)
+        })
+    }
+
+    private async runTasks(accounts: Account[]) {
         for (const account of accounts) {
-            log('MAIN', `Started tasks for account ${account.email}`)
+            log('MAIN-WORKER', `Started tasks for account ${account.email}`)
 
             // Desktop Searches, DailySet and More Promotions
             await this.Desktop(account)
@@ -35,13 +92,11 @@ class MicrosoftRewardsBot {
             // Mobile Searches
             await this.Mobile(account)
 
-            log('MAIN', `Completed tasks for account ${account.email}`)
+            log('MAIN-WORKER', `Completed tasks for account ${account.email}`)
         }
 
-
-        // Clean exit
-        log('MAIN', 'Completed tasks for ALL accounts')
-        log('MAIN', 'Bot exited')
+        log('MAIN-PRIMARY', 'Completed tasks for ALL accounts')
+        log('MAIN-PRIMARY', 'All workers destroyed!')
         process.exit(0)
     }
 
@@ -99,6 +154,7 @@ class MicrosoftRewardsBot {
         await browser.close()
     }
 
+    // Mobile
     async Mobile(account: Account) {
         const browser = await this.browserFactory.createBrowser(account.email, true)
         const page = await browser.newPage()
@@ -137,4 +193,9 @@ class MicrosoftRewardsBot {
     }
 }
 
-new MicrosoftRewardsBot().run()
+const bot = new MicrosoftRewardsBot()
+
+// Initialize accounts first and then start the bot
+bot.initialize().then(() => {
+    bot.run()
+})

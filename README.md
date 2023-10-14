@@ -15,11 +15,14 @@ Under development, however mainly for personal use!
 - [x] Multi-Account Support
 - [x] Session Storing
 - [x] 2FA Support
+- [x] Headless Support
 - [x] Discord Webhook Support
 - [x] Desktop Searches
+- [x] Configurable Tasks
 - [x] Microsoft Edge Searches
 - [x] Mobile Searches
-- [x] Emulate scrolling and link clicking (Optional)
+- [x] Emulated Scrolling Support
+- [x] Emulated Link Clicking Support
 - [x] Completing Daily Set
 - [x] Completing More Promotions
 - [x] Solving Quiz (10 point variant)
@@ -30,7 +33,9 @@ Under development, however mainly for personal use!
 - [ ] Solving This Or That Quiz
 - [x] Clicking Promotional Items
 - [x] Solving ABC Quiz
-- [ ] Completing Shop And Earn
+- [ ] Completing Shopping Game
+- [ ] Completing Gaming Tab
+- [x] Clustering Support
 - [ ] Proxy Support
 
 ## Disclaimer ##

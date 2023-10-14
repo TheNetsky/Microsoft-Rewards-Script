@@ -15,10 +15,16 @@ export async function login(page: Page, email: string, password: string) {
     try {
         // Navigate to the Bing login page
         await page.goto('https://login.live.com/')
-        
+
         const isLoggedIn = await page.waitForSelector('html[data-role-name="MeePortal"]', { timeout: 5000 }).then(() => true).catch(() => false)
 
         if (!isLoggedIn) {
+            const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { visible: true, timeout: 5000 }).then(() => true).catch(() => false)
+            if (isLocked) {
+                log('LOGIN', 'This account is suspended!', 'error')
+                throw new Error('Account has been locked!')
+            }
+
             await page.waitForSelector('#loginHeader', { visible: true, timeout: 10_000 })
 
             await execLogin(page, email, password)
@@ -34,13 +40,15 @@ export async function login(page: Page, email: string, password: string) {
         log('LOGIN', 'Logged in successfully')
 
     } catch (error) {
-        log('LOGIN', 'An error occurred:' + error, 'error')
+        // Throw and don't continue
+        throw log('LOGIN', 'An error occurred:' + error, 'error')
     }
 }
 
 async function execLogin(page: Page, email: string, password: string) {
     await page.type('#i0116', email)
     await page.click('#idSIButton9')
+
     log('LOGIN', 'Email entered successfully')
 
     try {

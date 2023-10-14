@@ -3,6 +3,7 @@
     "sessionPath": "sessions",
     "headless": false,
     "runOnZeroPoints": false,
+    "clusters": 1,
     "workers": {
         "doDailySet": true,
         "doMorePromotions": true,

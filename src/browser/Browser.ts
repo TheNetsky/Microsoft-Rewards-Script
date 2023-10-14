@@ -18,6 +18,7 @@ class Browser {
             userDataDir: await loadSesion(email),
             args: [
                 '--no-sandbox',
+                '--mute-audio',
                 '--disable-setuid-sandbox',
                 `--user-agent=${userAgent.userAgent}`,
                 isMobile ? '--window-size=568,1024' : ''

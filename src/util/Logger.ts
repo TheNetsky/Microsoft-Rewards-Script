@@ -7,17 +7,17 @@ export function log(title: string, message: string, type?: 'log' | 'warn' | 'err
 
     switch (type) {
         case 'warn':
-            str = `[${currentTime}] [WARN] [${title}] ${message}`
+            str = `[${currentTime}] [PID: ${process.pid}] [WARN] [${title}] ${message}`
             console.warn(str)
             break
 
         case 'error':
-            str = `[${currentTime}] [ERROR] [${title}] ${message}`
+            str = `[${currentTime}] [PID: ${process.pid}] [ERROR] [${title}] ${message}`
             console.error(str)
             break
 
         default:
-            str = `[${currentTime}] [LOG] [${title}] ${message}`
+            str = `[${currentTime}] [PID: ${process.pid}] [LOG] [${title}] ${message}`
             console.log(str)
             break
     }
