@@ -1,16 +1,18 @@
 import puppeteer from 'puppeteer-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 
 import { getUserAgent } from '../util/UserAgent'
 import { loadSesion } from './BrowserFunc'
 
+import { AccountProxy } from '../interface/Account'
+
 import { headless } from '../config.json'
 
-puppeteer.use(StealthPlugin())
+puppeteer.use(stealthPlugin())
 
 class Browser {
 
-    async createBrowser(email: string, isMobile: boolean) {
+    async createBrowser(email: string, proxy: AccountProxy, isMobile: boolean) {
         const userAgent = await getUserAgent(isMobile)
 
         const browser = await puppeteer.launch({
@@ -21,7 +23,8 @@ class Browser {
                 '--mute-audio',
                 '--disable-setuid-sandbox',
                 `--user-agent=${userAgent.userAgent}`,
-                isMobile ? '--window-size=568,1024' : ''
+                isMobile ? '--window-size=568,1024' : '',
+                proxy.url ? `--proxy-server=${proxy.url}:${proxy.port}` : ''
             ]
         })
 

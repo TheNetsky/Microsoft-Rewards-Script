@@ -62,7 +62,7 @@ export async function tryDismissBingCookieBanner(page: Page): Promise<void> {
     }
 }
 
-export async function getLatestTab(page: Page) {
+export async function getLatestTab(page: Page): Promise<Page> {
     try {
         await wait(500)
 

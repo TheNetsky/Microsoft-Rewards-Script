@@ -2,7 +2,7 @@
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
     "headless": false,
-    "runOnZeroPoints": false,
+    "runOnZeroPoints": true,
     "clusters": 1,
     "workers": {
         "doDailySet": true,
@@ -12,6 +12,7 @@
         "doMobileSearch": true
     },
     "searchSettings": {
+        "useGeoLocaleQueries": false,
         "scrollRandomResults": true,
         "clickRandomResults": true
     },

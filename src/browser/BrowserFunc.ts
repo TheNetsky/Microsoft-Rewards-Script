@@ -1,7 +1,7 @@
 import { Page } from 'puppeteer'
 import fs from 'fs'
 import path from 'path'
-import { load } from 'cheerio'
+import { CheerioAPI, load } from 'cheerio'
 
 import { tryDismissAllMessages, tryDismissCookieBanner } from './BrowserUtil'
 import { getFormattedDate, wait } from './../util/Utils'
@@ -200,7 +200,7 @@ export async function loadSesion(email: string): Promise<string> {
     }
 }
 
-export async function waitForQuizRefresh(page: Page) {
+export async function waitForQuizRefresh(page: Page): Promise<boolean> {
     try {
         await page.waitForSelector('#rqHeaderCredits', { visible: true, timeout: 5000 })
         await wait(2000)
@@ -212,7 +212,7 @@ export async function waitForQuizRefresh(page: Page) {
     }
 }
 
-export async function checkQuizCompleted(page: Page) {
+export async function checkQuizCompleted(page: Page): Promise<boolean> {
     try {
         await page.waitForSelector('#quizCompleteContainer', { visible: true, timeout: 1000 })
         await wait(2000)
@@ -223,14 +223,14 @@ export async function checkQuizCompleted(page: Page) {
     }
 }
 
-export async function refreshCheerio(page: Page) {
+export async function refreshCheerio(page: Page): Promise<CheerioAPI> {
     const html = await page.content()
     const $ = load(html)
 
     return $
 }
 
-export async function getPunchCardActivity(page: Page, activity: PromotionalItem | MorePromotion) {
+export async function getPunchCardActivity(page: Page, activity: PromotionalItem | MorePromotion): Promise<string> {
     let selector = ''
     try {
         const html = await page.content()

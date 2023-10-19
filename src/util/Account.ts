@@ -1,7 +1,9 @@
 import * as fs from 'fs'
 import path from 'path'
 
-export async function loadAccounts() {
+import { Account } from '../interface/Account'
+
+export async function loadAccounts(): Promise<Account[]> {
     try {
         let file = 'accounts.json'
 

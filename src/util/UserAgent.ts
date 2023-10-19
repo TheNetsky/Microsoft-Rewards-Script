@@ -81,7 +81,7 @@ export async function getEdgeVersions() {
 
 export function getSystemComponents(mobile: boolean): string {
     const osId: string = mobile ? 'Linux' : 'Windows NT 10.0'
-    const uaPlatform: string = mobile ? 'Android 10' : 'Win64; x64'
+    const uaPlatform: string = mobile ? 'Android 13' : 'Win64; x64'
 
     if (mobile) {
         return `${uaPlatform}; ${osId}; K`
@@ -89,7 +89,6 @@ export function getSystemComponents(mobile: boolean): string {
 
     return `${uaPlatform}; ${osId}`
 }
-
 
 export async function getAppComponents(mobile: boolean) {
     const versions = await getEdgeVersions()

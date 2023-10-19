@@ -157,13 +157,14 @@ async function solveActivities(page: Page, activities: PromotionalItem[] | MoreP
                     await doUrlReward(activityPage)
                     break
 
-                // Misc
+                // Misc, Usually UrlReward Type
                 default:
                     log('ACTIVITY', `Found activity type: "Misc" title: "${activity.title}"`)
                     await doUrlReward(activityPage)
                     break
             }
 
+            // Cooldown
             await wait(1500)
         } catch (error) {
             log('ACTIVITY', 'An error occurred:' + error, 'error')

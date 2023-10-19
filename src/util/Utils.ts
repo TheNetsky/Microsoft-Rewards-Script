@@ -4,7 +4,7 @@ export async function wait(ms: number): Promise<void> {
     })
 }
 
-export function getFormattedDate(ms = Date.now()) {
+export function getFormattedDate(ms = Date.now()): string {
     const today = new Date(ms)
     const month = String(today.getMonth() + 1).padStart(2, '0')  // January is 0
     const day = String(today.getDate()).padStart(2, '0')
@@ -21,7 +21,7 @@ export function shuffleArray<T>(array: T[]): T[] {
     return shuffledArray
 }
 
-export function randomNumber(min: number, max: number) {
+export function randomNumber(min: number, max: number): number {
     return Math.floor(Math.random() * (max - min + 1)) + min
 }
 

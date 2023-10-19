@@ -2,6 +2,7 @@ import cluster from 'cluster'
 
 import Browser from './browser/Browser'
 import { getDashboardData, getEarnablePoints, goHome } from './browser/BrowserFunc'
+
 import { log } from './util/Logger'
 import { loadAccounts } from './util/Account'
 import { chunkArray } from './util/Utils'
@@ -102,8 +103,18 @@ class MicrosoftRewardsBot {
 
     // Desktop
     async Desktop(account: Account) {
-        const browser = await this.browserFactory.createBrowser(account.email, false)
+        const browser = await this.browserFactory.createBrowser(account.email, account.proxy, false)
         const page = await browser.newPage()
+        let pages = await browser.pages()
+
+        // If for some reason the browser initializes with more than 2 pages, close these
+        while (pages.length > 2) {
+            await pages[0]?.close()
+            pages = await browser.pages()
+        }
+
+        // Log into proxy
+        await page.authenticate({ username: account.proxy.username, password: account.proxy.password })
 
         log('MAIN', 'Starting DESKTOP browser')
 
@@ -156,8 +167,17 @@ class MicrosoftRewardsBot {
 
     // Mobile
     async Mobile(account: Account) {
-        const browser = await this.browserFactory.createBrowser(account.email, true)
+        const browser = await this.browserFactory.createBrowser(account.email, account.proxy, true)
         const page = await browser.newPage()
+        let pages = await browser.pages()
+
+        // If for some reason the browser initializes with more than 2 pages, close these
+        while (pages.length > 2) {
+            await pages[0]?.close()
+            pages = await browser.pages()
+        }
+        // Log into proxy
+        await page.authenticate({ username: account.proxy.username, password: account.proxy.password })
 
         log('MAIN', 'Starting MOBILE browser')
 

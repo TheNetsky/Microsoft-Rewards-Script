@@ -13,10 +13,6 @@ import { GoogleTrends } from '../../interface/GoogleDailyTrends'
 import { GoogleSearch } from '../../interface/Search'
 
 export async function doSearch(page: Page, data: DashboardData, mobile: boolean) {
-    const locale = await page.evaluate(() => {
-        return navigator.language
-    })
-
     log('SEARCH-BING', 'Starting bing searches')
 
     const mobileData = data.userStatus.counters?.mobileSearch ? data.userStatus.counters.mobileSearch[0] : null // Mobile searches
@@ -33,7 +29,7 @@ export async function doSearch(page: Page, data: DashboardData, mobile: boolean)
     }
 
     // Generate search queries
-    let googleSearchQueries = await getGoogleTrends(locale, missingPoints) as GoogleSearch[]
+    let googleSearchQueries = await getGoogleTrends(data.userProfile.attributes.country, missingPoints)
     googleSearchQueries = shuffleArray(googleSearchQueries)
 
     // Deduplicate the search terms
@@ -185,9 +181,13 @@ async function bingSearch(page: Page, searchPage: Page, query: string) {
     return await getSearchPoints(page)
 }
 
-async function getGoogleTrends(locale: string, queryCount: number): Promise<GoogleSearch[]> {
+async function getGoogleTrends(geoLocale: string, queryCount: number): Promise<GoogleSearch[]> {
     const queryTerms: GoogleSearch[] = []
     let i = 0
+
+    geoLocale = (searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'US'
+
+    log('SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
     while (queryCount > queryTerms.length) {
         i += 1
@@ -197,7 +197,7 @@ async function getGoogleTrends(locale: string, queryCount: number): Promise<Goog
 
         try {
             const request = {
-                url: `https://trends.google.com/trends/api/dailytrends?geo=US&hl=en&ed=${formattedDate}&ns=15`,
+                url: `https://trends.google.com/trends/api/dailytrends?geo=${geoLocale}&hl=en&ed=${formattedDate}&ns=15`,
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -283,13 +283,11 @@ async function clickRandomLink(page: Page) {
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
             while (lastTabURL.href !== searchListingURL.href && i < 5) {
-
                 // If hostname is still bing, (Bing images/news etc)
                 if (lastTabURL.hostname == searchListingURL.hostname) {
                     await lastTab.goBack()
 
                     lastTab = await getLatestTab(page) // Get last opened tab
-                    lastTabURL = new URL(lastTab.url())
 
                     // If "goBack" didn't return to search listing (due to redirects)
                     if (lastTabURL.hostname !== searchListingURL.hostname) {

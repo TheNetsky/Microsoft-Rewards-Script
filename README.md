@@ -23,6 +23,7 @@ Under development, however mainly for personal use!
 - [x] Mobile Searches
 - [x] Emulated Scrolling Support
 - [x] Emulated Link Clicking Support
+- [x] Geo Locale Search Queries
 - [x] Completing Daily Set
 - [x] Completing More Promotions
 - [x] Solving Quiz (10 point variant)
@@ -36,7 +37,7 @@ Under development, however mainly for personal use!
 - [ ] Completing Shopping Game
 - [ ] Completing Gaming Tab
 - [x] Clustering Support
-- [ ] Proxy Support
+- [x] Proxy Support
 
 ## Disclaimer ##
 Your account may be at risk of getting banned or suspended using this script, you've been warned!

@@ -2,9 +2,9 @@ import { Page } from 'puppeteer'
 
 import { wait } from '../../util/Utils'
 import { log } from '../../util/Logger'
+import { getQuizData } from '../../browser/BrowserFunc'
 
 export async function doThisOrThat(page: Page) {
-    return // Todo    
     log('THIS-OR-THAT', 'Trying to complete ThisOrThat')
 
     try {
@@ -22,7 +22,9 @@ export async function doThisOrThat(page: Page) {
         await wait(2000)
 
         // Solving
-
+        const quizData = await getQuizData(page)
+        quizData // correctAnswer property is always null?
+        
         log('THIS-OR-THAT', 'Completed the ThisOrthat successfully')
     } catch (error) {
         await page.close()
