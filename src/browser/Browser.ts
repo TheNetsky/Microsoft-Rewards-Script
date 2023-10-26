@@ -1,23 +1,28 @@
 import puppeteer from 'puppeteer-extra'
 import stealthPlugin from 'puppeteer-extra-plugin-stealth'
 
+import { MicrosoftRewardsBot } from '../index'
+
 import { getUserAgent } from '../util/UserAgent'
-import { loadSesion } from './BrowserFunc'
 
 import { AccountProxy } from '../interface/Account'
 
-import { headless } from '../config.json'
-
 puppeteer.use(stealthPlugin())
 
+
 class Browser {
+    private bot: MicrosoftRewardsBot
+
+    constructor(bot: MicrosoftRewardsBot) {
+        this.bot = bot
+    }
 
     async createBrowser(email: string, proxy: AccountProxy, isMobile: boolean) {
         const userAgent = await getUserAgent(isMobile)
 
         const browser = await puppeteer.launch({
-            headless: headless,
-            userDataDir: await loadSesion(email),
+            headless: this.bot.config.headless,
+            userDataDir: await this.bot.browser.func.loadSesion(email),
             args: [
                 '--no-sandbox',
                 '--mute-audio',

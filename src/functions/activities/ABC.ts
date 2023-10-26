@@ -1,52 +1,52 @@
 import { Page } from 'puppeteer'
 
-import { refreshCheerio } from '../../browser/BrowserFunc'
-import { getLatestTab } from '../../browser/BrowserUtil'
-import { log } from '../../util/Logger'
-import { randomNumber, wait } from '../../util/Utils'
+import { Workers } from '../Workers'
 
-export async function doABC(page: Page) {
-    log('ABC', 'Trying to complete poll')
 
-    try {
-        await wait(2000)
-        let $ = await refreshCheerio(page)
+export class ABC extends Workers {
 
-        // Don't loop more than 15 in case unable to solve, would lock otherwise
-        const maxIterations = 15
-        let i
-        for (i = 0; i < maxIterations && !$('span.rw_icon').length; i++) {
-            await page.waitForSelector('.wk_OptionClickClass', { visible: true, timeout: 5000 })
+    async doABC(page: Page) {
+        this.bot.log('ABC', 'Trying to complete poll')
 
-            const answers = $('.wk_OptionClickClass')
-            const answer = answers[randomNumber(0, 2)]?.attribs['id']
+        try {
+            let $ = await this.bot.browser.func.refreshCheerio(page)
 
-            await page.waitForSelector(`#${answer}`, { visible: true, timeout: 5000 })
+            // Don't loop more than 15 in case unable to solve, would lock otherwise
+            const maxIterations = 15
+            let i
+            for (i = 0; i < maxIterations && !$('span.rw_icon').length; i++) {
+                await page.waitForSelector('.wk_OptionClickClass', { visible: true, timeout: 5000 })
 
-            await wait(2000)
-            await page.click(`#${answer}`) // Click answer
+                const answers = $('.wk_OptionClickClass')
+                const answer = answers[this.bot.utils.randomNumber(0, 2)]?.attribs['id']
 
-            await wait(4000)
-            await page.waitForSelector('div.wk_button', { visible: true, timeout: 5000 })
-            await page.click('div.wk_button') // Click next question button
+                await page.waitForSelector(`#${answer}`, { visible: true, timeout: 5000 })
 
-            page = await getLatestTab(page)
-            $ = await refreshCheerio(page)
-            await wait(1000)
+                await this.bot.utils.wait(2000)
+                await page.click(`#${answer}`) // Click answer
+
+                await this.bot.utils.wait(4000)
+                await page.waitForSelector('div.wk_button', { visible: true, timeout: 5000 })
+                await page.click('div.wk_button') // Click next question button
+
+                page = await this.bot.browser.utils.getLatestTab(page)
+                $ = await this.bot.browser.func.refreshCheerio(page)
+                await this.bot.utils.wait(1000)
+            }
+
+            await this.bot.utils.wait(4000)
+            await page.close()
+
+            if (i === maxIterations) {
+                this.bot.log('ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
+            } else {
+                this.bot.log('ABC', 'Completed the ABC successfully')
+            }
+
+        } catch (error) {
+            await page.close()
+            this.bot.log('ABC', 'An error occurred:' + error, 'error')
         }
-
-        await wait(4000)
-        await page.close()
-
-        if (i === maxIterations) {
-            log('ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
-        } else {
-            log('ABC', 'Completed the ABC successfully')
-        }
-
-    } catch (error) {
-        await page.close()
-        log('ABC', 'An error occurred:' + error, 'error')
     }
-}
 
+}

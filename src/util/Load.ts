@@ -1,9 +1,11 @@
-import * as fs from 'fs'
+import fs from 'fs'
 import path from 'path'
 
 import { Account } from '../interface/Account'
+import { Config } from '../interface/Config'
 
-export async function loadAccounts(): Promise<Account[]> {
+
+export function loadAccounts(): Account[] {
     try {
         let file = 'accounts.json'
 
@@ -16,6 +18,17 @@ export async function loadAccounts(): Promise<Account[]> {
         const accounts = fs.readFileSync(accountDir, 'utf-8')
 
         return JSON.parse(accounts)
+    } catch (error) {
+        throw new Error(error as string)
+    }
+}
+
+export function loadConfig(): Config {
+    try {
+        const configDir = path.join(__dirname, '../', 'config.json')
+        const config = fs.readFileSync(configDir, 'utf-8')
+
+        return JSON.parse(config)
     } catch (error) {
         throw new Error(error as string)
     }

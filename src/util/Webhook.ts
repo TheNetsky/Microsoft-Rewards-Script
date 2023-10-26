@@ -1,10 +1,13 @@
 import axios from 'axios'
 
-import { webhook } from '../config.json'
+import { loadConfig } from './Load'
+
 
 export async function Webhook(content: string) {
+    const webhook = loadConfig().webhook
+
     if (!webhook.enabled || webhook.url.length < 10) return
-    
+
     const request = {
         method: 'POST',
         url: webhook.url,

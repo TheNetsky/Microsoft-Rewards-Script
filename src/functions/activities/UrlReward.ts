@@ -1,21 +1,22 @@
 import { Page } from 'puppeteer'
 
-import { wait } from '../../util/Utils'
-import { log } from '../../util/Logger'
+import { Workers } from '../Workers'
 
-export async function doUrlReward(page: Page) {
-    log('URL-REWARD', 'Trying to complete UrlReward')
 
-    try {
-        // After waiting, close the page
-        await page.waitForNetworkIdle({ timeout: 10_000 })
-        await wait(2000)
-        await page.close()
+export class UrlReward extends Workers {
 
-        log('URL-REWARD', 'Completed the UrlReward successfully')
-    } catch (error) {
-        await page.close()
-        log('URL-REWARD', 'An error occurred:' + error, 'error')
+    async doUrlReward(page: Page) {
+        this.bot.log('URL-REWARD', 'Trying to complete UrlReward')
+
+        try {
+            // After waiting, close the page
+            await page.close()
+
+            this.bot.log('URL-REWARD', 'Completed the UrlReward successfully')
+        } catch (error) {
+            await page.close()
+            this.bot.log('URL-REWARD', 'An error occurred:' + error, 'error')
+        }
     }
 
 }

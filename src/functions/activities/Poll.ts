@@ -1,26 +1,29 @@
 import { Page } from 'puppeteer'
 
-import { log } from '../../util/Logger'
-import { randomNumber, wait } from '../../util/Utils'
+import { Workers } from '../Workers'
 
-export async function doPoll(page: Page) {
-    log('POLL', 'Trying to complete poll')
 
-    try {
-        const buttonId = `#btoption${Math.floor(randomNumber(0, 1))}`
+export class Poll extends Workers {
 
-        await page.waitForNetworkIdle({ timeout: 5000 })
-        await page.waitForSelector(buttonId, { visible: true, timeout: 5000 })
-        await wait(2000)
+    async doPoll(page: Page) {
+        this.bot.log('POLL', 'Trying to complete poll')
 
-        await page.click(buttonId)
+        try {
+            const buttonId = `#btoption${Math.floor(this.bot.utils.randomNumber(0, 1))}`
 
-        await wait(4000)
-        await page.close()
+            await page.waitForSelector(buttonId, { visible: true, timeout: 5000 })
+            await this.bot.utils.wait(2000)
 
-        log('POLL', 'Completed the poll successfully')
-    } catch (error) {
-        await page.close()
-        log('POLL', 'An error occurred:' + error, 'error')
+            await page.click(buttonId)
+
+            await this.bot.utils.wait(4000)
+            await page.close()
+
+            this.bot.log('POLL', 'Completed the poll successfully')
+        } catch (error) {
+            await page.close()
+            this.bot.log('POLL', 'An error occurred:' + error, 'error')
+        }
     }
+
 }

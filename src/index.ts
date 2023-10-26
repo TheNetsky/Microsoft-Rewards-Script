@@ -1,40 +1,60 @@
 import cluster from 'cluster'
 
 import Browser from './browser/Browser'
-import { getDashboardData, getEarnablePoints, goHome } from './browser/BrowserFunc'
+import BrowserFunc from './browser/BrowserFunc'
+import BrowserUtil from './browser/BrowserUtil'
 
 import { log } from './util/Logger'
-import { loadAccounts } from './util/Account'
-import { chunkArray } from './util/Utils'
+import Util from './util/Utils'
+import { loadAccounts, loadConfig } from './util/Load'
 
-import { login } from './functions/Login'
-import { doDailySet, doMorePromotions, doPunchCard } from './functions/Workers'
-import { doSearch } from './functions/activities/Search'
+import { Login } from './functions/Login'
+import { Workers } from './functions/Workers'
+import Activities from './functions/Activities'
 
 import { Account } from './interface/Account'
 
-import { runOnZeroPoints, workers, clusters } from './config.json'
-
 // Main bot class
-class MicrosoftRewardsBot {
-    private activeWorkers: number = clusters
+export class MicrosoftRewardsBot {
+    public log: typeof log
+    public config
+    public utils: Util
+    public activities: Activities = new Activities(this)
+    public browser: {
+        func: BrowserFunc,
+        utils: BrowserUtil
+    }
+
     private collectedPoints: number = 0
-    private browserFactory: Browser = new Browser()
+    private activeWorkers: number
+    private browserFactory: Browser = new Browser(this)
     private accounts: Account[]
+    private workers: Workers
+    private login = new Login(this)
 
     constructor() {
+        this.log = log
+
         this.accounts = []
+        this.utils = new Util()
+        this.workers = new Workers(this)
+        this.browser = {
+            func: new BrowserFunc(this),
+            utils: new BrowserUtil(this)
+        }
+        this.config = loadConfig()
+        this.activeWorkers = this.config.clusters
     }
 
     async initialize() {
-        this.accounts = await loadAccounts()
+        this.accounts = loadAccounts()
     }
 
     async run() {
-        log('MAIN', `Bot started with ${clusters} clusters`)
+        log('MAIN', `Bot started with ${this.config.clusters} clusters`)
 
         // Only cluster when there's more than 1 cluster demanded
-        if (clusters > 1) {
+        if (this.config.clusters > 1) {
             if (cluster.isPrimary) {
                 this.runMaster()
             } else {
@@ -48,7 +68,7 @@ class MicrosoftRewardsBot {
     private runMaster() {
         log('MAIN-PRIMARY', 'Primary process started')
 
-        const accountChunks = chunkArray(this.accounts, clusters)
+        const accountChunks = this.utils.chunkArray(this.accounts, this.config.clusters)
 
         for (let i = 0; i < accountChunks.length; i++) {
             const worker = cluster.fork()
@@ -71,7 +91,6 @@ class MicrosoftRewardsBot {
 
     private runWorker() {
         log('MAIN-WORKER', `Worker ${process.pid} spawned`)
-
         // Receive the chunk of accounts from the master
         process.on('message', async ({ chunk }) => {
             await this.runTasks(chunk)
@@ -86,7 +105,7 @@ class MicrosoftRewardsBot {
             await this.Desktop(account)
 
             // If runOnZeroPoints is false and 0 points to earn, stop and try the next account
-            if (!runOnZeroPoints && this.collectedPoints === 0) {
+            if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
                 continue
             }
 
@@ -119,22 +138,22 @@ class MicrosoftRewardsBot {
         log('MAIN', 'Starting DESKTOP browser')
 
         // Login into MS Rewards
-        await login(page, account.email, account.password)
+        await this.login.login(page, account.email, account.password)
 
-        const wentHome = await goHome(page)
+        const wentHome = await this.browser.func.goHome(page)
         if (!wentHome) {
             throw log('MAIN', 'Unable to get dashboard page', 'error')
         }
 
-        const data = await getDashboardData(page)
+        const data = await this.browser.func.getDashboardData(page)
         log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
 
-        const earnablePoints = await getEarnablePoints(data)
+        const earnablePoints = await this.browser.func.getEarnablePoints(data)
         this.collectedPoints = earnablePoints
         log('MAIN-POINTS', `You can earn ${earnablePoints} points today`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
-        if (!runOnZeroPoints && this.collectedPoints === 0) {
+        if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
             log('MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping')
 
             // Close desktop browser
@@ -142,23 +161,23 @@ class MicrosoftRewardsBot {
         }
 
         // Complete daily set
-        if (workers.doDailySet) {
-            await doDailySet(page, data)
+        if (this.config.workers.doDailySet) {
+            await this.workers.doDailySet(page, data)
         }
 
         // Complete more promotions
-        if (workers.doMorePromotions) {
-            await doMorePromotions(page, data)
+        if (this.config.workers.doMorePromotions) {
+            await this.workers.doMorePromotions(page, data)
         }
 
         // Complete punch cards
-        if (workers.doPunchCards) {
-            await doPunchCard(page, data)
+        if (this.config.workers.doPunchCards) {
+            await this.workers.doPunchCard(page, data)
         }
 
         // Do desktop searches
-        if (workers.doDesktopSearch) {
-            await doSearch(page, data, false)
+        if (this.config.workers.doDesktopSearch) {
+            await this.activities.doSearch(page, data, false)
         }
 
         // Close desktop browser
@@ -182,11 +201,11 @@ class MicrosoftRewardsBot {
         log('MAIN', 'Starting MOBILE browser')
 
         // Login into MS Rewards
-        await login(page, account.email, account.password)
+        await this.login.login(page, account.email, account.password)
 
-        await goHome(page)
+        await this.browser.func.goHome(page)
 
-        const data = await getDashboardData(page)
+        const data = await this.browser.func.getDashboardData(page)
 
         // If no mobile searches data found, stop (Does not exist on new accounts)
         if (!data.userStatus.counters.mobileSearch) {
@@ -197,12 +216,12 @@ class MicrosoftRewardsBot {
         }
 
         // Do mobile searches
-        if (workers.doMobileSearch) {
-            await doSearch(page, data, true)
+        if (this.config.workers.doMobileSearch) {
+            await this.activities.doSearch(page, data, true)
         }
 
         // Fetch new points
-        const earnablePoints = await getEarnablePoints(data, page)
+        const earnablePoints = await this.browser.func.getEarnablePoints(data, page)
 
         // If the new earnable is 0, means we got all the points, else retract
         this.collectedPoints = earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints)
