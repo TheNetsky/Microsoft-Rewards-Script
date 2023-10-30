@@ -206,7 +206,7 @@ export default class BrowserFunc {
 
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#rqHeaderCredits', { visible: true, timeout: 5000 })
+            await page.waitForSelector('#rqHeaderCredits', { visible: true, timeout: 10_000 })
             await this.bot.utils.wait(2000)
 
             return true
@@ -218,7 +218,7 @@ export default class BrowserFunc {
 
     async checkQuizCompleted(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#quizCompleteContainer', { visible: true, timeout: 1000 })
+            await page.waitForSelector('#quizCompleteContainer', { visible: true, timeout: 2000 })
             await this.bot.utils.wait(2000)
 
             return true

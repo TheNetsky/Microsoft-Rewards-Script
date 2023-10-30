@@ -22,10 +22,10 @@ export class Login {
             // Navigate to the Bing login page
             await page.goto('https://login.live.com/')
 
-            const isLoggedIn = await page.waitForSelector('html[data-role-name="MeePortal"]', { timeout: 5000 }).then(() => true).catch(() => false)
+            const isLoggedIn = await page.waitForSelector('html[data-role-name="MeePortal"]', { timeout: 10_000 }).then(() => true).catch(() => false)
 
             if (!isLoggedIn) {
-                const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { visible: true, timeout: 5000 }).then(() => true).catch(() => false)
+                const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { visible: true, timeout: 10_000 }).then(() => true).catch(() => false)
                 if (isLocked) {
                     this.bot.log('LOGIN', 'This account has been locked!', 'error')
                     throw new Error('Account has been locked!')
@@ -123,7 +123,7 @@ export class Login {
 
     private async checkBingLoginStatus(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#id_n', { timeout: 5000 })
+            await page.waitForSelector('#id_n', { timeout: 10_000 })
             return true
         } catch (error) {
             return false

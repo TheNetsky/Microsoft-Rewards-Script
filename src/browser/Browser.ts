@@ -1,13 +1,16 @@
 import puppeteer from 'puppeteer-extra'
-import stealthPlugin from 'puppeteer-extra-plugin-stealth'
+import { FingerprintInjector } from 'fingerprint-injector'
+import { FingerprintGenerator } from 'fingerprint-generator'
 
 import { MicrosoftRewardsBot } from '../index'
 
-import { getUserAgent } from '../util/UserAgent'
-
 import { AccountProxy } from '../interface/Account'
 
-puppeteer.use(stealthPlugin())
+/* Test Stuff
+https://abrahamjuliot.github.io/creepjs/
+https://botcheck.luminati.io/
+http://f.vision/
+*/
 
 
 class Browser {
@@ -18,7 +21,7 @@ class Browser {
     }
 
     async createBrowser(email: string, proxy: AccountProxy, isMobile: boolean) {
-        const userAgent = await getUserAgent(isMobile)
+        //        const userAgent = await getUserAgent(isMobile)
 
         const browser = await puppeteer.launch({
             headless: this.bot.config.headless,
@@ -27,14 +30,28 @@ class Browser {
                 '--no-sandbox',
                 '--mute-audio',
                 '--disable-setuid-sandbox',
-                `--user-agent=${userAgent.userAgent}`,
-                isMobile ? '--window-size=568,1024' : '',
                 proxy.url ? `--proxy-server=${proxy.url}:${proxy.port}` : ''
             ]
         })
 
+        const { fingerprint, headers } = new FingerprintGenerator().getFingerprint({
+            devices: isMobile ? ['mobile'] : ['desktop'],
+            operatingSystems: isMobile ? ['android'] : ['windows'],
+            browsers: ['edge'],
+            browserListQuery: 'last 2 Edge versions'
+        })
+
+        // Modify the newPage function to attach the fingerprint
+        const originalNewPage = browser.newPage
+        browser.newPage = async function () {
+            const page = await originalNewPage.apply(browser)
+            await new FingerprintInjector().attachFingerprintToPuppeteer(page, { fingerprint, headers })
+            return page
+        }
+
         return browser
     }
+
 }
 
 export default Browser

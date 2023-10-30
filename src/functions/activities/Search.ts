@@ -10,6 +10,8 @@ import { GoogleSearch } from '../../interface/Search'
 
 export class Search extends Workers {
 
+    private searchPageURL = 'https://bing.com'
+
     public async doSearch(page: Page, data: DashboardData, mobile: boolean) {
         this.bot.log('SEARCH-BING', 'Starting bing searches')
 
@@ -38,7 +40,7 @@ export class Search extends Workers {
         const searchPage = await browser.newPage()
 
         // Go to bing
-        await searchPage.goto('https://bing.com')
+        await searchPage.goto(this.searchPageURL)
 
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
 
@@ -289,7 +291,7 @@ export class Search extends Workers {
 
                         // If "goBack" didn't return to search listing (due to redirects)
                         if (lastTabURL.hostname !== searchListingURL.hostname) {
-                            await lastTab.goto(searchListingURL.href)
+                            await lastTab.goto(this.searchPageURL)
                         }
 
                     } else { // No longer on bing, likely opened a new tab, close this tab
@@ -314,14 +316,15 @@ export class Search extends Workers {
 
                             // If "goBack" didn't return to search listing (due to redirects)
                             if (lastTabURL.hostname !== searchListingURL.hostname) {
-                                await lastTab.goto(searchListingURL.href)
+                                await lastTab.goto(this.searchPageURL)
                             }
                         }
                     }
+                    lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
+                    i++
                 }
 
-                lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
-                i++
+
             }
         } catch (error) {
             this.bot.log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')

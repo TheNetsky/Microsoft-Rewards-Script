@@ -108,7 +108,7 @@ export class Workers {
                 }
 
                 // Wait for element to load
-                await page.waitForSelector(selector, { timeout: 5000 })
+                await page.waitForSelector(selector, { timeout: 10_000 })
 
                 // Click element, it will be opened in a new tab
                 await page.click(selector)

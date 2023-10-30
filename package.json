@@ -32,9 +32,10 @@
     "cheerio": "^1.0.0-rc.12",
     "eslint": "^8.49.0",
     "eslint-plugin-modules-newline": "^0.0.6",
+    "fingerprint-generator": "^2.1.42",
+    "fingerprint-injector": "^2.1.42",
     "puppeteer": "^21.4.1",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "ts-node": "^10.9.1"
   }
 }
