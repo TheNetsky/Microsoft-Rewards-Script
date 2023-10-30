@@ -8,6 +8,7 @@ export class ThisOrThat extends Workers {
     async doThisOrThat(page: Page) {
         this.bot.log('THIS-OR-THAT', 'Trying to complete ThisOrThat')
 
+        return
         try {
             // Check if the quiz has been started or not
             const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
