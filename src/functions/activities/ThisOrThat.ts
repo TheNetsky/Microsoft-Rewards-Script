@@ -11,7 +11,7 @@ export class ThisOrThat extends Workers {
         return
         try {
             // Check if the quiz has been started or not
-            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
+            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { visible: true, timeout: 2000 }).then(() => true).catch(() => false)
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {
@@ -24,7 +24,7 @@ export class ThisOrThat extends Workers {
             const quizData = await this.bot.browser.func.getQuizData(page)
             quizData // correctAnswer property is always null?
 
-            this.bot.log('THIS-OR-THAT', 'Completed the ThisOrthat successfully')
+            this.bot.log('THIS-OR-THAT', 'Completed the ThisOrThat successfully')
         } catch (error) {
             await page.close()
             this.bot.log('THIS-OR-THAT', 'An error occurred:' + error, 'error')

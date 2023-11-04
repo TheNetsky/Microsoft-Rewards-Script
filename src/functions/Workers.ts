@@ -52,6 +52,9 @@ export class Workers {
             // Got to punch card index page in a new tab
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
 
+            // Wait for new page to load, max 10 seconds, however try regardless in case of error
+            await page.waitForNetworkIdle({ timeout: 10_000 }).catch(() => { })
+
             await this.solveActivities(page, activitiesUncompleted, punchCard)
 
             // Close the punch card index page
@@ -101,7 +104,8 @@ export class Workers {
 
                     // Promotion
                     if (activity.priority === 1) {
-                        selector = '#promo-item'
+                        selector = await page.waitForSelector('#promo-item', { visible: true, timeout: 2000 }).then(() => true).catch(() => false) ?
+                            '#promo-item' : activity.name
                     } else {
                         selector = `[data-bi-id="${activity.name}"]`
                     }
@@ -111,16 +115,20 @@ export class Workers {
                 await page.waitForSelector(selector, { timeout: 10_000 })
 
                 // Click element, it will be opened in a new tab
-                await page.click(selector)
-
-                // Cooldown
-                await this.bot.utils.wait(4000)
+                page.click(selector)
 
                 // Select the new activity page
                 const activityPage = await this.bot.browser.utils.getLatestTab(page)
 
-                // Wait for body to load
-                await activityPage.waitForSelector('body', { timeout: 10_000 })
+                // Wait for the new tab to fully load, ignore error.
+                /*
+                Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster, 
+                if it didn't then it gave enough time for the page to load.
+                */
+                await activityPage.waitForNetworkIdle({ timeout: 10_000 }).catch(() => { })
+
+                // Cooldown
+                await this.bot.utils.wait(4000)
 
                 switch (activity.promotionType) {
                     // Quiz (Poll, Quiz or ABC)

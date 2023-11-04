@@ -30,6 +30,9 @@ class Browser {
                 '--no-sandbox',
                 '--mute-audio',
                 '--disable-setuid-sandbox',
+                '--ignore-certificate-errors',
+                '--ignore-certificate-errors-spki-list',
+                '--ignore-ssl-errors',
                 proxy.url ? `--proxy-server=${proxy.url}:${proxy.port}` : ''
             ]
         })

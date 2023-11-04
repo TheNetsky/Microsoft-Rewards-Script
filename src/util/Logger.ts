@@ -1,7 +1,7 @@
 import { Webhook } from './Webhook'
 
 export function log(title: string, message: string, type?: 'log' | 'warn' | 'error') {
-    const currentTime = new Date().toISOString()
+    const currentTime = new Date().toLocaleString()
 
     let str = ''
 

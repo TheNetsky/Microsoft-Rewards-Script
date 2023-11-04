@@ -30,7 +30,7 @@ export default class BrowserFunc {
                 await this.bot.browser.utils.tryDismissCookieBanner(page)
 
                 // Check if account is suspended
-                const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { visible: true, timeout: 3000 }).then(() => true).catch(() => false)
+                const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { visible: true, timeout: 2000 }).then(() => true).catch(() => false)
                 if (isSuspended) {
                     this.bot.log('GO-HOME', 'This account is suspended!', 'error')
                     throw new Error('Account has been suspended!')

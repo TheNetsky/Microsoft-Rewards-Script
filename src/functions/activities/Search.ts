@@ -267,14 +267,11 @@ export class Search extends Workers {
 
             await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
 
-            // Wait for website to load
-            await this.bot.utils.wait(3000)
-
             // Will get current tab if no new one is created
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
-            // Wait for the body of the new page to be loaded
-            await lastTab.waitForSelector('body', { timeout: 10_000 }).catch(() => { })
+            // Let website load, if it doesn't load within 5 sec. exit regardless
+            await lastTab.waitForNetworkIdle({ timeout: 5000 }).catch(() => { })
 
             // Check if the tab is closed or not
             if (!lastTab.isClosed()) {
@@ -323,7 +320,6 @@ export class Search extends Workers {
                     lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
                     i++
                 }
-
 
             }
         } catch (error) {
