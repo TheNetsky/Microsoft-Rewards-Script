@@ -115,7 +115,7 @@ export class Workers {
                 await page.waitForSelector(selector, { timeout: 10_000 })
 
                 // Click element, it will be opened in a new tab
-                page.click(selector)
+                await page.click(selector)
 
                 // Select the new activity page
                 const activityPage = await this.bot.browser.utils.getLatestTab(page)
