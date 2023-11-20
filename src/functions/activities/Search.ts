@@ -16,8 +16,9 @@ export class Search extends Workers {
         this.bot.log('SEARCH-BING', 'Starting bing searches')
 
         const mobileData = data.userStatus.counters?.mobileSearch ? data.userStatus.counters.mobileSearch[0] : null // Mobile searches
-        const edgeData = data.userStatus.counters.pcSearch[1] as DashboardImpression // Edge searches
-        const genericData = data.userStatus.counters.pcSearch[0] as DashboardImpression  // Normal searches
+        const edgeData = (data.userStatus.counters.pcSearch && data.userStatus.counters.pcSearch[1]) ? data.userStatus.counters.pcSearch[1] as DashboardImpression : { pointProgressMax: 0, pointProgress: 0 }; // Edge searches
+        const genericData = (data.userStatus.counters.pcSearch && data.userStatus.counters.pcSearch[0]) ? data.userStatus.counters.pcSearch[0] as DashboardImpression : { pointProgressMax: 0, pointProgress: 0 }; // Normal searches
+
 
         let missingPoints = (mobile && mobileData) ?
             (mobileData.pointProgressMax - mobileData.pointProgress) :
@@ -56,8 +57,9 @@ export class Search extends Workers {
             const newData = await this.bingSearch(page, searchPage, query)
 
             const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
-            const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
-            const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
+            const newEdgeData = (newData.pcSearch && newData.pcSearch[1]) ? newData.pcSearch[1] as DashboardImpression : { pointProgressMax: 0, pointProgress: 0 }; // Edge searches
+            const newGenericData = (newData.pcSearch && newData.pcSearch[0]) ? newData.pcSearch[0] as DashboardImpression : { pointProgressMax: 0, pointProgress: 0 }; // Normal searches
+
 
             const newMissingPoints = (mobile && newMobileData) ?
                 (newMobileData.pointProgressMax - newMobileData.pointProgress) :
