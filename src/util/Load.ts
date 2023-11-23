@@ -33,3 +33,19 @@ export function loadConfig(): Config {
         throw new Error(error as string)
     }
 }
+
+export async function loadSesion(sessionPath: string, email: string): Promise<string> {
+    try {
+        // Fetch path
+        const sessionDir = path.join(__dirname, '../browser/', sessionPath, email)
+
+        // Create session dir
+        if (!fs.existsSync(sessionDir)) {
+            await fs.promises.mkdir(sessionDir, { recursive: true })
+        }
+
+        return sessionDir
+    } catch (error) {
+        throw new Error(error as string)
+    }
+}

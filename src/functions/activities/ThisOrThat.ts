@@ -8,7 +8,7 @@ export class ThisOrThat extends Workers {
     async doThisOrThat(page: Page) {
         this.bot.log('THIS-OR-THAT', 'Trying to complete ThisOrThat')
 
-        return
+
         try {
             // Check if the quiz has been started or not
             const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { visible: true, timeout: 2000 }).then(() => true).catch(() => false)
@@ -22,7 +22,20 @@ export class ThisOrThat extends Workers {
 
             // Solving
             const quizData = await this.bot.browser.func.getQuizData(page)
-            quizData // correctAnswer property is always null?
+            const questionsRemaining = quizData.maxQuestions - (quizData.currentQuestionNumber - 1) // Amount of questions remaining
+
+            for (let question = 0; question < questionsRemaining; question++) {
+                // Since there's no solving logic yet, randomly guess to complete
+                const buttonId = `#rqAnswerOption${Math.floor(this.bot.utils.randomNumber(0, 1))}`
+                await page.click(buttonId)
+
+                const refreshSuccess = await this.bot.browser.func.waitForQuizRefresh(page)
+                if (!refreshSuccess) {
+                    await page.close()
+                    this.bot.log('QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
+                    return
+                }
+            }
 
             this.bot.log('THIS-OR-THAT', 'Completed the ThisOrThat successfully')
         } catch (error) {

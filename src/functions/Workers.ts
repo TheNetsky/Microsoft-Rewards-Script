@@ -92,6 +92,8 @@ export class Workers {
 
     // Solve all the different types of activities
     private async solveActivities(page: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
+        let activityPage = page
+
         for (const activity of activities) {
             try {
 
@@ -111,14 +113,11 @@ export class Workers {
                     }
                 }
 
-                // Wait for element to load
-                await page.waitForSelector(selector, { timeout: 10_000 })
-
                 // Click element, it will be opened in a new tab
                 await page.click(selector)
 
                 // Select the new activity page
-                const activityPage = await this.bot.browser.utils.getLatestTab(page)
+                activityPage = await this.bot.browser.utils.getLatestTab(page)
 
                 // Wait for the new tab to fully load, ignore error.
                 /*
@@ -126,9 +125,7 @@ export class Workers {
                 if it didn't then it gave enough time for the page to load.
                 */
                 await activityPage.waitForNetworkIdle({ timeout: 10_000 }).catch(() => { })
-
-                // Cooldown
-                await this.bot.utils.wait(4000)
+                await this.bot.utils.wait(5000)
 
                 switch (activity.promotionType) {
                     // Quiz (Poll, Quiz or ABC)
@@ -175,8 +172,14 @@ export class Workers {
 
                 // Cooldown
                 await this.bot.utils.wait(2000)
+
             } catch (error) {
                 this.bot.log('ACTIVITY', 'An error occurred:' + error, 'error')
+                const tabs = await (page.browser()).pages()
+
+                if (tabs.length > 2) {
+                    await activityPage.close() // Already assigned to be the "latest tab"
+                }
             }
         }
     }

@@ -1,8 +1,9 @@
-import puppeteer from 'puppeteer-extra'
+import puppeteer from 'puppeteer'
 import { FingerprintInjector } from 'fingerprint-injector'
 import { FingerprintGenerator } from 'fingerprint-generator'
 
 import { MicrosoftRewardsBot } from '../index'
+import { loadSesion } from '../util/Load'
 
 import { AccountProxy } from '../interface/Account'
 
@@ -20,12 +21,12 @@ class Browser {
         this.bot = bot
     }
 
-    async createBrowser(email: string, proxy: AccountProxy, isMobile: boolean) {
-        //        const userAgent = await getUserAgent(isMobile)
+    async createBrowser(email: string, proxy: AccountProxy) {
+        // const userAgent = await getUserAgent(isMobile)
 
         const browser = await puppeteer.launch({
-            headless: this.bot.config.headless,
-            userDataDir: await this.bot.browser.func.loadSesion(email),
+            headless: this.bot.config.headless ? 'new' : false,
+            userDataDir: await loadSesion(this.bot.config.sessionPath, email),
             args: [
                 '--no-sandbox',
                 '--mute-audio',
@@ -38,8 +39,8 @@ class Browser {
         })
 
         const { fingerprint, headers } = new FingerprintGenerator().getFingerprint({
-            devices: isMobile ? ['mobile'] : ['desktop'],
-            operatingSystems: isMobile ? ['android'] : ['windows'],
+            devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
+            operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
             browsers: ['edge'],
             browserListQuery: 'last 2 Edge versions'
         })

@@ -1,7 +1,5 @@
 import { Page } from 'puppeteer'
 import { CheerioAPI, load } from 'cheerio'
-import fs from 'fs'
-import path from 'path'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -16,7 +14,12 @@ export default class BrowserFunc {
         this.bot = bot
     }
 
-    async goHome(page: Page): Promise<boolean> {
+
+    /**
+     * Navigate the provided page to rewards homepage
+     * @param {Page} page Puppeteer page
+    */
+    async goHome(page: Page) {
 
         try {
             const dashboardURL = new URL(this.bot.config.baseURL)
@@ -39,12 +42,14 @@ export default class BrowserFunc {
                 try {
                     // If activities are found, exit the loop
                     await page.waitForSelector('#more-activities', { timeout: 1000 })
+                    this.bot.log('GO-HOME', 'Visited homepage successfully')
                     break
 
                 } catch (error) {
                     // Continue if element is not found
                 }
 
+                // Below runs if the homepage was unable to be visited
                 const currentURL = new URL(page.url())
 
                 if (currentURL.hostname !== dashboardURL.hostname) {
@@ -52,34 +57,37 @@ export default class BrowserFunc {
 
                     await this.bot.utils.wait(2000)
                     await page.goto(this.bot.config.baseURL)
+                } else {
+                    this.bot.log('GO-HOME', 'Visited homepage successfully')
+                    break
                 }
 
                 await this.bot.utils.wait(5000)
-                this.bot.log('GO-HOME', 'Visited homepage successfully')
             }
 
         } catch (error) {
-            console.error('An error occurred:', error)
-            return false
+            throw this.bot.log('GO-HOME', 'An error occurred:' + error, 'error')
         }
-
-        return true
     }
 
-    async getDashboardData(page: Page): Promise<DashboardData> {
+    /**
+     * Fetch user dashboard data
+     * @returns {DashboardData} Object of user bing rewards dashboard data
+    */
+    async getDashboardData(): Promise<DashboardData> {
         const dashboardURL = new URL(this.bot.config.baseURL)
-        const currentURL = new URL(page.url())
+        const currentURL = new URL(this.bot.homePage.url())
 
         // Should never happen since tasks are opened in a new tab!
         if (currentURL.hostname !== dashboardURL.hostname) {
             this.bot.log('DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
-            await this.goHome(page)
+            await this.goHome(this.bot.homePage)
         }
 
         // Reload the page to get new data
-        await page.reload({ waitUntil: 'networkidle2' })
+        await this.bot.homePage.reload({ waitUntil: 'networkidle2' })
 
-        const scriptContent = await page.evaluate(() => {
+        const scriptContent = await this.bot.homePage.evaluate(() => {
             const scripts = Array.from(document.querySelectorAll('script'))
             const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
 
@@ -91,7 +99,7 @@ export default class BrowserFunc {
         })
 
         // Extract the dashboard object from the script content
-        const dashboardData = await page.evaluate(scriptContent => {
+        const dashboardData = await this.bot.homePage.evaluate(scriptContent => {
             // Extract the dashboard object using regex
             const regex = /var dashboard = (\{.*?\});/s
             const match = regex.exec(scriptContent)
@@ -106,47 +114,23 @@ export default class BrowserFunc {
         return dashboardData
     }
 
-    async getQuizData(page: Page): Promise<QuizData> {
-        try {
-            const html = await page.content()
-            const $ = load(html)
-
-            const scriptContent = $('script').filter((index, element) => {
-                return $(element).text().includes('_w.rewardsQuizRenderInfo')
-            }).text()
-
-            if (scriptContent) {
-                const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
-                const match = regex.exec(scriptContent)
-
-                if (match && match[1]) {
-                    const quizData = JSON.parse(match[1])
-                    return quizData
-                } else {
-                    throw this.bot.log('GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
-                }
-            } else {
-                throw this.bot.log('GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
-            }
-
-        } catch (error) {
-            throw this.bot.log('GET-QUIZ-DATA', 'An error occurred:' + error, 'error')
-        }
-
-    }
-
-    async getSearchPoints(page: Page): Promise<Counters> {
-        const dashboardData = await this.getDashboardData(page) // Always fetch newest data
+    /**
+     * Get search point counters
+     * @returns {Counters} Object of search counter data
+    */
+    async getSearchPoints(): Promise<Counters> {
+        const dashboardData = await this.getDashboardData() // Always fetch newest data
 
         return dashboardData.userStatus.counters
     }
 
-    async getEarnablePoints(data: DashboardData, page: null | Page = null): Promise<number> {
+    /**
+     * Get total earnable points
+     * @returns {number} Total earnable points
+    */
+    async getEarnablePoints(): Promise<number> {
         try {
-            // Fetch new data if page is provided
-            if (page) {
-                data = await this.getDashboardData(page)
-            }
+            const data = await this.getDashboardData()
 
             // These only include the points from tasks that the script can complete!
             let totalEarnablePoints = 0
@@ -176,12 +160,13 @@ export default class BrowserFunc {
         }
     }
 
-    async getCurrentPoints(data: DashboardData, page: null | Page = null): Promise<number> {
+    /**
+     * Get current point amount
+     * @returns {number} Current total point amount
+    */
+    async getCurrentPoints(): Promise<number> {
         try {
-            // Fetch new data if page is provided
-            if (page) {
-                data = await this.getDashboardData(page)
-            }
+            const data = await this.getDashboardData()
 
             return data.userStatus.availablePoints
         } catch (error) {
@@ -189,24 +174,43 @@ export default class BrowserFunc {
         }
     }
 
-    async loadSesion(email: string): Promise<string> {
-        const sessionDir = path.join(__dirname, this.bot.config.sessionPath, email)
-
+    /**
+     * Parse quiz data from provided page
+     * @param {Page} page Puppeteer page
+     * @returns {QuizData} Quiz data object
+    */
+    async getQuizData(page: Page): Promise<QuizData> {
         try {
-            // Create session dir
-            if (!fs.existsSync(sessionDir)) {
-                await fs.promises.mkdir(sessionDir, { recursive: true })
+            const html = await page.content()
+            const $ = load(html)
+
+            const scriptContent = $('script').filter((index, element) => {
+                return $(element).text().includes('_w.rewardsQuizRenderInfo')
+            }).text()
+
+            if (scriptContent) {
+                const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
+                const match = regex.exec(scriptContent)
+
+                if (match && match[1]) {
+                    const quizData = JSON.parse(match[1])
+                    return quizData
+                } else {
+                    throw this.bot.log('GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
+                }
+            } else {
+                throw this.bot.log('GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
             }
 
-            return sessionDir
         } catch (error) {
-            throw new Error(error as string)
+            throw this.bot.log('GET-QUIZ-DATA', 'An error occurred:' + error, 'error')
         }
+
     }
 
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#rqHeaderCredits', { visible: true, timeout: 10_000 })
+            await page.waitForSelector('span.rqMCredits', { visible: true, timeout: 10_000 })
             await this.bot.utils.wait(2000)
 
             return true

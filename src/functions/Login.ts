@@ -20,11 +20,12 @@ export class Login {
 
         try {
             // Navigate to the Bing login page
-            await page.goto('https://login.live.com/')
+            await page.goto('https://rewards.bing.com/signin')
 
-            const isLoggedIn = await page.waitForSelector('html[data-role-name="MeePortal"]', { timeout: 10_000 }).then(() => true).catch(() => false)
+            const isLoggedIn = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10_000 }).then(() => true).catch(() => false)
 
             if (!isLoggedIn) {
+                // Check if account is locked
                 const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { visible: true, timeout: 10_000 }).then(() => true).catch(() => false)
                 if (isLocked) {
                     this.bot.log('LOGIN', 'This account has been locked!', 'error')
@@ -64,9 +65,11 @@ export class Login {
             await page.type('#i0118', password)
             await page.click('#idSIButton9')
 
+            // When erroring at this stage it means a 2FA code is required
         } catch (error) {
             this.bot.log('LOGIN', '2FA code required')
 
+            // Wait for user input
             const code = await new Promise<string>((resolve) => {
                 rl.question('Enter 2FA code:\n', (input) => {
                     rl.close()
@@ -83,13 +86,13 @@ export class Login {
 
         const currentURL = new URL(page.url())
 
-        while (currentURL.pathname !== '/' || currentURL.hostname !== 'account.microsoft.com') {
+        while (currentURL.pathname !== '/' || currentURL.hostname !== 'rewards.bing.com') {
             await this.bot.browser.utils.tryDismissAllMessages(page)
             currentURL.href = page.url()
         }
 
         // Wait for login to complete
-        await page.waitForSelector('html[data-role-name="MeePortal"]', { timeout: 10_000 })
+        await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10_000 })
     }
 
     private async checkBingLogin(page: Page): Promise<void> {
@@ -103,11 +106,11 @@ export class Login {
                 const currentUrl = new URL(page.url())
 
                 if (currentUrl.hostname === 'www.bing.com' && currentUrl.pathname === '/') {
-                    await this.bot.utils.wait(3000)
                     await this.bot.browser.utils.tryDismissBingCookieBanner(page)
 
                     const loggedIn = await this.checkBingLoginStatus(page)
-                    if (loggedIn) {
+                    // If mobile browser, skip this step
+                    if (loggedIn || this.bot.isMobile) {
                         this.bot.log('LOGIN-BING', 'Bing login verification passed!')
                         break
                     }
@@ -123,7 +126,7 @@ export class Login {
 
     private async checkBingLoginStatus(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#id_n', { timeout: 10_000 })
+            await page.waitForSelector('#id_n', { timeout: 5000 })
             return true
         } catch (error) {
             return false

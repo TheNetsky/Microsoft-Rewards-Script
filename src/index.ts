@@ -1,4 +1,5 @@
 import cluster from 'cluster'
+import { Page } from 'puppeteer'
 
 import Browser from './browser/Browser'
 import BrowserFunc from './browser/BrowserFunc'
@@ -24,6 +25,8 @@ export class MicrosoftRewardsBot {
         func: BrowserFunc,
         utils: BrowserUtil
     }
+    public isMobile: boolean = false
+    public homePage!: Page
 
     private collectedPoints: number = 0
     private activeWorkers: number
@@ -122,8 +125,8 @@ export class MicrosoftRewardsBot {
 
     // Desktop
     async Desktop(account: Account) {
-        const browser = await this.browserFactory.createBrowser(account.email, account.proxy, false)
-        const page = await browser.newPage()
+        const browser = await this.browserFactory.createBrowser(account.email, account.proxy)
+        this.homePage = await browser.newPage()
         let pages = await browser.pages()
 
         // If for some reason the browser initializes with more than 2 pages, close these
@@ -133,51 +136,53 @@ export class MicrosoftRewardsBot {
         }
 
         // Log into proxy
-        await page.authenticate({ username: account.proxy.username, password: account.proxy.password })
+        await this.homePage.authenticate({ username: account.proxy.username, password: account.proxy.password })
 
         log('MAIN', 'Starting DESKTOP browser')
 
-        // Login into MS Rewards
-        await this.login.login(page, account.email, account.password)
+        // Login into MS Rewards, then go to rewards homepage
+        await this.login.login(this.homePage, account.email, account.password)
+        await this.browser.func.goHome(this.homePage)
 
-        const wentHome = await this.browser.func.goHome(page)
-        if (!wentHome) {
-            throw log('MAIN', 'Unable to get dashboard page', 'error')
-        }
-
-        const data = await this.browser.func.getDashboardData(page)
+        const data = await this.browser.func.getDashboardData()
         log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
 
-        const earnablePoints = await this.browser.func.getEarnablePoints(data)
+        const earnablePoints = await this.browser.func.getEarnablePoints()
         this.collectedPoints = earnablePoints
         log('MAIN-POINTS', `You can earn ${earnablePoints} points today`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
-            log('MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping')
+            log('MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!')
 
             // Close desktop browser
             return await browser.close()
         }
 
+        // Open a new tab to where the tasks are going to be completed
+        const workerPage = await browser.newPage()
+
+        // Go to homepage on worker page
+        await this.browser.func.goHome(workerPage)
+
         // Complete daily set
         if (this.config.workers.doDailySet) {
-            await this.workers.doDailySet(page, data)
+            await this.workers.doDailySet(workerPage, data)
         }
 
         // Complete more promotions
         if (this.config.workers.doMorePromotions) {
-            await this.workers.doMorePromotions(page, data)
+            await this.workers.doMorePromotions(workerPage, data)
         }
 
         // Complete punch cards
         if (this.config.workers.doPunchCards) {
-            await this.workers.doPunchCard(page, data)
+            await this.workers.doPunchCard(workerPage, data)
         }
 
         // Do desktop searches
         if (this.config.workers.doDesktopSearch) {
-            await this.activities.doSearch(page, data, false)
+            await this.activities.doSearch(workerPage, data)
         }
 
         // Close desktop browser
@@ -186,8 +191,10 @@ export class MicrosoftRewardsBot {
 
     // Mobile
     async Mobile(account: Account) {
-        const browser = await this.browserFactory.createBrowser(account.email, account.proxy, true)
-        const page = await browser.newPage()
+        this.isMobile = true
+
+        const browser = await this.browserFactory.createBrowser(account.email, account.proxy)
+        this.homePage = await browser.newPage()
         let pages = await browser.pages()
 
         // If for some reason the browser initializes with more than 2 pages, close these
@@ -196,32 +203,37 @@ export class MicrosoftRewardsBot {
             pages = await browser.pages()
         }
         // Log into proxy
-        await page.authenticate({ username: account.proxy.username, password: account.proxy.password })
+        await this.homePage.authenticate({ username: account.proxy.username, password: account.proxy.password })
 
         log('MAIN', 'Starting MOBILE browser')
 
-        // Login into MS Rewards
-        await this.login.login(page, account.email, account.password)
+        // Login into MS Rewards, then go to rewards homepage
+        await this.login.login(this.homePage, account.email, account.password)
+        await this.browser.func.goHome(this.homePage)
 
-        await this.browser.func.goHome(page)
-
-        const data = await this.browser.func.getDashboardData(page)
+        const data = await this.browser.func.getDashboardData()
 
         // If no mobile searches data found, stop (Does not exist on new accounts)
         if (!data.userStatus.counters.mobileSearch) {
-            log('MAIN', 'No mobile searches found, stopping')
+            log('MAIN', 'No mobile searches found, stopping!')
 
             // Close mobile browser
             return await browser.close()
         }
 
+        // Open a new tab to where the tasks are going to be completed
+        const workerPage = await browser.newPage()
+
+        // Go to homepage on worker page
+        await this.browser.func.goHome(workerPage)
+
         // Do mobile searches
         if (this.config.workers.doMobileSearch) {
-            await this.activities.doSearch(page, data, true)
+            await this.activities.doSearch(workerPage, data)
         }
 
         // Fetch new points
-        const earnablePoints = await this.browser.func.getEarnablePoints(data, page)
+        const earnablePoints = await this.browser.func.getEarnablePoints()
 
         // If the new earnable is 0, means we got all the points, else retract
         this.collectedPoints = earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints)

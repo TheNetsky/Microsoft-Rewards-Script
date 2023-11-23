@@ -87,4 +87,38 @@ export default class BrowserUtil {
         }
     }
 
+    async getTabs(page: Page) {
+        try {
+            const browser = page.browser()
+            const pages = await browser.pages()
+
+            const homeTab = pages[1]
+            let homeTabURL: URL
+
+            if (!homeTab) {
+                throw this.bot.log('GET-TABS', 'Home tab could not be found!', 'error')
+
+            } else {
+                homeTabURL = new URL(homeTab.url())
+
+                if (homeTabURL.hostname !== 'rewards.bing.com') {
+                    throw this.bot.log('GET-TABS', 'Reward page hostname is invalid: ' + homeTabURL.host, 'error')
+                }
+            }
+
+            const workerTab = pages[2]
+            if (!workerTab) {
+                throw this.bot.log('GET-TABS', 'Worker tab could not be found!', 'error')
+            }
+
+            return {
+                homeTab: homeTab,
+                workerTab: workerTab
+            }
+
+        } catch (error) {
+            throw this.bot.log('GET-TABS', 'An error occurred:' + error, 'error')
+        }
+    }
+
 }

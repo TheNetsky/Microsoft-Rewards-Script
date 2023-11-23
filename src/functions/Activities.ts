@@ -19,9 +19,9 @@ export default class Activities {
         this.bot = bot
     }
 
-    doSearch = async (page: Page, data: DashboardData, mobile: boolean): Promise<void> => {
+    doSearch = async (page: Page, data: DashboardData): Promise<void> => {
         const search = new Search(this.bot)
-        await search.doSearch(page, data, mobile)
+        await search.doSearch(page, data)
     }
 
     doABC = async (page: Page): Promise<void> => {

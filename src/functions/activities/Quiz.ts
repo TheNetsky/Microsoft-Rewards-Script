@@ -52,7 +52,7 @@ export class Quiz extends Workers {
                         }
                     }
 
-                    // Other type quiz
+                    // Other type quiz, lightspeed
                 } else if ([2, 3, 4].includes(quizData.numberOfOptions)) {
                     quizData = await this.bot.browser.func.getQuizData(page) // Refresh Quiz Data
                     const correctOption = quizData.correctAnswer

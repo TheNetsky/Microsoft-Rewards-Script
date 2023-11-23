@@ -12,19 +12,25 @@ export class Search extends Workers {
 
     private searchPageURL = 'https://bing.com'
 
-    public async doSearch(page: Page, data: DashboardData, mobile: boolean) {
+    public async doSearch(page: Page, data: DashboardData) {
         this.bot.log('SEARCH-BING', 'Starting bing searches')
+
+        let retries = 0
+        while ((!data.userStatus.counters?.pcSearch || data.userStatus.counters.pcSearch.length < 2) && retries < 3) {
+            data = await this.bot.browser.func.getDashboardData()
+            retries++
+        }
 
         const mobileData = data.userStatus.counters?.mobileSearch ? data.userStatus.counters.mobileSearch[0] : null // Mobile searches
         const edgeData = data.userStatus.counters.pcSearch[1] as DashboardImpression // Edge searches
         const genericData = data.userStatus.counters.pcSearch[0] as DashboardImpression  // Normal searches
 
-        let missingPoints = (mobile && mobileData) ?
+        let missingPoints = (this.bot.isMobile && mobileData) ?
             (mobileData.pointProgressMax - mobileData.pointProgress) :
             (edgeData.pointProgressMax - edgeData.pointProgress) + (genericData.pointProgressMax - genericData.pointProgress)
 
         if (missingPoints == 0) {
-            this.bot.log('SEARCH-BING', `Bing searches for ${mobile ? 'MOBILE' : 'DESKTOP'} have already been completed`)
+            this.bot.log('SEARCH-BING', `Bing searches for ${this.bot.isMobile ? 'MOBILE' : 'DESKTOP'} have already been completed`)
             return
         }
 
@@ -35,31 +41,39 @@ export class Search extends Workers {
         // Deduplicate the search terms
         googleSearchQueries = [...new Set(googleSearchQueries)]
 
-        // Open a new tab
-        const browser = page.browser()
-        const searchPage = await browser.newPage()
 
         // Go to bing
-        await searchPage.goto(this.searchPageURL)
+        await page.goto(this.searchPageURL)
 
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
 
         const queries: string[] = []
-        googleSearchQueries.forEach(x => queries.push(x.topic, ...x.related))
+        // Mobile search doesn't seem to like related queries?
+        googleSearchQueries.forEach(x => { this.bot.isMobile ? queries.push(x.topic) : queries.push(x.topic, ...x.related) })
 
         // Loop over Google search queries
         for (let i = 0; i < queries.length; i++) {
             const query = queries[i] as string
 
-            this.bot.log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${mobile}`)
+            this.bot.log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${this.bot.isMobile}`)
 
-            const newData = await this.bingSearch(page, searchPage, query)
+            let newData = await this.bingSearch(page, page, query)
+
+            let retries = 0
+            while ((!newData?.pcSearch || newData.pcSearch.length < 2) && retries < 3) {
+                newData = await this.bot.browser.func.getSearchPoints()
+                retries++
+            }
+
+            if (!newData?.pcSearch || newData.pcSearch.length < 2) {
+                newData = await this.bot.browser.func.getSearchPoints()
+            }
 
             const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
             const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
             const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
 
-            const newMissingPoints = (mobile && newMobileData) ?
+            const newMissingPoints = (this.bot.isMobile && newMobileData) ?
                 (newMobileData.pointProgressMax - newMobileData.pointProgress) :
                 (newEdgeData.pointProgressMax - newEdgeData.pointProgress) + (newGenericData.pointProgressMax - newGenericData.pointProgress)
 
@@ -97,14 +111,21 @@ export class Search extends Workers {
                 if (relatedTerms.length > 3) {
                     // Search for the first 2 related terms
                     for (const term of relatedTerms.slice(1, 3)) {
-                        this.bot.log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${mobile}`)
-                        const newData = await this.bingSearch(page, searchPage, query.topic)
+                        this.bot.log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${this.bot.isMobile}`)
+
+                        let newData = await this.bingSearch(page, page, query.topic)
+
+                        let retries = 0
+                        while ((!newData?.pcSearch || newData.pcSearch.length < 2) && retries < 3) {
+                            newData = await this.bot.browser.func.getSearchPoints()
+                            retries++
+                        }
 
                         const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
                         const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
                         const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
 
-                        const newMissingPoints = (mobile && newMobileData) ?
+                        const newMissingPoints = (this.bot.isMobile && newMobileData) ?
                             (newMobileData.pointProgressMax - newMobileData.pointProgress) :
                             (newEdgeData.pointProgressMax - newEdgeData.pointProgress) + (newGenericData.pointProgressMax - newGenericData.pointProgress)
 
@@ -162,7 +183,7 @@ export class Search extends Workers {
 
                 await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max)))
 
-                return await this.bot.browser.func.getSearchPoints(page)
+                return await this.bot.browser.func.getSearchPoints()
 
             } catch (error) {
                 if (i === 5) {
@@ -178,7 +199,7 @@ export class Search extends Workers {
         }
 
         this.bot.log('SEARCH-BING', 'Search failed after 5 retries, ending', 'error')
-        return await this.bot.browser.func.getSearchPoints(page)
+        return await this.bot.browser.func.getSearchPoints()
     }
 
     private async getGoogleTrends(geoLocale: string, queryCount: number): Promise<GoogleSearch[]> {
@@ -211,7 +232,7 @@ export class Search extends Workers {
                 for (const topic of data.default.trendingSearchesDays[0]?.trendingSearches ?? []) {
                     queryTerms.push({
                         topic: topic.title.query.toLowerCase(),
-                        related: topic.relatedQueries.map(x => x.query.toLocaleLowerCase())
+                        related: topic.relatedQueries.map(x => x.query.toLowerCase())
                     })
                 }
 
@@ -253,9 +274,10 @@ export class Search extends Workers {
     private async randomScroll(page: Page) {
         try {
             // Press the arrow down key to scroll
-            for (let i = 0; i < this.bot.utils.randomNumber(5, 100); i++) {
+            for (let i = 0; i < this.bot.utils.randomNumber(5, 400); i++) {
                 await page.keyboard.press('ArrowDown')
             }
+
         } catch (error) {
             this.bot.log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
         }
@@ -271,57 +293,52 @@ export class Search extends Workers {
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
             // Let website load, if it doesn't load within 5 sec. exit regardless
-            await lastTab.waitForNetworkIdle({ timeout: 5000 }).catch(() => { })
+            await this.bot.utils.wait(5000)
 
-            // Check if the tab is closed or not
-            if (!lastTab.isClosed()) {
-                let lastTabURL = new URL(lastTab.url()) // Get new tab info
+            let lastTabURL = new URL(lastTab.url()) // Get new tab info
 
-                // Check if the URL is different from the original one, don't loop more than 5 times.
-                let i = 0
-                while (lastTabURL.href !== searchListingURL.href && i < 5) {
-                    // If hostname is still bing, (Bing images/news etc)
-                    if (lastTabURL.hostname == searchListingURL.hostname) {
+            // Check if the URL is different from the original one, don't loop more than 5 times.
+            let i = 0
+            while (lastTabURL.href !== searchListingURL.href && i < 5) {
+                // If hostname is still bing, (Bing images/news etc)
+                if (lastTabURL.hostname === searchListingURL.hostname) {
+                    await lastTab.goBack()
+
+                    // Refresh
+                    lastTab = await this.bot.browser.utils.getLatestTab(page)
+                    lastTabURL = new URL(lastTab.url())
+
+                    // If "goBack" didn't return to search listing (due to redirects)
+                    if (lastTabURL.hostname !== searchListingURL.hostname) {
+                        await lastTab.goto(this.searchPageURL)
+                    }
+
+                } else { // No longer on bing, likely opened a new tab, close this tab
+                    const tabs = await (page.browser()).pages()
+
+                    // If the browser has more than 3 tabs open, it has opened a new one, we need to close this one.
+                    if (tabs.length > 3) {
+                        await lastTab.close()
+
+                    } else if (lastTabURL.href !== searchListingURL.href) {
                         await lastTab.goBack()
-
-                        lastTab = await this.bot.browser.utils.getLatestTab(page) // Get last opened tab
+                        // Refresh
+                        lastTab = await this.bot.browser.utils.getLatestTab(page)
+                        lastTabURL = new URL(lastTab.url())
 
                         // If "goBack" didn't return to search listing (due to redirects)
                         if (lastTabURL.hostname !== searchListingURL.hostname) {
                             await lastTab.goto(this.searchPageURL)
                         }
-
-                    } else { // No longer on bing, likely opened a new tab, close this tab
-                        lastTab = await this.bot.browser.utils.getLatestTab(page) // Get last opened tab
-                        lastTabURL = new URL(lastTab.url())
-
-                        const tabs = await (page.browser()).pages() // Get all tabs open
-
-                        // If the browser has more than 3 tabs open, it has opened a new one, we need to close this one.
-                        if (tabs.length > 3) {
-                            // Make sure the page is still open!
-                            if (!lastTab.isClosed()) {
-                                await lastTab.close()
-                            }
-
-                        } else if (lastTabURL.href !== searchListingURL.href) {
-
-                            await lastTab.goBack()
-
-                            lastTab = await this.bot.browser.utils.getLatestTab(page) // Get last opened tab
-                            lastTabURL = new URL(lastTab.url())
-
-                            // If "goBack" didn't return to search listing (due to redirects)
-                            if (lastTabURL.hostname !== searchListingURL.hostname) {
-                                await lastTab.goto(this.searchPageURL)
-                            }
-                        }
                     }
-                    lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
-                    i++
                 }
 
+                // End of loop, refresh lastPage
+                lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
+                lastTabURL = new URL(lastTab.url()) // Get new tab info
+                i++
             }
+
         } catch (error) {
             this.bot.log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
         }

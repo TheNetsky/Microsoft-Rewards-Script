@@ -31,7 +31,7 @@ Under development, however mainly for personal use!
 - [x] Completing Click Rewards
 - [x] Completing Polls
 - [x] Completing Punchcards
-- [ ] Solving This Or That Quiz
+- [x] Solving This Or That Quiz (Random)
 - [x] Clicking Promotional Items
 - [x] Solving ABC Quiz
 - [ ] Completing Shopping Game
