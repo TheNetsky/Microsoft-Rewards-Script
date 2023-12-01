@@ -230,6 +230,20 @@ export class MicrosoftRewardsBot {
         // Do mobile searches
         if (this.config.workers.doMobileSearch) {
             await this.activities.doSearch(workerPage, data)
+
+            // Fetch current search points
+            const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
+
+            // If the remaining mobile points does not equal 0, restart and assume the generated UA is invalid
+            if (mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
+                log('MAIN', 'Unable to complete mobile searches, bad User-Agent?, retrying...')
+
+                // Close mobile browser
+                await browser.close()
+
+                // Retry
+                await this.Mobile(account)
+            }
         }
 
         // Fetch new points

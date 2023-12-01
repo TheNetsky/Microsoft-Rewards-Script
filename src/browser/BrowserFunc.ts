@@ -24,6 +24,10 @@ export default class BrowserFunc {
         try {
             const dashboardURL = new URL(this.bot.config.baseURL)
 
+            if (page.url() === dashboardURL.href) {
+                return
+            }
+
             await page.goto(this.bot.config.baseURL)
 
             const maxIterations = 5 // Maximum iterations set to 5

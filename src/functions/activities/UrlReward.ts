@@ -9,7 +9,8 @@ export class UrlReward extends Workers {
         this.bot.log('URL-REWARD', 'Trying to complete UrlReward')
 
         try {
-            // After waiting, close the page
+            this.bot.utils.wait(2000)
+
             await page.close()
 
             this.bot.log('URL-REWARD', 'Completed the UrlReward successfully')

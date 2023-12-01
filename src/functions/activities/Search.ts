@@ -3,7 +3,7 @@ import axios from 'axios'
 
 import { Workers } from '../Workers'
 
-import { DashboardData, DashboardImpression } from '../../interface/DashboardData'
+import { Counters, DashboardData } from '../../interface/DashboardData'
 import { GoogleTrends } from '../../interface/GoogleDailyTrends'
 import { GoogleSearch } from '../../interface/Search'
 
@@ -15,21 +15,12 @@ export class Search extends Workers {
     public async doSearch(page: Page, data: DashboardData) {
         this.bot.log('SEARCH-BING', 'Starting bing searches')
 
-        let retries = 0
-        while ((!data.userStatus.counters?.pcSearch || data.userStatus.counters.pcSearch.length < 2) && retries < 3) {
-            data = await this.bot.browser.func.getDashboardData()
-            retries++
-        }
+        page = await this.bot.browser.utils.getLatestTab(page)
 
-        const mobileData = data.userStatus.counters?.mobileSearch ? data.userStatus.counters.mobileSearch[0] : null // Mobile searches
-        const edgeData = data.userStatus.counters.pcSearch[1] as DashboardImpression // Edge searches
-        const genericData = data.userStatus.counters.pcSearch[0] as DashboardImpression  // Normal searches
+        let searchCounters: Counters = await this.bot.browser.func.getSearchPoints()
+        let missingPoints = this.calculatePoints(searchCounters)
 
-        let missingPoints = (this.bot.isMobile && mobileData) ?
-            (mobileData.pointProgressMax - mobileData.pointProgress) :
-            (edgeData.pointProgressMax - edgeData.pointProgress) + (genericData.pointProgressMax - genericData.pointProgress)
-
-        if (missingPoints == 0) {
+        if (missingPoints === 0) {
             this.bot.log('SEARCH-BING', `Bing searches for ${this.bot.isMobile ? 'MOBILE' : 'DESKTOP'} have already been completed`)
             return
         }
@@ -40,7 +31,6 @@ export class Search extends Workers {
 
         // Deduplicate the search terms
         googleSearchQueries = [...new Set(googleSearchQueries)]
-
 
         // Go to bing
         await page.goto(this.searchPageURL)
@@ -57,25 +47,8 @@ export class Search extends Workers {
 
             this.bot.log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${this.bot.isMobile}`)
 
-            let newData = await this.bingSearch(page, page, query)
-
-            let retries = 0
-            while ((!newData?.pcSearch || newData.pcSearch.length < 2) && retries < 3) {
-                newData = await this.bot.browser.func.getSearchPoints()
-                retries++
-            }
-
-            if (!newData?.pcSearch || newData.pcSearch.length < 2) {
-                newData = await this.bot.browser.func.getSearchPoints()
-            }
-
-            const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
-            const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
-            const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
-
-            const newMissingPoints = (this.bot.isMobile && newMobileData) ?
-                (newMobileData.pointProgressMax - newMobileData.pointProgress) :
-                (newEdgeData.pointProgressMax - newEdgeData.pointProgress) + (newGenericData.pointProgressMax - newGenericData.pointProgress)
+            searchCounters = await this.bingSearch(page, query)
+            const newMissingPoints = this.calculatePoints(searchCounters)
 
             // If the new point amount is the same as before
             if (newMissingPoints == missingPoints) {
@@ -86,7 +59,7 @@ export class Search extends Workers {
 
             missingPoints = newMissingPoints
 
-            if (missingPoints == 0) {
+            if (missingPoints === 0) {
                 break
             }
 
@@ -113,21 +86,8 @@ export class Search extends Workers {
                     for (const term of relatedTerms.slice(1, 3)) {
                         this.bot.log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${this.bot.isMobile}`)
 
-                        let newData = await this.bingSearch(page, page, query.topic)
-
-                        let retries = 0
-                        while ((!newData?.pcSearch || newData.pcSearch.length < 2) && retries < 3) {
-                            newData = await this.bot.browser.func.getSearchPoints()
-                            retries++
-                        }
-
-                        const newMobileData = newData.mobileSearch ? newData.mobileSearch[0] : null // Mobile searches
-                        const newEdgeData = newData.pcSearch[1] as DashboardImpression // Edge searches
-                        const newGenericData = newData.pcSearch[0] as DashboardImpression  // Normal searches
-
-                        const newMissingPoints = (this.bot.isMobile && newMobileData) ?
-                            (newMobileData.pointProgressMax - newMobileData.pointProgress) :
-                            (newEdgeData.pointProgressMax - newEdgeData.pointProgress) + (newGenericData.pointProgressMax - newGenericData.pointProgress)
+                        searchCounters = await this.bingSearch(page, query.topic)
+                        const newMissingPoints = this.calculatePoints(searchCounters)
 
                         // If the new point amount is the same as before
                         if (newMissingPoints == missingPoints) {
@@ -139,7 +99,7 @@ export class Search extends Workers {
                         missingPoints = newMissingPoints
 
                         // If we satisfied the searches
-                        if (missingPoints == 0) {
+                        if (missingPoints === 0) {
                             break
                         }
 
@@ -156,7 +116,7 @@ export class Search extends Workers {
         this.bot.log('SEARCH-BING', 'Completed searches')
     }
 
-    private async bingSearch(page: Page, searchPage: Page, query: string) {
+    private async bingSearch(searchPage: Page, query: string) {
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
@@ -300,37 +260,18 @@ export class Search extends Workers {
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
             while (lastTabURL.href !== searchListingURL.href && i < 5) {
-                // If hostname is still bing, (Bing images/news etc)
-                if (lastTabURL.hostname === searchListingURL.hostname) {
+                const browser = page.browser()
+                const tabs = await browser.pages()
+
+                if (tabs.length === 4) {
+                    await lastTab.close()
+
+                } else if (tabs.length === 2) {
+                    const newPage = await browser.newPage()
+                    await newPage.goto(searchListingURL.href)
+
+                } else {
                     await lastTab.goBack()
-
-                    // Refresh
-                    lastTab = await this.bot.browser.utils.getLatestTab(page)
-                    lastTabURL = new URL(lastTab.url())
-
-                    // If "goBack" didn't return to search listing (due to redirects)
-                    if (lastTabURL.hostname !== searchListingURL.hostname) {
-                        await lastTab.goto(this.searchPageURL)
-                    }
-
-                } else { // No longer on bing, likely opened a new tab, close this tab
-                    const tabs = await (page.browser()).pages()
-
-                    // If the browser has more than 3 tabs open, it has opened a new one, we need to close this one.
-                    if (tabs.length > 3) {
-                        await lastTab.close()
-
-                    } else if (lastTabURL.href !== searchListingURL.href) {
-                        await lastTab.goBack()
-                        // Refresh
-                        lastTab = await this.bot.browser.utils.getLatestTab(page)
-                        lastTabURL = new URL(lastTab.url())
-
-                        // If "goBack" didn't return to search listing (due to redirects)
-                        if (lastTabURL.hostname !== searchListingURL.hostname) {
-                            await lastTab.goto(this.searchPageURL)
-                        }
-                    }
                 }
 
                 // End of loop, refresh lastPage
@@ -344,4 +285,16 @@ export class Search extends Workers {
         }
     }
 
+    private calculatePoints(counters: Counters) {
+        const mobileData = counters.mobileSearch?.[0] // Mobile searches
+        const genericData = counters.pcSearch?.[0] // Normal searches
+        const edgeData = counters.pcSearch?.[1] // Edge searches
+
+        const missingPoints = (this.bot.isMobile && mobileData)
+            ? mobileData.pointProgressMax - mobileData.pointProgress
+            : (edgeData ? edgeData.pointProgressMax - edgeData.pointProgress : 0)
+            + (genericData ? genericData.pointProgressMax - genericData.pointProgress : 0)
+
+        return missingPoints
+    }
 }

@@ -11,6 +11,11 @@ Under development, however mainly for personal use!
 5. Run `npm run build` to build the script
 6. Run `npm run start` to start the built script
 
+## Notes ##
+- If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run chrome-kill` script. WINDOWS ONLY
+- If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
+
+
 ## Features ##
 - [x] Multi-Account Support
 - [x] Session Storing

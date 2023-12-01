@@ -27,6 +27,11 @@ export class Workers {
 
         await this.solveActivities(page, activitiesUncompleted)
 
+        page = await this.bot.browser.utils.getLatestTab(page)
+
+        // Always return to the homepage if not already
+        await this.bot.browser.func.goHome(page)
+
         this.bot.log('DAILY-SET', 'All "Daily Set" items have been completed')
     }
 
@@ -41,24 +46,31 @@ export class Workers {
         }
 
         for (const punchCard of punchCardsUncompleted) {
+            // Get latest page for each card
+            page = await this.bot.browser.utils.getLatestTab(page)
+
             const activitiesUncompleted = punchCard.childPromotions.filter(x => !x.complete) // Only return uncompleted activities
 
             // Solve Activities
             this.bot.log('PUNCH-CARD', `Started solving "Punch Card" items for punchcard: "${punchCard.parentPromotion.title}"`)
 
-            const browser = page.browser()
-            page = await browser.newPage()
-
             // Got to punch card index page in a new tab
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
 
             // Wait for new page to load, max 10 seconds, however try regardless in case of error
-            await page.waitForNetworkIdle({ timeout: 10_000 }).catch(() => { })
+            await page.waitForNetworkIdle({ timeout: 5_000 }).catch(() => { })
 
             await this.solveActivities(page, activitiesUncompleted, punchCard)
 
-            // Close the punch card index page
-            await page.close()
+            page = await this.bot.browser.utils.getLatestTab(page)
+
+            const pages = await (page.browser()).pages()
+
+            if (pages.length > 3) {
+                await page.close()
+            } else {
+                await this.bot.browser.func.goHome(page)
+            }
 
             this.bot.log('PUNCH-CARD', `All items for punchcard: "${punchCard.parentPromotion.title}" have been completed`)
         }
@@ -85,39 +97,55 @@ export class Workers {
         // Solve Activities
         this.bot.log('MORE-PROMOTIONS', 'Started solving "More Promotions" item')
 
+        page = await this.bot.browser.utils.getLatestTab(page)
+
         await this.solveActivities(page, activitiesUncompleted)
+
+        page = await this.bot.browser.utils.getLatestTab(page)
+
+        // Always return to the homepage if not already
+        await this.bot.browser.func.goHome(page)
 
         this.bot.log('MORE-PROMOTIONS', 'All "More Promotion" items have been completed')
     }
 
     // Solve all the different types of activities
-    private async solveActivities(page: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
-        let activityPage = page
+    private async solveActivities(activityPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
+        const activityInitial = activityPage.url() // Homepage for Daily/More and Index for promotions
 
         for (const activity of activities) {
             try {
+                // Reselect the worker page
+                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+
+                const pages = await activityPage.browser().pages()
+                if (pages.length > 3) {
+                    await activityPage.close()
+
+                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                }
+
+                await this.bot.utils.wait(1000)
+
+                if (activityPage.url() !== activityInitial) {
+                    await activityPage.goto(activityInitial)
+                }
+
 
                 let selector = `[data-bi-id="${activity.offerId}"]`
 
                 if (punchCard) {
-                    selector = await this.bot.browser.func.getPunchCardActivity(page, activity)
+                    selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
 
                 } else if (activity.name.toLowerCase().includes('membercenter')) {
-
-                    // Promotion
-                    if (activity.priority === 1) {
-                        selector = await page.waitForSelector('#promo-item', { visible: true, timeout: 2000 }).then(() => true).catch(() => false) ?
-                            '#promo-item' : activity.name
-                    } else {
-                        selector = `[data-bi-id="${activity.name}"]`
-                    }
+                    selector = `[data-bi-id="${activity.name}"]`
                 }
 
                 // Click element, it will be opened in a new tab
-                await page.click(selector)
+                await activityPage.click(selector)
 
                 // Select the new activity page
-                activityPage = await this.bot.browser.utils.getLatestTab(page)
+                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
 
                 // Wait for the new tab to fully load, ignore error.
                 /*
@@ -175,12 +203,8 @@ export class Workers {
 
             } catch (error) {
                 this.bot.log('ACTIVITY', 'An error occurred:' + error, 'error')
-                const tabs = await (page.browser()).pages()
-
-                if (tabs.length > 2) {
-                    await activityPage.close() // Already assigned to be the "latest tab"
-                }
             }
+
         }
     }
 
