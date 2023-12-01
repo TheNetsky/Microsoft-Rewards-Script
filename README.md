@@ -37,7 +37,6 @@ Under development, however mainly for personal use!
 - [x] Completing Polls
 - [x] Completing Punchcards
 - [x] Solving This Or That Quiz (Random)
-- [x] Clicking Promotional Items
 - [x] Solving ABC Quiz
 - [ ] Completing Shopping Game
 - [ ] Completing Gaming Tab
