@@ -154,6 +154,22 @@ export class Search extends Workers {
                 this.bot.log('SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
                 this.bot.log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
+                // Reset the tabs
+                const browser = searchPage.browser()
+                const tabs = await browser.pages()
+                const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
+
+                if (tabs.length === 4) {
+                    await lastTab.close()
+
+                } else if (tabs.length === 2) {
+                    const newPage = await browser.newPage()
+                    await newPage.goto(this.searchPageURL)
+
+                } else {
+                    await lastTab.goBack()
+                }
+
                 await this.bot.utils.wait(4000)
             }
         }
