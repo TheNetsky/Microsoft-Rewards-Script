@@ -16,6 +16,7 @@ http://f.vision/
 
 class Browser {
     private bot: MicrosoftRewardsBot
+    private usedUserAgents: string[] = []
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
@@ -38,20 +39,33 @@ class Browser {
             ]
         })
 
-        const { fingerprint, headers } = new FingerprintGenerator().getFingerprint({
+        let fingerPrintData = new FingerprintGenerator().getFingerprint({
             devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
             operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
-            browsers: ['edge'],
-            browserListQuery: 'last 2 Edge versions'
+            browsers: ['edge']
         })
+
+        if (this.usedUserAgents) {
+            while (this.usedUserAgents.includes(fingerPrintData.fingerprint.navigator.userAgent)) {
+                fingerPrintData = new FingerprintGenerator().getFingerprint({
+                    devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
+                    operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
+                    browsers: ['edge']
+                })
+            }
+        }
+
+        this.usedUserAgents.push(fingerPrintData.fingerprint.navigator.userAgent)
 
         // Modify the newPage function to attach the fingerprint
         const originalNewPage = browser.newPage
         browser.newPage = async function () {
             const page = await originalNewPage.apply(browser)
-            await new FingerprintInjector().attachFingerprintToPuppeteer(page, { fingerprint, headers })
+            await new FingerprintInjector().attachFingerprintToPuppeteer(page, fingerPrintData)
             return page
         }
+
+        this.bot.log('BROWSER', `Created browser with User-Agent: "${fingerPrintData.fingerprint.navigator.userAgent}"`)
 
         return browser
     }
