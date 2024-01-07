@@ -1,9 +1,11 @@
-import puppeteer from 'puppeteer'
-import { FingerprintInjector } from 'fingerprint-injector'
+import playwright from 'playwright'
+import { BrowserContext } from 'playwright'
+
+import { newInjectedContext } from 'fingerprint-injector'
 import { FingerprintGenerator } from 'fingerprint-generator'
 
 import { MicrosoftRewardsBot } from '../index'
-import { loadSesion } from '../util/Load'
+import { loadSessionData, saveFingerprintData } from '../util/Load'
 
 import { AccountProxy } from '../interface/Account'
 
@@ -13,63 +15,54 @@ https://botcheck.luminati.io/
 http://f.vision/
 */
 
-
 class Browser {
     private bot: MicrosoftRewardsBot
-    private usedUserAgents: string[] = []
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
     }
 
-    async createBrowser(email: string, proxy: AccountProxy) {
-        // const userAgent = await getUserAgent(isMobile)
-
-        const browser = await puppeteer.launch({
-            headless: this.bot.config.headless ? 'new' : false,
-            userDataDir: await loadSesion(this.bot.config.sessionPath, email),
+    async createBrowser(proxy: AccountProxy, email: string): Promise<BrowserContext> {
+        const browser = await playwright.chromium.launch({
+            //channel: 'msedge', // Uses Edge instead of chrome
+            headless: this.bot.config.headless,
+            ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
                 '--no-sandbox',
                 '--mute-audio',
                 '--disable-setuid-sandbox',
                 '--ignore-certificate-errors',
                 '--ignore-certificate-errors-spki-list',
-                '--ignore-ssl-errors',
-                proxy.url ? `--proxy-server=${proxy.url}:${proxy.port}` : ''
+                '--ignore-ssl-errors'
             ]
         })
 
-        let fingerPrintData = new FingerprintGenerator().getFingerprint({
+        const sessionData = await loadSessionData(this.bot.config.sessionPath, email, this.bot.isMobile, this.bot.config.saveFingerprint)
+
+        const fingerpint = sessionData.fingerprint ? sessionData.fingerprint : this.generateFingerprint()
+
+        const context = await newInjectedContext(browser, { fingerprint: fingerpint })
+
+        await context.addCookies(sessionData.cookies)
+
+        if (this.bot.config.saveFingerprint) {
+            await saveFingerprintData(this.bot.config.sessionPath, email, this.bot.isMobile, fingerpint)
+        }
+
+        this.bot.log('BROWSER', `Created browser with User-Agent: "${fingerpint.fingerprint.navigator.userAgent}"`)
+
+        return context
+    }
+
+    generateFingerprint() {
+        const fingerPrintData = new FingerprintGenerator().getFingerprint({
             devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
             operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
             browsers: ['edge']
         })
 
-        if (this.usedUserAgents) {
-            while (this.usedUserAgents.includes(fingerPrintData.fingerprint.navigator.userAgent)) {
-                fingerPrintData = new FingerprintGenerator().getFingerprint({
-                    devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
-                    operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
-                    browsers: ['edge']
-                })
-            }
-        }
-
-        this.usedUserAgents.push(fingerPrintData.fingerprint.navigator.userAgent)
-
-        // Modify the newPage function to attach the fingerprint
-        const originalNewPage = browser.newPage
-        browser.newPage = async function () {
-            const page = await originalNewPage.apply(browser)
-            await new FingerprintInjector().attachFingerprintToPuppeteer(page, fingerPrintData)
-            return page
-        }
-
-        this.bot.log('BROWSER', `Created browser with User-Agent: "${fingerPrintData.fingerprint.navigator.userAgent}"`)
-
-        return browser
+        return fingerPrintData
     }
-
 }
 
 export default Browser

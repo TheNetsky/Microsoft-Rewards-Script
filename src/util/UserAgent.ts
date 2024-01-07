@@ -81,7 +81,7 @@ export async function getEdgeVersions() {
 
 export function getSystemComponents(mobile: boolean): string {
     const osId: string = mobile ? 'Linux' : 'Windows NT 10.0'
-    const uaPlatform: string = mobile ? 'Android 13' : 'Win64; x64'
+    const uaPlatform: string = mobile ? `Android 1${Math.floor(Math.random() * 5)}` : 'Win64; x64'
 
     if (mobile) {
         return `${uaPlatform}; ${osId}; K`

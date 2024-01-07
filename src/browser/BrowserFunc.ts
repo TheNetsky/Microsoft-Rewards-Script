@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 import { CheerioAPI, load } from 'cheerio'
 
 import { MicrosoftRewardsBot } from '../index'
@@ -17,7 +17,7 @@ export default class BrowserFunc {
 
     /**
      * Navigate the provided page to rewards homepage
-     * @param {Page} page Puppeteer page
+     * @param {Page} page Playwright page
     */
     async goHome(page: Page) {
 
@@ -37,7 +37,7 @@ export default class BrowserFunc {
                 await this.bot.browser.utils.tryDismissCookieBanner(page)
 
                 // Check if account is suspended
-                const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { visible: true, timeout: 2000 }).then(() => true).catch(() => false)
+                const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
                 if (isSuspended) {
                     this.bot.log('GO-HOME', 'This account is suspended!', 'error')
                     throw new Error('Account has been suspended!')
@@ -89,7 +89,7 @@ export default class BrowserFunc {
         }
 
         // Reload the page to get new data
-        await this.bot.homePage.reload({ waitUntil: 'networkidle2' })
+        await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
 
         const scriptContent = await this.bot.homePage.evaluate(() => {
             const scripts = Array.from(document.querySelectorAll('script'))
@@ -180,7 +180,7 @@ export default class BrowserFunc {
 
     /**
      * Parse quiz data from provided page
-     * @param {Page} page Puppeteer page
+     * @param {Page} page Playwright page
      * @returns {QuizData} Quiz data object
     */
     async getQuizData(page: Page): Promise<QuizData> {
@@ -214,7 +214,7 @@ export default class BrowserFunc {
 
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('span.rqMCredits', { visible: true, timeout: 10_000 })
+            await page.waitForSelector('span.rqMCredits', { state: 'visible', timeout: 10_000 })
             await this.bot.utils.wait(2000)
 
             return true
@@ -226,7 +226,7 @@ export default class BrowserFunc {
 
     async checkQuizCompleted(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#quizCompleteContainer', { visible: true, timeout: 2000 })
+            await page.waitForSelector('#quizCompleteContainer', { state: 'visible', timeout: 2000 })
             await this.bot.utils.wait(2000)
 
             return true

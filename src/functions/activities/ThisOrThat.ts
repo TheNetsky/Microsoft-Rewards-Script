@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 
 import { Workers } from '../Workers'
 
@@ -11,7 +11,7 @@ export class ThisOrThat extends Workers {
 
         try {
             // Check if the quiz has been started or not
-            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { visible: true, timeout: 2000 }).then(() => true).catch(() => false)
+            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {

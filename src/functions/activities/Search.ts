@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 import axios from 'axios'
 
 import { Workers } from '../Workers'
@@ -63,12 +63,23 @@ export class Search extends Workers {
                 break
             }
 
+            // Only for mobile searches
+            if (maxLoop > 3 && this.bot.isMobile) {
+                this.bot.log('SEARCH-BING-MOBILE', 'Search didn\'t gain point for 3 iterations, likely bad User-Agent', 'warn')
+                break
+            }
+
             // If we didn't gain points for 10 iterations, assume it's stuck
             if (maxLoop > 10) {
                 this.bot.log('SEARCH-BING', 'Search didn\'t gain point for 10 iterations aborting searches', 'warn')
                 maxLoop = 0 // Reset to 0 so we can retry with related searches below
                 break
             }
+        }
+
+        // Only for mobile searches
+        if (missingPoints > 0 && this.bot.isMobile) {
+            return
         }
 
         // If we still got remaining search queries, generate extra ones
@@ -121,7 +132,7 @@ export class Search extends Workers {
         for (let i = 0; i < 5; i++) {
             try {
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { visible: true, timeout: 10_000 })
+                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
                 await this.bot.utils.wait(500)
                 await searchPage.keyboard.down('Control')
@@ -155,20 +166,8 @@ export class Search extends Workers {
                 this.bot.log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
                 // Reset the tabs
-                const browser = searchPage.browser()
-                const tabs = await browser.pages()
                 const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
-
-                if (tabs.length === 4) {
-                    await lastTab.close()
-
-                } else if (tabs.length === 2) {
-                    const newPage = await browser.newPage()
-                    await newPage.goto(this.searchPageURL)
-
-                } else {
-                    await lastTab.goBack()
-                }
+                await this.closeTabs(lastTab, this.searchPageURL)
 
                 await this.bot.utils.wait(4000)
             }
@@ -276,19 +275,8 @@ export class Search extends Workers {
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
             while (lastTabURL.href !== searchListingURL.href && i < 5) {
-                const browser = page.browser()
-                const tabs = await browser.pages()
 
-                if (tabs.length === 4) {
-                    await lastTab.close()
-
-                } else if (tabs.length === 2) {
-                    const newPage = await browser.newPage()
-                    await newPage.goto(searchListingURL.href)
-
-                } else {
-                    await lastTab.goBack()
-                }
+                await this.closeTabs(lastTab, searchListingURL.href)
 
                 // End of loop, refresh lastPage
                 lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
@@ -300,6 +288,26 @@ export class Search extends Workers {
             this.bot.log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
         }
     }
+
+    private async closeTabs(lastTab: Page, url: string) {
+        const browser = lastTab.context()
+        const tabs = browser.pages()
+
+        // If more than 3 tabs are open, close the last tab
+        if (tabs.length > 2) {
+            await lastTab.close()
+
+            // If only 1 tab is open, open a new one to search in
+        } else if (tabs.length === 1) {
+            const newPage = await browser.newPage()
+            await newPage.goto(url)
+
+            // Else go back one page
+        } else {
+            await lastTab.goBack()
+        }
+    }
+
 
     private calculatePoints(counters: Counters) {
         const mobileData = counters.mobileSearch?.[0] // Mobile searches

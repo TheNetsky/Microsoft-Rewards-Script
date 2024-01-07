@@ -1,5 +1,5 @@
 import cluster from 'cluster'
-import { Page } from 'puppeteer'
+import { BrowserContext, Page } from 'playwright'
 
 import Browser from './browser/Browser'
 import BrowserFunc from './browser/BrowserFunc'
@@ -7,7 +7,7 @@ import BrowserUtil from './browser/BrowserUtil'
 
 import { log } from './util/Logger'
 import Util from './util/Utils'
-import { loadAccounts, loadConfig } from './util/Load'
+import { loadAccounts, loadConfig, saveSessionData } from './util/Load'
 
 import { Login } from './functions/Login'
 import { Workers } from './functions/Workers'
@@ -125,18 +125,8 @@ export class MicrosoftRewardsBot {
 
     // Desktop
     async Desktop(account: Account) {
-        const browser = await this.browserFactory.createBrowser(account.email, account.proxy)
+        const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
-        let pages = await browser.pages()
-
-        // If for some reason the browser initializes with more than 2 pages, close these
-        while (pages.length > 2) {
-            await pages[0]?.close()
-            pages = await browser.pages()
-        }
-
-        // Log into proxy
-        await this.homePage.authenticate({ username: account.proxy.username, password: account.proxy.password })
 
         log('MAIN', 'Starting DESKTOP browser')
 
@@ -156,7 +146,7 @@ export class MicrosoftRewardsBot {
             log('MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!')
 
             // Close desktop browser
-            return await browser.close()
+            return await this.closeBrowser(browser, account.email)
         }
 
         // Open a new tab to where the tasks are going to be completed
@@ -185,25 +175,20 @@ export class MicrosoftRewardsBot {
             await this.activities.doSearch(workerPage, data)
         }
 
+        // Save cookies
+        const cookies = await browser.cookies()
+        await saveSessionData(this.config.sessionPath, account.email, this.isMobile, cookies)
+
         // Close desktop browser
-        await browser.close()
+        return await this.closeBrowser(browser, account.email)
     }
 
     // Mobile
     async Mobile(account: Account) {
         this.isMobile = true
 
-        const browser = await this.browserFactory.createBrowser(account.email, account.proxy)
+        const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
-        let pages = await browser.pages()
-
-        // If for some reason the browser initializes with more than 2 pages, close these
-        while (pages.length > 2) {
-            await pages[0]?.close()
-            pages = await browser.pages()
-        }
-        // Log into proxy
-        await this.homePage.authenticate({ username: account.proxy.username, password: account.proxy.password })
 
         log('MAIN', 'Starting MOBILE browser')
 
@@ -218,7 +203,7 @@ export class MicrosoftRewardsBot {
             log('MAIN', 'No mobile searches found, stopping!')
 
             // Close mobile browser
-            return await browser.close()
+            return await this.closeBrowser(browser, account.email)
         }
 
         // Open a new tab to where the tasks are going to be completed
@@ -235,11 +220,12 @@ export class MicrosoftRewardsBot {
             const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
 
             // If the remaining mobile points does not equal 0, restart and assume the generated UA is invalid
-            if (mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
-                log('MAIN', 'Unable to complete mobile searches, bad User-Agent?, retrying...')
+            // Retry until all points are gathered when (retryMobileSearch is enabled)
+            if (this.config.searchSettings.retryMobileSearch && mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
+                log('MAIN', 'Unable to complete mobile searches, bad User-Agent? Retrying...')
 
                 // Close mobile browser
-                await browser.close()
+                await this.closeBrowser(browser, account.email)
 
                 // Retry
                 await this.Mobile(account)
@@ -254,9 +240,20 @@ export class MicrosoftRewardsBot {
         log('MAIN-POINTS', `The script collected ${this.collectedPoints} points today`)
 
         // Close mobile browser
+        return await this.closeBrowser(browser, account.email)
+    }
+
+    private async closeBrowser(browser: BrowserContext, email: string) {
+        // Save cookies
+        const cookies = await browser.cookies()
+        await saveSessionData(this.config.sessionPath, email, this.isMobile, cookies)
+
+        // Close browser
         await browser.close()
     }
+
 }
+
 
 const bot = new MicrosoftRewardsBot()
 

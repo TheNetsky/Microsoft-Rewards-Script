@@ -1,5 +1,8 @@
+import { Cookie } from 'playwright'
+import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 import fs from 'fs'
 import path from 'path'
+
 
 import { Account } from '../interface/Account'
 import { Config } from '../interface/Config'
@@ -34,7 +37,37 @@ export function loadConfig(): Config {
     }
 }
 
-export async function loadSesion(sessionPath: string, email: string): Promise<string> {
+export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, getFingerprint: boolean) {
+    try {
+        // Fetch cookie file
+        const cookieFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`)
+
+        let cookies: Cookie[] = []
+        if (fs.existsSync(cookieFile)) {
+            const cookiesData = await fs.promises.readFile(cookieFile, 'utf-8')
+            cookies = JSON.parse(cookiesData)
+        }
+
+        // Fetch fingerprint file
+        const fingerprintFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+
+        let fingerprint!: BrowserFingerprintWithHeaders
+        if (getFingerprint && fs.existsSync(fingerprintFile)) {
+            const fingerprintData = await fs.promises.readFile(fingerprintFile, 'utf-8')
+            fingerprint = JSON.parse(fingerprintData)
+        }
+
+        return {
+            cookies: cookies,
+            fingerprint: fingerprint
+        }
+
+    } catch (error) {
+        throw new Error(error as string)
+    }
+}
+
+export async function saveSessionData(sessionPath: string, email: string, isMobile: boolean, cookies: Cookie[]): Promise<string> {
     try {
         // Fetch path
         const sessionDir = path.join(__dirname, '../browser/', sessionPath, email)
@@ -43,6 +76,28 @@ export async function loadSesion(sessionPath: string, email: string): Promise<st
         if (!fs.existsSync(sessionDir)) {
             await fs.promises.mkdir(sessionDir, { recursive: true })
         }
+
+        // Save cookies to a file
+        await fs.promises.writeFile(path.join(sessionDir, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`), JSON.stringify(cookies))
+
+        return sessionDir
+    } catch (error) {
+        throw new Error(error as string)
+    }
+}
+
+export async function saveFingerprintData(sessionPath: string, email: string, isMobile: boolean, fingerpint: BrowserFingerprintWithHeaders): Promise<string> {
+    try {
+        // Fetch path
+        const sessionDir = path.join(__dirname, '../browser/', sessionPath, email)
+
+        // Create session dir
+        if (!fs.existsSync(sessionDir)) {
+            await fs.promises.mkdir(sessionDir, { recursive: true })
+        }
+
+        // Save fingerprint to a file
+        await fs.promises.writeFile(path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`), JSON.stringify(fingerpint))
 
         return sessionDir
     } catch (error) {

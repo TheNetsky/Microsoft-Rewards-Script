@@ -7,6 +7,7 @@ export interface Config {
     workers: Workers;
     searchSettings: SearchSettings;
     webhook: Webhook;
+    saveFingerprint: boolean;
 }
 
 export interface SearchSettings {
@@ -14,6 +15,7 @@ export interface SearchSettings {
     scrollRandomResults: boolean;
     clickRandomResults: boolean;
     searchDelay: SearchDelay;
+    retryMobileSearch: boolean;
 }
 
 export interface SearchDelay {

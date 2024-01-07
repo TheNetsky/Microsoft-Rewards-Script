@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 
 import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../interface/DashboardData'
 
@@ -58,13 +58,13 @@ export class Workers {
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
 
             // Wait for new page to load, max 10 seconds, however try regardless in case of error
-            await page.waitForNetworkIdle({ timeout: 5_000 }).catch(() => { })
+            await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { })
 
             await this.solveActivities(page, activitiesUncompleted, punchCard)
 
             page = await this.bot.browser.utils.getLatestTab(page)
 
-            const pages = await (page.browser()).pages()
+            const pages = page.context().pages()
 
             if (pages.length > 3) {
                 await page.close()
@@ -118,7 +118,7 @@ export class Workers {
                 // Reselect the worker page
                 activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
 
-                const pages = await activityPage.browser().pages()
+                const pages = activityPage.context().pages()
                 if (pages.length > 3) {
                     await activityPage.close()
 
@@ -152,7 +152,7 @@ export class Workers {
                 Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster, 
                 if it didn't then it gave enough time for the page to load.
                 */
-                await activityPage.waitForNetworkIdle({ timeout: 10_000 }).catch(() => { })
+                await activityPage.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { })
                 await this.bot.utils.wait(5000)
 
                 switch (activity.promotionType) {

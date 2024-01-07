@@ -2,8 +2,9 @@
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
     "headless": false,
-    "runOnZeroPoints": false,
+    "runOnZeroPoints": true,
     "clusters": 1,
+    "saveFingerprint": false,
     "workers": {
         "doDailySet": true,
         "doMorePromotions": true,
@@ -18,7 +19,8 @@
         "searchDelay": {
             "min": 10000,
             "max": 20000
-        }
+        },
+        "retryMobileSearch": true
     },
     "webhook": {
         "enabled": false,

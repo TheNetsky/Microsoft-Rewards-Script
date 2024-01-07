@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -24,7 +24,7 @@ export default class BrowserUtil {
 
         for (const button of buttons) {
             try {
-                const element = await page.waitForSelector(button.selector, { visible: true, timeout: 1000 })
+                const element = await page.waitForSelector(button.selector, { state: 'visible', timeout: 1000 })
                 if (element) {
                     await element.click()
                     result = true
@@ -73,8 +73,8 @@ export default class BrowserUtil {
         try {
             await this.bot.utils.wait(500)
 
-            const browser = page.browser()
-            const pages = await browser.pages()
+            const browser = page.context()
+            const pages = browser.pages()
             const newTab = pages[pages.length - 1]
 
             if (newTab) {
@@ -89,8 +89,8 @@ export default class BrowserUtil {
 
     async getTabs(page: Page) {
         try {
-            const browser = page.browser()
-            const pages = await browser.pages()
+            const browser = page.context()
+            const pages = browser.pages()
 
             const homeTab = pages[1]
             let homeTabURL: URL

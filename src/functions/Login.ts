@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 import readline from 'readline'
 
 import { MicrosoftRewardsBot } from '../index'
@@ -26,13 +26,13 @@ export class Login {
 
             if (!isLoggedIn) {
                 // Check if account is locked
-                const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { visible: true, timeout: 10_000 }).then(() => true).catch(() => false)
+                const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false)
                 if (isLocked) {
                     this.bot.log('LOGIN', 'This account has been locked!', 'error')
                     throw new Error('Account has been locked!')
                 }
 
-                await page.waitForSelector('#loginHeader', { visible: true, timeout: 10_000 })
+                await page.waitForSelector('#loginHeader', { state: 'visible', timeout: 10_000 })
 
                 await this.execLogin(page, email, password)
                 this.bot.log('LOGIN', 'Logged into Microsoft successfully')
@@ -59,7 +59,7 @@ export class Login {
         this.bot.log('LOGIN', 'Email entered successfully')
 
         try {
-            await page.waitForSelector('#i0118', { visible: true, timeout: 2000 })
+            await page.waitForSelector('#i0118', { state: 'visible', timeout: 2000 })
             await this.bot.utils.wait(2000)
 
             await page.type('#i0118', password)

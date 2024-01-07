@@ -1,4 +1,4 @@
-import { Page } from 'puppeteer'
+import { Page } from 'playwright'
 
 import { Workers } from '../Workers'
 
@@ -10,7 +10,7 @@ export class Quiz extends Workers {
 
         try {
             // Check if the quiz has been started or not
-            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { visible: true, timeout: 2000 }).then(() => true).catch(() => false)
+            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {
@@ -29,7 +29,7 @@ export class Quiz extends Workers {
                     const answers: string[] = []
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
-                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { visible: true, timeout: 10_000 })
+                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10_000 })
                         const answerAttribute = await answerSelector?.evaluate(el => el.getAttribute('iscorrectoption'))
 
                         if (answerAttribute && answerAttribute.toLowerCase() === 'true') {
@@ -39,7 +39,7 @@ export class Quiz extends Workers {
 
                     // Click the answers
                     for (const answer of answers) {
-                        await page.waitForSelector(answer, { visible: true, timeout: 2000 })
+                        await page.waitForSelector(answer, { state: 'visible', timeout: 2000 })
 
                         // Click the answer on page
                         await page.click(answer)
@@ -59,7 +59,7 @@ export class Quiz extends Workers {
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
 
-                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { visible: true, timeout: 10_000 })
+                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10_000 })
                         const dataOption = await answerSelector?.evaluate(el => el.getAttribute('data-option'))
 
                         if (dataOption === correctOption) {

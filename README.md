@@ -1,5 +1,5 @@
 # Microsoft-Rewards-Script
-Automated Microsoft Rewards script, however this time using TypeScript, Cheerio and Puppeteer.
+Automated Microsoft Rewards script, however this time using TypeScript, Cheerio and Playwright.
 
 Under development, however mainly for personal use!
 
