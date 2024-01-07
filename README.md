@@ -34,7 +34,7 @@ Under development, however mainly for personal use!
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) |
 |  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` |
-|  webhook.enabled     | Enabled or disable your set webhook | `false` |
+|  webhook.enabled     | Enable or disable your set webhook | `false` |
 |  webhook.url     | Your Discord webhook URL | `null` |
 
 ## Features ##
