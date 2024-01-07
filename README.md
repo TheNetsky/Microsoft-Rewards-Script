@@ -15,6 +15,27 @@ Under development, however mainly for personal use!
 - If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run chrome-kill-win` script. (Windows)
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
+## Config ## 
+| Setting        | Description           | Default  |
+| :------------- |:-------------| :-----|
+|  baseURL    | MS Rewards page | `https://rewards.bing.com` |
+|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In src/browser/sessions) |
+|  headless    | If the browser window should be visable be ran in the background | `false` (Browser is visable) |
+|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |
+|  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) |
+|  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
+|  workers.doDailySet    | Complete daily set items | `true`  |
+|  workers.doMorePromotions    | Complete promotional items | `true`  |
+|  workers.doPunchCards    | Complete punchcards | `true`  |
+|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  |
+|  workers.doMobileSearch    | Complete daily mobile searches | `true`  |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |
+|  scrollRandomResults    | Scroll randomly in search results | `true`   |
+|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
+|  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) |
+|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` |
+|  webhook.enabled     | Enabled or disable your set webhook | `false` |
+|  webhook.url     | Your Discord webhook URL | `null` |
 
 ## Features ##
 - [x] Multi-Account Support
