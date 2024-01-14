@@ -14,6 +14,7 @@ Under development, however mainly for personal use!
 ## Notes ##
 - If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run chrome-kill-win` script. (Windows)
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
+- Docker container has to be recreated for any changes regardings the `config.json` and/or `accounts.json`.
 
 ## Config ## 
 | Setting        | Description           | Default  |

@@ -132,7 +132,7 @@ export class Search extends Workers {
         for (let i = 0; i < 5; i++) {
             try {
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10_000 })
+                await searchPage.waitForSelector(searchBar, { state: 'attached', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
                 await this.bot.utils.wait(500)
                 await searchPage.keyboard.down('Control')
@@ -249,7 +249,7 @@ export class Search extends Workers {
     private async randomScroll(page: Page) {
         try {
             // Press the arrow down key to scroll
-            for (let i = 0; i < this.bot.utils.randomNumber(5, 400); i++) {
+            for (let i = 0; i < this.bot.utils.randomNumber(5, 600); i++) {
                 await page.keyboard.press('ArrowDown')
             }
 

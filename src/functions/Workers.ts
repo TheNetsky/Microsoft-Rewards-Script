@@ -95,7 +95,7 @@ export class Workers {
         }
 
         // Solve Activities
-        this.bot.log('MORE-PROMOTIONS', 'Started solving "More Promotions" item')
+        this.bot.log('MORE-PROMOTIONS', 'Started solving "More Promotions" items')
 
         page = await this.bot.browser.utils.getLatestTab(page)
 

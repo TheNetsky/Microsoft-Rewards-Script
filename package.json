@@ -1,6 +1,6 @@
 {
   "name": "microsoft-rewards-script",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Automatically do tasks for Microsoft Rewards but in TS!",
   "main": "index.js",
   "engines": {
@@ -11,7 +11,8 @@
     "start": "node ./dist/index.js",
     "ts-start": "ts-node ./src/index.ts",
     "dev": "ts-node ./src/index.ts -dev",
-    "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\""
+    "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",
+    "create-docker" : "docker build -t microsoft-rewards-script-docker ."
   },
   "keywords": [
     "Bing Rewards",
