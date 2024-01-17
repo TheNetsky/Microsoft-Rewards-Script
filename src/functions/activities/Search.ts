@@ -128,6 +128,14 @@ export class Search extends Workers {
     }
 
     private async bingSearch(searchPage: Page, query: string) {
+        const os = require('os');
+        let platform = os.platform();
+        let systemNewTabKey;
+        if (platform === 'darwin') {
+            systemNewTabKey = 'Meta';
+        } else {
+           systemNewTabKey = 'Control';
+        }
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
@@ -138,10 +146,10 @@ export class Search extends Workers {
                 await searchPage.waitForSelector(searchBar, { state: 'attached', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
                 await this.bot.utils.wait(500)
-                await searchPage.keyboard.down('Control')
+                await searchPage.keyboard.down(${systemNewTabKey})
                 await searchPage.keyboard.press('A')
                 await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up('Control')
+                await searchPage.keyboard.up(${systemNewTabKey})
                 await searchPage.keyboard.type(query)
                 await searchPage.keyboard.press('Enter')
 
