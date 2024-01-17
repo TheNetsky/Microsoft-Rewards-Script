@@ -146,10 +146,10 @@ export class Search extends Workers {
                 await searchPage.waitForSelector(searchBar, { state: 'attached', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
                 await this.bot.utils.wait(500)
-                await searchPage.keyboard.down(${systemNewTabKey})
+                await searchPage.keyboard.down('${systemNewTabKey}')
                 await searchPage.keyboard.press('A')
                 await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up(${systemNewTabKey})
+                await searchPage.keyboard.up('${systemNewTabKey}')
                 await searchPage.keyboard.type(query)
                 await searchPage.keyboard.press('Enter')
 
