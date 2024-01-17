@@ -14,14 +14,19 @@ Under development, however mainly for personal use!
 ## Notes ##
 - If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run chrome-kill-win` script. (Windows)
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
-- Docker container has to be recreated for any changes regardings the `config.json` and/or `accounts.json`.
+
+## Docker (Experimental) ##
+1. Download the source code
+2. Make changes to your `accounts.json` and/or `config.json`
+3. Run `docker build -t microsoft-rewards-script-docker .`
+- Docker container has to be recreated for any changes regarding the `config.json` and/or `accounts.json`!
 
 ## Config ## 
 | Setting        | Description           | Default  |
 | :------------- |:-------------| :-----|
 |  baseURL    | MS Rewards page | `https://rewards.bing.com` |
-|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In src/browser/sessions) |
-|  headless    | If the browser window should be visable be ran in the background | `false` (Browser is visable) |
+|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) |
+|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) |
 |  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |
 |  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) |
 |  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
