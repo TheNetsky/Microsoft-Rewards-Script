@@ -131,6 +131,9 @@ export class Search extends Workers {
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
+                // Go back to the top
+                await searchPage.keyboard.press('Home')
+
                 const searchBar = '#sb_form_q'
                 await searchPage.waitForSelector(searchBar, { state: 'attached', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
@@ -152,6 +155,7 @@ export class Search extends Workers {
                     await this.clickRandomLink(searchPage)
                 }
 
+                // Delay between searches
                 await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max)))
 
                 return await this.bot.browser.func.getSearchPoints()

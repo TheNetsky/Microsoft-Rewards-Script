@@ -1,6 +1,6 @@
 {
   "name": "microsoft-rewards-script",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Automatically do tasks for Microsoft Rewards but in TS!",
   "main": "index.js",
   "engines": {
