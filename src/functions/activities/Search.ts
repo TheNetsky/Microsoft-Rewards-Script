@@ -1,5 +1,6 @@
 import { Page } from 'playwright'
 import axios from 'axios'
+import { platform } from 'os'
 
 import { Workers } from '../Workers'
 
@@ -128,20 +129,25 @@ export class Search extends Workers {
     }
 
     private async bingSearch(searchPage: Page, query: string) {
+        const platformControlKey = platform() === 'darwin' ? 'Meta' : 'Control'
+
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
-                // Go back to the top
-                await searchPage.keyboard.press('Home')
+
+                // Go to top of the page
+                await searchPage.evaluate(() => {
+                    window.scrollTo(0, 0)
+                })
 
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'attached', timeout: 10_000 })
+                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
                 await this.bot.utils.wait(500)
-                await searchPage.keyboard.down('Control')
+                await searchPage.keyboard.down(platformControlKey)
                 await searchPage.keyboard.press('A')
                 await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up('Control')
+                await searchPage.keyboard.up(platformControlKey)
                 await searchPage.keyboard.type(query)
                 await searchPage.keyboard.press('Enter')
 
@@ -252,10 +258,11 @@ export class Search extends Workers {
 
     private async randomScroll(page: Page) {
         try {
-            // Press the arrow down key to scroll
-            for (let i = 0; i < this.bot.utils.randomNumber(5, 600); i++) {
-                await page.keyboard.press('ArrowDown')
-            }
+            const scrollAmount = this.bot.utils.randomNumber(5, 5000)
+
+            await page.evaluate((scrollAmount) => {
+                window.scrollBy(0, scrollAmount)
+            }, scrollAmount)
 
         } catch (error) {
             this.bot.log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')

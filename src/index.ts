@@ -125,6 +125,8 @@ export class MicrosoftRewardsBot {
 
     // Desktop
     async Desktop(account: Account) {
+        this.isMobile = false
+
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
 
