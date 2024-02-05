@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y jq
 COPY . .
 
 # Check if "headless" is set to "true" in the config.json file
+# DELETE BELOW IF YOU WANT TO RUN THE DOCKER SCRIPT HEADFULL!
 RUN HEADLESS=$(cat src/config.json | jq -r .headless) \
     && if [ "$HEADLESS" != "true" ]; then \
     echo "Error: 'headless' in src/config.json is not true."; \

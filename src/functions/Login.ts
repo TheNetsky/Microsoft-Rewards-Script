@@ -53,35 +53,41 @@ export class Login {
     }
 
     private async execLogin(page: Page, email: string, password: string) {
-        await page.type('#i0116', email)
-        await page.click('#idSIButton9')
-
-        this.bot.log('LOGIN', 'Email entered successfully')
-
         try {
-            await page.waitForSelector('#i0118', { state: 'visible', timeout: 2000 })
-            await this.bot.utils.wait(2000)
-
-            await page.type('#i0118', password)
+            // Enter email
+            await page.fill('#i0116', email)
             await page.click('#idSIButton9')
 
-            // When erroring at this stage it means a 2FA code is required
-        } catch (error) {
-            this.bot.log('LOGIN', '2FA code required')
+            this.bot.log('LOGIN', 'Email entered successfully')
 
-            // Wait for user input
-            const code = await new Promise<string>((resolve) => {
-                rl.question('Enter 2FA code:\n', (input) => {
-                    rl.close()
-                    resolve(input)
+            try {
+                // Enter password
+                await page.waitForSelector('#i0118', { state: 'visible', timeout: 2000 })
+                await this.bot.utils.wait(2000)
+
+                await page.fill('#i0118', password)
+                await page.click('#idSIButton9')
+
+                // When erroring at this stage it means a 2FA code is required
+            } catch (error) {
+                this.bot.log('LOGIN', '2FA code required')
+
+                // Wait for user input
+                const code = await new Promise<string>((resolve) => {
+                    rl.question('Enter 2FA code:\n', (input) => {
+                        rl.close()
+                        resolve(input)
+                    })
                 })
-            })
 
-            await page.type('input[name="otc"]', code)
-            await page.keyboard.press('Enter')
+                await page.fill('input[name="otc"]', code)
+                await page.keyboard.press('Enter')
+            }
 
-        } finally {
             this.bot.log('LOGIN', 'Password entered successfully')
+
+        } catch (error) {
+            this.bot.log('LOGIN', 'An error occurred:' + error, 'error')
         }
 
         const currentURL = new URL(page.url())

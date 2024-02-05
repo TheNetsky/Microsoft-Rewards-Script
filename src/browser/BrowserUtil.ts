@@ -12,6 +12,7 @@ export default class BrowserUtil {
 
     async tryDismissAllMessages(page: Page): Promise<boolean> {
         const buttons = [
+            { selector: '#acceptButton', label: 'AcceptButton' },
             { selector: '#iLandingViewAction', label: 'iLandingViewAction' },
             { selector: '#iShowSkip', label: 'iShowSkip' },
             { selector: '#iNext', label: 'iNext' },

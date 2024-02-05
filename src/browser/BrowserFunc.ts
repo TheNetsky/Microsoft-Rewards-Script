@@ -95,12 +95,12 @@ export default class BrowserFunc {
             const scripts = Array.from(document.querySelectorAll('script'))
             const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
 
-            if (targetScript) {
-                return targetScript.innerText
-            } else {
-                throw this.bot.log('GET-DASHBOARD-DATA', 'Script containing dashboard data not found', 'error')
-            }
+            return targetScript?.innerText ? targetScript.innerText : null
         })
+
+        if (!scriptContent) {
+            throw this.bot.log('GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
+        }
 
         // Extract the dashboard object from the script content
         const dashboardData = await this.bot.homePage.evaluate(scriptContent => {
@@ -110,10 +110,12 @@ export default class BrowserFunc {
 
             if (match && match[1]) {
                 return JSON.parse(match[1])
-            } else {
-                throw this.bot.log('GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
             }
         }, scriptContent)
+
+        if (!dashboardData) {
+            throw this.bot.log('GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
+        }
 
         return dashboardData
     }
