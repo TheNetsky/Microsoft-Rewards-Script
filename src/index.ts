@@ -178,8 +178,7 @@ export class MicrosoftRewardsBot {
         }
 
         // Save cookies
-        const cookies = await browser.cookies()
-        await saveSessionData(this.config.sessionPath, account.email, this.isMobile, cookies)
+        await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile)
 
         // Close desktop browser
         return await this.closeBrowser(browser, account.email)
@@ -247,8 +246,7 @@ export class MicrosoftRewardsBot {
 
     private async closeBrowser(browser: BrowserContext, email: string) {
         // Save cookies
-        const cookies = await browser.cookies()
-        await saveSessionData(this.config.sessionPath, email, this.isMobile, cookies)
+        await saveSessionData(this.config.sessionPath, browser, email, this.isMobile)
 
         // Close browser
         await browser.close()

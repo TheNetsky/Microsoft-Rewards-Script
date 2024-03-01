@@ -1,4 +1,4 @@
-import { Cookie } from 'playwright'
+import { BrowserContext, Cookie } from 'playwright'
 import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 import fs from 'fs'
 import path from 'path'
@@ -67,8 +67,10 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
     }
 }
 
-export async function saveSessionData(sessionPath: string, email: string, isMobile: boolean, cookies: Cookie[]): Promise<string> {
+export async function saveSessionData(sessionPath: string, browser: BrowserContext, email: string, isMobile: boolean): Promise<string> {
     try {
+        const cookies = await browser.cookies()
+
         // Fetch path
         const sessionDir = path.join(__dirname, '../browser/', sessionPath, email)
 

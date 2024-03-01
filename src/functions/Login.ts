@@ -2,6 +2,7 @@ import { Page } from 'playwright'
 import readline from 'readline'
 
 import { MicrosoftRewardsBot } from '../index'
+import { saveSessionData } from '../util/Load'
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -26,13 +27,11 @@ export class Login {
 
             if (!isLoggedIn) {
                 // Check if account is locked
-                const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false)
+                const isLocked = await page.waitForSelector('.serviceAbusePageContainer', { state: 'visible', timeout: 1000 }).then(() => true).catch(() => false)
                 if (isLocked) {
                     this.bot.log('LOGIN', 'This account has been locked!', 'error')
                     throw new Error('Account has been locked!')
                 }
-
-                await page.waitForSelector('#loginHeader', { state: 'visible', timeout: 10_000 })
 
                 await this.execLogin(page, email, password)
                 this.bot.log('LOGIN', 'Logged into Microsoft successfully')
@@ -42,6 +41,9 @@ export class Login {
 
             // Check if logged in to bing
             await this.checkBingLogin(page)
+
+            // Save session
+            await saveSessionData(this.bot.config.sessionPath, page.context(), email, this.bot.isMobile)
 
             // We're done logging in
             this.bot.log('LOGIN', 'Logged in successfully')

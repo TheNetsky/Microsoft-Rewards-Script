@@ -142,7 +142,9 @@ export default class BrowserFunc {
             let totalEarnablePoints = 0
 
             // Desktop Search Points
-            data.userStatus.counters.pcSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+            if (data.userStatus.counters.pcSearch?.length) {
+                data.userStatus.counters.pcSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
+            }
 
             // Mobile Search Points
             if (data.userStatus.counters.mobileSearch?.length) {
@@ -153,12 +155,14 @@ export default class BrowserFunc {
             data.dailySetPromotions[this.bot.utils.getFormattedDate()]?.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
 
             // More Promotions
-            data.morePromotions.forEach(x => {
-                // Only count points from supported activities
-                if (['quiz', 'urlreward'].includes(x.activityType)) {
-                    totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
-                }
-            })
+            if (data.morePromotions?.length) {
+                data.morePromotions.forEach(x => {
+                    // Only count points from supported activities
+                    if (['quiz', 'urlreward'].includes(x.activityType)) {
+                        totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
+                    }
+                })
+            }
 
             return totalEarnablePoints
         } catch (error) {

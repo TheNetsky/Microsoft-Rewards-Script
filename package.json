@@ -1,6 +1,6 @@
 {
   "name": "microsoft-rewards-script",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Automatically do tasks for Microsoft Rewards but in TS!",
   "main": "index.js",
   "engines": {
@@ -34,9 +34,9 @@
   "dependencies": {
     "axios": "^1.6.7",
     "cheerio": "^1.0.0-rc.12",
-    "fingerprint-generator": "^2.1.48",
-    "fingerprint-injector": "^2.1.48",
-    "playwright": "^1.41.2",
+    "fingerprint-generator": "^2.1.49",
+    "fingerprint-injector": "^2.1.49",
+    "playwright": "^1.42.0",
     "ts-node": "^10.9.2"
   }
 }
