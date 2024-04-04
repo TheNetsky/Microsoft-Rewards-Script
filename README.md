@@ -17,9 +17,26 @@ Under development, however mainly for personal use!
 
 ## Docker (Experimental) ##
 1. Download the source code
-2. Make changes to your `accounts.json` and/or `config.json`
-3. Run `docker build -t microsoft-rewards-script-docker .`
-- Docker container has to be recreated for any changes regarding the `config.json` and/or `accounts.json`!
+2. Make changes to your `accounts.json`
+3. Make sure to change `"headless": false` to `"headless": true` in your `config.json` 
+4. Note, the container has to be recreated for any changes regarding the `config.json` and/or `accounts.json`!
+### Option 1: build and run with docker run
+
+1. Run `docker build -t microsoft-rewards-script-docker .` to build the container
+2. Run the container with `docker run --name netsky -d microsoft-rewards-script-docker` or, omit the detached flag `-d` to view the script output in your terminal. 
+3. Optionally, change the name of the container by changing `--name netsky` to your preferred container name
+4. The container will exit after completing the script, run it again using `docker start netsky`
+5. If you are running the container `-d` detached, you can view logs with `docker logs netsky`
+
+### Option 2: use docker compose
+
+1. A basic docker compose.yaml has been provided, which can be run with `docker compose up -d` or, omit the detached flag `-d` to view the script output in your terminal. 
+
+2. The container will exit after completing the script, run it again using `docker start netsky`
+
+3. If you are running the container `-d` detached, you can view logs with `docker logs netsky`
+
+   
 
 ## Config ## 
 | Setting        | Description           | Default  |

@@ -1,0 +1,8 @@
+services:
+  microsoft-rewards-script:
+    build: .
+    container_name: netsky
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - .:/usr/src/microsoft-rewards-script
