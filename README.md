@@ -32,9 +32,11 @@ Under development, however mainly for personal use!
 
 1. A basic docker compose.yaml has been provided, which can be run with `docker compose up -d` or, omit the detached flag `-d` to view the script output in your terminal. 
 
-2. The container will exit after completing the script, run it again using `docker start netsky`
+2. If you make changes to your config, you may wish to use use `docker compose up -d --build` to build or rebuild the image with your latest changes to the script.
 
-3. If you are running the container `-d` detached, you can view logs with `docker logs netsky`
+3. The container will exit after completing the script, run it again using `docker start netsky`
+
+4. If you are running the container `-d` detached, you can view logs with `docker logs netsky`
 
    
 
