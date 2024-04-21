@@ -4,9 +4,8 @@ FROM node:18
 # Set the working directory in the container
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install jq
-RUN apt-get update && apt-get install -y jq
-
+# Install jq and cron
+RUN apt-get update && apt-get install -y jq cron
 
 # Copy all files to the working directory
 COPY . .
@@ -39,5 +38,17 @@ RUN npm run build
 # Install playwright chromium
 RUN npx playwright install chromium
 
+# Copy cron file to cron directory
+COPY src/crontab /etc/cron.d/microsoft-rewards-cron
+
+# Give execution rights on the cron job
+RUN chmod 0644 /etc/cron.d/microsoft-rewards-cron
+
+# Apply cron job
+RUN crontab /etc/cron.d/microsoft-rewards-cron
+
+# Create the log file to be able to run tail
+RUN touch /var/log/cron.log
+
 # Define the command to run your application
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npm start & cron && tail -f /var/log/cron.log"]
