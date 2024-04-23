@@ -1,1 +1,1 @@
-0 5 * * * /bin/bash /usr/src/microsoft-rewards-script/src/run_daily.sh >> /var/log/cron.log 2>&1
+0 5,11 * * * /bin/bash /usr/src/microsoft-rewards-script/src/run_daily.sh >> /var/log/cron.log 2>&1
