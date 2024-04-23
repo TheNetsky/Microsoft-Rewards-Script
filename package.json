@@ -32,11 +32,13 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@types/tunnel": "^0.0.7",
     "axios": "^1.6.7",
     "cheerio": "^1.0.0-rc.12",
     "fingerprint-generator": "^2.1.49",
     "fingerprint-injector": "^2.1.49",
     "playwright": "^1.42.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tunnel": "^0.0.6"
   }
 }

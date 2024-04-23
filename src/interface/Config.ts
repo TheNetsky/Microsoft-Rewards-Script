@@ -8,6 +8,7 @@ export interface Config {
     searchSettings: SearchSettings;
     webhook: Webhook;
     saveFingerprint: boolean;
+    GoogleTrendsProxy: GoogleTrendsProxy;
 }
 
 export interface SearchSettings {
@@ -34,4 +35,12 @@ export interface Workers {
     doPunchCards: boolean;
     doDesktopSearch: boolean;
     doMobileSearch: boolean;
+}
+export interface GoogleTrendsProxy {
+    enabled: boolean;
+    geoLocale: string;
+    host: string;
+    port: number;
+    username: string;
+    password: string;
 }

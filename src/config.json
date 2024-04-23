@@ -25,5 +25,13 @@
     "webhook": {
         "enabled": false,
         "url": ""
+    },
+    "GoogleTrendsProxy": {
+        "enabled": false,
+        "geoLocale": "SG",
+        "host": "",
+        "port": 0,
+        "username": "",
+        "password": ""
     }
 }

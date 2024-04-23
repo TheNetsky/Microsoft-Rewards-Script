@@ -3,7 +3,7 @@ import axios from 'axios'
 import { platform } from 'os'
 
 import { Workers } from '../Workers'
-
+import tunnel from 'tunnel'
 import { Counters, DashboardData } from '../../interface/DashboardData'
 import { GoogleTrends } from '../../interface/GoogleDailyTrends'
 import { GoogleSearch } from '../../interface/Search'
@@ -190,11 +190,23 @@ export class Search extends Workers {
     private async getGoogleTrends(geoLocale: string, queryCount: number): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
         let i = 0
-
+        let httpsAgent = null
         geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'US'
 
+        // If Google Trends Proxy is enabled, then use a proxy
+        if (this.bot.config.GoogleTrendsProxy.enabled) {
+            this.bot.log('SEARCH-GOOGLE-TRENDS', 'Using Google Trends Proxy!')
+            const agent = tunnel.httpsOverHttp({
+                proxy: {
+                    host: this.bot.config.GoogleTrendsProxy.host,
+                    port: this.bot.config.GoogleTrendsProxy.port,
+                    proxyAuth: `${this.bot.config.GoogleTrendsProxy.username}:${this.bot.config.GoogleTrendsProxy.password}`
+                }
+            })
+            geoLocale=this.bot.config.GoogleTrendsProxy.geoLocale
+            httpsAgent = agent
+        }
         this.bot.log('SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
-
         while (queryCount > queryTerms.length) {
             i += 1
             const date = new Date()
@@ -207,7 +219,8 @@ export class Search extends Workers {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    httpsAgent: httpsAgent
                 }
 
                 const response = await axios(request)
