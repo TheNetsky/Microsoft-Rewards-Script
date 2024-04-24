@@ -19,5 +19,5 @@ sleep $SLEEPTIME
 # Log the start of the script
 echo "Starting script..."
 
-# Start the script
-docker exec netsky npm run start
+# Execute the Node.js script directly
+npm run start
