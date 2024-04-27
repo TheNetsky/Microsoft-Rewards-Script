@@ -4,8 +4,8 @@ FROM node:18
 # Set the working directory in the container
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install jq and cron
-RUN apt-get update && apt-get install -y jq cron
+# Install jq, cron, and gettext-base
+RUN apt-get update && apt-get install -y jq cron gettext-base
 
 # Copy all files to the working directory
 COPY . .
@@ -36,5 +36,8 @@ COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 # Create the log file to be able to run tail
 RUN touch /var/log/cron.log
 
+# Set the timezone as an environment variable, default to UTC if not set
+ENV TZ=UTC
+
 # Define the command to run your application
-CMD sh -c 'envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && npm start & tail -f /var/log/cron.log'
+CMD sh -c 'envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && tail -f /var/log/cron.log'
