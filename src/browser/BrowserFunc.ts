@@ -28,7 +28,7 @@ export default class BrowserFunc {
                 return
             }
 
-            await page.goto(this.bot.config.baseURL)
+            await page.goto(this.bot.config.baseURL, { timeout: 60000 })
 
             const maxIterations = 5 // Maximum iterations set to 5
 
