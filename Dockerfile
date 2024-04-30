@@ -7,9 +7,6 @@ WORKDIR /usr/src/microsoft-rewards-script
 # Install jq, cron, and gettext-base
 RUN apt-get update && apt-get install -y jq cron gettext-base
 
-# Set the timezone
-ENV TZ=America/New_York
-
 # Copy all files to the working directory
 COPY . .
 
@@ -39,5 +36,5 @@ COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 # Create the log file to be able to run tail
 RUN touch /var/log/cron.log
 
-# Define the command to run your application
-CMD sh -c 'envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && tail -f /var/log/cron.log'
+# Define the command to run your application with cron optionally
+CMD sh -c 'envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && if [ "${RUN_ON_START:-true}" = "true" ]; then TZ="${TZ:-America/New_York}" npm start; fi'

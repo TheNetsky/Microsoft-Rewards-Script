@@ -75,6 +75,7 @@ Under development, however mainly for personal use!
 |  webhook.enabled     | Enable or disable your set webhook | `false` |  |
 |  webhook.url     | Your Discord webhook URL | `null` |  |
 | cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME |
+|  | Run the script immediately when the Docker container starts | `true` | RUN_ON_START |
 
 ## Features ##
 - [x] Multi-Account Support
