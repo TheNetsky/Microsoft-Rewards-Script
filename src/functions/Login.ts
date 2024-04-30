@@ -21,7 +21,7 @@ export class Login {
 
         try {
             // Navigate to the Bing login page
-            await page.goto('https://rewards.bing.com/signin')
+            await page.goto('https://rewards.bing.com/signin', { timeout: 60000 })
 
             const isLoggedIn = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10_000 }).then(() => true).catch(() => false)
 
