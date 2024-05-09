@@ -12,6 +12,7 @@
         "doDesktopSearch": true,
         "doMobileSearch": true
     },
+    "globalTimeout": 30000,
     "searchSettings": {
         "useGeoLocaleQueries": false,
         "scrollRandomResults": true,

@@ -52,6 +52,7 @@ Under development, however mainly for personal use!
 |  workers.doPunchCards    | Complete punchcards | `true`  |
 |  workers.doDesktopSearch    | Complete daily desktop searches | `true`  |
 |  workers.doMobileSearch    | Complete daily mobile searches | `true`  |
+|  globalTimeout    | The length before the action gets timeout | 30 seconds (30.000 miliseconds)   |
 |  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |
 |  scrollRandomResults    | Scroll randomly in search results | `true`   |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
