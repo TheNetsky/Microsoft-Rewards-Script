@@ -181,7 +181,8 @@ export class MicrosoftRewardsBot {
         await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile)
 
         // Close desktop browser
-        return await this.closeBrowser(browser, account.email)
+        await this.closeBrowser(browser, account.email)
+        return
     }
 
     // Mobile
@@ -241,7 +242,8 @@ export class MicrosoftRewardsBot {
         log('MAIN-POINTS', `The script collected ${this.collectedPoints} points today`)
 
         // Close mobile browser
-        return await this.closeBrowser(browser, account.email)
+        await this.closeBrowser(browser, account.email)
+        return
     }
 
     private async closeBrowser(browser: BrowserContext, email: string) {
