@@ -55,27 +55,27 @@ Under development, however mainly for personal use!
 
 ## Config ## 
 | Setting        | Description           | Default  | Docker Environmental Variable |
-| :------------- |:-------------| :-----| ------|
-|  baseURL    | MS Rewards page | `https://rewards.bing.com` |  |
-|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) |  |
+| :------------- |:-------------| :-----| :-----|
+|  baseURL    | MS Rewards page | `https://rewards.bing.com` | BASE_URL |
+|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) | SESSION_PATH |
 |  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) | HEADLESS *(must be set to `=true` for docker)* |
-|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |  |
+|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) | RUN_ON_ZERO_POINTS |
 |  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) | CLUSTERS |
-|  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |  |
-|  workers.doDailySet    | Complete daily set items | `true`  |   |
-|  workers.doMorePromotions    | Complete promotional items | `true`  |   |
-|  workers.doPunchCards    | Complete punchcards | `true`  |   |
-|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  |   |
-|  workers.doMobileSearch    | Complete daily mobile searches | `true`  |   |
-|  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   |   |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |   |
-|  scrollRandomResults    | Scroll randomly in search results | `true`   |    |
-|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |    |
+|  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) | SAVE_FINGERPRINT |
+|  workers.doDailySet    | Complete daily set items | `true`  | WORKERS_DO_DAILY_SET |
+|  workers.doMorePromotions    | Complete promotional items | `true`  | WORKERS_DO_MORE_PROMOTIONS |
+|  workers.doPunchCards    | Complete punchcards | `true`  | WORKERS_DO_PUNCH_CARDS |
+|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | WORKERS_DO_DESKTOP_SEARCH |
+|  workers.doMobileSearch    | Complete daily mobile searches | `true`  | WORKERS_DO_MOBILE_SEARCH |
+|  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | SEARCH_SETTINGS_USE_GEO_LOCALE_QUERIES |
+|  scrollRandomResults    | Scroll randomly in search results | `true`   | SEARCH_SETTINGS_SCROLL_RANDOM_RESULTS |
+|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | SEARCH_SETTINGS_CLICK_RANDOM_RESULTS |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
-|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` |  |
-|  webhook.enabled     | Enable or disable your set webhook | `false` |  |
-|  webhook.url     | Your Discord webhook URL | `null` |  |
-| cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME |
+|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | SEARCH_SETTINGS_RETRY_MOBILE_SEARCH |
+|  webhook.enabled     | Enable or disable your set webhook | `false` | WEBHOOK_ENABLED |
+|  webhook.url     | Your Discord webhook URL | `null` | WEBHOOK_URL="" |
+| cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME="" |
 |  | Run the script immediately when the Docker container starts | `true` | RUN_ON_START |
 
 ## Features ##
