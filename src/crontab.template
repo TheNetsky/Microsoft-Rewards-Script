@@ -1,0 +1,1 @@
+${CRON_START_TIME} /bin/bash /usr/src/microsoft-rewards-script/src/run_daily.sh >> /var/log/cron.log 2>&1

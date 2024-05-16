@@ -4,20 +4,11 @@ FROM node:18
 # Set the working directory in the container
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install jq
-RUN apt-get update && apt-get install -y jq
-
+# Install jq, cron, and gettext-base
+RUN apt-get update && apt-get install -y jq cron gettext-base
 
 # Copy all files to the working directory
 COPY . .
-
-# Check if "headless" is set to "true" in the config.json file
-# DELETE BELOW IF YOU WANT TO RUN THE DOCKER SCRIPT HEADFULL!
-RUN HEADLESS=$(cat src/config.json | jq -r .headless) \
-    && if [ "$HEADLESS" != "true" ]; then \
-    echo "Error: 'headless' in src/config.json is not true."; \
-    exit 1; \
-    fi
 
 # Install dependencies including Playwright
 RUN apt-get install -y \
@@ -39,5 +30,11 @@ RUN npm run build
 # Install playwright chromium
 RUN npx playwright install chromium
 
-# Define the command to run your application
-CMD ["npm", "start"]
+# Copy cron file to cron directory
+COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
+
+# Create the log file to be able to run tail
+RUN touch /var/log/cron.log
+
+# Define the command to run your application with cron optionally
+CMD sh -c 'echo "$TZ" > /etc/timezone && dpkg-reconfigure -f noninteractive tzdata && if [ "$RUN_ON_START" = "true" ]; then npm start; fi && envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && tail -f /var/log/cron.log'

@@ -26,5 +26,6 @@
     "webhook": {
         "enabled": false,
         "url": ""
-    }
+    },
+    "cronStartTime": "0 5,11 * * *"
 }
