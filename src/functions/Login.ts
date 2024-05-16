@@ -56,11 +56,17 @@ export class Login {
 
     private async execLogin(page: Page, email: string, password: string) {
         try {
-            // Enter email
-            await page.fill('#i0116', email)
-            await page.click('#idSIButton9')
+            const isPrefilledEmail = await this.checkPrefilledEmail(page, email)
 
-            this.bot.log('LOGIN', 'Email entered successfully')
+            if (isPrefilledEmail) {
+                this.bot.log('LOGIN', 'Email already pre-filled')
+            } else {
+                // Enter email
+                await page.fill('#i0116', email)
+                await page.click('#idSIButton9')
+
+                this.bot.log('LOGIN', 'Email entered successfully')
+            }
 
             try {
                 // Enter password
@@ -136,6 +142,20 @@ export class Login {
         try {
             await page.waitForSelector('#id_n', { timeout: 5000 })
             return true
+        } catch (error) {
+            return false
+        }
+    }
+
+    private async checkPrefilledEmail(page: Page, email: string): Promise<boolean> {
+        try {
+            const prefilled = await page.getByTestId('login').inputValue()
+
+            if (prefilled == email) {
+                return true
+            }
+            
+            return false
         } catch (error) {
             return false
         }
