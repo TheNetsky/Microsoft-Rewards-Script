@@ -24,16 +24,4 @@ services:
       - WEBHOOK_ENABLED=false
       - WEBHOOK_URL=
       - CRON_START_TIME="0 5,11 * * *"
-      # Accounts.json variables
-      - EMAIL_1=sample1@email.com
-      - PASSWORD_1=password1
-      - PROXY_URL_1=
-      - PROXY_PORT_1=0
-      - PROXY_USERNAME_1=
-      - PROXY_PASSWORD_1=
-      - EMAIL_2=sample2@email.com
-      - PASSWORD_2=password2
-      - PROXY_URL_2=
-      - PROXY_PORT_2=0
-      - PROXY_USERNAME_2=
-      - PROXY_PASSWORD_2=
+    restart: unless-stopped
