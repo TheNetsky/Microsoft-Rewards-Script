@@ -16,28 +16,40 @@ Under development, however mainly for personal use!
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
 ## Docker (Experimental) ##
-1. Download the source code
-2. Make changes to your `accounts.json`
-3. **Headless mode must be enabled when using Docker.** You can do this using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are always prioritized over the values in config.json. 
-4. The container will run scheduled. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
-5. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/TheNetsky/Microsoft-Rewards-Script
+   cd Microsoft-Rewards-Script
+   ```
+
+2. Copy `accounts.example.json` to `accounts.json` and update it with your account details.
+
+   ```bash
+   cp accounts.example.json accounts.json
+   ```
+
+3. Modify `config.json` as needed.
+
+4. **Headless mode must be enabled when using Docker.** You can do this using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are always prioritized over the values in config.json. 
+
+5. The container will run scheduled. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
+
+6. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
 ### Option 1: build and run with docker run
 
 1. Build or re-build the container image with: `docker build -t microsoft-rewards-script-docker .` 
 
-2. Run the container with:
+2. Then,  for example, run the container with:
 
    ```bash
    docker run --name netsky -d \
    -e TZ=America/New_York \
    -e HEADLESS=true \
-   -e SEARCH_DELAY_MIN=10000 \
-   -e SEARCH_DELAY_MAX=20000 \
-   -e CLUSTERS=1 \
    -e CRON_START_TIME="0 5,11 * * *" \
    microsoft-rewards-script-docker
    ```
-
+   
 3. Optionally, change any environmental variables other than `HEADLESS`, which must stay `=true`
 
 4. You can view logs with `docker logs netsky`.
