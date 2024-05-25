@@ -16,12 +16,7 @@ Under development, however mainly for personal use!
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
 ## Docker (Experimental) ##
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/TheNetsky/Microsoft-Rewards-Script
-   cd Microsoft-Rewards-Script
-   ```
+1. Download the source code
 
 2. Copy `accounts.example.json` to `accounts.json` and update it with your account details.
 
@@ -29,7 +24,7 @@ Under development, however mainly for personal use!
    cp accounts.example.json accounts.json
    ```
 
-3. Modify `config.json` as needed.
+3. Modify `config.json` as needed
 
 4. **Headless mode must be enabled when using Docker.** You can do this using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are always prioritized over the values in config.json. 
 
