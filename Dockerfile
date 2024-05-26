@@ -4,11 +4,14 @@ FROM node:18
 # Set the working directory in the container
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install necessary packages including jq, cron, gettext-base, and dependencies for Playwright
-RUN apt-get update && apt-get install -y \
-    jq \
-    cron \
-    gettext-base \
+# Install jq, cron, and gettext-base
+RUN apt-get update && apt-get install -y jq cron gettext-base
+
+# Copy all files to the working directory
+COPY . .
+
+# Install dependencies including Playwright
+RUN apt-get install -y \
     xvfb \
     libgbm-dev \
     libnss3 \
@@ -18,16 +21,13 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all files from the current directory (repository) to the working directory in the container
-COPY . .
-
 # Install application dependencies
 RUN npm install
 
 # Build the script
 RUN npm run build
 
-# Install Playwright Chromium
+# Install playwright chromium
 RUN npx playwright install chromium
 
 # Copy cron file to cron directory

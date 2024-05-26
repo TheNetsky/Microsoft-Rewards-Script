@@ -3,26 +3,27 @@ services:
     build: .
     container_name: netsky
     environment:
-      # Config.json variables
-      - BASE_URL=https://rewards.bing.com
-      - SESSION_PATH=sessions
-      - HEADLESS=false
-      - RUN_ON_ZERO_POINTS=false
-      - CLUSTERS=1
-      - SAVE_FINGERPRINT=false
-      - WORKERS_DO_DAILY_SET=true
-      - WORKERS_DO_MORE_PROMOTIONS=true
-      - WORKERS_DO_PUNCH_CARDS=true
-      - WORKERS_DO_DESKTOP_SEARCH=true
-      - WORKERS_DO_MOBILE_SEARCH=true
-      - SEARCH_SETTINGS_USE_GEO_LOCALE_QUERIES=false
-      - SEARCH_SETTINGS_SCROLL_RANDOM_RESULTS=true
-      - SEARCH_SETTINGS_CLICK_RANDOM_RESULTS=true
-      - SEARCH_SETTINGS_SEARCH_DELAY_MIN=10000
-      - SEARCH_SETTINGS_SEARCH_DELAY_MAX=20000
-      - SEARCH_SETTINGS_RETRY_MOBILE_SEARCH=true
-      - WEBHOOK_ENABLED=false
-      - WEBHOOK_URL=
-      - CRON_START_TIME="0 5,11 * * *"
-      - RUN_ON_START=true
+      BASE_URL: "https://rewards.bing.com"
+      SESSION_PATH: "sessions"
+      HEADLESS: "true"
+      RUN_ON_ZERO_POINTS: "false"
+      CLUSTERS: "1"
+      SAVE_FINGERPRINT: "false"
+      DO_DAILY_SET: "true"
+      DO_MORE_PROMOTIONS: "true"
+      DO_PUNCH_CARDS: "true"
+      DO_DESKTOP_SEARCH: "true"
+      DO_MOBILE_SEARCH: "true"
+      GLOBAL_TIMEOUT: "30000"
+      USE_GEO_LOCALE_QUERIES: "true"
+      SCROLL_RANDOM_RESULTS: "true"
+      CLICK_RANDOM_RESULTS: "true"
+      SEARCH_DELAY_MIN: "10000"
+      SEARCH_DELAY_MAX: "20000"
+      RETRY_MOBILE_SEARCH: "true"
+      WEBHOOK_ENABLED: "false"
+      WEBHOOK_URL: ""
+      CRON_START_TIME: "0 5,11 * * *"
+      TZ: "America/New_York"
+      RUN_ON_START: "true"    
     restart: unless-stopped
