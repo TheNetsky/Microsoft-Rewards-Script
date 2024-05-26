@@ -1,6 +1,6 @@
 services:
   microsoft-rewards-script:
-    image: your_image_name_here
+    build: .
     container_name: netsky
     environment:
       # Config.json variables
@@ -24,4 +24,5 @@ services:
       - WEBHOOK_ENABLED=false
       - WEBHOOK_URL=
       - CRON_START_TIME="0 5,11 * * *"
+      - RUN_ON_START=true
     restart: unless-stopped
