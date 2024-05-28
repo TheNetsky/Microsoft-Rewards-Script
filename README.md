@@ -63,17 +63,17 @@ Under development, however mainly for personal use!
 |  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) | RUN_ON_ZERO_POINTS |
 |  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) | CLUSTERS |
 |  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) | SAVE_FINGERPRINT |
-|  workers.doDailySet    | Complete daily set items | `true`  | WORKERS_DO_DAILY_SET |
-|  workers.doMorePromotions    | Complete promotional items | `true`  | WORKERS_DO_MORE_PROMOTIONS |
-|  workers.doPunchCards    | Complete punchcards | `true`  | WORKERS_DO_PUNCH_CARDS |
-|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | WORKERS_DO_DESKTOP_SEARCH |
-|  workers.doMobileSearch    | Complete daily mobile searches | `true`  | WORKERS_DO_MOBILE_SEARCH |
+|  workers.doDailySet    | Complete daily set items | `true`  | DO_DAILY_SET |
+|  workers.doMorePromotions    | Complete promotional items | `true`  | DO_MORE_PROMOTIONS |
+|  workers.doPunchCards    | Complete punchcards | `true`  | DO_PUNCH_CARDS |
+|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | DO_DESKTOP_SEARCH |
+|  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
 |  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | SEARCH_SETTINGS_USE_GEO_LOCALE_QUERIES |
-|  scrollRandomResults    | Scroll randomly in search results | `true`   | SEARCH_SETTINGS_SCROLL_RANDOM_RESULTS |
-|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | SEARCH_SETTINGS_CLICK_RANDOM_RESULTS |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
+|  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
+|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
-|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | SEARCH_SETTINGS_RETRY_MOBILE_SEARCH |
+|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | RETRY_MOBILE_SEARCH |
 |  webhook.enabled     | Enable or disable your set webhook | `false` | WEBHOOK_ENABLED |
 |  webhook.url     | Your Discord webhook URL | `null` | WEBHOOK_URL="" |
 | cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME="" |
