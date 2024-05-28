@@ -3,6 +3,9 @@
 # Set up environment variables
 export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
+# Ensure TZ is set
+export TZ=${TZ}
+
 # Change directory to the application directory
 cd /usr/src/microsoft-rewards-script
 
