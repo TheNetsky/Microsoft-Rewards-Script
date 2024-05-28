@@ -16,11 +16,14 @@ Under development, however mainly for personal use!
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
 ## Docker (Experimental) ##
+**Note:** If you had previously built and run the script locally, remove the `/node_modules` and `/dist` from your Microsoft-Rewards-Script folder.
+
 1. Download the source code
-2. Make changes to your `accounts.json`
-3. **Headless mode must be enabled when using Docker.** You can do this using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are always prioritized over the values in config.json. 
-4. The container will run scheduled. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
+2. Make changes to your `accounts.json` and `config.json`
+3. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
+4. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
 5. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
+
 ### Option 1: build and run with docker run
 
 1. Build or re-build the container image with: `docker build -t microsoft-rewards-script-docker .` 
@@ -31,14 +34,12 @@ Under development, however mainly for personal use!
    docker run --name netsky -d \
    -e TZ=America/New_York \
    -e HEADLESS=true \
-   -e SEARCH_DELAY_MIN=10000 \
-   -e SEARCH_DELAY_MAX=20000 \
-   -e CLUSTERS=1 \
+   -e RUN_ON_START=true \
    -e CRON_START_TIME="0 5,11 * * *" \
    microsoft-rewards-script-docker
    ```
-
-3. Optionally, change any environmental variables other than `HEADLESS`, which must stay `=true`
+   
+3. Optionally, customize your config by adding any other environmental variables from the table below.
 
 4. You can view logs with `docker logs netsky`.
 
@@ -46,9 +47,9 @@ Under development, however mainly for personal use!
 
 1. A basic docker compose.yaml has been provided. 
 
-2. Optionally, change any environmental variables other than `HEADLESS`, which must stay `=true`
+2. Optionally, customize your config by adding any other environmental variables from the table below.
 
-3. Build or rebuild and start the container using `docker compose up -d --build` 
+3. Build and start the container using `docker compose up -d`.  
 
 4. You can view logs with `docker logs netsky`
 
