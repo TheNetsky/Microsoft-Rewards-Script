@@ -16,11 +16,14 @@ Under development, however mainly for personal use!
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
 ## Docker (Experimental) ##
+**Note:** If you had previously built and run the script locally, remove the `/node_modules` and `/dist` from your Microsoft-Rewards-Script folder.
+
 1. Download the source code
-2. Make changes to your `accounts.json`
-3. **Headless mode must be enabled when using Docker.** You can do this using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are always prioritized over the values in config.json. 
-4. The container will run scheduled. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
+2. Make changes to your `accounts.json` and `config.json`
+3. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
+4. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
 5. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
+
 ### Option 1: build and run with docker run
 
 1. Build or re-build the container image with: `docker build -t microsoft-rewards-script-docker .` 
@@ -31,14 +34,12 @@ Under development, however mainly for personal use!
    docker run --name netsky -d \
    -e TZ=America/New_York \
    -e HEADLESS=true \
-   -e SEARCH_DELAY_MIN=10000 \
-   -e SEARCH_DELAY_MAX=20000 \
-   -e CLUSTERS=1 \
+   -e RUN_ON_START=true \
    -e CRON_START_TIME="0 5,11 * * *" \
    microsoft-rewards-script-docker
    ```
-
-3. Optionally, change any environmental variables other than `HEADLESS`, which must stay `=true`
+   
+3. Optionally, customize your config by adding any other environmental variables from the table below.
 
 4. You can view logs with `docker logs netsky`.
 
@@ -46,9 +47,9 @@ Under development, however mainly for personal use!
 
 1. A basic docker compose.yaml has been provided. 
 
-2. Optionally, change any environmental variables other than `HEADLESS`, which must stay `=true`
+2. Optionally, customize your config by adding any other environmental variables from the table below.
 
-3. Build or rebuild and start the container using `docker compose up -d --build` 
+3. Build and start the container using `docker compose up -d`.  
 
 4. You can view logs with `docker logs netsky`
 
@@ -62,17 +63,17 @@ Under development, however mainly for personal use!
 |  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) | RUN_ON_ZERO_POINTS |
 |  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) | CLUSTERS |
 |  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) | SAVE_FINGERPRINT |
-|  workers.doDailySet    | Complete daily set items | `true`  | WORKERS_DO_DAILY_SET |
-|  workers.doMorePromotions    | Complete promotional items | `true`  | WORKERS_DO_MORE_PROMOTIONS |
-|  workers.doPunchCards    | Complete punchcards | `true`  | WORKERS_DO_PUNCH_CARDS |
-|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | WORKERS_DO_DESKTOP_SEARCH |
-|  workers.doMobileSearch    | Complete daily mobile searches | `true`  | WORKERS_DO_MOBILE_SEARCH |
+|  workers.doDailySet    | Complete daily set items | `true`  | DO_DAILY_SET |
+|  workers.doMorePromotions    | Complete promotional items | `true`  | DO_MORE_PROMOTIONS |
+|  workers.doPunchCards    | Complete punchcards | `true`  | DO_PUNCH_CARDS |
+|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | DO_DESKTOP_SEARCH |
+|  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
 |  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | SEARCH_SETTINGS_USE_GEO_LOCALE_QUERIES |
-|  scrollRandomResults    | Scroll randomly in search results | `true`   | SEARCH_SETTINGS_SCROLL_RANDOM_RESULTS |
-|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | SEARCH_SETTINGS_CLICK_RANDOM_RESULTS |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
+|  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
+|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
-|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | SEARCH_SETTINGS_RETRY_MOBILE_SEARCH |
+|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | RETRY_MOBILE_SEARCH |
 |  webhook.enabled     | Enable or disable your set webhook | `false` | WEBHOOK_ENABLED |
 |  webhook.url     | Your Discord webhook URL | `null` | WEBHOOK_URL="" |
 | cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME="" |

@@ -37,4 +37,4 @@ COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 RUN touch /var/log/cron.log
 
 # Define the command to run your application with cron optionally
-CMD sh -c 'echo "$TZ" > /etc/timezone && dpkg-reconfigure -f noninteractive tzdata && if [ "$RUN_ON_START" = "true" ]; then npm start; fi && envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && tail -f /var/log/cron.log'
+CMD sh -c 'node src/updateConfig.js && echo "$TZ" > /etc/timezone && dpkg-reconfigure -f noninteractive tzdata && if [ "$RUN_ON_START" = "true" ]; then npm start; fi && envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && crontab /etc/cron.d/microsoft-rewards-cron && cron && tail -f /var/log/cron.log'
