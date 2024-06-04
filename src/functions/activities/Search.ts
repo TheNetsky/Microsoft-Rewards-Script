@@ -140,6 +140,8 @@ export class Search extends Workers {
                     window.scrollTo(0, 0)
                 })
 
+                await this.bot.utils.wait(500)
+
                 const searchBar = '#sb_form_q'
                 await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10_000 })
                 await searchPage.click(searchBar) // Focus on the textarea
