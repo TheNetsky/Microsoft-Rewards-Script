@@ -5,6 +5,7 @@ export interface Config {
     runOnZeroPoints: boolean;
     clusters: number;
     workers: Workers;
+    restartTime: number;
     globalTimeout: number;
     searchSettings: SearchSettings;
     webhook: Webhook;

@@ -56,15 +56,12 @@ export class MicrosoftRewardsBot {
     async run() {
         log('MAIN', `Bot started with ${this.config.clusters} clusters`)
 
-        // Only cluster when there's more than 1 cluster demanded
-        if (this.config.clusters > 1) {
-            if (cluster.isPrimary) {
-                this.runMaster()
-            } else {
-                this.runWorker()
-            }
+        // No matter what the situation,
+        // a master will be started to monitor whether the worker needs to be restarted.
+        if (cluster.isPrimary) {
+            this.runMaster()
         } else {
-            this.runTasks(this.accounts)
+            this.runWorker()
         }
     }
 
@@ -72,11 +69,14 @@ export class MicrosoftRewardsBot {
         log('MAIN-PRIMARY', 'Primary process started')
 
         const accountChunks = this.utils.chunkArray(this.accounts, this.config.clusters)
+        // Create a Map to store the worker's PID and corresponding account array to facilitate restarting
+        const workerAccountsMap = new Map<number, { accounts: Account[], restartCount: number }>()
 
         for (let i = 0; i < accountChunks.length; i++) {
             const worker = cluster.fork()
-            const chunk = accountChunks[i]
+            const chunk = accountChunks[i] as Account[]
             worker.send({ chunk })
+            workerAccountsMap.set(<number>worker.process.pid, { accounts: chunk, restartCount: 0 })
         }
 
         cluster.on('exit', (worker, code) => {
@@ -84,13 +84,32 @@ export class MicrosoftRewardsBot {
 
             log('MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
 
+            // Restart worker if exit code is not 0 and restart count is less than 5
+            if (code !== 0) {
+                const workerId = worker.process.pid as number
+                const workerData = workerAccountsMap.get(workerId)
+                if (workerData) {
+                    if (workerData.restartCount < 5) {
+                        log('QuitUnexpectedly', `Restarting worker ${workerId}... Remaining restarts: ${5 - workerData.restartCount}`, 'warn')
+                        const worker = cluster.fork()
+                        worker.send({ chunk: workerData.accounts })
+                        this.activeWorkers += 1
+                        workerAccountsMap.set(<number>worker.process.pid, { accounts: workerData.accounts, restartCount: workerData.restartCount + 1 })
+                    } else {
+                        log('QuitUnexpectedly', `Worker ${workerId} has reached maximum restart limit.`, 'warn')
+                    }
+                }
+            }
+
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
                 log('MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
                 process.exit(0)
             }
+            workerAccountsMap.delete(worker.process.pid as number)
         })
     }
+
 
     private runWorker() {
         log('MAIN-WORKER', `Worker ${process.pid} spawned`)
