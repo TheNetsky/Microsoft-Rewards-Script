@@ -98,7 +98,7 @@ export class Search extends Workers {
                     for (const term of relatedTerms.slice(1, 3)) {
                         this.bot.log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${this.bot.isMobile}`)
 
-                        searchCounters = await this.bingSearch(page, query.topic)
+                        searchCounters = await this.bingSearch(page, term)
                         const newMissingPoints = this.calculatePoints(searchCounters)
 
                         // If the new point amount is the same as before
