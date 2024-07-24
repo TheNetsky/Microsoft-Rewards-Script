@@ -83,6 +83,7 @@ Under development, however mainly for personal use!
 - [x] Multi-Account Support
 - [x] Session Storing
 - [x] 2FA Support
+- [x] Passwordless Support
 - [x] Headless Support
 - [x] Discord Webhook Support
 - [x] Desktop Searches
