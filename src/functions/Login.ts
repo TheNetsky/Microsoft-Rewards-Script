@@ -70,23 +70,50 @@ export class Login {
                 await page.fill('#i0118', password)
                 await page.click('#idSIButton9')
 
+                this.bot.log('LOGIN', 'Password entered successfully')
+
                 // When erroring at this stage it means a 2FA code is required
             } catch (error) {
-                this.bot.log('LOGIN', '2FA code required')
+                // this.bot.log('LOGIN', 'App approval required because you have passwordless enabled.');
 
-                // Wait for user input
-                const code = await new Promise<string>((resolve) => {
-                    rl.question('Enter 2FA code:\n', (input) => {
-                        rl.close()
-                        resolve(input)
+                let numberToPress: string | null = await (await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })).textContent();
+
+                if (!numberToPress) {
+                    await page.click('button[aria-describedby="confirmSendTitle"]');
+                    await this.bot.utils.wait(2000);
+                    numberToPress = await (await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })).textContent();
+                }
+
+                if (numberToPress) {
+                    while (true) {
+                        try {
+                            this.bot.log('LOGIN', 'Press the number below on your Authenticator app to approve the login');
+                            this.bot.log('LOGIN', 'If you press the wrong number or the "Deny" button, try again in 60 seconds');
+                            this.bot.log('LOGIN', 'Number to press: ' + numberToPress);
+                            await page.waitForSelector('#i0281', { state: 'detached', timeout: 60000 })
+                            break;
+                        } catch (error) {
+                            this.bot.log('LOGIN', 'The code is expired. Trying to get the new code...');
+                            (await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { state: 'visible', timeout: 5000 })).click();
+                            numberToPress = await (await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })).textContent();
+                        }
+                    }
+                    this.bot.log('LOGIN', 'Login successfully approved!');
+                } else {
+                    this.bot.log('LOGIN', '2FA code required')
+                    // Wait for user input
+                    const code = await new Promise<string>((resolve) => {
+                        rl.question('Enter 2FA code:\n', (input) => {
+                            rl.close()
+                            resolve(input)
+                        })
                     })
-                })
+    
+                    await page.fill('input[name="otc"]', code)
+                    await page.keyboard.press('Enter')
 
-                await page.fill('input[name="otc"]', code)
-                await page.keyboard.press('Enter')
+                }
             }
-
-            this.bot.log('LOGIN', 'Password entered successfully')
 
         } catch (error) {
             this.bot.log('LOGIN', 'An error occurred:' + error, 'error')
