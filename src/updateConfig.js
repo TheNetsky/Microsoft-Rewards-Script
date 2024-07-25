@@ -20,6 +20,8 @@ config.workers.doMorePromotions = process.env.DO_MORE_PROMOTIONS ? process.env.D
 config.workers.doPunchCards = process.env.DO_PUNCH_CARDS ? process.env.DO_PUNCH_CARDS === 'true' : config.workers.doPunchCards;
 config.workers.doDesktopSearch = process.env.DO_DESKTOP_SEARCH ? process.env.DO_DESKTOP_SEARCH === 'true' : config.workers.doDesktopSearch;
 config.workers.doMobileSearch = process.env.DO_MOBILE_SEARCH ? process.env.DO_MOBILE_SEARCH === 'true' : config.workers.doMobileSearch;
+config.workers.doDailyCheckIn = process.env.DO_DAILY_CHECK_IN ? process.env.DO_DAILY_CHECK_IN === 'true' : config.workers.doDailyCheckIn;
+config.workers.doReadToEarn = process.env.DO_READ_TO_EARN ? process.env.DO_READ_TO_EARN === 'true' : config.workers.doReadToEarn;
 
 config.searchSettings.useGeoLocaleQueries = process.env.USE_GEO_LOCALE_QUERIES ? process.env.USE_GEO_LOCALE_QUERIES === 'true' : config.searchSettings.useGeoLocaleQueries;
 config.searchSettings.scrollRandomResults = process.env.SCROLL_RANDOM_RESULTS ? process.env.SCROLL_RANDOM_RESULTS === 'true' : config.searchSettings.scrollRandomResults;

@@ -5,6 +5,7 @@ import { MicrosoftRewardsBot } from '../index'
 
 import { Counters, DashboardData, MorePromotion, PromotionalItem } from './../interface/DashboardData'
 import { QuizData } from './../interface/QuizData'
+import axios from 'axios'
 
 
 export default class BrowserFunc {
@@ -131,10 +132,10 @@ export default class BrowserFunc {
     }
 
     /**
-     * Get total earnable points
+     * Get total earnable points with web browser
      * @returns {number} Total earnable points
     */
-    async getEarnablePoints(): Promise<number> {
+    async getBrowserEarnablePoints(): Promise<number> {
         try {
             const data = await this.getDashboardData()
 
@@ -166,7 +167,55 @@ export default class BrowserFunc {
 
             return totalEarnablePoints
         } catch (error) {
-            throw this.bot.log('GET-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
+            throw this.bot.log('GET-BROWSER-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
+        }
+    }
+
+    /**
+     * Get total earnable points with mobile app
+     * @returns {number} Total earnable points
+    */
+    async getAppEarnablePoints(accessToken: string): Promise<number> {
+        try {
+            let eligibleOffers = [
+                'ENUS_readarticle3_30points',
+                'Gamification_Sapphire_DailyCheckIn'
+            ];
+            let totalEarnablePoints = 0;
+
+            const data = await this.getDashboardData();
+            let geoLocale = data.userProfile.attributes.country;
+            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
+
+            const userDataRequest = {
+                url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
+                method: 'GET',
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "X-Rewards-Country": geoLocale,
+                    "X-Rewards-Language": "en"
+                }
+            }
+            const userDataResponse = await axios(userDataRequest)
+            const userData = (await userDataResponse.data).response;
+            const eligibleActivities = userData.promotions.filter((x: any) => eligibleOffers.includes(x.attributes.offerid));
+    
+            for (let item of eligibleActivities) {
+                switch (item.attributes.type) {
+                    case 'msnreadearn':
+                        totalEarnablePoints += parseInt(item.attributes.pointmax) - parseInt(item.attributes.pointprogress);
+                        break;
+                    case 'checkin':
+                        if (item.attributes.progress < 7 && (new Date()).getDate() != (new Date(item.attributes.last_updated)).getDate()) {
+                            totalEarnablePoints += parseInt(item.attributes['day_' + item.attributes.progress + '_points']);
+                        }
+                        break;
+                }
+            }
+
+            return totalEarnablePoints;
+        } catch (error) {
+            throw this.bot.log('GET-APP-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
         }
     }
 

@@ -8,6 +8,8 @@ import { Poll } from './activities/Poll'
 import { Quiz } from './activities/Quiz'
 import { ThisOrThat } from './activities/ThisOrThat'
 import { UrlReward } from './activities/UrlReward'
+import { ReadToEarn } from './activities/ReadToEarn'
+import { DailyCheckIn } from './activities/DailyCheckIn'
 
 import { DashboardData } from '../interface/DashboardData'
 
@@ -47,6 +49,16 @@ export default class Activities {
     doUrlReward = async (page: Page): Promise<void> => {
         const urlReward = new UrlReward(this.bot)
         await urlReward.doUrlReward(page)
+    }
+
+    doReadToEarn = async (accessToken: string, data: DashboardData): Promise<void> => {
+        const readToEarn = new ReadToEarn(this.bot)
+        await readToEarn.doReadToEarn(accessToken, data)
+    }
+
+    doDailyCheckIn = async (accessToken: string, data: DashboardData): Promise<void> => {
+        const dailyCheckIn = new DailyCheckIn(this.bot)
+        await dailyCheckIn.doDailyCheckIn(accessToken, data)
     }
 
 }

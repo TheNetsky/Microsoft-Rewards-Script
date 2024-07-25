@@ -35,4 +35,6 @@ export interface Workers {
     doPunchCards: boolean;
     doDesktopSearch: boolean;
     doMobileSearch: boolean;
+    doDailyCheckIn: boolean;
+    doReadToEarn: boolean;
 }
