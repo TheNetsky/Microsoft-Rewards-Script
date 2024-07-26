@@ -206,8 +206,8 @@ export default class BrowserFunc {
                         totalEarnablePoints += parseInt(item.attributes.pointmax) - parseInt(item.attributes.pointprogress);
                         break;
                     case 'checkin':
-                        if (item.attributes.progress < 7 && (new Date()).getDate() != (new Date(item.attributes.last_updated)).getDate()) {
-                            totalEarnablePoints += parseInt(item.attributes['day_' + item.attributes.progress + '_points']);
+                        if (item.attributes.progress < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated)).getDate()) {
+                            totalEarnablePoints += parseInt(item.attributes['day_' + (parseInt(item.attributes.progress) + 1) + '_points']);
                         }
                         break;
                 }

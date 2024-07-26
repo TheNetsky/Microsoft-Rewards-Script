@@ -142,9 +142,12 @@ export class MicrosoftRewardsBot {
         const data = await this.browser.func.getDashboardData()
         log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
 
-        const earnablePoints = await this.browser.func.getBrowserEarnablePoints() + await this.browser.func.getAppEarnablePoints(this.accessToken);
+        const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints();
+        const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken);
+
+        const earnablePoints = browserEnarablePoints + appEarnablePoints;
         this.collectedPoints = earnablePoints
-        log('MAIN-POINTS', `You can earn ${earnablePoints} points today`)
+        log('MAIN-POINTS', `You can earn ${earnablePoints} points today (Browser: ${browserEnarablePoints} points, App: ${appEarnablePoints} points)`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
