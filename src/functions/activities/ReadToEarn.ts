@@ -56,7 +56,7 @@ export class ReadToEarn extends Workers {
             } else {
                 balance = newBalance;
                 this.bot.log("READ-TO-EARN", `Read article ${i + 1}`);
-                await this.bot.utils.wait(this.bot.utils.randomNumber(4, 15) * 1000);
+                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max)))
             }
         }
         this.bot.log("READ-TO-EARN", "Completed Read to Earn");
