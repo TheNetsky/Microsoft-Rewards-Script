@@ -199,15 +199,15 @@ export default class BrowserFunc {
             const userDataResponse = await axios(userDataRequest)
             const userData = (await userDataResponse.data).response;
             const eligibleActivities = userData.promotions.filter((x: any) => eligibleOffers.includes(x.attributes.offerid));
-    
             for (let item of eligibleActivities) {
                 switch (item.attributes.type) {
                     case 'msnreadearn':
                         totalEarnablePoints += parseInt(item.attributes.pointmax) - parseInt(item.attributes.pointprogress);
                         break;
                     case 'checkin':
-                        if (item.attributes.progress < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated)).getDate()) {
-                            totalEarnablePoints += parseInt(item.attributes['day_' + (parseInt(item.attributes.progress) + 1) + '_points']);
+                        let checkInDay = parseInt(item.attributes.progress) % 7;
+                        if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated)).getDate()) {
+                            totalEarnablePoints += parseInt(item.attributes['day_' + (checkInDay + 1) + '_points']);
                         }
                         break;
                 }
