@@ -158,7 +158,7 @@ export default class BrowserFunc {
             if (data.morePromotions?.length) {
                 data.morePromotions.forEach(x => {
                     // Only count points from supported activities
-                    if (['quiz', 'urlreward'].includes(x.promotionType)) {
+                    if (['quiz', 'urlreward'].includes(x.promotionType) && !x.attributes.is_unlocked) {
                         totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
                     }
                 })
