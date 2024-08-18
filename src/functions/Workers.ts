@@ -87,7 +87,7 @@ export class Workers {
             morePromotions.push(data.promotionalItem as unknown as MorePromotion)
         }
 
-        const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0) ?? []
+        const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && !x.attributes.is_unlocked) ?? [];
 
         if (!activitiesUncompleted.length) {
             this.bot.log('MORE-PROMOTIONS', 'All "More Promotion" items have already been completed')
@@ -149,7 +149,7 @@ export class Workers {
 
                 // Wait for the new tab to fully load, ignore error.
                 /*
-                Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster, 
+                Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster,
                 if it didn't then it gave enough time for the page to load.
                 */
                 await activityPage.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { })
