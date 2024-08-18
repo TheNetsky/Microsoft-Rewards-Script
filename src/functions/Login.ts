@@ -56,78 +56,110 @@ export class Login {
 
     private async execLogin(page: Page, email: string, password: string) {
         try {
-            // Enter email
-            await page.fill('#i0116', email)
-            await page.click('#idSIButton9')
-
-            this.bot.log('LOGIN', 'Email entered successfully')
-
-            try {
-                // Enter password
-                await page.waitForSelector('#i0118', { state: 'visible', timeout: 2000 })
-                await this.bot.utils.wait(2000)
-
-                await page.fill('#i0118', password)
-                await page.click('#idSIButton9')
-
-                this.bot.log('LOGIN', 'Password entered successfully')
-
-                // When erroring at this stage it means a 2FA code is required
-            } catch (error) {
-                // this.bot.log('LOGIN', 'App approval required because you have passwordless enabled.');
-
-                let numberToPress: string | null = await (await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })).textContent();
-
-                if (!numberToPress) {
-                    await page.click('button[aria-describedby="confirmSendTitle"]');
-                    await this.bot.utils.wait(2000);
-                    numberToPress = await (await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })).textContent();
-                }
-
-                if (numberToPress) {
-                    while (true) {
-                        try {
-                            this.bot.log('LOGIN', 'Press the number below on your Authenticator app to approve the login');
-                            this.bot.log('LOGIN', 'If you press the wrong number or the "Deny" button, try again in 60 seconds');
-                            this.bot.log('LOGIN', 'Number to press: ' + numberToPress);
-                            await page.waitForSelector('#i0281', { state: 'detached', timeout: 60000 })
-                            break;
-                        } catch (error) {
-                            this.bot.log('LOGIN', 'The code is expired. Trying to get the new code...');
-                            (await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { state: 'visible', timeout: 5000 })).click();
-                            numberToPress = await (await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })).textContent();
-                        }
-                    }
-                    this.bot.log('LOGIN', 'Login successfully approved!');
-                } else {
-                    this.bot.log('LOGIN', '2FA code required')
-                    // Wait for user input
-                    const code = await new Promise<string>((resolve) => {
-                        rl.question('Enter 2FA code:\n', (input) => {
-                            rl.close()
-                            resolve(input)
-                        })
-                    })
-    
-                    await page.fill('input[name="otc"]', code)
-                    await page.keyboard.press('Enter')
-
-                }
-            }
-
-        } catch (error) {
-            this.bot.log('LOGIN', 'An error occurred:' + error, 'error')
+            await this.enterEmail(page, email)
+            await this.enterPassword(page, password)
+            await this.checkLoggedIn(page)
+        } catch (error: any) {
+            this.bot.log('LOGIN', 'An error occurred: ' + error.message, 'error')
         }
+    }
 
-        const currentURL = new URL(page.url())
+    private async enterEmail(page: Page, email: string) {
+        await page.fill('#i0116', email)
+        await page.click('#idSIButton9')
+        this.bot.log('LOGIN', 'Email entered successfully')
+    }
 
-        while (currentURL.pathname !== '/' || currentURL.hostname !== 'rewards.bing.com') {
+    private async enterPassword(page: Page, password: string) {
+        try {
+            await page.waitForSelector('#i0118', { state: 'visible', timeout: 2000 })
+            await this.bot.utils.wait(2000)
+            await page.fill('#i0118', password)
+            await page.click('#idSIButton9')
+            this.bot.log('LOGIN', 'Password entered successfully')
+        } catch {
+            this.bot.log('LOGIN', 'Password entry failed or 2FA required')
+            await this.handle2FA(page)
+        }
+    }
+
+    private async handle2FA(page: Page) {
+        try {
+            const numberToPress = await this.get2FACode(page)
+            if (numberToPress) {
+                // Authentictor App verification
+                await this.authAppVerification(page, numberToPress)
+            } else {
+                // SMS verification
+                await this.authSMSVerification(page)
+            }
+        } catch (error: any) {
+            this.bot.log('LOGIN', `2FA handling failed: ${error.message}`)
+        }
+    }
+
+    private async get2FACode(page: Page): Promise<string | null> {
+        try {
+            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            return await element.textContent()
+        } catch {
+            await page.click('button[aria-describedby="confirmSendTitle"]')
+            await this.bot.utils.wait(2000)
+            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            return await element.textContent()
+        }
+    }
+
+    private async authAppVerification(page: Page, numberToPress: string | null) {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            try {
+                this.bot.log('LOGIN', `Press the number ${numberToPress} on your Authenticator app to approve the login`)
+                this.bot.log('LOGIN', 'If you press the wrong number or the "DENY" button, try again in 60 seconds')
+
+                await page.waitForSelector('#i0281', { state: 'detached', timeout: 60000 })
+
+                this.bot.log('LOGIN', 'Login successfully approved!')
+                break
+            } catch {
+                this.bot.log('LOGIN', 'The code is expired. Trying to get a new code...')
+                await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
+                numberToPress = await this.get2FACode(page)
+            }
+        }
+    }
+
+    private async authSMSVerification(page: Page) {
+        this.bot.log('LOGIN', 'SMS 2FA code required. Waiting for user input...')
+
+        const code = await new Promise<string>((resolve) => {
+            rl.question('Enter 2FA code:\n', (input) => {
+                rl.close()
+                resolve(input)
+            })
+        })
+
+        await page.fill('input[name="otc"]', code)
+        await page.keyboard.press('Enter')
+        this.bot.log('LOGIN', '2FA code entered successfully')
+    }
+
+    private async checkLoggedIn(page: Page) {
+        const targetHostname = 'rewards.bing.com'
+        const targetPathname = '/'
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
             await this.bot.browser.utils.tryDismissAllMessages(page)
-            currentURL.href = page.url()
+            const currentURL = new URL(page.url())
+            if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
+                break
+            }
         }
 
         // Wait for login to complete
         await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10_000 })
+        this.bot.log('LOGIN', 'Successfully logged into the rewards portal')
     }
 
     private async checkBingLogin(page: Page): Promise<void> {

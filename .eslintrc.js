@@ -28,6 +28,10 @@ module.exports = {
             'error',
             'never'
         ],
+        '@typescript-eslint/no-explicit-any':
+            ['warn', {
+                fixToUnknown: true // This line is optional and only relevant if you are using TypeScript
+            }],
         'comma-dangle': 'off',
         '@typescript-eslint/comma-dangle': 'error',
         'prefer-arrow-callback': 'error'

@@ -87,7 +87,7 @@ export class Workers {
             morePromotions.push(data.promotionalItem as unknown as MorePromotion)
         }
 
-        const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && !x.attributes.is_unlocked) ?? [];
+        const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && !x.attributes.is_unlocked) ?? []
 
         if (!activitiesUncompleted.length) {
             this.bot.log('MORE-PROMOTIONS', 'All "More Promotion" items have already been completed')
@@ -132,13 +132,13 @@ export class Workers {
                 }
 
 
-                let selector = `[data-bi-id="${activity.offerId}"]`
+                let selector = `[data-bi-id^="${activity.offerId}"]`
 
                 if (punchCard) {
                     selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
 
                 } else if (activity.name.toLowerCase().includes('membercenter')) {
-                    selector = `[data-bi-id="${activity.name}"]`
+                    selector = `[data-bi-id^="${activity.name}"]`
                 }
 
                 // Click element, it will be opened in a new tab
