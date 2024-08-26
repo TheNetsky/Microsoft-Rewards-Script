@@ -205,41 +205,7 @@ export class MicrosoftRewardsBot {
         await this.browser.func.goHome(this.homePage)
 
         const data = await this.browser.func.getDashboardData()
-
-        // If no mobile searches data found, stop (Does not exist on new accounts)
-        if (!data.userStatus.counters.mobileSearch) {
-            log('MAIN', 'No mobile searches found, stopping!')
-
-            // Close mobile browser
-            return await this.closeBrowser(browser, account.email)
-        }
-
-        // Open a new tab to where the tasks are going to be completed
-        const workerPage = await browser.newPage()
-
-        // Go to homepage on worker page
-        await this.browser.func.goHome(workerPage)
-
-        // Do mobile searches
-        if (this.config.workers.doMobileSearch) {
-            await this.activities.doSearch(workerPage, data)
-
-            // Fetch current search points
-            const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
-
-            // If the remaining mobile points does not equal 0, restart and assume the generated UA is invalid
-            // Retry until all points are gathered when (retryMobileSearch is enabled)
-            if (this.config.searchSettings.retryMobileSearch && mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
-                log('MAIN', 'Unable to complete mobile searches, bad User-Agent? Retrying...')
-
-                // Close mobile browser
-                await this.closeBrowser(browser, account.email)
-
-                // Retry
-                await this.Mobile(account)
-            }
-        }
-
+        
         // Do daily check in
         if (this.config.workers.doDailyCheckIn) {
             await this.activities.doDailyCheckIn(this.accessToken, data)
@@ -248,6 +214,37 @@ export class MicrosoftRewardsBot {
         // Do read to earn
         if (this.config.workers.doReadToEarn) {
             await this.activities.doReadToEarn(this.accessToken, data)
+        }
+
+        // If no mobile searches data found, stop (Does not exist on new accounts)
+        if (data.userStatus.counters.mobileSearch) {
+            // Open a new tab to where the tasks are going to be completed
+            const workerPage = await browser.newPage()
+
+            // Go to homepage on worker page
+            await this.browser.func.goHome(workerPage)
+
+            // Do mobile searches
+            if (this.config.workers.doMobileSearch) {
+                await this.activities.doSearch(workerPage, data)
+
+                // Fetch current search points
+                const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
+
+                // If the remaining mobile points does not equal 0, restart and assume the generated UA is invalid
+                // Retry until all points are gathered when (retryMobileSearch is enabled)
+                if (this.config.searchSettings.retryMobileSearch && mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
+                    log('MAIN', 'Unable to complete mobile searches, bad User-Agent? Retrying...')
+
+                    // Close mobile browser
+                    await this.closeBrowser(browser, account.email)
+
+                    // Retry
+                    await this.Mobile(account)
+                }
+            }
+        } else {
+            log('MAIN', 'Mobile searches found!')
         }
 
         // Fetch new points
