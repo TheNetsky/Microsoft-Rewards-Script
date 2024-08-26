@@ -42,6 +42,8 @@ export class Search extends Workers {
         // Mobile search doesn't seem to like related queries?
         googleSearchQueries.forEach(x => { this.bot.isMobile ? queries.push(x.topic) : queries.push(x.topic, ...x.related) })
 
+        await this.bot.browser.utils.tryDismissBingCookieBanner(page)
+
         // Loop over Google search queries
         for (let i = 0; i < queries.length; i++) {
             const query = queries[i] as string
