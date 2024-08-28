@@ -244,7 +244,7 @@ export class MicrosoftRewardsBot {
                 }
             }
         } else {
-            log('MAIN', 'Mobile searches found!')
+            log('MAIN', 'No mobile searches found!')
         }
 
         // Fetch new points
