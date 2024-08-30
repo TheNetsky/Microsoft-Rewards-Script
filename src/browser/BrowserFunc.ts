@@ -1,11 +1,12 @@
 import { Page } from 'playwright'
 import { CheerioAPI, load } from 'cheerio'
+import axios, { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 
 import { Counters, DashboardData, MorePromotion, PromotionalItem } from './../interface/DashboardData'
 import { QuizData } from './../interface/QuizData'
-import axios from 'axios'
+import { AppUserData } from '../interface/AppUserData'
 
 
 export default class BrowserFunc {
@@ -177,43 +178,45 @@ export default class BrowserFunc {
     */
     async getAppEarnablePoints(accessToken: string): Promise<number> {
         try {
-            let eligibleOffers = [
+            const eligibleOffers = [
                 'ENUS_readarticle3_30points',
                 'Gamification_Sapphire_DailyCheckIn'
-            ];
-            let totalEarnablePoints = 0;
+            ]
+            let totalEarnablePoints = 0
 
-            const data = await this.getDashboardData();
-            let geoLocale = data.userProfile.attributes.country;
+            const data = await this.getDashboardData()
+            let geoLocale = data.userProfile.attributes.country
             geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
 
-            const userDataRequest = {
+            const userDataRequest: AxiosRequestConfig = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
                 method: 'GET',
                 headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    "X-Rewards-Country": geoLocale,
-                    "X-Rewards-Language": "en"
-                }
-            }
-            const userDataResponse = await axios(userDataRequest)
-            const userData = (await userDataResponse.data).response;
-            const eligibleActivities = userData.promotions.filter((x: any) => eligibleOffers.includes(x.attributes.offerid));
-            for (let item of eligibleActivities) {
-                switch (item.attributes.type) {
-                    case 'msnreadearn':
-                        totalEarnablePoints += parseInt(item.attributes.pointmax) - parseInt(item.attributes.pointprogress);
-                        break;
-                    case 'checkin':
-                        let checkInDay = parseInt(item.attributes.progress) % 7;
-                        if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated)).getDate()) {
-                            totalEarnablePoints += parseInt(item.attributes['day_' + (checkInDay + 1) + '_points']);
-                        }
-                        break;
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Rewards-Country': geoLocale,
+                    'X-Rewards-Language': 'en'
                 }
             }
 
-            return totalEarnablePoints;
+            const userDataResponse: AppUserData = (await axios(userDataRequest)).data
+            const userData = userDataResponse.response
+            const eligibleActivities = userData.promotions.filter((x) => eligibleOffers.includes(x.attributes.offerid ?? ''))
+
+            for (const item of eligibleActivities) {
+                if (item.attributes.type === 'msnreadearn') {
+                    totalEarnablePoints += parseInt(item.attributes.pointmax ?? '') - parseInt(item.attributes.pointprogress ?? '')
+                    break
+                } else if (item.attributes.type === 'checkin') {
+                    const checkInDay = parseInt(item.attributes.progress ?? '') % 7
+
+                    if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated ?? '')).getDate()) {
+                        totalEarnablePoints += parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '')
+                    }
+                    break
+                }
+            }
+
+            return totalEarnablePoints
         } catch (error) {
             throw this.bot.log('GET-APP-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
         }

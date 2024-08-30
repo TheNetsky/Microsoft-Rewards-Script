@@ -14,12 +14,12 @@ const rl = readline.createInterface({
 
 
 export class Login {
-    private bot: MicrosoftRewardsBot;
-    private clientId: string    = '0000000040170455';
-    private authBaseUrl: string = 'https://login.live.com/oauth20_authorize.srf';
-    private redirectUrl: string = 'https://login.live.com/oauth20_desktop.srf';
-    private tokenUrl: string    = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
-    private scope: string       = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL';
+    private bot: MicrosoftRewardsBot
+    private clientId: string = '0000000040170455'
+    private authBaseUrl: string = 'https://login.live.com/oauth20_authorize.srf'
+    private redirectUrl: string = 'https://login.live.com/oauth20_desktop.srf'
+    private tokenUrl: string = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
+    private scope: string = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL'
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
@@ -209,34 +209,35 @@ export class Login {
     }
 
     async getMobileAccessToken(page: Page, email: string) {
+        const authorizeUrl = new URL(this.authBaseUrl)
 
-        let authorizeUrl = new URL(this.authBaseUrl);
-        authorizeUrl.searchParams.append('response_type', 'code');
-        authorizeUrl.searchParams.append('client_id', this.clientId);
-        authorizeUrl.searchParams.append('redirect_uri', this.redirectUrl);
-        authorizeUrl.searchParams.append('scope', this.scope);
-        authorizeUrl.searchParams.append('state', crypto.randomBytes(16).toString('hex'));
-        authorizeUrl.searchParams.append('access_type', 'offline_access');
-        authorizeUrl.searchParams.append('login_hint', email);
+        authorizeUrl.searchParams.append('response_type', 'code')
+        authorizeUrl.searchParams.append('client_id', this.clientId)
+        authorizeUrl.searchParams.append('redirect_uri', this.redirectUrl)
+        authorizeUrl.searchParams.append('scope', this.scope)
+        authorizeUrl.searchParams.append('state', crypto.randomBytes(16).toString('hex'))
+        authorizeUrl.searchParams.append('access_type', 'offline_access')
+        authorizeUrl.searchParams.append('login_hint', email)
 
-        await page.goto(authorizeUrl.href);
+        await page.goto(authorizeUrl.href)
 
-        const currentUrl = new URL(page.url());
-        let code : string;
-        
+        const currentUrl = new URL(page.url())
+        let code: string
+
+        // eslint-disable-next-line no-constant-condition
         while (true) {
-            this.bot.log("LOGIN-APP", "Waiting for authorization");
+            this.bot.log('LOGIN-APP', 'Waiting for authorization')
             if (currentUrl.hostname === 'login.live.com' && currentUrl.pathname === '/oauth20_desktop.srf') {
-                code = currentUrl.searchParams.get('code')!;
-                break;
+                code = currentUrl.searchParams.get('code')!
+                break
             }
         }
 
-        const body = new URLSearchParams();
-        body.append('grant_type', 'authorization_code');
-        body.append('client_id', this.clientId);
-        body.append('code', code);
-        body.append('redirect_uri', this.redirectUrl);
+        const body = new URLSearchParams()
+        body.append('grant_type', 'authorization_code')
+        body.append('client_id', this.clientId)
+        body.append('code', code)
+        body.append('redirect_uri', this.redirectUrl)
 
         const tokenRequest = {
             url: this.tokenUrl,
@@ -247,10 +248,10 @@ export class Login {
             data: body.toString()
         }
 
-        const tokenResponse = await axios(tokenRequest);
-        const tokenData : OAuth = await tokenResponse.data;
-        
-        this.bot.log("LOGIN-APP", "Successfully authorized");
-        return tokenData.access_token;
+        const tokenResponse = await axios(tokenRequest)
+        const tokenData: OAuth = await tokenResponse.data
+
+        this.bot.log('LOGIN-APP', 'Successfully authorized')
+        return tokenData.access_token
     }
 }

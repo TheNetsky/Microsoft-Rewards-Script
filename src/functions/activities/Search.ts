@@ -133,14 +133,18 @@ export class Search extends Workers {
     private async bingSearch(searchPage: Page, query: string) {
         const platformControlKey = platform() === 'darwin' ? 'Meta' : 'Control'
 
+
+
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
-
                 // Go to top of the page
                 await searchPage.evaluate(() => {
                     window.scrollTo(0, 0)
                 })
+
+                // Set it since params get added after visiting
+                this.searchPageURL = searchPage.url()
 
                 await this.bot.utils.wait(500)
 
@@ -155,14 +159,19 @@ export class Search extends Workers {
                 await searchPage.keyboard.type(query)
                 await searchPage.keyboard.press('Enter')
 
+                await this.bot.utils.wait(1000)
+
+                // Bing.com in Chrome opens a new tab when searching
+                const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
+
                 if (this.bot.config.searchSettings.scrollRandomResults) {
                     await this.bot.utils.wait(2000)
-                    await this.randomScroll(searchPage)
+                    await this.randomScroll(resultPage)
                 }
 
                 if (this.bot.config.searchSettings.clickRandomResults) {
                     await this.bot.utils.wait(2000)
-                    await this.clickRandomLink(searchPage)
+                    await this.clickRandomLink(resultPage)
                 }
 
                 // Delay between searches
@@ -181,7 +190,7 @@ export class Search extends Workers {
 
                 // Reset the tabs
                 const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
-                await this.closeTabs(lastTab, this.searchPageURL)
+                await this.closeTabs(lastTab)
 
                 await this.bot.utils.wait(4000)
             }
@@ -262,11 +271,13 @@ export class Search extends Workers {
 
     private async randomScroll(page: Page) {
         try {
-            const scrollAmount = this.bot.utils.randomNumber(5, 5000)
+            const viewportHeight = await page.evaluate(() => window.innerHeight)
+            const totalHeight = await page.evaluate(() => document.body.scrollHeight)
+            const randomScrollPosition = Math.floor(Math.random() * (totalHeight - viewportHeight))
 
-            await page.evaluate((scrollAmount) => {
-                window.scrollBy(0, scrollAmount)
-            }, scrollAmount)
+            await page.evaluate((scrollPos) => {
+                window.scrollTo(0, scrollPos)
+            }, randomScrollPosition)
 
         } catch (error) {
             this.bot.log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
@@ -275,23 +286,22 @@ export class Search extends Workers {
 
     private async clickRandomLink(page: Page) {
         try {
-            const searchListingURL = new URL(page.url()) // Get searchPage info before clicking
 
-            await page.click('#b_results .b_algo h2').catch(() => { }) // Since we don't really care if it did it or not
+            await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
 
             // Will get current tab if no new one is created
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
-            // Let website load, if it doesn't load within 5 sec. exit regardless
-            await this.bot.utils.wait(5000)
+            // Stay for 10 seconds
+            await this.bot.utils.wait(10_000)
 
             let lastTabURL = new URL(lastTab.url()) // Get new tab info
 
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
-            while (lastTabURL.href !== searchListingURL.href && i < 5) {
+            while (lastTabURL.href !== this.searchPageURL && i < 5) {
 
-                await this.closeTabs(lastTab, searchListingURL.href)
+                await this.closeTabs(lastTab)
 
                 // End of loop, refresh lastPage
                 lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
@@ -304,25 +314,24 @@ export class Search extends Workers {
         }
     }
 
-    private async closeTabs(lastTab: Page, url: string) {
+    private async closeTabs(lastTab: Page) {
         const browser = lastTab.context()
         const tabs = browser.pages()
 
-        // If more than 3 tabs are open, close the last tab
+        // If more than 2 tabs are open, close the last tab
         if (tabs.length > 2) {
             await lastTab.close()
 
             // If only 1 tab is open, open a new one to search in
         } else if (tabs.length === 1) {
             const newPage = await browser.newPage()
-            await newPage.goto(url)
+            await newPage.goto(this.searchPageURL)
 
-            // Else go back one page
+            // Else go back one page, this means the correct amount is open
         } else {
-            await lastTab.goBack()
+            await lastTab.goBack().catch(() => { })
         }
     }
-
 
     private calculatePoints(counters: Counters) {
         const mobileData = counters.mobileSearch?.[0] // Mobile searches

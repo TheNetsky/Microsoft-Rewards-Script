@@ -34,7 +34,7 @@ export class MicrosoftRewardsBot {
     private accounts: Account[]
     private workers: Workers
     private login = new Login(this)
-    private accessToken: string = "";
+    private accessToken: string = ''
 
     constructor() {
         this.log = log
@@ -47,7 +47,7 @@ export class MicrosoftRewardsBot {
             utils: new BrowserUtil(this)
         }
         this.config = loadConfig()
-        this.activeWorkers = this.config.clusters;
+        this.activeWorkers = this.config.clusters
     }
 
     async initialize() {
@@ -142,10 +142,10 @@ export class MicrosoftRewardsBot {
         const data = await this.browser.func.getDashboardData()
         log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
 
-        const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints();
-        const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken);
+        const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
+        const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken)
 
-        const earnablePoints = browserEnarablePoints + appEarnablePoints;
+        const earnablePoints = browserEnarablePoints + appEarnablePoints
         this.collectedPoints = earnablePoints
         log('MAIN-POINTS', `You can earn ${earnablePoints} points today (Browser: ${browserEnarablePoints} points, App: ${appEarnablePoints} points)`)
 
@@ -205,7 +205,7 @@ export class MicrosoftRewardsBot {
         await this.browser.func.goHome(this.homePage)
 
         const data = await this.browser.func.getDashboardData()
-        
+
         // Do daily check in
         if (this.config.workers.doDailyCheckIn) {
             await this.activities.doDailyCheckIn(this.accessToken, data)
@@ -248,7 +248,7 @@ export class MicrosoftRewardsBot {
         }
 
         // Fetch new points
-        const earnablePoints = await this.browser.func.getBrowserEarnablePoints() + await this.browser.func.getAppEarnablePoints(this.accessToken);
+        const earnablePoints = await this.browser.func.getBrowserEarnablePoints() + await this.browser.func.getAppEarnablePoints(this.accessToken)
 
         // If the new earnable is 0, means we got all the points, else retract
         this.collectedPoints = earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints)
