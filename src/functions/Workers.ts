@@ -58,7 +58,7 @@ export class Workers {
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
 
             // Wait for new page to load, max 10 seconds, however try regardless in case of error
-            await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { })
+            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { })
 
             await this.solveActivities(page, activitiesUncompleted, punchCard)
 

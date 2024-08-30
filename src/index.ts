@@ -34,6 +34,7 @@ export class MicrosoftRewardsBot {
     private accounts: Account[]
     private workers: Workers
     private login = new Login(this)
+    private accessToken: string = ''
 
     constructor() {
         this.log = log
@@ -134,14 +135,19 @@ export class MicrosoftRewardsBot {
 
         // Login into MS Rewards, then go to rewards homepage
         await this.login.login(this.homePage, account.email, account.password)
+        this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email)
+
         await this.browser.func.goHome(this.homePage)
 
         const data = await this.browser.func.getDashboardData()
         log('MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`)
 
-        const earnablePoints = await this.browser.func.getEarnablePoints()
+        const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
+        const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken)
+
+        const earnablePoints = browserEnarablePoints + appEarnablePoints
         this.collectedPoints = earnablePoints
-        log('MAIN-POINTS', `You can earn ${earnablePoints} points today`)
+        log('MAIN-POINTS', `You can earn ${earnablePoints} points today (Browser: ${browserEnarablePoints} points, App: ${appEarnablePoints} points)`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
@@ -200,42 +206,49 @@ export class MicrosoftRewardsBot {
 
         const data = await this.browser.func.getDashboardData()
 
-        // If no mobile searches data found, stop (Does not exist on new accounts)
-        if (!data.userStatus.counters.mobileSearch) {
-            log('MAIN', 'No mobile searches found, stopping!')
-
-            // Close mobile browser
-            return await this.closeBrowser(browser, account.email)
+        // Do daily check in
+        if (this.config.workers.doDailyCheckIn) {
+            await this.activities.doDailyCheckIn(this.accessToken, data)
         }
 
-        // Open a new tab to where the tasks are going to be completed
-        const workerPage = await browser.newPage()
+        // Do read to earn
+        if (this.config.workers.doReadToEarn) {
+            await this.activities.doReadToEarn(this.accessToken, data)
+        }
 
-        // Go to homepage on worker page
-        await this.browser.func.goHome(workerPage)
+        // If no mobile searches data found, stop (Does not exist on new accounts)
+        if (data.userStatus.counters.mobileSearch) {
+            // Open a new tab to where the tasks are going to be completed
+            const workerPage = await browser.newPage()
 
-        // Do mobile searches
-        if (this.config.workers.doMobileSearch) {
-            await this.activities.doSearch(workerPage, data)
+            // Go to homepage on worker page
+            await this.browser.func.goHome(workerPage)
 
-            // Fetch current search points
-            const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
+            // Do mobile searches
+            if (this.config.workers.doMobileSearch) {
+                await this.activities.doSearch(workerPage, data)
 
-            // If the remaining mobile points does not equal 0, restart and assume the generated UA is invalid
-            // Retry until all points are gathered when (retryMobileSearch is enabled)
-            if (this.config.searchSettings.retryMobileSearch && mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
-                log('MAIN', 'Unable to complete mobile searches, bad User-Agent? Retrying...')
+                // Fetch current search points
+                const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
 
-                // Close mobile browser
-                await this.closeBrowser(browser, account.email)
+                // If the remaining mobile points does not equal 0, restart and assume the generated UA is invalid
+                // Retry until all points are gathered when (retryMobileSearch is enabled)
+                if (this.config.searchSettings.retryMobileSearch && mobileSearchPoints && ((mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)) {
+                    log('MAIN', 'Unable to complete mobile searches, bad User-Agent? Retrying...')
 
-                // Retry
-                await this.Mobile(account)
+                    // Close mobile browser
+                    await this.closeBrowser(browser, account.email)
+
+                    // Retry
+                    await this.Mobile(account)
+                }
             }
+        } else {
+            log('MAIN', 'No mobile searches found!')
         }
 
         // Fetch new points
-        const earnablePoints = await this.browser.func.getEarnablePoints()
+        const earnablePoints = await this.browser.func.getBrowserEarnablePoints() + await this.browser.func.getAppEarnablePoints(this.accessToken)
 
         // If the new earnable is 0, means we got all the points, else retract
         this.collectedPoints = earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints)

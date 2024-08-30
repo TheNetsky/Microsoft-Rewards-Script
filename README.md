@@ -102,6 +102,8 @@ Under development, however mainly for personal use!
 - [x] Completing Punchcards
 - [x] Solving This Or That Quiz (Random)
 - [x] Solving ABC Quiz
+- [x] Completing Daily Check In
+- [x] Completing Read To Earn
 - [ ] Completing Shopping Game
 - [ ] Completing Gaming Tab
 - [x] Clustering Support

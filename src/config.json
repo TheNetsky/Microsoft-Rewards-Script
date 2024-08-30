@@ -10,7 +10,9 @@
         "doMorePromotions": true,
         "doPunchCards": true,
         "doDesktopSearch": true,
-        "doMobileSearch": true
+        "doMobileSearch": true,
+        "doDailyCheckIn": true,
+        "doReadToEarn": true
     },
     "globalTimeout": 30000,
     "searchSettings": {
