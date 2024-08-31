@@ -145,7 +145,7 @@ export class Search extends Workers {
 
                 // Set it since params get added after visiting
                 this.searchPageURL = searchPage.url()
-                console.log(this.searchPageURL)
+
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
