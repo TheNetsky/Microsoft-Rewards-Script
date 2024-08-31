@@ -145,7 +145,7 @@ export class Search extends Workers {
 
                 // Set it since params get added after visiting
                 this.searchPageURL = searchPage.url()
-
+                console.log(this.searchPageURL)
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
@@ -320,7 +320,7 @@ export class Search extends Workers {
 
         // If more than 2 tabs are open, close the last tab
         if (tabs.length > 2) {
-            await lastTab.close()
+            await tabs[tabs.length - 1]?.close()
 
             // If only 1 tab is open, open a new one to search in
         } else if (tabs.length === 1) {
@@ -329,7 +329,7 @@ export class Search extends Workers {
 
             // Else go back one page, this means the correct amount is open
         } else {
-            await lastTab.goBack().catch(() => { })
+            await tabs[tabs.length - 1]?.goBack().catch(() => { })
         }
     }
 
