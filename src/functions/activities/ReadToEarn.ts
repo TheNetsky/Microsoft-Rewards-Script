@@ -12,8 +12,7 @@ export class ReadToEarn extends Workers {
 
         try {
 
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
+            let geoLocale = 'cn'
 
             const userDataRequest = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me',
