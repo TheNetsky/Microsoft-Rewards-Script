@@ -11,8 +11,7 @@ export class DailyCheckIn extends Workers {
         this.bot.log('DAILY-CHECK-IN', 'Starting Daily Check In')
 
         try {
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
+            let geoLocale = 'cn'
 
             const jsonData = {
                 amount: 1,
