@@ -11,7 +11,6 @@ export class ReadToEarn extends Workers {
         this.bot.log('READ-TO-EARN', 'Starting Read to Earn')
 
         try {
-
             let geoLocale = data.userProfile.attributes.country
             geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
 
@@ -26,7 +25,7 @@ export class ReadToEarn extends Workers {
             }
             const userDataResponse = await axios(userDataRequest)
             const userData = (await userDataResponse.data).response
-            let balance: number = userData.balance
+            let userBalance = userData.balance
 
             const jsonData = {
                 amount: 1,
@@ -38,7 +37,8 @@ export class ReadToEarn extends Workers {
                 }
             }
 
-            for (let i = 0; i < 10; ++i) {
+            const articleCount = 10
+            for (let i = 0; i < articleCount; ++i) {
                 jsonData.id = randomBytes(64).toString('hex')
                 const claimRequest = {
                     url: 'https://prod.rewardsplatform.microsoft.com/dapi/me/activities',
@@ -55,12 +55,12 @@ export class ReadToEarn extends Workers {
                 const claimResponse = await axios(claimRequest)
                 const newBalance = (await claimResponse.data).response.balance
 
-                if (newBalance == balance) {
+                if (newBalance == userBalance) {
                     this.bot.log('READ-TO-EARN', 'Read all available articles')
                     break
                 } else {
-                    balance = newBalance
-                    this.bot.log('READ-TO-EARN', `Read article ${i + 1}`)
+                    this.bot.log('READ-TO-EARN', `Read article ${i + 1} of ${articleCount} max | Gained ${newBalance - userBalance} Points`)
+                    userBalance = newBalance
                     await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max)))
                 }
             }

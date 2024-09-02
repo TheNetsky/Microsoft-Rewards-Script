@@ -10,11 +10,11 @@ import { GoogleSearch } from '../../interface/Search'
 
 
 export class Search extends Workers {
-
-    private searchPageURL = 'https://bing.com'
+    private bingHome = 'https://bing.com'
+    private searchPageURL = ''
 
     public async doSearch(page: Page, data: DashboardData) {
-        this.bot.log('SEARCH-BING', 'Starting bing searches')
+        this.bot.log('SEARCH-BING', 'Starting Bing searches')
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
@@ -34,7 +34,7 @@ export class Search extends Workers {
         googleSearchQueries = [...new Set(googleSearchQueries)]
 
         // Go to bing
-        await page.goto(this.searchPageURL)
+        await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
 
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
 
@@ -133,11 +133,12 @@ export class Search extends Workers {
     private async bingSearch(searchPage: Page, query: string) {
         const platformControlKey = platform() === 'darwin' ? 'Meta' : 'Control'
 
-
-
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
+                // This page had already been set to the Bing.com page or the previous search listing, we just need to select it
+                searchPage = await this.bot.browser.utils.getLatestTab(searchPage)
+
                 // Go to top of the page
                 await searchPage.evaluate(() => {
                     window.scrollTo(0, 0)
@@ -163,6 +164,7 @@ export class Search extends Workers {
 
                 // Bing.com in Chrome opens a new tab when searching
                 const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
+                this.searchPageURL = new URL(resultPage.url()).href // Set the results page
 
                 if (this.bot.config.searchSettings.scrollRandomResults) {
                     await this.bot.utils.wait(2000)
@@ -185,6 +187,7 @@ export class Search extends Workers {
                     break
 
                 }
+
                 this.bot.log('SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
                 this.bot.log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
@@ -286,16 +289,15 @@ export class Search extends Workers {
 
     private async clickRandomLink(page: Page) {
         try {
-
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
 
-            // Will get current tab if no new one is created
+            // Will get current tab if no new one is created, this will always be the visited site or the result page if it failed to click
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
             // Stay for 10 seconds
             await this.bot.utils.wait(10_000)
 
-            let lastTabURL = new URL(lastTab.url()) // Get new tab info
+            let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we've visited
 
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
@@ -325,11 +327,15 @@ export class Search extends Workers {
             // If only 1 tab is open, open a new one to search in
         } else if (tabs.length === 1) {
             const newPage = await browser.newPage()
-            await newPage.goto(this.searchPageURL)
+            await this.bot.utils.wait(1000)
+            await newPage.goto(this.bingHome)
+            await this.bot.utils.wait(3000)
+            this.searchPageURL = newPage.url()
 
-            // Else go back one page, this means the correct amount is open
+            // Else reset the last tab back to the search listing
         } else {
-            await lastTab.goBack().catch(() => { })
+            lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
+            await lastTab.goto(this.searchPageURL)
         }
     }
 
