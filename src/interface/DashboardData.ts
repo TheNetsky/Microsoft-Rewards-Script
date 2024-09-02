@@ -351,6 +351,8 @@ export interface MorePromotion {
     legalText: string;
     legalLinkText: string;
     deviceType: string;
+    exclusiveLockedFeatureType: string;
+    exclusiveLockedFeatureStatus: string;
 }
 
 export interface PunchCard {
