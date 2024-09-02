@@ -162,8 +162,6 @@ export default class BrowserFunc {
                     // Only count points from supported activities
                     if (['quiz', 'urlreward'].includes(x.promotionType) && x.exclusiveLockedFeatureStatus === 'unlocked') {
                         totalEarnablePoints += (x.pointProgressMax - x.pointProgress)
-                    } else {
-                        console.log(x)
                     }
                 })
             }
