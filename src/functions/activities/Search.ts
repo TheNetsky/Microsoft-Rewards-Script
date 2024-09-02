@@ -259,7 +259,7 @@ export class Search extends Workers {
 
             return response.data[1] as string[]
         } catch (error) {
-            this.bot.log('SEARCH-BING-RELTATED', 'An error occurred:' + error, 'error')
+            this.bot.log('SEARCH-BING-RELATED', 'An error occurred:' + error, 'error')
         }
         return []
     }
