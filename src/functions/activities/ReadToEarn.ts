@@ -39,7 +39,7 @@ export class ReadToEarn extends Workers {
 
             const articleCount = 10
             for (let i = 0; i < articleCount; ++i) {
-                jsonData.id = randomBytes(64).toString('hex')
+                jsonData.id = randomBytes(16).toString('hex')
                 const claimRequest = {
                     url: 'https://prod.rewardsplatform.microsoft.com/dapi/me/activities',
                     method: 'POST',
