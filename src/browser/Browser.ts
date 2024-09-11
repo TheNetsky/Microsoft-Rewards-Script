@@ -6,6 +6,7 @@ import { FingerprintGenerator } from 'fingerprint-generator'
 
 import { MicrosoftRewardsBot } from '../index'
 import { loadSessionData, saveFingerprintData } from '../util/Load'
+import { updateFingerprintUserAgent } from '../util/UserAgent'
 
 import { AccountProxy } from '../interface/Account'
 
@@ -39,9 +40,9 @@ class Browser {
 
         const sessionData = await loadSessionData(this.bot.config.sessionPath, email, this.bot.isMobile, this.bot.config.saveFingerprint)
 
-        const fingerpint = sessionData.fingerprint ? sessionData.fingerprint : this.generateFingerprint()
+        const fingerprint = sessionData.fingerprint ? sessionData.fingerprint : await this.generateFingerprint()
 
-        const context = await newInjectedContext(browser, { fingerprint: fingerpint })
+        const context = await newInjectedContext(browser, { fingerprint: fingerprint })
 
         // Set timeout to preferred amount
         context.setDefaultTimeout(this.bot.config?.globalTimeout ?? 30_000)
@@ -49,22 +50,24 @@ class Browser {
         await context.addCookies(sessionData.cookies)
 
         if (this.bot.config.saveFingerprint) {
-            await saveFingerprintData(this.bot.config.sessionPath, email, this.bot.isMobile, fingerpint)
+            await saveFingerprintData(this.bot.config.sessionPath, email, this.bot.isMobile, fingerprint)
         }
 
-        this.bot.log('BROWSER', `Created browser with User-Agent: "${fingerpint.fingerprint.navigator.userAgent}"`)
+        this.bot.log('BROWSER', `Created browser with User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`)
 
         return context
     }
 
-    generateFingerprint() {
-        const fingerPrintData = new FingerprintGenerator().getFingerprint({
+    async generateFingerprint() {
+        let fingerprintData = new FingerprintGenerator().getFingerprint({
             devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
             operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
             browsers: ['edge']
         })
 
-        return fingerPrintData
+        const updatedFingerPrintData = await updateFingerprintUserAgent(fingerprintData, this.bot.isMobile)
+
+        return updatedFingerPrintData
     }
 }
 
