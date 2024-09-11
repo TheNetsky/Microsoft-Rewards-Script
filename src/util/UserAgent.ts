@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 
 import { log } from './Logger'
 
@@ -106,4 +107,25 @@ export async function getAppComponents(mobile: boolean) {
         chrome_major_version: chromeMajorVersion as string,
         chrome_reduced_version: chromeReducedVersion as string
     }
+}
+
+    // Function to update the version numbers
+ export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, mobile: boolean): Promise<BrowserFingerprintWithHeaders> {
+    // Get latest Chrome version in its reduced form
+    const app = await getAppComponents(mobile)
+    const chromeReducedVersion = app.chrome_reduced_version    
+    
+    // Regular expressions to find and replace the versions
+    const chromeVersionRegex = /Chrome\/\d+\.\d+\.\d+\.\d+/
+    const edgeVersionRegex = /Edg\/\d+\.\d+\.\d+\.\d+/
+
+    let updatedFingerprint = fingerprint
+
+    // Replace the old versions with the new ones
+    updatedFingerprint.fingerprint.navigator.userAgent = updatedFingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
+    updatedFingerprint.headers['user-agent'] = updatedFingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
+    updatedFingerprint.fingerprint.navigator.userAgent = updatedFingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
+    updatedFingerprint.headers['user-agent'] = updatedFingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
+
+    return updatedFingerprint
 }
