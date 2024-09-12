@@ -109,23 +109,24 @@ export async function getAppComponents(mobile: boolean) {
     }
 }
 
-    // Function to update the version numbers
- export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, mobile: boolean): Promise<BrowserFingerprintWithHeaders> {
-    // Get latest Chrome version in its reduced form
+export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, mobile: boolean): Promise<BrowserFingerprintWithHeaders> {
     const app = await getAppComponents(mobile)
-    const chromeReducedVersion = app.chrome_reduced_version    
+    const chromeReducedVersion = app.chrome_reduced_version
     
-    // Regular expressions to find and replace the versions
     const chromeVersionRegex = /Chrome\/\d+\.\d+\.\d+\.\d+/
-    const edgeVersionRegex = /Edg\/\d+\.\d+\.\d+\.\d+/
+    fingerprint.fingerprint.navigator.userAgent = fingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
+    fingerprint.headers['user-agent'] = fingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
 
-    let updatedFingerprint = fingerprint
+    if (mobile) {
+        const edgeVersionRegex = /EdgA\/\d+\.\d+\.\d+\.\d+/
+        fingerprint.fingerprint.navigator.userAgent = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `EdgA/${chromeReducedVersion}`)
+        fingerprint.headers['user-agent'] = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `EdgA/${chromeReducedVersion}`)
+    }
+    else {
+        const edgeVersionRegex = /Edg\/\d+\.\d+\.\d+\.\d+/
+        fingerprint.fingerprint.navigator.userAgent = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
+        fingerprint.headers['user-agent'] = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
+    }
 
-    // Replace the old versions with the new ones
-    updatedFingerprint.fingerprint.navigator.userAgent = updatedFingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
-    updatedFingerprint.headers['user-agent'] = updatedFingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
-    updatedFingerprint.fingerprint.navigator.userAgent = updatedFingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
-    updatedFingerprint.headers['user-agent'] = updatedFingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
-
-    return updatedFingerprint
+    return fingerprint
 }
