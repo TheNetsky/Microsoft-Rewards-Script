@@ -110,23 +110,23 @@ export async function getAppComponents(mobile: boolean) {
 }
 
 export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, mobile: boolean): Promise<BrowserFingerprintWithHeaders> {
-    const app = await getAppComponents(mobile)
-    const chromeReducedVersion = app.chrome_reduced_version
-    
-    const chromeVersionRegex = /Chrome\/\d+\.\d+\.\d+\.\d+/
-    fingerprint.fingerprint.navigator.userAgent = fingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
-    fingerprint.headers['user-agent'] = fingerprint.fingerprint.navigator.userAgent.replace(chromeVersionRegex, `Chrome/${chromeReducedVersion}`)
+    try {
+        const app = await getAppComponents(mobile)
+        const edge_major_version = app.edge_major_version
 
-    if (mobile) {
-        const edgeVersionRegex = /EdgA\/\d+\.\d+\.\d+\.\d+/
-        fingerprint.fingerprint.navigator.userAgent = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `EdgA/${chromeReducedVersion}`)
-        fingerprint.headers['user-agent'] = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `EdgA/${chromeReducedVersion}`)
-    }
-    else {
-        const edgeVersionRegex = /Edg\/\d+\.\d+\.\d+\.\d+/
-        fingerprint.fingerprint.navigator.userAgent = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
-        fingerprint.headers['user-agent'] = fingerprint.fingerprint.navigator.userAgent.replace(edgeVersionRegex, `Edg/${chromeReducedVersion}`)
-    }
+        const regex = /(Chrome\/|Edg\/|EdgA\/)(\d+)/g
+        const modifyBrowserVersion = (userAgent: string): string =>
+            userAgent.replace(regex, (_, prefix) => `${prefix}${edge_major_version}`)
 
-    return fingerprint
+        if (fingerprint.fingerprint.navigator?.userAgent) {
+            fingerprint.fingerprint.navigator.userAgent = modifyBrowserVersion(fingerprint.fingerprint.navigator.userAgent)
+        }
+        if (fingerprint.headers['user-agent']) {
+            fingerprint.headers['user-agent'] = modifyBrowserVersion(fingerprint.headers['user-agent'])
+        }
+
+        return fingerprint
+    } catch (error) {
+        throw log('USERAGENT-UPDATE', 'An error occurred:' + error, 'error')
+    }
 }
