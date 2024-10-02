@@ -68,8 +68,10 @@ Under development, however mainly for personal use!
 |  workers.doPunchCards    | Complete punchcards | `true`  | DO_PUNCH_CARDS |
 |  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | DO_DESKTOP_SEARCH |
 |  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
+|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  | DO_DAILY_CHECKIN |
+|  workers.doReadToEarn    | Complete read to earn activity | `true`  | DO_READ_TO_EARN |
 |  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
 |  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
