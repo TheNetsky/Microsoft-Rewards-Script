@@ -144,9 +144,6 @@ export class Search extends Workers {
                     window.scrollTo(0, 0)
                 })
 
-                // Set it since params get added after visiting
-                this.searchPageURL = searchPage.url()
-
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
@@ -291,13 +288,13 @@ export class Search extends Workers {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
 
+            // Stay for 10 seconds for page to load and "visit"
+            await this.bot.utils.wait(10_000)
+
             // Will get current tab if no new one is created, this will always be the visited site or the result page if it failed to click
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
-            // Stay for 10 seconds
-            await this.bot.utils.wait(10_000)
-
-            let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we've visited
+            let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we're visiting
 
             // Check if the URL is different from the original one, don't loop more than 5 times.
             let i = 0
@@ -332,10 +329,10 @@ export class Search extends Workers {
             await this.bot.utils.wait(3000)
             this.searchPageURL = newPage.url()
 
-            // Else reset the last tab back to the search listing
+            // Else reset the last tab back to the search listing or Bing.com
         } else {
             lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
-            await lastTab.goto(this.searchPageURL)
+            await lastTab.goto(this.searchPageURL ?  this.searchPageURL : this.bingHome)
         }
     }
 

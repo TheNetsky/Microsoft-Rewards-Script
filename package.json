@@ -34,9 +34,9 @@
   "dependencies": {
     "axios": "^1.7.5",
     "cheerio": "^1.0.0",
-    "fingerprint-generator": "^2.1.54",
-    "fingerprint-injector": "^2.1.54",
-    "playwright": "^1.46.1",
+    "fingerprint-generator": "^2.1.56",
+    "fingerprint-injector": "^2.1.56",
+    "playwright": "^1.47.2",
     "ts-node": "^10.9.2"
   }
 }
