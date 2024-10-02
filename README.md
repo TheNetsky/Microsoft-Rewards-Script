@@ -68,7 +68,7 @@ Under development, however mainly for personal use!
 |  workers.doPunchCards    | Complete punchcards | `true`  | DO_PUNCH_CARDS |
 |  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | DO_DESKTOP_SEARCH |
 |  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
-|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  | DO_DAILY_CHECKIN |
+|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  | DO_DAILY_CHECK_IN |
 |  workers.doReadToEarn    | Complete read to earn activity | `true`  | DO_READ_TO_EARN |
 |  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
 |  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
