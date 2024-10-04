@@ -184,16 +184,13 @@ export default class BrowserFunc {
             ]
             let totalEarnablePoints = 0
 
-            const data = await this.getDashboardData()
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
-
+            const [, geo] = await this.getGeoLocale()
             const userDataRequest: AxiosRequestConfig = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'X-Rewards-Country': geoLocale,
+                    'X-Rewards-Country': geo.toLocaleLowerCase(),
                     'X-Rewards-Language': 'en'
                 }
             }
@@ -315,6 +312,26 @@ export default class BrowserFunc {
         }
 
         return selector
+    }
+
+    async getGeoLocale(): Promise<[string, string]> {
+        const defaultLang = this.bot.config.searchSettings.defaultLang
+        const defaultGeo = this.bot.config.searchSettings.defaultGeo
+
+        if (!this.bot.config.searchSettings.useGeoLocaleQueries) {
+            return [defaultLang, defaultGeo]
+        }
+
+        try {
+            const response = await axios.get('https://ipapi.co/json/')
+            const nfo = response.data
+            const lang = (nfo.languages as string)?.split(',')[0] ?? defaultLang
+            const geo = (nfo.country as string) ?? defaultGeo
+            return [lang, geo]
+        } catch (error) {
+            this.bot.log('GET-GEOLOCALE', 'An error occurred: ' + error, 'error')
+            return [defaultLang, defaultGeo]
+        }
     }
 
 }

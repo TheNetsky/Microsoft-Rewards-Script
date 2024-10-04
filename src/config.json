@@ -1,7 +1,7 @@
 {
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
-    "headless": false,
+    "headless": true,
     "runOnZeroPoints": false,
     "clusters": 1,
     "saveFingerprint": false,
@@ -16,7 +16,9 @@
     },
     "globalTimeout": 30000,
     "searchSettings": {
-        "useGeoLocaleQueries": true,
+        "useGeoLocaleQueries": false,
+        "defaultLang": "zh-CN",
+        "defaultGeo": "CN",
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {

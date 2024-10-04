@@ -42,3 +42,27 @@ export interface Title {
     query: string;
     exploreLink: string;
 }
+
+export interface CNTrends {
+    code: number;
+    name: string;
+    title: string;
+    type: string;
+    link: string;
+    total: number;
+    updateTime: string;
+    fromCache: boolean;
+    data: TrendItem[];
+}
+
+export interface TrendItem {
+    id: number;
+    title: string;
+    desc: string;
+    cover: string;
+    author: string;
+    timestamp: string | null;
+    hot: number;
+    url: string;
+    mobileUrl: string;
+}
