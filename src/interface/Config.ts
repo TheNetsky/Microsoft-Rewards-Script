@@ -13,6 +13,8 @@ export interface Config {
 
 export interface SearchSettings {
     useGeoLocaleQueries: boolean;
+    defaultLang: string;
+    defaultGeo: string;
     scrollRandomResults: boolean;
     clickRandomResults: boolean;
     searchDelay: SearchDelay;

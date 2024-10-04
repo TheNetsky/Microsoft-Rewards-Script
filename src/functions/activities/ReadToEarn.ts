@@ -11,15 +11,13 @@ export class ReadToEarn extends Workers {
         this.bot.log('READ-TO-EARN', 'Starting Read to Earn')
 
         try {
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
-
+            const [, geo] = await this.bot.browser.func.getGeoLocale()
             const userDataRequest = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me',
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
-                    'X-Rewards-Country': geoLocale,
+                    'X-Rewards-Country': geo.toLocaleLowerCase(),
                     'X-Rewards-Language': 'en'
                 }
             }
@@ -29,7 +27,7 @@ export class ReadToEarn extends Workers {
 
             const jsonData = {
                 amount: 1,
-                country: geoLocale,
+                country: geo.toLocaleLowerCase(),
                 id: '1',
                 type: 101,
                 attributes: {
@@ -46,7 +44,7 @@ export class ReadToEarn extends Workers {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
-                        'X-Rewards-Country': geoLocale,
+                        'X-Rewards-Country': geo.toLocaleLowerCase(),
                         'X-Rewards-Language': 'en'
                     },
                     data: JSON.stringify(jsonData)
