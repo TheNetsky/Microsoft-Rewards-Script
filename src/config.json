@@ -14,6 +14,7 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true
     },
+    "restartTime": 180000,
     "globalTimeout": 30000,
     "searchSettings": {
         "useGeoLocaleQueries": true,
