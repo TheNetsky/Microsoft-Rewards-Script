@@ -141,6 +141,12 @@ export class Workers {
                     selector = `[data-bi-id^="${activity.name}"]`
                 }
 
+                const element = await activityPage.waitForSelector(selector, { timeout: 500 }).catch(() => null)
+
+                if (!element) {
+                    selector = 'mee-rewards-promotion'
+                }
+
                 // Click element, it will be opened in a new tab
                 await activityPage.click(selector)
 
