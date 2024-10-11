@@ -59,7 +59,7 @@ Under development, however mainly for personal use!
 | :------------- |:-------------| :-----| :-----|
 |  baseURL    | MS Rewards page | `https://rewards.bing.com` | BASE_URL |
 |  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) | SESSION_PATH |
-|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) | HEADLESS *(must be set to `=true` for docker)* |
+|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) | HEADLESS *(must be set to `true` for docker)* |
 |  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) | RUN_ON_ZERO_POINTS |
 |  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) | CLUSTERS |
 |  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) | SAVE_FINGERPRINT |
@@ -70,11 +70,11 @@ Under development, however mainly for personal use!
 |  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
 |  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  | DO_DAILY_CHECK_IN |
 |  workers.doReadToEarn    | Complete read to earn activity | `true`  | DO_READ_TO_EARN |
-|  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
+|  globalTimeout    | The length before the action gets timeout | `30s`   | GLOBAL_TIMEOUT |
 |  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
 |  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
-|  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
+|  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
 |  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | RETRY_MOBILE_SEARCH |
 |  webhook.enabled     | Enable or disable your set webhook | `false` | WEBHOOK_ENABLED |
 |  webhook.url     | Your Discord webhook URL | `null` | WEBHOOK_URL="" |
@@ -106,8 +106,6 @@ Under development, however mainly for personal use!
 - [x] Solving ABC Quiz
 - [x] Completing Daily Check In
 - [x] Completing Read To Earn
-- [ ] Completing Shopping Game
-- [ ] Completing Gaming Tab
 - [x] Clustering Support
 - [x] Proxy Support
 - [x] Docker Support (experimental)
