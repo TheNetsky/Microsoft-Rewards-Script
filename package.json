@@ -1,6 +1,6 @@
 {
   "name": "microsoft-rewards-script",
-  "version": "1.4.11",
+  "version": "1.4.12",
   "description": "Automatically do tasks for Microsoft Rewards but in TS!",
   "main": "index.js",
   "engines": {
@@ -26,6 +26,7 @@
   "author": "Netsky",
   "license": "ISC",
   "devDependencies": {
+    "@types/ms": "^0.7.34",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "eslint": "^8.57.0",
     "eslint-plugin-modules-newline": "^0.0.6",
@@ -36,7 +37,11 @@
     "cheerio": "^1.0.0",
     "fingerprint-generator": "^2.1.56",
     "fingerprint-injector": "^2.1.56",
-    "playwright": "^1.47.2",
+    "http-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.5",
+    "ms": "^2.1.3",
+    "rebrowser-playwright": "^1.47.100",
+    "socks-proxy-agent": "^8.0.4",
     "ts-node": "^10.9.2"
   }
 }

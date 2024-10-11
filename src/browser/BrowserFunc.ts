@@ -1,6 +1,6 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 import { CheerioAPI, load } from 'cheerio'
-import axios, { AxiosRequestConfig } from 'axios'
+import { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -198,7 +198,7 @@ export default class BrowserFunc {
                 }
             }
 
-            const userDataResponse: AppUserData = (await axios(userDataRequest)).data
+            const userDataResponse: AppUserData = (await this.bot.axiosInstance.axios(userDataRequest)).data
             const userData = userDataResponse.response
             const eligibleActivities = userData.promotions.filter((x) => eligibleOffers.includes(x.attributes.offerid ?? ''))
 

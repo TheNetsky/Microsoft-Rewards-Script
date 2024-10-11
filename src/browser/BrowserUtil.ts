@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -119,6 +119,23 @@ export default class BrowserUtil {
 
         } catch (error) {
             throw this.bot.log('GET-TABS', 'An error occurred:' + error, 'error')
+        }
+    }
+
+    async reloadBadPage(page: Page): Promise<void> {
+        try {
+            const isEmptyBodyElement = await page.evaluate(() => {
+                const body = document.querySelector('body')
+                return !body || !body.innerHTML.trim()
+            })
+
+            if (isEmptyBodyElement) {
+                this.bot.log('RELOAD-BAD-PAGE', 'Bad page detected, reloading!')
+                await page.reload()
+            }
+
+        } catch (error) {
+            throw this.bot.log('RELOAD-BAD-PAGE', 'An error occurred:' + error, 'error')
         }
     }
 

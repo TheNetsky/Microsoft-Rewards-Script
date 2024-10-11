@@ -1,5 +1,5 @@
-import axios from 'axios'
 import { randomBytes } from 'crypto'
+import { AxiosRequestConfig } from 'axios'
 
 import { Workers } from '../Workers'
 
@@ -24,7 +24,7 @@ export class DailyCheckIn extends Workers {
                 }
             }
 
-            const claimRequest = {
+            const claimRequest: AxiosRequestConfig = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me/activities',
                 method: 'POST',
                 headers: {
@@ -36,7 +36,7 @@ export class DailyCheckIn extends Workers {
                 data: JSON.stringify(jsonData)
             }
 
-            const claimResponse = await axios(claimRequest)
+            const claimResponse = await this.bot.axiosInstance.axios(claimRequest)
             const claimedPoint = parseInt((await claimResponse.data).response.activity.p)
 
             this.bot.log('DAILY-CHECK-IN', claimedPoint > 0 ? `Claimed ${claimedPoint} points` : 'Already claimed today')

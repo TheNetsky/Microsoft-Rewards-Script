@@ -1,17 +1,18 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 import readline from 'readline'
+import * as crypto from 'crypto'
+import { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
-import axios from 'axios'
+
 import { OAuth } from '../interface/OAuth'
-import * as crypto from 'crypto'
+
 
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
 })
-
 
 export class Login {
     private bot: MicrosoftRewardsBot
@@ -239,7 +240,7 @@ export class Login {
         body.append('code', code)
         body.append('redirect_uri', this.redirectUrl)
 
-        const tokenRequest = {
+        const tokenRequest: AxiosRequestConfig = {
             url: this.tokenUrl,
             method: 'POST',
             headers: {
@@ -248,7 +249,7 @@ export class Login {
             data: body.toString()
         }
 
-        const tokenResponse = await axios(tokenRequest)
+        const tokenResponse = await this.bot.axiosInstance.axios(tokenRequest)
         const tokenData: OAuth = await tokenResponse.data
 
         this.bot.log('LOGIN-APP', 'Successfully authorized')

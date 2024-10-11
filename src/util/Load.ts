@@ -1,4 +1,4 @@
-import { BrowserContext, Cookie } from 'playwright'
+import { BrowserContext, Cookie } from 'rebrowser-playwright'
 import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 import fs from 'fs'
 import path from 'path'

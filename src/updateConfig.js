@@ -13,7 +13,13 @@ config.headless = process.env.HEADLESS ? process.env.HEADLESS === 'true' : confi
 config.runOnZeroPoints = process.env.RUN_ON_ZERO_POINTS ? process.env.RUN_ON_ZERO_POINTS === 'true' : config.runOnZeroPoints
 config.clusters = process.env.CLUSTERS ? parseInt(process.env.CLUSTERS, 10) : config.clusters
 config.saveFingerprint = process.env.SAVE_FINGERPRINT ? process.env.SAVE_FINGERPRINT === 'true' : config.saveFingerprint
-config.globalTimeout = process.env.GLOBAL_TIMEOUT ? parseInt(process.env.GLOBAL_TIMEOUT, 10) : config.globalTimeout
+config.globalTimeout = process.env.GLOBAL_TIMEOUT
+    ? isNaN(process.env.GLOBAL_TIMEOUT)
+        ? process.env.GLOBAL_TIMEOUT
+        : parseInt(process.env.GLOBAL_TIMEOUT, 10)
+    : config.globalTimeout
+
+
 
 config.workers.doDailySet = process.env.DO_DAILY_SET ? process.env.DO_DAILY_SET === 'true' : config.workers.doDailySet
 config.workers.doMorePromotions = process.env.DO_MORE_PROMOTIONS ? process.env.DO_MORE_PROMOTIONS === 'true' : config.workers.doMorePromotions
@@ -26,8 +32,18 @@ config.workers.doReadToEarn = process.env.DO_READ_TO_EARN ? process.env.DO_READ_
 config.searchSettings.useGeoLocaleQueries = process.env.USE_GEO_LOCALE_QUERIES ? process.env.USE_GEO_LOCALE_QUERIES === 'true' : config.searchSettings.useGeoLocaleQueries
 config.searchSettings.scrollRandomResults = process.env.SCROLL_RANDOM_RESULTS ? process.env.SCROLL_RANDOM_RESULTS === 'true' : config.searchSettings.scrollRandomResults
 config.searchSettings.clickRandomResults = process.env.CLICK_RANDOM_RESULTS ? process.env.CLICK_RANDOM_RESULTS === 'true' : config.searchSettings.clickRandomResults
-config.searchSettings.searchDelay.min = process.env.SEARCH_DELAY_MIN ? parseInt(process.env.SEARCH_DELAY_MIN, 10) : config.searchSettings.searchDelay.min
-config.searchSettings.searchDelay.max = process.env.SEARCH_DELAY_MAX ? parseInt(process.env.SEARCH_DELAY_MAX, 10) : config.searchSettings.searchDelay.max
+config.searchSettings.searchDelay.min = process.env.SEARCH_DELAY_MIN
+    ? isNaN(process.env.SEARCH_DELAY_MIN)
+        ? process.env.SEARCH_DELAY_MIN
+        : parseInt(process.env.SEARCH_DELAY_MIN, 10)
+    : config.searchSettings.searchDelay.min
+
+config.searchSettings.searchDelay.max = process.env.SEARCH_DELAY_MAX
+    ? isNaN(process.env.SEARCH_DELAY_MAX)
+        ? process.env.SEARCH_DELAY_MAX
+        : parseInt(process.env.SEARCH_DELAY_MAX, 10)
+    : config.searchSettings.searchDelay.max
+
 config.searchSettings.retryMobileSearch = process.env.RETRY_MOBILE_SEARCH ? process.env.RETRY_MOBILE_SEARCH === 'true' : config.searchSettings.retryMobileSearch
 
 config.webhook.enabled = process.env.WEBHOOK_ENABLED ? process.env.WEBHOOK_ENABLED === 'true' : config.webhook.enabled

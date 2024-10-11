@@ -14,14 +14,14 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true
     },
-    "globalTimeout": 30000,
+    "globalTimeout": "30s",
     "searchSettings": {
         "useGeoLocaleQueries": true,
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {
-            "min": 10000,
-            "max": 20000
+            "min": "1min",
+            "max": "2min"
         },
         "retryMobileSearch": true
     },

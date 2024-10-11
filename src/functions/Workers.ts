@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../interface/DashboardData'
 
@@ -46,6 +46,13 @@ export class Workers {
         }
 
         for (const punchCard of punchCardsUncompleted) {
+
+            // Ensure parentPromotion exists before proceeding
+            if (!punchCard.parentPromotion) {
+                this.bot.log('PUNCH-CARD', 'Skipping punchcard: Parent promotion is missing!', 'warn')
+                continue
+            }
+
             // Get latest page for each card
             page = await this.bot.browser.utils.getLatestTab(page)
 

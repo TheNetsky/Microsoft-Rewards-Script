@@ -5,7 +5,7 @@ export interface Config {
     runOnZeroPoints: boolean;
     clusters: number;
     workers: Workers;
-    globalTimeout: number;
+    globalTimeout: number | string;
     searchSettings: SearchSettings;
     webhook: Webhook;
     saveFingerprint: boolean;
@@ -20,8 +20,8 @@ export interface SearchSettings {
 }
 
 export interface SearchDelay {
-    min: number;
-    max: number;
+    min: number | string;
+    max: number | string;
 }
 
 export interface Webhook {

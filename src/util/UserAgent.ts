@@ -1,35 +1,38 @@
 import axios from 'axios'
+import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 
 import { log } from './Logger'
 
 import { ChromeVersion, EdgeVersion } from '../interface/UserAgentUtil'
 
-export async function getUserAgent(mobile: boolean) {
-    const system = getSystemComponents(mobile)
-    const app = await getAppComponents(mobile)
+const NOT_A_BRAND_VERSION = '99'
 
-    const uaTemplate = mobile ?
+export async function getUserAgent(isMobile: boolean) {
+    const system = getSystemComponents(isMobile)
+    const app = await getAppComponents(isMobile)
+
+    const uaTemplate = isMobile ?
         `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${app.chrome_reduced_version} Mobile Safari/537.36 EdgA/${app.edge_version}` :
         `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${app.chrome_reduced_version} Safari/537.36 Edg/${app.edge_version}`
 
-    const platformVersion = `${mobile ? Math.floor(Math.random() * 5) + 9 : Math.floor(Math.random() * 15) + 1}.0.0`
+    const platformVersion = `${isMobile ? Math.floor(Math.random() * 5) + 9 : Math.floor(Math.random() * 15) + 1}.0.0`
 
     const uaMetadata = {
-        mobile,
-        platform: mobile ? 'Android' : 'Windows',
+        isMobile,
+        platform: isMobile ? 'Android' : 'Windows',
         fullVersionList: [
-            { brand: 'Not/A)Brand', version: '99.0.0.0' },
+            { brand: 'Not/A)Brand', version: `${NOT_A_BRAND_VERSION}.0.0.0` },
             { brand: 'Microsoft Edge', version: app['edge_version'] },
             { brand: 'Chromium', version: app['chrome_version'] }
         ],
         brands: [
-            { brand: 'Not/A)Brand', version: '99' },
+            { brand: 'Not/A)Brand', version: NOT_A_BRAND_VERSION },
             { brand: 'Microsoft Edge', version: app['edge_major_version'] },
             { brand: 'Chromium', version: app['chrome_major_version'] }
         ],
         platformVersion,
-        architecture: mobile ? '' : 'x86',
-        bitness: mobile ? '' : '64',
+        architecture: isMobile ? '' : 'x86',
+        bitness: isMobile ? '' : '64',
         model: ''
     }
 
@@ -90,9 +93,9 @@ export function getSystemComponents(mobile: boolean): string {
     return `${uaPlatform}; ${osId}`
 }
 
-export async function getAppComponents(mobile: boolean) {
+export async function getAppComponents(isMobile: boolean) {
     const versions = await getEdgeVersions()
-    const edgeVersion = mobile ? versions.android : versions.windows as string
+    const edgeVersion = isMobile ? versions.android : versions.windows as string
     const edgeMajorVersion = edgeVersion?.split('.')[0]
 
     const chromeVersion = await getChromeVersion()
@@ -100,10 +103,41 @@ export async function getAppComponents(mobile: boolean) {
     const chromeReducedVersion = `${chromeMajorVersion}.0.0.0`
 
     return {
+        not_a_brand_version: `${NOT_A_BRAND_VERSION}.0.0.0`,
+        not_a_brand_major_version: NOT_A_BRAND_VERSION,
         edge_version: edgeVersion as string,
         edge_major_version: edgeMajorVersion as string,
         chrome_version: chromeVersion as string,
         chrome_major_version: chromeMajorVersion as string,
         chrome_reduced_version: chromeReducedVersion as string
+    }
+}
+
+export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, isMobile: boolean): Promise<BrowserFingerprintWithHeaders> {
+    try {
+        const userAgentData = await getUserAgent(isMobile)
+        const componentData = await getAppComponents(isMobile)
+
+        //@ts-expect-error Errors due it not exactly matching
+        fingerprint.fingerprint.navigator.userAgentData = userAgentData.userAgentMetadata
+        fingerprint.fingerprint.navigator.userAgent = userAgentData.userAgent
+        fingerprint.fingerprint.navigator.appVersion = userAgentData.userAgent.replace(`${fingerprint.fingerprint.navigator.appCodeName}/`, '')
+
+        fingerprint.headers['user-agent'] = userAgentData.userAgent
+        fingerprint.headers['sec-ch-ua'] = `"Microsoft Edge";v="${componentData.edge_major_version}", "Not=A?Brand";v="${componentData.not_a_brand_major_version}", "Chromium";v="${componentData.chrome_major_version}"`
+        fingerprint.headers['sec-ch-ua-full-version-list'] = `"Microsoft Edge";v="${componentData.edge_version}", "Not=A?Brand";v="${componentData.not_a_brand_version}", "Chromium";v="${componentData.chrome_version}"`
+
+        /*
+        Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36 EdgA/129.0.0.0
+        sec-ch-ua-full-version-list: "Microsoft Edge";v="129.0.2792.84", "Not=A?Brand";v="8.0.0.0", "Chromium";v="129.0.6668.90"
+        sec-ch-ua: "Microsoft Edge";v="129", "Not=A?Brand";v="8", "Chromium";v="129"
+
+        Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36
+        "Google Chrome";v="129.0.6668.90", "Not=A?Brand";v="8.0.0.0", "Chromium";v="129.0.6668.90"
+        */
+
+        return fingerprint
+    } catch (error) {
+        throw log('USER-AGENT-UPDATE', 'An error occurred:' + error, 'error')
     }
 }

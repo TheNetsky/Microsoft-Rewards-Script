@@ -1,5 +1,4 @@
-import { Page } from 'playwright'
-import axios from 'axios'
+import { Page } from 'rebrowser-playwright'
 import { platform } from 'os'
 
 import { Workers } from '../Workers'
@@ -36,13 +35,13 @@ export class Search extends Workers {
         // Go to bing
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
 
+        await this.bot.browser.utils.tryDismissBingCookieBanner(page)
+
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
 
         const queries: string[] = []
         // Mobile search doesn't seem to like related queries?
         googleSearchQueries.forEach(x => { this.bot.isMobile ? queries.push(x.topic) : queries.push(x.topic, ...x.related) })
-
-        await this.bot.browser.utils.tryDismissBingCookieBanner(page)
 
         // Loop over Google search queries
         for (let i = 0; i < queries.length; i++) {
@@ -67,8 +66,8 @@ export class Search extends Workers {
             }
 
             // Only for mobile searches
-            if (maxLoop > 3 && this.bot.isMobile) {
-                this.bot.log('SEARCH-BING-MOBILE', 'Search didn\'t gain point for 3 iterations, likely bad User-Agent', 'warn')
+            if (maxLoop > 5 && this.bot.isMobile) {
+                this.bot.log('SEARCH-BING-MOBILE', 'Search didn\'t gain point for 5 iterations, likely bad User-Agent', 'warn')
                 break
             }
 
@@ -157,11 +156,13 @@ export class Search extends Workers {
                 await searchPage.keyboard.type(query)
                 await searchPage.keyboard.press('Enter')
 
-                await this.bot.utils.wait(1000)
+                await this.bot.utils.wait(3000)
 
                 // Bing.com in Chrome opens a new tab when searching
                 const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
                 this.searchPageURL = new URL(resultPage.url()).href // Set the results page
+
+                await this.bot.browser.utils.reloadBadPage(resultPage)
 
                 if (this.bot.config.searchSettings.scrollRandomResults) {
                     await this.bot.utils.wait(2000)
@@ -174,7 +175,7 @@ export class Search extends Workers {
                 }
 
                 // Delay between searches
-                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max)))
+                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
 
                 return await this.bot.browser.func.getSearchPoints()
 
@@ -223,7 +224,7 @@ export class Search extends Workers {
                     }
                 }
 
-                const response = await axios(request)
+                const response = await this.bot.axiosInstance.axios(request)
 
                 const data: GoogleTrends = JSON.parse((await response.data).slice(5))
 
@@ -252,7 +253,7 @@ export class Search extends Workers {
                 }
             }
 
-            const response = await axios(request)
+            const response = await this.bot.axiosInstance.axios(request)
 
             return response.data[1] as string[]
         } catch (error) {
@@ -287,6 +288,8 @@ export class Search extends Workers {
     private async clickRandomLink(page: Page) {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
+
+            await this.closeContinuePopup(page)
 
             // Stay for 10 seconds for page to load and "visit"
             await this.bot.utils.wait(10_000)
@@ -332,7 +335,7 @@ export class Search extends Workers {
             // Else reset the last tab back to the search listing or Bing.com
         } else {
             lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
-            await lastTab.goto(this.searchPageURL ?  this.searchPageURL : this.bingHome)
+            await lastTab.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
         }
     }
 
@@ -348,4 +351,19 @@ export class Search extends Workers {
 
         return missingPoints
     }
+
+
+    private async closeContinuePopup(page: Page) {
+        try {
+            await page.waitForSelector('#sacs_close', { timeout: 1000 })
+            const continueButton = await page.$('#sacs_close')
+
+            if (continueButton) {
+                await continueButton.click()
+            }
+        } catch (error) {
+            // Continue if element is not found or other error occurs
+        }
+    }
+
 }

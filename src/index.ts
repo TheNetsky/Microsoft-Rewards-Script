@@ -1,5 +1,5 @@
 import cluster from 'cluster'
-import { BrowserContext, Page } from 'playwright'
+import { BrowserContext, Page } from 'rebrowser-playwright'
 
 import Browser from './browser/Browser'
 import BrowserFunc from './browser/BrowserFunc'
@@ -14,6 +14,7 @@ import { Workers } from './functions/Workers'
 import Activities from './functions/Activities'
 
 import { Account } from './interface/Account'
+import Axios from './util/Axios'
 
 // Main bot class
 export class MicrosoftRewardsBot {
@@ -35,6 +36,9 @@ export class MicrosoftRewardsBot {
     private workers: Workers
     private login = new Login(this)
     private accessToken: string = ''
+
+    //@ts-expect-error Will be initialized later
+    public axiosInstance: Axios
 
     constructor() {
         this.log = log
@@ -105,6 +109,7 @@ export class MicrosoftRewardsBot {
         for (const account of accounts) {
             log('MAIN-WORKER', `Started tasks for account ${account.email}`)
 
+            this.axiosInstance = new Axios(account.proxy)
             // Desktop Searches, DailySet and More Promotions
             await this.Desktop(account)
 
@@ -132,6 +137,8 @@ export class MicrosoftRewardsBot {
         this.homePage = await browser.newPage()
 
         log('MAIN', 'Starting DESKTOP browser')
+
+        //await this.utils.wait(300_000)
 
         // Login into MS Rewards, then go to rewards homepage
         await this.login.login(this.homePage, account.email, account.password)

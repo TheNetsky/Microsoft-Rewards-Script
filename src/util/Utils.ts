@@ -1,3 +1,5 @@
+import ms from 'ms'
+
 export default class Util {
 
     async wait(ms: number): Promise<void> {
@@ -37,6 +39,14 @@ export default class Util {
         }
 
         return chunks
+    }
+
+    stringToMs(input: string | number): number {
+        const milisec = ms(input.toString())
+        if (!milisec) {
+            throw new Error('The string provided cannot be parsed to a valid time! Use a format like "1 min", "1m" or "1 minutes"')
+        }
+        return milisec
     }
 
 }
