@@ -28,5 +28,8 @@ sleep $SLEEPTIME
 # Log the start of the script
 echo "Starting script..."
 
+# Update config with environment variables before running the script
+node src/updateConfig.js
+
 # Execute the Node.js script directly
 npm run start
