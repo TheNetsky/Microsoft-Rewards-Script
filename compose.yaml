@@ -10,4 +10,13 @@ services:
       - CRON_START_TIME=0 5,11 * * *
       ### Run on start, set to false to only run the script per the cron schedule
       - RUN_ON_START=true 
+    volumes:
+      ### Replace "/path/to/" with the actual path to where you want to save the files on your local machine.
+      - /path/to/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json
+      - /path/to/config.json:/usr/src/microsoft-rewards-script/dist/config.json 
+      - /path/to/sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions #optional, saves your login session
+    deploy:
+      resources:
+        limits:
+          memory: 2048M    
     restart: unless-stopped
