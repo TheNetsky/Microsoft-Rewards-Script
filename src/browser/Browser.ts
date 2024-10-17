@@ -13,6 +13,7 @@ import { AccountProxy } from '../interface/Account'
 https://abrahamjuliot.github.io/creepjs/
 https://botcheck.luminati.io/
 http://f.vision/
+https://pixelscan.net/
 */
 
 class Browser {
@@ -61,7 +62,7 @@ class Browser {
         const fingerPrintData = new FingerprintGenerator().getFingerprint({
             devices: this.bot.isMobile ? ['mobile'] : ['desktop'],
             operatingSystems: this.bot.isMobile ? ['android'] : ['windows'],
-            browsers: ['edge']
+            browserListQuery: 'last 2 edge version'
         })
 
         return fingerPrintData
