@@ -19,10 +19,11 @@ Under development, however mainly for personal use!
 **Note:** If you had previously built and run the script locally, remove the `/node_modules` and `/dist` from your Microsoft-Rewards-Script folder.
 
 1. Download the source code
-2. Make changes to your `accounts.json` and `config.json`
-3. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
-4. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
-5. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
+2. Make changes to your `accounts.json` and `config.json`. 
+3. Use volume mapping (see sample compose.yaml) to ensure these files are stored on your local machine and not inside the container. This way, your data (like account settings and config options) will persist even if the container is restarted or updated. 
+4. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
+5. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
+6. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
 
 ### Option 1: build and run with docker run
 
@@ -68,8 +69,10 @@ Under development, however mainly for personal use!
 |  workers.doPunchCards    | Complete punchcards | `true`  | DO_PUNCH_CARDS |
 |  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | DO_DESKTOP_SEARCH |
 |  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
+|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  | DO_DAILY_CHECK_IN |
+|  workers.doReadToEarn    | Complete read to earn activity | `true`  | DO_READ_TO_EARN |
 |  globalTimeout    | The length before the action gets timeout | `30000` (30 seconds)   | GLOBAL_TIMEOUT |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
 |  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 10000` (10 seconds)    `max: 20000` (20 seconds) | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
