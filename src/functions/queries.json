@@ -1,4 +1,17 @@
 {
+    "Houses near you": [
+        "Houses near me"
+    ],
+    "Feeling symptoms?": [
+        "Rash on forearm",
+        "Stuffy nose",
+        "Tickling cough"
+    ],
+    "Get your shopping done faster​!": [
+        "Buy PS5",
+        "Buy Xbox",
+        "Chair deals"
+    ],
     "Translate anything": [
         "Translate welcome home to Korean",
         "Translate welcome home to Japanese",
@@ -31,7 +44,7 @@
         "Directions to Tokyo",
         "Directions to New York"
     ],
-    "Too tired to cook tonight?": [
+    "Too tired to cook tonight?​": [
         "KFC near me",
         "Burger King near me",
         "McDonalds near me"
@@ -44,7 +57,7 @@
         "How to cook ratatouille",
         "How to cook lasagna"
     ],
-    "Find places to stay": [
+    "Find places to stay!": [
         "Hotels Berlin Germany",
         "Hotels Amsterdam Netherlands"
     ],
