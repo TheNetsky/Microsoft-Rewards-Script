@@ -44,7 +44,7 @@
         "Directions to Tokyo",
         "Directions to New York"
     ],
-    "Too tired to cook tonight?​": [
+    "Too tired to cook tonight?": [
         "KFC near me",
         "Burger King near me",
         "McDonalds near me"
@@ -53,7 +53,7 @@
         "convert 250 USD to yen",
         "convert 500 USD to yen"
     ],
-    "Learn to cook a new recipe": [
+    "Learn to cook a new recipe?": [
         "How to cook ratatouille",
         "How to cook lasagna"
     ],
