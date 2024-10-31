@@ -39,7 +39,7 @@ export async function getUserAgent(isMobile: boolean) {
     return { userAgent: uaTemplate, userAgentMetadata: uaMetadata }
 }
 
-export async function getChromeVersion(): Promise<string> {
+export async function getChromeVersion(isMobile: boolean): Promise<string> {
     try {
         const request = {
             url: 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json',
@@ -54,11 +54,11 @@ export async function getChromeVersion(): Promise<string> {
         return data.channels.Stable.version
 
     } catch (error) {
-        throw log('USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
+        throw log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
     }
 }
 
-export async function getEdgeVersions() {
+export async function getEdgeVersions(isMobile: boolean) {
     try {
         const request = {
             url: 'https://edgeupdates.microsoft.com/api/products',
@@ -78,7 +78,7 @@ export async function getEdgeVersions() {
 
 
     } catch (error) {
-        throw log('USERAGENT-EDGE-VERSION', 'An error occurred:' + error, 'error')
+        throw log(isMobile, 'USERAGENT-EDGE-VERSION', 'An error occurred:' + error, 'error')
     }
 }
 
@@ -94,11 +94,11 @@ export function getSystemComponents(mobile: boolean): string {
 }
 
 export async function getAppComponents(isMobile: boolean) {
-    const versions = await getEdgeVersions()
+    const versions = await getEdgeVersions(isMobile)
     const edgeVersion = isMobile ? versions.android : versions.windows as string
     const edgeMajorVersion = edgeVersion?.split('.')[0]
 
-    const chromeVersion = await getChromeVersion()
+    const chromeVersion = await getChromeVersion(isMobile)
     const chromeMajorVersion = chromeVersion?.split('.')[0]
     const chromeReducedVersion = `${chromeMajorVersion}.0.0.0`
 
@@ -138,6 +138,6 @@ export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprint
 
         return fingerprint
     } catch (error) {
-        throw log('USER-AGENT-UPDATE', 'An error occurred:' + error, 'error')
+        throw log(isMobile, 'USER-AGENT-UPDATE', 'An error occurred:' + error, 'error')
     }
 }

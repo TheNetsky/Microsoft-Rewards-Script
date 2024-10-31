@@ -2,13 +2,20 @@ export interface Config {
     baseURL: string;
     sessionPath: string;
     headless: boolean;
+    parallel: boolean;
     runOnZeroPoints: boolean;
     clusters: number;
     workers: Workers;
+    searchOnBingLocalQueries: boolean;
     globalTimeout: number | string;
     searchSettings: SearchSettings;
     webhook: Webhook;
-    saveFingerprint: boolean;
+    saveFingerprint: ConfigSaveFingerprint;
+}
+
+export interface ConfigSaveFingerprint {
+    mobile: boolean;
+    desktop: boolean;
 }
 
 export interface SearchSettings {
@@ -16,7 +23,7 @@ export interface SearchSettings {
     scrollRandomResults: boolean;
     clickRandomResults: boolean;
     searchDelay: SearchDelay;
-    retryMobileSearch: boolean;
+    retryMobileSearchAmount: number;
 }
 
 export interface SearchDelay {

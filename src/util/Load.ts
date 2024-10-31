@@ -5,7 +5,7 @@ import path from 'path'
 
 
 import { Account } from '../interface/Account'
-import { Config } from '../interface/Config'
+import { Config, ConfigSaveFingerprint } from '../interface/Config'
 
 
 export function loadAccounts(): Account[] {
@@ -37,7 +37,7 @@ export function loadConfig(): Config {
     }
 }
 
-export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, getFingerprint: boolean) {
+export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, saveFingerprint: ConfigSaveFingerprint) {
     try {
         // Fetch cookie file
         const cookieFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`)
@@ -52,7 +52,7 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
         const fingerprintFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
 
         let fingerprint!: BrowserFingerprintWithHeaders
-        if (getFingerprint && fs.existsSync(fingerprintFile)) {
+        if (((saveFingerprint.desktop && !isMobile) || (saveFingerprint.mobile && isMobile)) && fs.existsSync(fingerprintFile)) {
             const fingerprintData = await fs.promises.readFile(fingerprintFile, 'utf-8')
             fingerprint = JSON.parse(fingerprintData)
         }

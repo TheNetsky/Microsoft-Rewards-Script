@@ -13,7 +13,7 @@ export class Search extends Workers {
     private searchPageURL = ''
 
     public async doSearch(page: Page, data: DashboardData) {
-        this.bot.log('SEARCH-BING', 'Starting Bing searches')
+        this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Starting Bing searches')
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
@@ -21,7 +21,7 @@ export class Search extends Workers {
         let missingPoints = this.calculatePoints(searchCounters)
 
         if (missingPoints === 0) {
-            this.bot.log('SEARCH-BING', `Bing searches for ${this.bot.isMobile ? 'MOBILE' : 'DESKTOP'} have already been completed`)
+            this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Bing searches have already been completed')
             return
         }
 
@@ -35,7 +35,9 @@ export class Search extends Workers {
         // Go to bing
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
 
-        await this.bot.browser.utils.tryDismissBingCookieBanner(page)
+        await this.bot.utils.wait(2000)
+
+        await this.bot.browser.utils.tryDismissAllMessages(page)
 
         let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
 
@@ -47,7 +49,7 @@ export class Search extends Workers {
         for (let i = 0; i < queries.length; i++) {
             const query = queries[i] as string
 
-            this.bot.log('SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query} | Mobile: ${this.bot.isMobile}`)
+            this.bot.log(this.bot.isMobile, 'SEARCH-BING', `${missingPoints} Points Remaining | Query: ${query}`)
 
             searchCounters = await this.bingSearch(page, query)
             const newMissingPoints = this.calculatePoints(searchCounters)
@@ -67,13 +69,13 @@ export class Search extends Workers {
 
             // Only for mobile searches
             if (maxLoop > 5 && this.bot.isMobile) {
-                this.bot.log('SEARCH-BING-MOBILE', 'Search didn\'t gain point for 5 iterations, likely bad User-Agent', 'warn')
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Search didn\'t gain point for 5 iterations, likely bad User-Agent', 'warn')
                 break
             }
 
             // If we didn't gain points for 10 iterations, assume it's stuck
             if (maxLoop > 10) {
-                this.bot.log('SEARCH-BING', 'Search didn\'t gain point for 10 iterations aborting searches', 'warn')
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Search didn\'t gain point for 10 iterations aborting searches', 'warn')
                 maxLoop = 0 // Reset to 0 so we can retry with related searches below
                 break
             }
@@ -86,7 +88,7 @@ export class Search extends Workers {
 
         // If we still got remaining search queries, generate extra ones
         if (missingPoints > 0) {
-            this.bot.log('SEARCH-BING', `Search completed but we're missing ${missingPoints} points, generating extra searches`)
+            this.bot.log(this.bot.isMobile, 'SEARCH-BING', `Search completed but we're missing ${missingPoints} points, generating extra searches`)
 
             let i = 0
             while (missingPoints > 0) {
@@ -97,7 +99,7 @@ export class Search extends Workers {
                 if (relatedTerms.length > 3) {
                     // Search for the first 2 related terms
                     for (const term of relatedTerms.slice(1, 3)) {
-                        this.bot.log('SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term} | Mobile: ${this.bot.isMobile}`)
+                        this.bot.log(this.bot.isMobile, 'SEARCH-BING-EXTRA', `${missingPoints} Points Remaining | Query: ${term}`)
 
                         searchCounters = await this.bingSearch(page, term)
                         const newMissingPoints = this.calculatePoints(searchCounters)
@@ -118,7 +120,7 @@ export class Search extends Workers {
 
                         // Try 5 more times, then we tried a total of 15 times, fair to say it's stuck
                         if (maxLoop > 5) {
-                            this.bot.log('SEARCH-BING-EXTRA', 'Search didn\'t gain point for 5 iterations aborting searches', 'warn')
+                            this.bot.log(this.bot.isMobile, 'SEARCH-BING-EXTRA', 'Search didn\'t gain point for 5 iterations aborting searches', 'warn')
                             return
                         }
                     }
@@ -126,7 +128,7 @@ export class Search extends Workers {
             }
         }
 
-        this.bot.log('SEARCH-BING', 'Completed searches')
+        this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Completed searches')
     }
 
     private async bingSearch(searchPage: Page, query: string) {
@@ -181,13 +183,13 @@ export class Search extends Workers {
 
             } catch (error) {
                 if (i === 5) {
-                    this.bot.log('SEARCH-BING', 'Failed after 5 retries... An error occurred:' + error, 'error')
+                    this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Failed after 5 retries... An error occurred:' + error, 'error')
                     break
 
                 }
 
-                this.bot.log('SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
-                this.bot.log('SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Search failed, An error occurred:' + error, 'error')
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `Retrying search, attempt ${i}/5`, 'warn')
 
                 // Reset the tabs
                 const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
@@ -197,7 +199,7 @@ export class Search extends Workers {
             }
         }
 
-        this.bot.log('SEARCH-BING', 'Search failed after 5 retries, ending', 'error')
+        this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Search failed after 5 retries, ending', 'error')
         return await this.bot.browser.func.getSearchPoints()
     }
 
@@ -207,7 +209,7 @@ export class Search extends Workers {
 
         geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'US'
 
-        this.bot.log('SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
+        this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
         while (queryCount > queryTerms.length) {
             i += 1
@@ -224,7 +226,7 @@ export class Search extends Workers {
                     }
                 }
 
-                const response = await this.bot.axiosInstance.axios(request)
+                const response = await this.bot.axios.request(request)
 
                 const data: GoogleTrends = JSON.parse((await response.data).slice(5))
 
@@ -236,7 +238,8 @@ export class Search extends Workers {
                 }
 
             } catch (error) {
-                this.bot.log('SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
+                break
             }
         }
 
@@ -253,11 +256,11 @@ export class Search extends Workers {
                 }
             }
 
-            const response = await this.bot.axiosInstance.axios(request)
+            const response = await this.bot.axios.request(request)
 
             return response.data[1] as string[]
         } catch (error) {
-            this.bot.log('SEARCH-BING-RELATED', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'SEARCH-BING-RELATED', 'An error occurred:' + error, 'error')
         }
         return []
     }
@@ -281,7 +284,7 @@ export class Search extends Workers {
             }, randomScrollPosition)
 
         } catch (error) {
-            this.bot.log('SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'SEARCH-RANDOM-SCROLL', 'An error occurred:' + error, 'error')
         }
     }
 
@@ -289,6 +292,7 @@ export class Search extends Workers {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
 
+            // Only used if the browser is not the edge browser (continue on Edge popup)
             await this.closeContinuePopup(page)
 
             // Stay for 10 seconds for page to load and "visit"
@@ -312,7 +316,7 @@ export class Search extends Workers {
             }
 
         } catch (error) {
-            this.bot.log('SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'SEARCH-RANDOM-CLICK', 'An error occurred:' + error, 'error')
         }
     }
 
@@ -351,7 +355,6 @@ export class Search extends Workers {
 
         return missingPoints
     }
-
 
     private async closeContinuePopup(page: Page) {
         try {

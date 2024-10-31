@@ -8,7 +8,7 @@ import { DashboardData } from '../../interface/DashboardData'
 
 export class DailyCheckIn extends Workers {
     public async doDailyCheckIn(accessToken: string, data: DashboardData) {
-        this.bot.log('DAILY-CHECK-IN', 'Starting Daily Check In')
+        this.bot.log(this.bot.isMobile, 'DAILY-CHECK-IN', 'Starting Daily Check In')
 
         try {
             let geoLocale = data.userProfile.attributes.country
@@ -36,12 +36,12 @@ export class DailyCheckIn extends Workers {
                 data: JSON.stringify(jsonData)
             }
 
-            const claimResponse = await this.bot.axiosInstance.axios(claimRequest)
-            const claimedPoint = parseInt((await claimResponse.data).response.activity.p)
+            const claimResponse = await this.bot.axios.request(claimRequest)
+            const claimedPoint = parseInt((await claimResponse.data).response?.activity?.p) ?? 0
 
-            this.bot.log('DAILY-CHECK-IN', claimedPoint > 0 ? `Claimed ${claimedPoint} points` : 'Already claimed today')
+            this.bot.log(this.bot.isMobile, 'DAILY-CHECK-IN', claimedPoint > 0 ? `Claimed ${claimedPoint} points` : 'Already claimed today')
         } catch (error) {
-            this.bot.log('DAILY-CHECK-IN', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'DAILY-CHECK-IN', 'An error occurred:' + error, 'error')
         }
     }
 

@@ -18,15 +18,20 @@ export default class BrowserUtil {
             { selector: '#iNext', label: 'iNext' },
             { selector: '#iLooksGood', label: 'iLooksGood' },
             { selector: '#idSIButton9', label: 'idSIButton9' },
-            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' }
+            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' },
+            { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
+            { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
+            { selector: '//div[@id=\'cookieConsentContainer\']//button[contains(text(), \'Accept\')]', label: 'Accept Cookie Consent Container' },
+            { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' }
         ]
 
         let result = false
 
         for (const button of buttons) {
             try {
-                const element = await page.waitForSelector(button.selector, { state: 'visible', timeout: 1000 })
+                const element = await page.$(button.selector)
                 if (element) {
+                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Found message: ${button.label}, dismissed!`)
                     await element.click()
                     result = true
                 }
@@ -37,37 +42,6 @@ export default class BrowserUtil {
         }
 
         return result
-    }
-
-    async tryDismissCookieBanner(page: Page): Promise<void> {
-        try {
-            await page.waitForSelector('#cookieConsentContainer', { timeout: 1000 })
-            const cookieBanner = await page.$('#cookieConsentContainer')
-
-            if (cookieBanner) {
-                const button = await cookieBanner.$('button')
-                if (button) {
-                    await button.click()
-                    await this.bot.utils.wait(2000)
-                }
-            }
-
-        } catch (error) {
-            // Continue if element is not found or other error occurs
-        }
-    }
-
-    async tryDismissBingCookieBanner(page: Page): Promise<void> {
-        try {
-            await page.waitForSelector('#bnp_btn_accept', { timeout: 1000 })
-            const cookieBanner = await page.$('#bnp_btn_accept')
-
-            if (cookieBanner) {
-                await cookieBanner.click()
-            }
-        } catch (error) {
-            // Continue if element is not found or other error occurs
-        }
     }
 
     async getLatestTab(page: Page): Promise<Page> {
@@ -82,9 +56,9 @@ export default class BrowserUtil {
                 return newTab
             }
 
-            throw this.bot.log('GET-NEW-TAB', 'Unable to get latest tab', 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'Unable to get latest tab', 'error')
         } catch (error) {
-            throw this.bot.log('GET-NEW-TAB', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'An error occurred:' + error, 'error')
         }
     }
 
@@ -97,19 +71,19 @@ export default class BrowserUtil {
             let homeTabURL: URL
 
             if (!homeTab) {
-                throw this.bot.log('GET-TABS', 'Home tab could not be found!', 'error')
+                throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Home tab could not be found!', 'error')
 
             } else {
                 homeTabURL = new URL(homeTab.url())
 
                 if (homeTabURL.hostname !== 'rewards.bing.com') {
-                    throw this.bot.log('GET-TABS', 'Reward page hostname is invalid: ' + homeTabURL.host, 'error')
+                    throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Reward page hostname is invalid: ' + homeTabURL.host, 'error')
                 }
             }
 
             const workerTab = pages[2]
             if (!workerTab) {
-                throw this.bot.log('GET-TABS', 'Worker tab could not be found!', 'error')
+                throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Worker tab could not be found!', 'error')
             }
 
             return {
@@ -118,7 +92,7 @@ export default class BrowserUtil {
             }
 
         } catch (error) {
-            throw this.bot.log('GET-TABS', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'An error occurred:' + error, 'error')
         }
     }
 
@@ -129,13 +103,18 @@ export default class BrowserUtil {
                 return !body || !body.innerHTML.trim()
             })
 
-            if (isEmptyBodyElement) {
-                this.bot.log('RELOAD-BAD-PAGE', 'Bad page detected, reloading!')
+            const isRequestError = await page.evaluate(() => {
+                const body = document.querySelector('body')
+                return body?.textContent?.trim().includes('Too Many Requests')
+            })
+
+            if (isEmptyBodyElement || isRequestError) {
+                this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'Bad page detected, reloading!')
                 await page.reload()
             }
 
         } catch (error) {
-            throw this.bot.log('RELOAD-BAD-PAGE', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'An error occurred:' + error, 'error')
         }
     }
 

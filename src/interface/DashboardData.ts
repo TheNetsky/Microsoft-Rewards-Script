@@ -357,7 +357,7 @@ export interface MorePromotion {
 
 export interface PunchCard {
     name: string;
-    parentPromotion: PromotionalItem;
+    parentPromotion?: PromotionalItem;
     childPromotions: PromotionalItem[];
 }
 

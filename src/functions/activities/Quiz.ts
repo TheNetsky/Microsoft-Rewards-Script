@@ -6,7 +6,7 @@ import { Workers } from '../Workers'
 export class Quiz extends Workers {
 
     async doQuiz(page: Page) {
-        this.bot.log('QUIZ', 'Trying to complete quiz')
+        this.bot.log(this.bot.isMobile, 'QUIZ', 'Trying to complete quiz')
 
         try {
             // Check if the quiz has been started or not
@@ -14,7 +14,7 @@ export class Quiz extends Workers {
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {
-                this.bot.log('QUIZ', 'Quiz has already been started, trying to finish it')
+                this.bot.log(this.bot.isMobile, 'QUIZ', 'Quiz has already been started, trying to finish it')
             }
 
             await this.bot.utils.wait(2000)
@@ -47,7 +47,7 @@ export class Quiz extends Workers {
                         const refreshSuccess = await this.bot.browser.func.waitForQuizRefresh(page)
                         if (!refreshSuccess) {
                             await page.close()
-                            this.bot.log('QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
+                            this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
                             return
                         }
                     }
@@ -69,7 +69,7 @@ export class Quiz extends Workers {
                             const refreshSuccess = await this.bot.browser.func.waitForQuizRefresh(page)
                             if (!refreshSuccess) {
                                 await page.close()
-                                this.bot.log('QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
+                                this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
                                 return
                             }
                         }
@@ -81,10 +81,10 @@ export class Quiz extends Workers {
             // Done with
             await this.bot.utils.wait(2000)
             await page.close()
-            this.bot.log('QUIZ', 'Completed the quiz successfully')
+            this.bot.log(this.bot.isMobile, 'QUIZ', 'Completed the quiz successfully')
         } catch (error) {
             await page.close()
-            this.bot.log('QUIZ', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred:' + error, 'error')
         }
     }
 

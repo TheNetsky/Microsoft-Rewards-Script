@@ -6,7 +6,7 @@ import { Workers } from '../Workers'
 export class ABC extends Workers {
 
     async doABC(page: Page) {
-        this.bot.log('ABC', 'Trying to complete poll')
+        this.bot.log(this.bot.isMobile, 'ABC', 'Trying to complete poll')
 
         try {
             let $ = await this.bot.browser.func.refreshCheerio(page)
@@ -38,14 +38,14 @@ export class ABC extends Workers {
             await page.close()
 
             if (i === maxIterations) {
-                this.bot.log('ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
+                this.bot.log(this.bot.isMobile, 'ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
             } else {
-                this.bot.log('ABC', 'Completed the ABC successfully')
+                this.bot.log(this.bot.isMobile, 'ABC', 'Completed the ABC successfully')
             }
 
         } catch (error) {
             await page.close()
-            this.bot.log('ABC', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'ABC', 'An error occurred:' + error, 'error')
         }
     }
 

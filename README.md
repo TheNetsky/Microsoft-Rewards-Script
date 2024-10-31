@@ -75,7 +75,7 @@ Under development, however mainly for personal use!
 |  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
-|  searchSettings.retryMobileSearch     | Keep retrying mobile searches until completed (indefinite)| `false` | RETRY_MOBILE_SEARCH |
+|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `3` | RETRY_MOBILE_SEARCH |
 |  webhook.enabled     | Enable or disable your set webhook | `false` | WEBHOOK_ENABLED |
 |  webhook.url     | Your Discord webhook URL | `null` | WEBHOOK_URL="" |
 | cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME="" |

@@ -43,8 +43,7 @@ class Browser {
 
         const fingerprint = sessionData.fingerprint ? sessionData.fingerprint : await this.generateFingerprint()
 
-        //@ts-expect-error Will error due to using "rebrowser-playwright" instead of "playwright"
-        const context = await newInjectedContext(browser, { fingerprint: fingerprint })
+        const context = await newInjectedContext(browser as any, { fingerprint: fingerprint })
 
         // Set timeout to preferred amount
         context.setDefaultTimeout(this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? 30_000))
@@ -55,10 +54,9 @@ class Browser {
             await saveFingerprintData(this.bot.config.sessionPath, email, this.bot.isMobile, fingerprint)
         }
 
-        this.bot.log('BROWSER', `Created browser with User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`)
+        this.bot.log(this.bot.isMobile, 'BROWSER', `Created browser with User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`)
 
-        //@ts-expect-error Will error due to using "rebrowser-playwright" instead of "playwright"
-        return context
+        return context as BrowserContext
     }
 
     async generateFingerprint() {

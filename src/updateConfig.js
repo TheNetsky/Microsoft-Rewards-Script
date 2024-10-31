@@ -13,13 +13,12 @@ config.headless = process.env.HEADLESS ? process.env.HEADLESS === 'true' : confi
 config.runOnZeroPoints = process.env.RUN_ON_ZERO_POINTS ? process.env.RUN_ON_ZERO_POINTS === 'true' : config.runOnZeroPoints
 config.clusters = process.env.CLUSTERS ? parseInt(process.env.CLUSTERS, 10) : config.clusters
 config.saveFingerprint = process.env.SAVE_FINGERPRINT ? process.env.SAVE_FINGERPRINT === 'true' : config.saveFingerprint
+config.searchOnBingLocalQueries = process.env.SEARCH_BING_LOCAL_QUERIES ? process.env.SEARCH_BING_LOCAL_QUERIES === 'true' : config.searchOnBingLocalQueries
 config.globalTimeout = process.env.GLOBAL_TIMEOUT
     ? isNaN(process.env.GLOBAL_TIMEOUT)
         ? process.env.GLOBAL_TIMEOUT
         : parseInt(process.env.GLOBAL_TIMEOUT, 10)
     : config.globalTimeout
-
-
 
 config.workers.doDailySet = process.env.DO_DAILY_SET ? process.env.DO_DAILY_SET === 'true' : config.workers.doDailySet
 config.workers.doMorePromotions = process.env.DO_MORE_PROMOTIONS ? process.env.DO_MORE_PROMOTIONS === 'true' : config.workers.doMorePromotions
@@ -44,7 +43,7 @@ config.searchSettings.searchDelay.max = process.env.SEARCH_DELAY_MAX
         : parseInt(process.env.SEARCH_DELAY_MAX, 10)
     : config.searchSettings.searchDelay.max
 
-config.searchSettings.retryMobileSearch = process.env.RETRY_MOBILE_SEARCH ? process.env.RETRY_MOBILE_SEARCH === 'true' : config.searchSettings.retryMobileSearch
+config.searchSettings.retryMobileSearchAmount = process.env.RETRY_MOBILE_SEARCH_AMOUNT ? parseInt(process.env.RETRY_MOBILE_SEARCH_AMOUNT, 10) : config.searchSettings.retryMobileSearchAmount
 
 config.webhook.enabled = process.env.WEBHOOK_ENABLED ? process.env.WEBHOOK_ENABLED === 'true' : config.webhook.enabled
 config.webhook.url = process.env.WEBHOOK_URL || config.webhook.url
