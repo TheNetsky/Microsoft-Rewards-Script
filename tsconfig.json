@@ -65,7 +65,8 @@
     "include": [
         "src/**/*.ts",
         "src/accounts.json",
-        "src/config.json"
+        "src/config.json",
+        "src/functions/queries.json"
     ],
     "exclude": [
         "node_modules"
