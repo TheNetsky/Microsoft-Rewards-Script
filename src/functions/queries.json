@@ -134,7 +134,7 @@
             "Japan time",
             "New York time"
         ]
-    }
+    },
 
     {
         "title": "Maisons près de chez vous",
@@ -271,7 +271,7 @@
             "Heure du Japon",
             "Heure de New York"
         ]
-    }
+    },
     {
         "title": "Vérifier la météo",
         "queries": [
