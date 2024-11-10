@@ -159,7 +159,7 @@
         ]
     },
     {
-        "title": "Traduisez n'importe quoi",
+        "title": "Traduisez tout",
         "queries": [
             "Traduisez bienvenue à la maison en coréen",
             "Traduisez bienvenue à la maison en japonais",
@@ -167,13 +167,13 @@
         ]
     },
     {
-        "title": "Recherchez les paroles d'une chanson",
+        "title": "Rechercher paroles de chanson",
         "queries": [
             "Paroles de Debarge rhythm of the night"
         ]
     },
     {
-        "title": "Regardons à nouveau ce film !",
+        "title": "Et si nous regardions ce film une nouvelle fois?",
         "queries": [
             "Alien film",
             "Film Aliens",
@@ -200,11 +200,11 @@
     {
         "title": "Vous pouvez suivre votre colis",
         "queries": [
-            "Suivi USPS"
+            "Suivi Chronopost"
         ]
     },
     {
-        "title": "Trouvez un endroit à découvrir",
+        "title": "Trouver un endroit à découvrir",
         "queries": [
             "Itinéraire vers Berlin",
             "Itinéraire vers Tokyo",
@@ -222,8 +222,8 @@
     {
         "title": "Convertissez rapidement votre argent",
         "queries": [
-            "convertir 250 USD en yen",
-            "convertir 500 USD en yen"
+            "convertir 250 EUR en yen",
+            "convertir 500 EUR en yen"
         ]
     },
     {
@@ -234,7 +234,7 @@
         ]
     },
     {
-        "title": "Trouvez des endroits où séjourner !",
+        "title": "Trouvez des emplacements pour rester!",
         "queries": [
             "Hôtels Berlin Allemagne",
             "Hôtels Amsterdam Pays-Bas"
@@ -243,13 +243,13 @@
     {
         "title": "Comment se porte l'économie ?",
         "queries": [
-            "sp 500"
+            "CAC 40"
         ]
     },
     {
         "title": "Qui a gagné ?",
         "queries": [
-            "score des Braves"
+            "score du Paris Saint-Germain"
         ]
     },
     {
