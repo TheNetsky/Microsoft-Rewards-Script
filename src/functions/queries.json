@@ -182,14 +182,14 @@
         ]
     },
     {
-        "title": "Planifiez une escapade rapide",
+        "title": "Planifiez une petite escapade",
         "queries": [
             "Vols Amsterdam-Tokyo",
             "Vols New York-Tokyo"
         ]
     },
     {
-        "title": "Découvrez les postes vacants",
+        "title": "Consulter postes à pourvoir",
         "queries": [
             "emplois chez Microsoft",
             "Offres d'emploi Microsoft",
@@ -277,6 +277,13 @@
         "queries": [
             "Météo de Paris",
             "Météo de la France"
+        ]
+    },
+    {
+        "title": "Tenez-vous informé des sujets d'actualité",
+        "queries": [
+            "Augmentation Impots",
+            "Mort célébrité"
         ]
     }
 ]
