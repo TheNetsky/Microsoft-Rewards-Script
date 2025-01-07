@@ -153,6 +153,11 @@ export default class BrowserFunc {
                 data.userStatus.counters.mobileSearch.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
             }
 
+            // Promotional Item Points
+            if (data.promotionalItem) {
+                totalEarnablePoints += (data.promotionalItem.pointProgressMax - data.promotionalItem.pointProgress)
+            }
+
             // Daily Set
             data.dailySetPromotions[this.bot.utils.getFormattedDate()]?.forEach(x => totalEarnablePoints += (x.pointProgressMax - x.pointProgress))
 
