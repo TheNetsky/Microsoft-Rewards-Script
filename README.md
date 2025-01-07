@@ -19,10 +19,11 @@ Under development, however mainly for personal use!
 **Note:** If you had previously built and run the script locally, remove the `/node_modules` and `/dist` from your Microsoft-Rewards-Script folder.
 
 1. Download the source code
-2. Make changes to your `accounts.json` and `config.json`
-3. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
-4. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
-5. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
+2. Make changes to your `accounts.json` and `config.json`. 
+3. Use volume mapping (see sample compose.yaml) to ensure these files are stored on your local machine and not inside the container. This way, your data (like account settings and config options) will persist even if the container is restarted or updated. 
+4. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
+5. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
+6. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
 
 ### Option 1: build and run with docker run
 

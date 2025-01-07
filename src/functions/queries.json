@@ -1,0 +1,138 @@
+[
+    {
+        "title": "Houses near you",
+        "queries": [
+            "Houses near me"
+        ]
+    },
+    {
+        "title": "Feeling symptoms?",
+        "queries": [
+            "Rash on forearm",
+            "Stuffy nose",
+            "Tickling cough"
+        ]
+    },
+    {
+        "title": "Get your shopping done faster",
+        "queries": [
+            "Buy PS5",
+            "Buy Xbox",
+            "Chair deals"
+        ]
+    },
+    {
+        "title": "Translate anything",
+        "queries": [
+            "Translate welcome home to Korean",
+            "Translate welcome home to Japanese",
+            "Translate goodbye to Japanese"
+        ]
+    },
+    {
+        "title": "Search the lyrics of a song",
+        "queries": [
+            "Debarge rhythm of the night lyrics"
+        ]
+    },
+    {
+        "title": "Let's watch that movie again!",
+        "queries": [
+            "Alien movie",
+            "Aliens movie",
+            "Alien 3 movie",
+            "Predator movie"
+        ]
+    },
+    {
+        "title": "Plan a quick getaway",
+        "queries": [
+            "Flights Amsterdam to Tokyo",
+            "Flights New York to Tokyo"
+        ]
+    },
+    {
+        "title": "Discover open job roles",
+        "queries": [
+            "jobs at Microsoft",
+            "Microsoft Job Openings",
+            "Jobs near me",
+            "jobs at Boeing worked"
+        ]
+    },
+    {
+        "title": "You can track your package",
+        "queries": [
+            "USPS tracking"
+        ]
+    },
+    {
+        "title": "Find somewhere new to explore",
+        "queries": [
+            "Directions to Berlin",
+            "Directions to Tokyo",
+            "Directions to New York"
+        ]
+    },
+    {
+        "title": "Too tired to cook tonight?",
+        "queries": [
+            "KFC near me",
+            "Burger King near me",
+            "McDonalds near me"
+        ]
+    },
+    {
+        "title": "Quickly convert your money",
+        "queries": [
+            "convert 250 USD to yen",
+            "convert 500 USD to yen"
+        ]
+    },
+    {
+        "title": "Learn to cook a new recipe",
+        "queries": [
+            "How to cook ratatouille",
+            "How to cook lasagna"
+        ]
+    },
+    {
+        "title": "Find places to stay!",
+        "queries": [
+            "Hotels Berlin Germany",
+            "Hotels Amsterdam Netherlands"
+        ]
+    },
+    {
+        "title": "How's the economy?",
+        "queries": [
+            "sp 500"
+        ]
+    },
+    {
+        "title": "Who won?",
+        "queries": [
+            "braves score"
+        ]
+    },
+    {
+        "title": "Gaming time",
+        "queries": [
+            "Overwatch video game",
+            "Call of duty video game"
+        ]
+    },
+    {
+        "title": "Expand your vocabulary",
+        "queries": [
+            "definition definition"
+        ]
+    },
+    {
+        "title": "What time is it?",
+        "queries": [
+            "Japan time",
+            "New York time"
+        ]
+    }
+]
