@@ -42,6 +42,7 @@ RUN touch /var/log/cron.log
 
 # Define the command to run your application with cron optionally
 CMD ["sh", "-c", "node src/updateConfig.js && \
+    ln -sf /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo \"$TZ\" > /etc/timezone && \
     dpkg-reconfigure -f noninteractive tzdata && \
     if [ \"$RUN_ON_START\" = \"true\" ]; then npm start; fi && \
