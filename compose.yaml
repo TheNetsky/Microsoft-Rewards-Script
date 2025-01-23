@@ -9,6 +9,6 @@ services:
       - /root/docker/appdata/netsky/sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
     environment:
       - NODE_ENV=production
-      - CRON_START_TIME=0 7,15,20 * * *
+      - CRON_SCHEDULE=0 7,15,20 * * *
       - RUN_ON_START=true
       - TZ=America/Toronto
