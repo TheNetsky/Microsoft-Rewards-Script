@@ -227,7 +227,7 @@ export class Login {
 
         await page.goto(authorizeUrl.href)
 
-        const currentUrl = new URL(page.url())
+        let currentUrl = new URL(page.url())
         let code: string
 
         // eslint-disable-next-line no-constant-condition
@@ -238,6 +238,7 @@ export class Login {
                 break
             }
 
+            currentUrl = new URL(page.url())
             await this.bot.utils.wait(2000)
         }
 
