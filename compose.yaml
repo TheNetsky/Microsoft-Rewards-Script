@@ -11,3 +11,4 @@ services:
       - NODE_ENV=production
       - CRON_SCHEDULE=0 7,15,20 * * *
       - RUN_ON_START=true
+      - TZ=America/Toronto
