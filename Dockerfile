@@ -41,9 +41,11 @@ COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 RUN touch /var/log/cron.log
 
 # Define the command to run your application with cron optionally
-CMD ["sh", "-c", "ln -sf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone && \
-    if [ \"$RUN_ON_START\" = \"true\" ]; then npm run start; fi && \
+CMD ["sh", "-c", "echo \"$TZ\" > /etc/timezone && \
+    dpkg-reconfigure -f noninteractive tzdata && \
     envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && \
+    chmod 0644 /etc/cron.d/microsoft-rewards-cron && \
     crontab /etc/cron.d/microsoft-rewards-cron && \
-    cron && tail -f /var/log/cron.log"]
+    cron -f & \
+    ([ \"$RUN_ON_START\" = \"true\" ] && npm start) && \
+    tail -f /var/log/cron.log"]
