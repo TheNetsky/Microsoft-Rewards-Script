@@ -1,14 +1,15 @@
 services:
-  netsky:
+  microsoft-rewards-script:
     build: .
-    container_name: netsky
+    container_name: microsoft-rewards-script
     restart: unless-stopped
     volumes:
-      - /root/docker/appdata/netsky/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json
-      - /root/docker/appdata/netsky/config.json:/usr/src/microsoft-rewards-script/dist/config.json
-      - /root/docker/appdata/netsky/sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
+      ### Replace "/path/to/" with the actual path to where you want to save the files on your local machine.
+      - /path/to/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json
+      - /path/to/config.json:/usr/src/microsoft-rewards-script/dist/config.json 
+      - /path/to/sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions #optional, saves your login session
     environment:
       - NODE_ENV=production
-      - CRON_SCHEDULE=0 7,15,20 * * *
-      - RUN_ON_START=true
-      - TZ=America/Toronto
+      - CRON_SCHEDULE=0 7,15,20 * * * #customize your schedule, use crontab.guru for formatting
+      - RUN_ON_START=true #runs the script on container startup
+      - TZ=America/Toronto #set your timezone for proper scheduling
