@@ -48,7 +48,7 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 4. **(Optional) Run on Startup:**
    - Set `RUN_ON_START=true` to execute the script immediately when the container starts.
 5. **Start the Container:** Run `docker compose up -d` to build and launch.
-6. **Monitor Logs:** Use `docker logs netsky` to view script execution and to retrieve 'passwordless' login codes.
+6. **Monitor Logs:** Use `docker logs microsoft-rewards-script` to view script execution and to retrieve 'passwordless' login codes.
 
 
 ## Config ## 
