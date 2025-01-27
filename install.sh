@@ -1,7 +1,7 @@
 #!/bin/bash
 
 install_dependencies() {
-    # install curl/git based on package manager
+    # Install OS-specific packages (curl, git)
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if command -v apt-get >/dev/null; then
             sudo apt-get update && sudo apt-get install -y curl git
@@ -20,10 +20,10 @@ install_dependencies() {
         exit 1
     fi
 
-    # install fnm (Node.js version manager)
+    # Install fnm (Node.js manager)
     curl -fsSL https://fnm.vercel.app/install | bash
     export PATH="$HOME/.local/share/fnm:$PATH"
-    eval "$(fnm env --shell bash)"    
+    eval "$(fnm env --shell bash)"
     fnm install 20 && fnm use 20
 }
 
