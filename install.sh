@@ -1,7 +1,6 @@
 #!/bin/bash
 
 install_dependencies() {
-    # Install OS-specific packages (curl, git)
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if command -v apt-get >/dev/null; then
             sudo apt-get update && sudo apt-get install -y curl git
@@ -20,7 +19,6 @@ install_dependencies() {
         exit 1
     fi
 
-    # Install fnm (Node.js manager)
     curl -fsSL https://fnm.vercel.app/install | bash
     export PATH="$HOME/.local/share/fnm:$PATH"
     eval "$(fnm env --shell bash)"
@@ -40,8 +38,15 @@ fi
 
 install_dependencies
 
+REPO_DIR="Microsoft-Rewards-Script"
+if [ ! -d "$REPO_DIR" ]; then
+  git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git "$REPO_DIR"
+fi
+cd "$REPO_DIR"
+
 npm install -g npm@10.8.3
-npm i && npx playwright install
+npm i
+npx playwright install
 
 # account setup (GUI/CLI detection)
 if [ -n "$DISPLAY" ] && command -v zenity >/dev/null; then
