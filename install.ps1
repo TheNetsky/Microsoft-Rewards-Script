@@ -5,7 +5,8 @@ $hasGUI = [Environment]::UserInteractive
 function Install-Dependencies {
     winget install Schniz.fnm Git.Git
     fnm env --use-on-cd | Out-String | Invoke-Expression
-    fnm install 20 && fnm use 20
+    fnm install 20
+    fnm use 20
 }
 
 $useDocker = Read-Host "Use Docker? [yes/no]"
@@ -21,8 +22,12 @@ if ($useDocker -eq "yes") {
 }
 
 Install-Dependencies
-git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
-cd Microsoft-Rewards-Script
+
+$REPO_DIR = "Microsoft-Rewards-Script"
+if (-not (Test-Path $REPO_DIR)) {
+    git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git $REPO_DIR
+}
+cd $REPO_DIR
 
 npm install -g npm@10.8.3
 npm i
