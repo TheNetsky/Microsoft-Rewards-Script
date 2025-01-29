@@ -37,8 +37,7 @@ export class Workers {
 
     // Punch Card
     async doPunchCard(page: Page, data: DashboardData) {
-
-        const punchCardsUncompleted = data.punchCards?.filter(x => !x.parentPromotion?.complete) ?? [] // Only return uncompleted punch cards
+        const punchCardsUncompleted = data.punchCards?.filter(x => x.parentPromotion && !x.parentPromotion.complete) ?? [] // Only return uncompleted punch cards with parentPromotion
 
         if (!punchCardsUncompleted.length) {
             this.bot.log('PUNCH-CARD', 'All "Punch Cards" have already been completed')

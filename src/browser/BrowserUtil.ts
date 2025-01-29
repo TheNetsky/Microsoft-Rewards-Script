@@ -72,7 +72,7 @@ export default class BrowserUtil {
 
     async getLatestTab(page: Page): Promise<Page> {
         try {
-            await this.bot.utils.wait(500)
+            await this.bot.utils.wait(5000)
 
             const browser = page.context()
             const pages = browser.pages()
