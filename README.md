@@ -16,70 +16,67 @@ Under development, however mainly for personal use!
 - If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
 ## Docker (Experimental) ##
-**Note:** If you had previously built and run the script locally, remove the `/node_modules` and `/dist` from your Microsoft-Rewards-Script folder.
+### **Before Starting**
 
-1. Download the source code
-2. Make changes to your `accounts.json` and `config.json`
-3. **Headless mode must be enabled.** You can do this in `config.json` or by using the `HEADLESS=true` environmental variable in docker run or docker compose.yaml (see below). Environmental variables are prioritized over the values in config.json. 
-4. The container has in-built scheduling. Customize your schedule using the `CRON_START_TIME` environmental variable. Use [crontab.guru](crontab.guru) if you're unsure how to create a cron schedule.
-5. **Note:** the container will add between 5 and 50 minutes of randomized variability to your scheduled start times. 
+- If you had previously built and run the script locally, **remove** the `/node_modules` and `/dist` folders from your `Microsoft-Rewards-Script` directory.
+- If you had used Docker with an older version of the script (e.g., 1.4), **remove** any persistently saved `config.json` and session folders. Old `accounts.json` files can be reused.
 
-### Option 1: build and run with docker run
+### **Setup the Source Files**
 
-1. Build or re-build the container image with: `docker build -t microsoft-rewards-script-docker .` 
+1. **Download the Source Code**
 
-2. Run the container with:
+2. **Update `accounts.json`**
 
-   ```bash
-   docker run --name netsky -d \
-   -e TZ=America/New_York \
-   -e HEADLESS=true \
-   -e RUN_ON_START=true \
-   -e CRON_START_TIME="0 5,11 * * *" \
-   microsoft-rewards-script-docker
+3. **Edit `config.json`,** ensuring the following values are set (other settings are up to your preference):
+
+   ```json
+   "headless": true,
+   "clusters": 1,
    ```
-   
-3. Optionally, customize your config by adding any other environmental variables from the table below.
 
-4. You can view logs with `docker logs netsky`.
+### **Customize the `compose.yaml` File**
 
-### Option 2: use docker compose
+A basic docker `compose.yaml` is provided. Follow these steps to configure and run the container:
 
-1. A basic docker compose.yaml has been provided. 
-
-2. Optionally, customize your config by adding any other environmental variables from the table below.
-
-3. Build and start the container using `docker compose up -d`.  
-
-4. You can view logs with `docker logs netsky`
+1. **Set Your Timezone:** Adjust the `TZ` variable to ensure correct scheduling.
+2. **Configure Persistent Storage:**
+   - Map `config.json` and `accounts.json` to retain settings and accounts.
+   - (Optional) Use a persistent `sessions` folder to save login sessions.
+3. **Customize the Schedule:**
+   - Modify `CRON_SCHEDULE` to set run times. Use [crontab.guru](https://crontab.guru) for help.
+   - **Note:** The container adds 5–50 minutes of random variability to each scheduled start time.
+4. **(Optional) Run on Startup:**
+   - Set `RUN_ON_START=true` to execute the script immediately when the container starts.
+5. **Start the Container:** Run `docker compose up -d` to build and launch.
+6. **Monitor Logs:** Use `docker logs microsoft-rewards-script` to view script execution and to retrieve 'passwordless' login codes.
 
 
 ## Config ## 
-| Setting        | Description           | Default  | Docker Environmental Variable |
-| :------------- |:-------------| :-----| :-----|
-|  baseURL    | MS Rewards page | `https://rewards.bing.com` | BASE_URL |
-|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) | SESSION_PATH |
-|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) | HEADLESS *(must be set to `true` for docker)* |
-|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) | RUN_ON_ZERO_POINTS |
-|  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) | CLUSTERS |
-|  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) | SAVE_FINGERPRINT |
-|  workers.doDailySet    | Complete daily set items | `true`  | DO_DAILY_SET |
-|  workers.doMorePromotions    | Complete promotional items | `true`  | DO_MORE_PROMOTIONS |
-|  workers.doPunchCards    | Complete punchcards | `true`  | DO_PUNCH_CARDS |
-|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  | DO_DESKTOP_SEARCH |
-|  workers.doMobileSearch    | Complete daily mobile searches | `true`  | DO_MOBILE_SEARCH |
-|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  | DO_DAILY_CHECK_IN |
-|  workers.doReadToEarn    | Complete read to earn activity | `true`  | DO_READ_TO_EARN |
-|  globalTimeout    | The length before the action gets timeout | `30s`   | GLOBAL_TIMEOUT |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  | USE_GEO_LOCALE_QUERIES |
-|  scrollRandomResults    | Scroll randomly in search results | `true`   | SCROLL_RANDOM_RESULTS |
-|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   | CLICK_RANDOM_RESULTS |
-|  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` | SEARCH_DELAY_MIN SEARCH_DELAY_MAX |
-|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `3` | RETRY_MOBILE_SEARCH |
-|  webhook.enabled     | Enable or disable your set webhook | `false` | WEBHOOK_ENABLED |
-|  webhook.url     | Your Discord webhook URL | `null` | WEBHOOK_URL="" |
-| cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) | CRON_START_TIME="" |
-|  | Run the script immediately when the Docker container starts | `true` | RUN_ON_START |
+| Setting        | Description           | Default  |
+| :------------- |:-------------| :-----|
+|  baseURL    | MS Rewards page | `https://rewards.bing.com` |
+|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) |
+|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) |
+|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |
+|  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) |
+|  saveFingerprint    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
+|  workers.doDailySet    | Complete daily set items | `true`  |
+|  workers.doMorePromotions    | Complete promotional items | `true`  |
+|  workers.doPunchCards    | Complete punchcards | `true`  |
+|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  |
+|  workers.doMobileSearch    | Complete daily mobile searches | `true`  |
+|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  |
+|  workers.doReadToEarn    | Complete read to earn activity | `true`  |
+|  globalTimeout    | The length before the action gets timeout | `30s`   |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  |
+|  scrollRandomResults    | Scroll randomly in search results | `true`   |
+|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
+|  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` |
+|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `3` |
+|  webhook.enabled     | Enable or disable your set webhook | `false` |
+|  webhook.url     | Your Discord webhook URL | `null` |
+| cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) |
+|  | Run the script immediately when the Docker container starts | `true` |
 
 ## Features ##
 - [x] Multi-Account Support
