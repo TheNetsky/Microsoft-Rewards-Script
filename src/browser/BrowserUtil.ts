@@ -1,4 +1,5 @@
 import { Page } from 'rebrowser-playwright'
+import { load } from 'cheerio'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -13,6 +14,7 @@ export default class BrowserUtil {
     async tryDismissAllMessages(page: Page): Promise<boolean> {
         const buttons = [
             { selector: '#acceptButton', label: 'AcceptButton' },
+            { selector: '.ext-secondary.ext-button', label: '"Skip for now" Button' },
             { selector: '#iLandingViewAction', label: 'iLandingViewAction' },
             { selector: '#iShowSkip', label: 'iShowSkip' },
             { selector: '#iNext', label: 'iNext' },
@@ -46,7 +48,7 @@ export default class BrowserUtil {
 
     async getLatestTab(page: Page): Promise<Page> {
         try {
-            await this.bot.utils.wait(500)
+            await this.bot.utils.wait(1000)
 
             const browser = page.context()
             const pages = browser.pages()
@@ -98,17 +100,12 @@ export default class BrowserUtil {
 
     async reloadBadPage(page: Page): Promise<void> {
         try {
-            const isEmptyBodyElement = await page.evaluate(() => {
-                const body = document.querySelector('body')
-                return !body || !body.innerHTML.trim()
-            })
+            const html = await page.content()
+            const $ = load(html)
 
-            const isRequestError = await page.evaluate(() => {
-                const body = document.querySelector('body')
-                return body?.textContent?.trim().includes('Too Many Requests')
-            })
+            const isNetworkError = $('body.neterror').length
 
-            if (isEmptyBodyElement || isRequestError) {
+            if (isNetworkError) {
                 this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'Bad page detected, reloading!')
                 await page.reload()
             }

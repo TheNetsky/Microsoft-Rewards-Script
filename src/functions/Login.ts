@@ -32,8 +32,12 @@ export class Login {
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
 
+            await page.waitForLoadState('domcontentloaded').catch(() => false)
+
+            await this.bot.browser.utils.reloadBadPage(page)
+
             // Check if account is locked
-            await this.checkLocked(page)
+            await this.checkAccountLocked(page)
 
             const isLoggedIn = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10_000 }).then(() => true).catch(() => false)
 
@@ -44,7 +48,7 @@ export class Login {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Already logged in')
 
                 // Check if account is locked
-                await this.checkLocked(page)
+                await this.checkAccountLocked(page)
             }
 
             // Check if logged in to bing
@@ -54,7 +58,7 @@ export class Login {
             await saveSessionData(this.bot.config.sessionPath, page.context(), email, this.bot.isMobile)
 
             // We're done logging in
-            this.bot.log(this.bot.isMobile, 'LOGIN', 'Logged in successfully')
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Logged in successfully, saved login session!')
 
         } catch (error) {
             // Throw and don't continue
@@ -65,20 +69,29 @@ export class Login {
     private async execLogin(page: Page, email: string, password: string) {
         try {
             await this.enterEmail(page, email)
+            await this.bot.utils.wait(2000)
             await this.bot.browser.utils.reloadBadPage(page)
+            await this.bot.utils.wait(2000)
             await this.enterPassword(page, password)
-
+            await this.bot.utils.wait(2000)
+            
             // Check if account is locked
-            await this.checkLocked(page)
+            await this.checkAccountLocked(page)
 
             await this.bot.browser.utils.reloadBadPage(page)
             await this.checkLoggedIn(page)
-        } catch (error: any) {
-            this.bot.log(this.bot.isMobile, 'LOGIN', 'An error occurred: ' + error.message, 'error')
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'An error occurred: ' + error, 'error')
         }
     }
 
     private async enterEmail(page: Page, email: string) {
+        const emailPrefilled = await page.waitForSelector('#userDisplayName')
+        if (emailPrefilled) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Email already prefilled by Microsoft')
+            return
+        }
+
         await page.fill('#i0116', email)
         await page.click('#idSIButton9')
         this.bot.log(this.bot.isMobile, 'LOGIN', 'Email entered successfully')
@@ -107,8 +120,8 @@ export class Login {
                 // SMS verification
                 await this.authSMSVerification(page)
             }
-        } catch (error: any) {
-            this.bot.log(this.bot.isMobile, 'LOGIN', `2FA handling failed: ${error.message}`)
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', `2FA handling failed: ${error}`)
         }
     }
 
@@ -264,7 +277,7 @@ export class Login {
         return tokenData.access_token
     }
 
-    private async checkLocked(page: Page) {
+    private async checkAccountLocked(page: Page) {
         await this.bot.utils.wait(2000)
         const isLocked = await page.waitForSelector('#serviceAbuseLandingTitle', { state: 'visible', timeout: 1000 }).then(() => true).catch(() => false)
         if (isLocked) {

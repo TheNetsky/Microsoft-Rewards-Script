@@ -262,6 +262,7 @@ export class Search extends Workers {
         } catch (error) {
             this.bot.log(this.bot.isMobile, 'SEARCH-BING-RELATED', 'An error occurred:' + error, 'error')
         }
+
         return []
     }
 
@@ -324,23 +325,35 @@ export class Search extends Workers {
         const browser = lastTab.context()
         const tabs = browser.pages()
 
-        // If more than 2 tabs are open, close the last tab
-        if (tabs.length > 2) {
-            await lastTab.close()
+        try {
+            if (tabs.length > 2) {
+                // If more than 2 tabs are open, close the last tab
 
-            // If only 1 tab is open, open a new one to search in
-        } else if (tabs.length === 1) {
-            const newPage = await browser.newPage()
-            await this.bot.utils.wait(1000)
-            await newPage.goto(this.bingHome)
-            await this.bot.utils.wait(3000)
-            this.searchPageURL = newPage.url()
+                await lastTab.close()
+                this.bot.log(this.bot.isMobile, 'SEARCH-CLOSE-TABS', `More than 2 were open, closed the last tab: "${new URL(lastTab.url()).host}"`)
 
-            // Else reset the last tab back to the search listing or Bing.com
-        } else {
-            lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
-            await lastTab.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
+            } else if (tabs.length === 1) {
+                // If only 1 tab is open, open a new one to search in
+
+                const newPage = await browser.newPage()
+                await this.bot.utils.wait(1000)
+
+                await newPage.goto(this.bingHome)
+                await this.bot.utils.wait(3000)
+                this.searchPageURL = newPage.url()
+
+                this.bot.log(this.bot.isMobile, 'SEARCH-CLOSE-TABS', 'There was only 1 tab open, crated a new one')
+            } else {
+                // Else reset the last tab back to the search listing or Bing.com
+
+                lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
+                await lastTab.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
+            }
+
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'SEARCH-CLOSE-TABS', 'An error occurred:' + error, 'error')
         }
+
     }
 
     private calculatePoints(counters: Counters) {

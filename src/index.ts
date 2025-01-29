@@ -114,19 +114,27 @@ export class MicrosoftRewardsBot {
             log('main', 'MAIN-WORKER', `Started tasks for account ${account.email}`)
 
             this.axios = new Axios(account.proxy)
+            if (this.config.parallel) {
+                await Promise.all([
+                    this.Desktop(account),
+                    (() => {
+                        const mobileInstance = new MicrosoftRewardsBot(true)
+                        mobileInstance.axios = this.axios
 
-            if (this.isMobile) {
-                // Mobile Searches and app Check-in
-                await this.Mobile(account)
+                        return mobileInstance.Mobile(account)
+                    })()
+                ])
             } else {
-                // Desktop Searches, DailySet and More Promotions
                 await this.Desktop(account)
+                this.isMobile = true
+                await this.Mobile(account)
             }
 
             log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
 
         log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
+        process.exit()
     }
 
     // Desktop
@@ -149,7 +157,10 @@ export class MicrosoftRewardsBot {
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
 
         // Tally all the desktop points
-        this.collectedPoints = browserEnarablePoints.dailySetPoints + browserEnarablePoints.desktopSearchPoints + browserEnarablePoints.morePromotionsPoints
+        this.collectedPoints = browserEnarablePoints.dailySetPoints +
+            browserEnarablePoints.desktopSearchPoints
+            + browserEnarablePoints.morePromotionsPoints
+
         log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.collectedPoints} points today`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
@@ -202,8 +213,6 @@ export class MicrosoftRewardsBot {
 
         log(this.isMobile, 'MAIN', 'Starting browser')
 
-        //await this.utils.wait(300_000)
-
         // Login into MS Rewards, then go to rewards homepage
         await this.login.login(this.homePage, account.email, account.password)
         this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email)
@@ -217,6 +226,7 @@ export class MicrosoftRewardsBot {
 
         const beforeEarnablePoints = browserEnarablePoints.mobileSearchPoints + appEarnablePoints
         this.collectedPoints = beforeEarnablePoints
+
         log(this.isMobile, 'MAIN-POINTS', `You can earn ${beforeEarnablePoints} points today (Browser: ${browserEnarablePoints.mobileSearchPoints} points, App: ${appEarnablePoints} points)`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
@@ -247,46 +257,36 @@ export class MicrosoftRewardsBot {
             await this.browser.func.goHome(workerPage)
 
             // Do mobile searches
-            // Add a retry count variable outside the loop or function, if applicable
-
             if (this.config.workers.doMobileSearch) {
                 await this.activities.doSearch(workerPage, data)
 
                 // Fetch current search points
-                let mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
+                const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
 
-                // Check if retries are enabled and start retry loop
-                while (this.config.searchSettings.retryMobileSearchAmount > this.mobileRetryAttempts && mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0) {
+                if (mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)
+                    // Increment retry count
+                    this.mobileRetryAttempts++
 
-                    log(this.isMobile, 'MAIN', `Attempt ${this.mobileRetryAttempts + 1}/${this.config.searchSettings.retryMobileSearchAmount}: Unable to complete mobile searches, bad User-Agent? Increase search delay? Retrying...`, 'log', 'yellow')
+                // Exit if retries are exhausted
+                if (this.mobileRetryAttempts > this.config.searchSettings.retryMobileSearchAmount) {
+                    log(this.isMobile, 'MAIN', `Max retry limit of ${this.config.searchSettings.retryMobileSearchAmount} reached. Exiting retry loop`, 'warn')
+                } else {
+                    log(this.isMobile, 'MAIN', `Attempt ${this.mobileRetryAttempts}/${this.config.searchSettings.retryMobileSearchAmount}: Unable to complete mobile searches, bad User-Agent? Increase search delay? Retrying...`, 'log', 'yellow')
 
                     // Close mobile browser
                     await this.browser.func.closeBrowser(browser, account.email)
 
-                    // Increment retry count
-                    this.mobileRetryAttempts++
-
-                    // Retry
+                    // Create a new browser and try
                     await this.Mobile(account)
-
-                    // Re-fetch search points after retry
-                    mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
-                }
-
-                if (this.mobileRetryAttempts >= this.config.searchSettings.retryMobileSearchAmount) {
-                    log(this.isMobile, 'MAIN', `Max retry limit of ${this.config.searchSettings.retryMobileSearchAmount} reached. Exiting retry loop`, 'warn')
+                    return
                 }
             }
-
-        } else {
-            log(this.isMobile, 'MAIN', 'No mobile searches found!')
         }
 
-        // Fetch new points
         const earnablePoints = (await this.browser.func.getBrowserEarnablePoints()).totalEarnablePoints + await this.browser.func.getAppEarnablePoints(this.accessToken)
 
         // If the new earnable is 0, means we got all the points, else retract
-        this.collectedPoints = earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints)
+        this.collectedPoints = Math.abs(earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints))
         log(this.isMobile, 'MAIN-POINTS', `The script collected ${this.collectedPoints} points today`)
 
         // Close mobile browser
@@ -297,47 +297,18 @@ export class MicrosoftRewardsBot {
 }
 
 async function main() {
-    const desktopBot = new MicrosoftRewardsBot(false)  // For desktop tasks
-    const mobileBot = new MicrosoftRewardsBot(true)   // For mobile tasks
+    const rewardsBot = new MicrosoftRewardsBot(false)
 
-    if (desktopBot.config.parallel) {
-        // Run desktop and mobile tasks concurrently
-        await Promise.all([
-            desktopBot.initialize().then(() => {
-                desktopBot.run().catch(error => {
-                    log(false, 'MAIN-ERROR', `Error running bots: ${error?.message}`, 'error')
-                })
-            }),
-            mobileBot.initialize().then(() => {
-                mobileBot.run().catch(error => {
-                    log(true, 'MAIN-ERROR', `Error running bots: ${error?.message}`, 'error')
-                })
-            })
-        ])
-
-    } else {
-        // Run desktop tasks first, then mobile tasks sequentially
-        try {
-            await desktopBot.initialize()
-            await desktopBot.run()
-        } catch (error: any) {
-            log(false, 'MAIN-ERROR', `Error running desktop bot: ${error.message}`, 'error')
-        }
-
-        // Mobile
-        try {
-            await mobileBot.initialize()
-            await mobileBot.run()
-        } catch (error: any) {
-            log(true, 'MAIN-ERROR', `Error running bots: ${error.message}`, 'error')
-        }
-
-        process.exit(1)
+    try {
+        await rewardsBot.initialize()
+        await rewardsBot.run()
+    } catch (error) {
+        log(false, 'MAIN-ERROR', `Error running desktop bot: ${error}`, 'error')
     }
 }
 
 // Start the bots
 main().catch(error => {
-    log('main', 'MAIN-ERROR', `Error running bots: ${error.message}`, 'error')
+    log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
     process.exit(1)
 })

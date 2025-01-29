@@ -10,7 +10,7 @@ import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
 export class SearchOnBing extends Workers {
 
     async doSearchOnBing(page: Page, activity: MorePromotion | PromotionalItem) {
-        this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'Trying to complete UrlReward')
+        this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'Trying to complete SearchOnBing')
 
         try {
             await this.bot.utils.wait(5000)
@@ -36,7 +36,6 @@ export class SearchOnBing extends Workers {
         }
     }
 
-    // Fetch hardcoded or from GH repo?
     private async getSearchQuery(title: string): Promise<string> {
         interface Queries {
             title: string;
