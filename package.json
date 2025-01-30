@@ -7,6 +7,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
+    "pre-build": "npm i && rimraf dist && npx playwright install chromium",
     "build": "tsc",
     "start": "node ./dist/index.js",
     "ts-start": "ts-node ./src/index.ts",
@@ -30,6 +31,7 @@
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "eslint": "^8.57.0",
     "eslint-plugin-modules-newline": "^0.0.6",
+    "rimraf": "^6.0.1",
     "typescript": "^5.5.4"
   },
   "dependencies": {
