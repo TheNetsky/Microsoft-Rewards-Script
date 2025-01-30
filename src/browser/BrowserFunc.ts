@@ -195,9 +195,13 @@ export default class BrowserFunc {
      * Get total earnable points with mobile app
      * @returns {number} Total earnable points
     */
-    async getAppEarnablePoints(accessToken: string): Promise<number> {
+    async getAppEarnablePoints(accessToken: string) {
         try {
-            let totalEarnablePoints = 0
+            const points = {
+                readToEarn: 0,
+                checkIn: 0,
+                totalEarnablePoints: 0
+            }
 
             const eligibleOffers = [
                 'ENUS_readarticle3_30points',
@@ -224,19 +228,21 @@ export default class BrowserFunc {
 
             for (const item of eligibleActivities) {
                 if (item.attributes.type === 'msnreadearn') {
-                    totalEarnablePoints += parseInt(item.attributes.pointmax ?? '') - parseInt(item.attributes.pointprogress ?? '')
+                    points.readToEarn = parseInt(item.attributes.pointmax ?? '') - parseInt(item.attributes.pointprogress ?? '')
                     break
                 } else if (item.attributes.type === 'checkin') {
                     const checkInDay = parseInt(item.attributes.progress ?? '') % 7
 
                     if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated ?? '')).getDate()) {
-                        totalEarnablePoints += parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '')
+                        points.checkIn = parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '')
                     }
                     break
                 }
             }
 
-            return totalEarnablePoints
+            points.totalEarnablePoints = points.readToEarn + points.checkIn
+
+            return points
         } catch (error) {
             throw this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
         }
@@ -338,12 +344,17 @@ export default class BrowserFunc {
     }
 
     async closeBrowser(browser: BrowserContext, email: string) {
-        // Save cookies
-        await saveSessionData(this.bot.config.sessionPath, browser, email, this.bot.isMobile)
+        try {
+            // Save cookies
+            await saveSessionData(this.bot.config.sessionPath, browser, email, this.bot.isMobile)
 
-        await this.bot.utils.wait(2000)
+            await this.bot.utils.wait(2000)
 
-        // Close browser
-        await browser.close()
+            // Close browser
+            await browser.close()
+            this.bot.log(this.bot.isMobile, 'CLOSE-BROWSER', 'Browser closed cleanly!')
+        } catch (error) {
+            throw this.bot.log(this.bot.isMobile, 'CLOSE-BROWSER', 'An error occurred:' + error, 'error')
+        }
     }
 }

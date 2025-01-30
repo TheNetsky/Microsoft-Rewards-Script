@@ -81,6 +81,7 @@ export class Quiz extends Workers {
             // Done with
             await this.bot.utils.wait(2000)
             await page.close()
+
             this.bot.log(this.bot.isMobile, 'QUIZ', 'Completed the quiz successfully')
         } catch (error) {
             await page.close()

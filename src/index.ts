@@ -30,7 +30,9 @@ export class MicrosoftRewardsBot {
     public isMobile: boolean
     public homePage!: Page
 
-    private collectedPoints: number = 0
+    private pointsCanCollect : number = 0
+    private pointsInitial : number = 0
+
     private activeWorkers: number
     private mobileRetryAttempts: number
     private browserFactory: Browser = new Browser(this)
@@ -144,27 +146,28 @@ export class MicrosoftRewardsBot {
 
         log(this.isMobile, 'MAIN', 'Starting browser')
 
-        //await this.utils.wait(300_000)
-
         // Login into MS Rewards, then go to rewards homepage
         await this.login.login(this.homePage, account.email, account.password)
 
         await this.browser.func.goHome(this.homePage)
 
         const data = await this.browser.func.getDashboardData()
-        log(this.isMobile, 'MAIN-POINTS', `Current point count: ${data.userStatus.availablePoints}`, 'log')
+
+        this.pointsInitial = data.userStatus.availablePoints
+
+        log(this.isMobile, 'MAIN-POINTS', `Current point count: ${this.pointsInitial}`)
 
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
 
         // Tally all the desktop points
-        this.collectedPoints = browserEnarablePoints.dailySetPoints +
+        this.pointsCanCollect = browserEnarablePoints.dailySetPoints +
             browserEnarablePoints.desktopSearchPoints
             + browserEnarablePoints.morePromotionsPoints
 
-        log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.collectedPoints} points today`)
+        log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
-        if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
+        if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
             log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
 
             // Close desktop browser
@@ -224,16 +227,15 @@ export class MicrosoftRewardsBot {
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
         const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken)
 
-        const beforeEarnablePoints = browserEnarablePoints.mobileSearchPoints + appEarnablePoints
-        this.collectedPoints = beforeEarnablePoints
+        this.pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints
 
-        log(this.isMobile, 'MAIN-POINTS', `You can earn ${beforeEarnablePoints} points today (Browser: ${browserEnarablePoints.mobileSearchPoints} points, App: ${appEarnablePoints} points)`)
+        log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today (Browser: ${browserEnarablePoints.mobileSearchPoints} points, App: ${appEarnablePoints.totalEarnablePoints} points)`)
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
-        if (!this.config.runOnZeroPoints && this.collectedPoints === 0) {
+        if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
             log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
 
-            // Close desktop browser
+            // Close mobile browser
             await this.browser.func.closeBrowser(browser, account.email)
             return
         }
@@ -283,11 +285,9 @@ export class MicrosoftRewardsBot {
             }
         }
 
-        const earnablePoints = (await this.browser.func.getBrowserEarnablePoints()).totalEarnablePoints + await this.browser.func.getAppEarnablePoints(this.accessToken)
+        const afterPointAmount = await this.browser.func.getCurrentPoints()
 
-        // If the new earnable is 0, means we got all the points, else retract
-        this.collectedPoints = Math.abs(earnablePoints === 0 ? this.collectedPoints : (this.collectedPoints - earnablePoints))
-        log(this.isMobile, 'MAIN-POINTS', `The script collected ${this.collectedPoints} points today`)
+        log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - this.pointsInitial} points today`)
 
         // Close mobile browser
         await this.browser.func.closeBrowser(browser, account.email)

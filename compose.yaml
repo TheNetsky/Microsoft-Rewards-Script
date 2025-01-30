@@ -7,9 +7,9 @@ services:
       ### Replace "/path/to/" with the actual path to where you want to save the files on your local machine.
       - /path/to/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json
       - /path/to/config.json:/usr/src/microsoft-rewards-script/dist/config.json 
-      - /path/to/sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions #optional, saves your login session
+      - /path/to/sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
     environment:
       - NODE_ENV=production
-      - CRON_SCHEDULE=0 7,15,20 * * * #customize your schedule, use crontab.guru for formatting
-      - RUN_ON_START=true #runs the script on container startup
-      - TZ=America/Toronto #set your timezone for proper scheduling
+      - CRON_SCHEDULE=0 7,15,20 * * * # Customize your schedule, use crontab.guru for formatting
+      - RUN_ON_START=true # Runs the script on container startup
+      - TZ=America/Toronto # Set your timezone for proper scheduling

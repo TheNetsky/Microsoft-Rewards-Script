@@ -74,7 +74,7 @@ export class Login {
             await this.bot.utils.wait(2000)
             await this.enterPassword(page, password)
             await this.bot.utils.wait(2000)
-            
+
             // Check if account is locked
             await this.checkAccountLocked(page)
 
@@ -86,7 +86,7 @@ export class Login {
     }
 
     private async enterEmail(page: Page, email: string) {
-        const emailPrefilled = await page.waitForSelector('#userDisplayName')
+        const emailPrefilled = await page.waitForSelector('#userDisplayName', { timeout: 2_000 }).catch(() => false)
         if (emailPrefilled) {
             this.bot.log(this.bot.isMobile, 'LOGIN', 'Email already prefilled by Microsoft')
             return
