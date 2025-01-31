@@ -130,7 +130,22 @@ export class Login {
             const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         } catch {
-            await page.click('button[aria-describedby="confirmSendTitle"]')
+            if (this.bot.config.parallel) {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Running in parallel, can only send 1 2FA request per account at a time')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Trying again in 60 seconds')
+
+                while (true) {
+                    const button = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { state: 'visible', timeout: 2000 }).catch(() => null)
+                    if (button) {
+                        await this.bot.utils.wait(60000)
+                        await button.click()
+
+                        continue
+                    } else break
+                }
+            }
+
+            await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => false)
             await this.bot.utils.wait(2000)
             const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
             return await element.textContent()
