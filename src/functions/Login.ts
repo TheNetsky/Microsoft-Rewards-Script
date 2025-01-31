@@ -32,7 +32,7 @@ export class Login {
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
 
-            await page.waitForLoadState('domcontentloaded').catch(() => false)
+            await page.waitForLoadState('domcontentloaded').catch(() => { })
 
             await this.bot.browser.utils.reloadBadPage(page)
 
@@ -86,7 +86,7 @@ export class Login {
     }
 
     private async enterEmail(page: Page, email: string) {
-        const emailPrefilled = await page.waitForSelector('#userDisplayName', { timeout: 2_000 }).catch(() => false)
+        const emailPrefilled = await page.waitForSelector('#userDisplayName', { timeout: 2_000 }).catch(() => null)
         if (emailPrefilled) {
             this.bot.log(this.bot.isMobile, 'LOGIN', 'Email already prefilled by Microsoft')
             return
@@ -131,21 +131,24 @@ export class Login {
             return await element.textContent()
         } catch {
             if (this.bot.config.parallel) {
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'Running in parallel, can only send 1 2FA request per account at a time')
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'Trying again in 60 seconds')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Script running in parallel, can only send 1 2FA request per account at a time!', 'log', 'yellow')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Trying again in 60 seconds! Please wait...', 'log', 'yellow')
 
+                // eslint-disable-next-line no-constant-condition
                 while (true) {
                     const button = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { state: 'visible', timeout: 2000 }).catch(() => null)
                     if (button) {
-                        await this.bot.utils.wait(60000)
+                        await this.bot.utils.wait(60_000)
                         await button.click()
 
                         continue
-                    } else break
+                    } else {
+                        break
+                    }
                 }
             }
 
-            await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => false)
+            await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => {})
             await this.bot.utils.wait(2000)
             const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
             return await element.textContent()

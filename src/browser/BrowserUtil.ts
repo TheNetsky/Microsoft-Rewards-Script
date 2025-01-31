@@ -100,7 +100,7 @@ export default class BrowserUtil {
 
     async reloadBadPage(page: Page): Promise<void> {
         try {
-            const html = await page.content().catch(() => "")
+            const html = await page.content().catch(() => '')
             const $ = load(html)
 
             const isNetworkError = $('body.neterror').length
