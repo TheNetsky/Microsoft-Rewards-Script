@@ -27,12 +27,7 @@ Under development, however mainly for personal use!
 
 2. **Update `accounts.json`**
 
-3. **Edit `config.json`,** ensuring the following values are set (other settings are up to your preference):
-
-   ```json
-   "headless": true,
-   "clusters": 1,
-   ```
+3. **Edit `config.json`,** ensuring `   "headless": true,`. Other settings are up to your preference.
 
 ### **Customize the `compose.yaml` File**
 
