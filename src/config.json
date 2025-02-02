@@ -25,8 +25,8 @@
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {
-            "min": "2min",
-            "max": "3min"
+            "min": "3min",
+            "max": "5min"
         },
         "retryMobileSearchAmount": 2
     },

@@ -261,18 +261,18 @@ export class Login {
         let currentUrl = new URL(page.url())
         let code: string
 
+        this.bot.log(this.bot.isMobile, 'LOGIN-APP', 'Waiting for authorization...')
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            this.bot.log(this.bot.isMobile, 'LOGIN-APP', 'Waiting for authorization')
             if (currentUrl.hostname === 'login.live.com' && currentUrl.pathname === '/oauth20_desktop.srf') {
                 code = currentUrl.searchParams.get('code')!
                 break
             }
 
             currentUrl = new URL(page.url())
-            await this.bot.utils.wait(2000)
+            await this.bot.utils.wait(5000)
         }
-
+       
         const body = new URLSearchParams()
         body.append('grant_type', 'authorization_code')
         body.append('client_id', this.clientId)
