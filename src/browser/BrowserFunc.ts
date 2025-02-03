@@ -319,7 +319,7 @@ export default class BrowserFunc {
         }
     }
 
-    async refreshCheerio(page: Page): Promise<CheerioAPI> {
+    async loadInCheerio(page: Page): Promise<CheerioAPI> {
         const html = await page.content()
         const $ = load(html)
 

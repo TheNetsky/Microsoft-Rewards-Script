@@ -139,13 +139,13 @@ export class Workers {
                 }
 
 
-                let selector = `[data-bi-id^="${activity.offerId}"]`
+                let selector = `[data-bi-id^="${activity.offerId}"] .pointLink:not(.contentContainer .pointLink)`
 
                 if (punchCard) {
                     selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
 
                 } else if (activity.name.toLowerCase().includes('membercenter') || activity.name.toLowerCase().includes('exploreonbing')) {
-                    selector = `[data-bi-id^="${activity.name}"]`
+                    selector = `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
                 }
 
                 // Wait for the new tab to fully load, ignore error.
@@ -154,7 +154,7 @@ export class Workers {
                 if it didn't then it gave enough time for the page to load.
                 */
                 await activityPage.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { })
-                await this.bot.utils.wait(5000)
+                await this.bot.utils.wait(2000)
 
                 switch (activity.promotionType) {
                     // Quiz (Poll, Quiz or ABC)

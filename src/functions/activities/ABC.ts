@@ -9,7 +9,7 @@ export class ABC extends Workers {
         this.bot.log(this.bot.isMobile, 'ABC', 'Trying to complete poll')
 
         try {
-            let $ = await this.bot.browser.func.refreshCheerio(page)
+            let $ = await this.bot.browser.func.loadInCheerio(page)
 
             // Don't loop more than 15 in case unable to solve, would lock otherwise
             const maxIterations = 15
@@ -30,7 +30,7 @@ export class ABC extends Workers {
                 await page.click('div.wk_button') // Click next question button
 
                 page = await this.bot.browser.utils.getLatestTab(page)
-                $ = await this.bot.browser.func.refreshCheerio(page)
+                $ = await this.bot.browser.func.loadInCheerio(page)
                 await this.bot.utils.wait(1000)
             }
 
