@@ -33,5 +33,11 @@
     "webhook": {
         "enabled": false,
         "url": ""
+    },
+    "ntfy": {
+        "enabled": false,
+        "url": "",  
+        "topic": "", 
+        "authToken": "" 
     }
 }

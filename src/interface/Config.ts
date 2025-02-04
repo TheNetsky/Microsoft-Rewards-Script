@@ -10,7 +10,15 @@ export interface Config {
     globalTimeout: number | string;
     searchSettings: SearchSettings;
     webhook: Webhook;
+    ntfy: Ntfy;  // <-- Added Ntfy configuration
     saveFingerprint: ConfigSaveFingerprint;
+}
+
+export interface Ntfy {
+    enabled: boolean;
+    url: string;
+    topic: string;
+    authToken?: string; // Optional authentication token
 }
 
 export interface ConfigSaveFingerprint {
