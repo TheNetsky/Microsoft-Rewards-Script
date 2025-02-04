@@ -14,7 +14,10 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     Webhook(cleanStr);
 
     // Send to NTFY only for specific logs
-    if (type === 'warn' || type === 'error' || message.toLowerCase().includes('completed') || message.includes('2FA')) {
+    if (type === 'warn' || type === 'error' || 
+        message.toLowerCase().includes('completed tasks for') || 
+        message.toLowerCase().includes('press the number') || 
+        message.includes('2FA')) {
         Ntfy(cleanStr);
     }
 
