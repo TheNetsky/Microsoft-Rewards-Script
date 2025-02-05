@@ -13,14 +13,15 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     // Send to Webhook if enabled
     Webhook(cleanStr);
 
-    // Send to NTFY only for specific logs
-    if (type === 'warn' || type === 'error' || 
-        message.toLowerCase().includes('completed tasks for') || 
-        message.toLowerCase().includes('press the number') || 
-        message.includes('2FA')) {
-        Ntfy(cleanStr);
+    // Send only specific log messages to NTFY
+    if (
+        (type === 'log' && (message.toLowerCase().includes('completed tasks for') || message.toLowerCase().includes('press the number')))
+        || (type === 'error' && message.toLowerCase().includes('ending'))
+        || (type === 'warn' && (message.toLowerCase().includes('aborting') || message.toLowerCase().includes("didn't gain")))
+    ) {
+        Ntfy(cleanStr, type);
     }
-
+    
     // Formatted string with chalk for terminal logging
     const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`;
 

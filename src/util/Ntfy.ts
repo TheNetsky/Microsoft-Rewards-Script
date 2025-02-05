@@ -1,21 +1,25 @@
-import axios from 'axios';
+import { exec } from 'child_process';
 import { loadConfig } from './Load';
 
-export async function Ntfy(content: string) {
+export async function Ntfy(message: string, type: 'log' | 'warn' | 'error' = 'log'): Promise<void> {
     const config = loadConfig();
-    const ntfy = config.ntfy;
+    if (!config.ntfy.enabled || !config.ntfy.url || !config.ntfy.topic) {
+        return;
+    }
 
-    if (!ntfy.enabled || ntfy.url.length < 10 || !ntfy.topic) return;
+    const ntfyUrl = `${config.ntfy.url}/${config.ntfy.topic}`;
+    const priority = type === 'error' ? 'max' : type === 'warn' ? 'high' : 'default';
+    const tags = type === 'error' ? 'rotating_light' : type === 'warn' ? 'warning' : 'information_source';
 
-    const request = {
-        method: 'POST',
-        url: `${ntfy.url}/${ntfy.topic}`, // Sends to the correct topic
-        headers: {
-            'Content-Type': 'text/plain',
-            'Authorization': `Bearer ${ntfy.authToken}` // If authToken is required
-        },
-        data: content
-    };
+    let curlCommand = `curl -X POST "${ntfyUrl}" -d "${message}" -H "Title: Microsoft Rewards Script" -H "Priority: ${priority}" -H "Tags: ${tags}"`;
 
-    await axios(request).catch((err) => console.error("NTFY Error:", err));
+    if (config.ntfy.authToken) {
+        curlCommand += ` -H "Authorization: Bearer ${config.ntfy.authToken}"`;
+    }
+
+    exec(curlCommand, (error) => {
+        if (error) {
+            console.error(`❌ Failed to send Ntfy notification: ${error.message}`);
+        }
+    });
 }
