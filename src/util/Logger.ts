@@ -18,6 +18,7 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
         log: [
             message.toLowerCase().includes('started tasks for account'),
             message.toLowerCase().includes('press the number'),
+            message.toLowerCase().includes('this script collected'),
             message.toLowerCase().includes('completed tasks for account')
         ], // Add or customize keywords for log messages here
         error: [], // Add or customize keywords for error messages here
