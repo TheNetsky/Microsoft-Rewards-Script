@@ -1,25 +1,33 @@
-import { exec } from 'child_process';
-import { loadConfig } from './Load';
+import { loadConfig } from './Load'
+import axios from 'axios'
 
-export async function Ntfy(message: string, type: 'log' | 'warn' | 'error' = 'log'): Promise<void> {
-    const config = loadConfig();
-    if (!config.ntfy.enabled || !config.ntfy.url || !config.ntfy.topic) {
-        return;
-    }
+const NOTIFICATION_TYPES = {
+    error: { priority: 'max', tags: 'rotating_light' }, // Customize the icon here, see: https://docs.ntfy.sh/emojis/
+    warn: { priority: 'high', tags: 'warning' }, // Customize the icon here, see: https://docs.ntfy.sh/emojis/
+    log: { priority: 'default', tags: 'medal_sports' } // Customize the icon here, see: https://docs.ntfy.sh/emojis/
+}
 
-    const ntfyUrl = `${config.ntfy.url}/${config.ntfy.topic}`;
-    const priority = type === 'error' ? 'max' : type === 'warn' ? 'high' : 'default';
-    const tags = type === 'error' ? 'rotating_light' : type === 'warn' ? 'warning' : 'information_source';
+export async function Ntfy(message: string, type: keyof typeof NOTIFICATION_TYPES = 'log'): Promise<void> {
+    const config = loadConfig().ntfy
+    if (!config?.enabled || !config.url || !config.topic) return
 
-    let curlCommand = `curl -X POST "${ntfyUrl}" -d "${message}" -H "Title: Microsoft Rewards Script" -H "Priority: ${priority}" -H "Tags: ${tags}"`;
-
-    if (config.ntfy.authToken) {
-        curlCommand += ` -H "Authorization: Bearer ${config.ntfy.authToken}"`;
-    }
-
-    exec(curlCommand, (error) => {
-        if (error) {
-            console.error(`❌ Failed to send Ntfy notification: ${error.message}`);
+    try {
+        const { priority, tags } = NOTIFICATION_TYPES[type]
+        const headers = {
+            Title: 'Microsoft Rewards Script',
+            Priority: priority,
+            Tags: tags,
+            ...(config.authToken && { Authorization: `Bearer ${config.authToken}` })
         }
-    });
+
+        const response = await axios.post(`${config.url}/${config.topic}`, message, { headers })
+        
+        if (response.status === 200) {
+            console.log('NTFY notification successfully sent.')
+        } else {
+            console.error(`NTFY notification failed with status ${response.status}`)
+        }
+    } catch (error) {
+        console.error('Failed to send NTFY notification:', error)
+    }
 }

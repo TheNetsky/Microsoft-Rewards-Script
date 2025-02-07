@@ -27,12 +27,7 @@ Under development, however mainly for personal use!
 
 2. **Update `accounts.json`**
 
-3. **Edit `config.json`,** ensuring the following values are set (other settings are up to your preference):
-
-   ```json
-   "headless": true,
-   "clusters": 1,
-   ```
+3. **Edit `config.json`,** ensuring `   "headless": true,`. Other settings are up to your preference.
 
 ### **Customize the `compose.yaml` File**
 
@@ -78,6 +73,27 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 | cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) |
 |  | Run the script immediately when the Docker container starts | `true` |
 
+
+## NTFY push notifications (experimental) ##
+Push notification can be optionally enabled using [NTFY](https://ntfy.sh/). 
+
+1. Open config.json and locate the ntfy section.
+2. Set "enabled" to true
+3. Add your NTFY server URL in the "url" field.
+4. Enter the topic for notifications in the "topic" field.
+5. Optionally, add your NTFY authentication token in the "authToken" field (if required).
+6. Save the file.
+7. Rebuild the script or recreate the docker container if it's already running to apply the changes.
+
+### Notification customizations ###
+- To change the emojis used in the notifications, edit the tags in `Ntfy.sh`. Visit NTFY's emoji customization [guide](https://docs.ntfy.sh/emojis) for available options.
+- To customize which keywords trigger notifications, edit the keywords in `Logger.ts`.
+- By default, notifications will be sent for the following events, per account:
+  - Script start
+  - 2FA/passwordless codes
+  - Script completion
+  - Critical warnings
+
 ## Features ##
 - [x] Multi-Account Support
 - [x] Session Storing
@@ -107,6 +123,7 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 - [x] Proxy Support
 - [x] Docker Support (experimental)
 - [x] Automatic scheduling (via Docker)
+- [x] Push notifications (via NTFY)
 
 ## Disclaimer ##
 Your account may be at risk of getting banned or suspended using this script, you've been warned!

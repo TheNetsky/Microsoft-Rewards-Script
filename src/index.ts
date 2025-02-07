@@ -135,7 +135,7 @@ export class MicrosoftRewardsBot {
             log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
 
-        log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
+        await(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
         process.exit()
     }
 

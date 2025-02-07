@@ -1,44 +1,53 @@
-import chalk from 'chalk';
-import { Webhook } from './Webhook';
-import { Ntfy } from './Ntfy';
+import chalk from 'chalk'
+import { Webhook } from './Webhook'
+import { Ntfy } from './Ntfy'
 
-export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): void {
-    const currentTime = new Date().toLocaleString();
-    const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP';
-    const chalkedPlatform = isMobile === 'main' ? chalk.bgCyan('MAIN') : isMobile ? chalk.bgBlue('MOBILE') : chalk.bgMagenta('DESKTOP');
+export async function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk) {
+    const currentTime = new Date().toLocaleString()
+    const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP'
+    const chalkedPlatform = isMobile === 'main' ? chalk.bgCyan('MAIN') : isMobile ? chalk.bgBlue('MOBILE') : chalk.bgMagenta('DESKTOP')
 
     // Clean string for Webhook and NTFY (no chalk formatting)
-    const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`;
+    const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
 
     // Send to Webhook if enabled
-    Webhook(cleanStr);
+    await Webhook(cleanStr)
 
-    // Send only specific log messages to NTFY
-    if (
-        (type === 'log' && (message.toLowerCase().includes('completed tasks for') || message.toLowerCase().includes('press the number')))
-        || (type === 'error' && message.toLowerCase().includes('ending'))
-        || (type === 'warn' && (message.toLowerCase().includes('aborting') || message.toLowerCase().includes("didn't gain")))
-    ) {
-        Ntfy(cleanStr, type);
+    // Define conditions for sending to NTFY
+    const ntfyConditions = {
+        log: [
+            message.toLowerCase().includes('started tasks for account'),
+            message.toLowerCase().includes('press the number'),
+            message.toLowerCase().includes('completed tasks for account')
+        ], // Add or customize keywords for log messages here
+        error: [], // Add or customize keywords for error messages here
+        warn: [
+            message.toLowerCase().includes('aborting'),
+            message.toLowerCase().includes('didn\'t gain')
+        ] // Add or customize keywords for warning messages here
     }
-    
-    // Formatted string with chalk for terminal logging
-    const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`;
 
-    const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null;
+    // Check if the current log type and message meet the NTFY conditions
+    if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition))
+        await Ntfy(cleanStr, type)
+
+    // Formatted string with chalk for terminal logging
+    const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`
+
+    const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null
 
     // Log based on type
     switch (type) {
         case 'warn':
-            applyChalk ? console.warn(applyChalk(str)) : console.warn(str);
-            break;
+            applyChalk ? console.warn(applyChalk(str)) : console.warn(str)
+            break
 
         case 'error':
-            applyChalk ? console.error(applyChalk(str)) : console.error(str);
-            break;
+            applyChalk ? console.error(applyChalk(str)) : console.error(str)
+            break
 
         default:
-            applyChalk ? console.log(applyChalk(str)) : console.log(str);
-            break;
+            applyChalk ? console.log(applyChalk(str)) : console.log(str)
+            break
     }
 }
