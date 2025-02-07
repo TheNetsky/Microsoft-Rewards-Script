@@ -7,6 +7,7 @@ import path from 'path'
 import { Account } from '../interface/Account'
 import { Config, ConfigSaveFingerprint } from '../interface/Config'
 
+let configCache: Config
 
 export function loadAccounts(): Account[] {
     try {
@@ -28,10 +29,17 @@ export function loadAccounts(): Account[] {
 
 export function loadConfig(): Config {
     try {
+        if (configCache) {
+            return configCache
+        }
+
         const configDir = path.join(__dirname, '../', 'config.json')
         const config = fs.readFileSync(configDir, 'utf-8')
 
-        return JSON.parse(config)
+        const configData = JSON.parse(config)
+        configCache = configData // Set as cache
+
+        return configData
     } catch (error) {
         throw new Error(error as string)
     }

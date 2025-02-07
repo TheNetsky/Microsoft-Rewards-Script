@@ -30,6 +30,9 @@
         },
         "retryMobileSearchAmount": 2
     },
+    "logExcludeFunc": [
+        "SEARCH-CLOSE-TABS"
+    ],
     "webhook": {
         "enabled": false,
         "url": ""

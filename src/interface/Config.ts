@@ -10,6 +10,7 @@ export interface Config {
     globalTimeout: number | string;
     searchSettings: SearchSettings;
     webhook: Webhook;
+    logExcludeFunc: string[];
     saveFingerprint: ConfigSaveFingerprint;
 }
 
