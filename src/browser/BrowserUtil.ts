@@ -24,7 +24,8 @@ export default class BrowserUtil {
             { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
             { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
             { selector: '//div[@id=\'cookieConsentContainer\']//button[contains(text(), \'Accept\')]', label: 'Accept Cookie Consent Container' },
-            { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' }
+            { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
+            { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
         ]
 
         let result = false

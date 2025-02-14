@@ -30,8 +30,8 @@ export class MicrosoftRewardsBot {
     public isMobile: boolean
     public homePage!: Page
 
-    private pointsCanCollect : number = 0
-    private pointsInitial : number = 0
+    private pointsCanCollect: number = 0
+    private pointsInitial: number = 0
 
     private activeWorkers: number
     private mobileRetryAttempts: number
@@ -129,7 +129,7 @@ export class MicrosoftRewardsBot {
             } else {
                 this.isMobile = false
                 await this.Desktop(account)
-                
+
                 this.isMobile = true
                 await this.Mobile(account)
             }
@@ -252,24 +252,25 @@ export class MicrosoftRewardsBot {
             await this.activities.doReadToEarn(this.accessToken, data)
         }
 
-        // If no mobile searches data found, stop (Does not exist on new accounts)
-        if (data.userStatus.counters.mobileSearch) {
-            // Open a new tab to where the tasks are going to be completed
-            const workerPage = await browser.newPage()
+        // Do mobile searches
+        if (this.config.workers.doMobileSearch) {
+            // If no mobile searches data found, stop (Does not always exist on new accounts)
+            if (data.userStatus.counters.mobileSearch) {
+                // Open a new tab to where the tasks are going to be completed
+                const workerPage = await browser.newPage()
 
-            // Go to homepage on worker page
-            await this.browser.func.goHome(workerPage)
+                // Go to homepage on worker page
+                await this.browser.func.goHome(workerPage)
 
-            // Do mobile searches
-            if (this.config.workers.doMobileSearch) {
                 await this.activities.doSearch(workerPage, data)
 
                 // Fetch current search points
                 const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
 
-                if (mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0)
+                if (mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0) {
                     // Increment retry count
                     this.mobileRetryAttempts++
+                }
 
                 // Exit if retries are exhausted
                 if (this.mobileRetryAttempts > this.config.searchSettings.retryMobileSearchAmount) {
@@ -284,6 +285,8 @@ export class MicrosoftRewardsBot {
                     await this.Mobile(account)
                     return
                 }
+            } else {
+                log(this.isMobile, 'MAIN', 'Unable to fetch search points, your account is most likely too "new" for this! Try again later!', 'warn')
             }
         }
 
