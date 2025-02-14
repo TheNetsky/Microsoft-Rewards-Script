@@ -23,28 +23,27 @@ export default class BrowserUtil {
             { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' },
             { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
             { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
-            { selector: '//div[@id=\'cookieConsentContainer\']//button[contains(text(), \'Accept\')]', label: 'Accept Cookie Consent Container' },
+            { selector: '//div[@id="cookieConsentContainer"]//button[contains(text(), "Accept")]', label: 'Accept Cookie Consent Container' },
             { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
             { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
         ]
 
-        let result = false
-
-        for (const button of buttons) {
+        const dismissTasks = buttons.map(async (button) => {
             try {
-                const element = await page.$(button.selector)
-                if (element) {
-                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Found message: ${button.label}, dismissed!`)
-                    await element.click()
-                    result = true
+                const element = page.locator(button.selector)
+                if (await element.first().isVisible({ timeout: 1000 })) {
+                    await element.first().click({ timeout: 1000 })
+                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${button.label}`)
+                    return true
                 }
-
             } catch (error) {
-                continue
+                // Ignore errors and continue
             }
-        }
+            return false
+        })
 
-        return result
+        const results = await Promise.allSettled(dismissTasks)
+        return results.some(result => result.status === 'fulfilled' && result.value === true)
     }
 
     async getLatestTab(page: Page): Promise<Page> {
