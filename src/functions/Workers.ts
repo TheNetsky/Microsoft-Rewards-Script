@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../interface/DashboardData'
 
@@ -18,12 +18,12 @@ export class Workers {
         const activitiesUncompleted = todayData?.filter(x => !x.complete && x.pointProgressMax > 0) ?? []
 
         if (!activitiesUncompleted.length) {
-            this.bot.log('DAILY-SET', 'All Daily Set" items have already been completed')
+            this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All Daily Set" items have already been completed')
             return
         }
 
         // Solve Activities
-        this.bot.log('DAILY-SET', 'Started solving "Daily Set" items')
+        this.bot.log(this.bot.isMobile, 'DAILY-SET', 'Started solving "Daily Set" items')
 
         await this.solveActivities(page, activitiesUncompleted)
 
@@ -32,27 +32,34 @@ export class Workers {
         // Always return to the homepage if not already
         await this.bot.browser.func.goHome(page)
 
-        this.bot.log('DAILY-SET', 'All "Daily Set" items have been completed')
+        this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All "Daily Set" items have been completed')
     }
 
     // Punch Card
     async doPunchCard(page: Page, data: DashboardData) {
 
-        const punchCardsUncompleted = data.punchCards?.filter(x => !x.parentPromotion?.complete) ?? [] // Only return uncompleted punch cards
+        const punchCardsUncompleted = data.punchCards?.filter(x => x.parentPromotion && !x.parentPromotion.complete) ?? [] // Only return uncompleted punch cards
 
         if (!punchCardsUncompleted.length) {
-            this.bot.log('PUNCH-CARD', 'All "Punch Cards" have already been completed')
+            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', 'All "Punch Cards" have already been completed')
             return
         }
 
         for (const punchCard of punchCardsUncompleted) {
+
+            // Ensure parentPromotion exists before proceeding
+            if (!punchCard.parentPromotion?.title) {
+                this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `Skipped punchcard "${punchCard.name}" | Reason: Parent promotion is missing!`, 'warn')
+                continue
+            }
+
             // Get latest page for each card
             page = await this.bot.browser.utils.getLatestTab(page)
 
             const activitiesUncompleted = punchCard.childPromotions.filter(x => !x.complete) // Only return uncompleted activities
 
             // Solve Activities
-            this.bot.log('PUNCH-CARD', `Started solving "Punch Card" items for punchcard: "${punchCard.parentPromotion.title}"`)
+            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `Started solving "Punch Card" items for punchcard: "${punchCard.parentPromotion.title}"`)
 
             // Got to punch card index page in a new tab
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
@@ -72,10 +79,10 @@ export class Workers {
                 await this.bot.browser.func.goHome(page)
             }
 
-            this.bot.log('PUNCH-CARD', `All items for punchcard: "${punchCard.parentPromotion.title}" have been completed`)
+            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `All items for punchcard: "${punchCard.parentPromotion.title}" have been completed`)
         }
 
-        this.bot.log('PUNCH-CARD', 'All "Punch Card" items have been completed')
+        this.bot.log(this.bot.isMobile, 'PUNCH-CARD', 'All "Punch Card" items have been completed')
     }
 
     // More Promotions
@@ -90,12 +97,12 @@ export class Workers {
         const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && x.exclusiveLockedFeatureStatus !== 'locked') ?? []
 
         if (!activitiesUncompleted.length) {
-            this.bot.log('MORE-PROMOTIONS', 'All "More Promotion" items have already been completed')
+            this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'All "More Promotion" items have already been completed')
             return
         }
 
         // Solve Activities
-        this.bot.log('MORE-PROMOTIONS', 'Started solving "More Promotions" items')
+        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'Started solving "More Promotions" items')
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
@@ -106,7 +113,7 @@ export class Workers {
         // Always return to the homepage if not already
         await this.bot.browser.func.goHome(page)
 
-        this.bot.log('MORE-PROMOTIONS', 'All "More Promotion" items have been completed')
+        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'All "More Promotion" items have been completed')
     }
 
     // Solve all the different types of activities
@@ -132,20 +139,14 @@ export class Workers {
                 }
 
 
-                let selector = `[data-bi-id^="${activity.offerId}"]`
+                let selector = `[data-bi-id^="${activity.offerId}"] .pointLink:not(.contentContainer .pointLink)`
 
                 if (punchCard) {
                     selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
 
-                } else if (activity.name.toLowerCase().includes('membercenter')) {
-                    selector = `[data-bi-id^="${activity.name}"]`
+                } else if (activity.name.toLowerCase().includes('membercenter') || activity.name.toLowerCase().includes('exploreonbing')) {
+                    selector = `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
                 }
-
-                // Click element, it will be opened in a new tab
-                await activityPage.click(selector)
-
-                // Select the new activity page
-                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
 
                 // Wait for the new tab to fully load, ignore error.
                 /*
@@ -153,7 +154,7 @@ export class Workers {
                 if it didn't then it gave enough time for the page to load.
                 */
                 await activityPage.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { })
-                await this.bot.utils.wait(5000)
+                await this.bot.utils.wait(2000)
 
                 switch (activity.promotionType) {
                     // Quiz (Poll, Quiz or ABC)
@@ -163,23 +164,31 @@ export class Workers {
                             case 10:
                                 // Normal poll
                                 if (activity.destinationUrl.toLowerCase().includes('pollscenarioid')) {
-                                    this.bot.log('ACTIVITY', `Found activity type: "Poll" title: "${activity.title}"`)
+                                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "Poll" title: "${activity.title}"`)
+                                    await activityPage.click(selector)
+                                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                                     await this.bot.activities.doPoll(activityPage)
                                 } else { // ABC
-                                    this.bot.log('ACTIVITY', `Found activity type: "ABC" title: "${activity.title}"`)
+                                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "ABC" title: "${activity.title}"`)
+                                    await activityPage.click(selector)
+                                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                                     await this.bot.activities.doABC(activityPage)
                                 }
                                 break
 
                             // This Or That Quiz (Usually 50 points)
                             case 50:
-                                this.bot.log('ACTIVITY', `Found activity type: "ThisOrThat" title: "${activity.title}"`)
+                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "ThisOrThat" title: "${activity.title}"`)
+                                await activityPage.click(selector)
+                                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                                 await this.bot.activities.doThisOrThat(activityPage)
                                 break
 
                             // Quizzes are usually 30-40 points
                             default:
-                                this.bot.log('ACTIVITY', `Found activity type: "Quiz" title: "${activity.title}"`)
+                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "Quiz" title: "${activity.title}"`)
+                                await activityPage.click(selector)
+                                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                                 await this.bot.activities.doQuiz(activityPage)
                                 break
                         }
@@ -187,14 +196,24 @@ export class Workers {
 
                     // UrlReward (Visit)
                     case 'urlreward':
-                        this.bot.log('ACTIVITY', `Found activity type: "UrlReward" title: "${activity.title}"`)
-                        await this.bot.activities.doUrlReward(activityPage)
+                        // Search on Bing are subtypes of "urlreward"
+                        if (activity.name.toLowerCase().includes('exploreonbing')) {
+                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "SearchOnBing" title: "${activity.title}"`)
+                            await activityPage.click(selector)
+                            activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                            await this.bot.activities.doSearchOnBing(activityPage, activity)
+
+                        } else {
+                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "UrlReward" title: "${activity.title}"`)
+                            await activityPage.click(selector)
+                            activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                            await this.bot.activities.doUrlReward(activityPage)
+                        }
                         break
 
-                    // Misc, Usually UrlReward Type
+                    // Unsupported types
                     default:
-                        this.bot.log('ACTIVITY', `Found activity type: "Misc" title: "${activity.title}"`)
-                        await this.bot.activities.doUrlReward(activityPage)
+                        this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
                         break
                 }
 
@@ -202,7 +221,7 @@ export class Workers {
                 await this.bot.utils.wait(2000)
 
             } catch (error) {
-                this.bot.log('ACTIVITY', 'An error occurred:' + error, 'error')
+                this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
             }
 
         }

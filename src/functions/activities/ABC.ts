@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
 
@@ -6,10 +6,10 @@ import { Workers } from '../Workers'
 export class ABC extends Workers {
 
     async doABC(page: Page) {
-        this.bot.log('ABC', 'Trying to complete poll')
+        this.bot.log(this.bot.isMobile, 'ABC', 'Trying to complete poll')
 
         try {
-            let $ = await this.bot.browser.func.refreshCheerio(page)
+            let $ = await this.bot.browser.func.loadInCheerio(page)
 
             // Don't loop more than 15 in case unable to solve, would lock otherwise
             const maxIterations = 15
@@ -30,7 +30,7 @@ export class ABC extends Workers {
                 await page.click('div.wk_button') // Click next question button
 
                 page = await this.bot.browser.utils.getLatestTab(page)
-                $ = await this.bot.browser.func.refreshCheerio(page)
+                $ = await this.bot.browser.func.loadInCheerio(page)
                 await this.bot.utils.wait(1000)
             }
 
@@ -38,14 +38,14 @@ export class ABC extends Workers {
             await page.close()
 
             if (i === maxIterations) {
-                this.bot.log('ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
+                this.bot.log(this.bot.isMobile, 'ABC', 'Failed to solve quiz, exceeded max iterations of 15', 'warn')
             } else {
-                this.bot.log('ABC', 'Completed the ABC successfully')
+                this.bot.log(this.bot.isMobile, 'ABC', 'Completed the ABC successfully')
             }
 
         } catch (error) {
             await page.close()
-            this.bot.log('ABC', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'ABC', 'An error occurred:' + error, 'error')
         }
     }
 

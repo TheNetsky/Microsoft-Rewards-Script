@@ -1,5 +1,5 @@
-import axios from 'axios'
 import { randomBytes } from 'crypto'
+import { AxiosRequestConfig } from 'axios'
 
 import { Workers } from '../Workers'
 
@@ -8,13 +8,13 @@ import { DashboardData } from '../../interface/DashboardData'
 
 export class ReadToEarn extends Workers {
     public async doReadToEarn(accessToken: string, data: DashboardData) {
-        this.bot.log('READ-TO-EARN', 'Starting Read to Earn')
+        this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'Starting Read to Earn')
 
         try {
             let geoLocale = data.userProfile.attributes.country
             geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
 
-            const userDataRequest = {
+            const userDataRequest: AxiosRequestConfig = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me',
                 method: 'GET',
                 headers: {
@@ -23,7 +23,7 @@ export class ReadToEarn extends Workers {
                     'X-Rewards-Language': 'en'
                 }
             }
-            const userDataResponse = await axios(userDataRequest)
+            const userDataResponse = await this.bot.axios.request(userDataRequest)
             const userData = (await userDataResponse.data).response
             let userBalance = userData.balance
 
@@ -52,22 +52,22 @@ export class ReadToEarn extends Workers {
                     data: JSON.stringify(jsonData)
                 }
 
-                const claimResponse = await axios(claimRequest)
+                const claimResponse = await this.bot.axios.request(claimRequest)
                 const newBalance = (await claimResponse.data).response.balance
 
                 if (newBalance == userBalance) {
-                    this.bot.log('READ-TO-EARN', 'Read all available articles')
+                    this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'Read all available articles')
                     break
                 } else {
-                    this.bot.log('READ-TO-EARN', `Read article ${i + 1} of ${articleCount} max | Gained ${newBalance - userBalance} Points`)
+                    this.bot.log(this.bot.isMobile, 'READ-TO-EARN', `Read article ${i + 1} of ${articleCount} max | Gained ${newBalance - userBalance} Points`)
                     userBalance = newBalance
-                    await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max)))
+                    await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
                 }
             }
 
-            this.bot.log('READ-TO-EARN', 'Completed Read to Earn')
+            this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'Completed Read to Earn')
         } catch (error) {
-            this.bot.log('READ-TO-EARN', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'An error occurred:' + error, 'error')
         }
     }
 }

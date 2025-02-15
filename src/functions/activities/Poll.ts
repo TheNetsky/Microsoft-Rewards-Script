@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
 
@@ -6,7 +6,7 @@ import { Workers } from '../Workers'
 export class Poll extends Workers {
 
     async doPoll(page: Page) {
-        this.bot.log('POLL', 'Trying to complete poll')
+        this.bot.log(this.bot.isMobile, 'POLL', 'Trying to complete poll')
 
         try {
             const buttonId = `#btoption${Math.floor(this.bot.utils.randomNumber(0, 1))}`
@@ -19,10 +19,10 @@ export class Poll extends Workers {
             await this.bot.utils.wait(4000)
             await page.close()
 
-            this.bot.log('POLL', 'Completed the poll successfully')
+            this.bot.log(this.bot.isMobile, 'POLL', 'Completed the poll successfully')
         } catch (error) {
             await page.close()
-            this.bot.log('POLL', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'POLL', 'An error occurred:' + error, 'error')
         }
     }
 

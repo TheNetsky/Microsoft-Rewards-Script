@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
 
@@ -6,7 +6,7 @@ import { Workers } from '../Workers'
 export class ThisOrThat extends Workers {
 
     async doThisOrThat(page: Page) {
-        this.bot.log('THIS-OR-THAT', 'Trying to complete ThisOrThat')
+        this.bot.log(this.bot.isMobile, 'THIS-OR-THAT', 'Trying to complete ThisOrThat')
 
 
         try {
@@ -15,7 +15,7 @@ export class ThisOrThat extends Workers {
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {
-                this.bot.log('THIS-OR-THAT', 'ThisOrThat has already been started, trying to finish it')
+                this.bot.log(this.bot.isMobile, 'THIS-OR-THAT', 'ThisOrThat has already been started, trying to finish it')
             }
 
             await this.bot.utils.wait(2000)
@@ -32,15 +32,15 @@ export class ThisOrThat extends Workers {
                 const refreshSuccess = await this.bot.browser.func.waitForQuizRefresh(page)
                 if (!refreshSuccess) {
                     await page.close()
-                    this.bot.log('QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
+                    this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
                     return
                 }
             }
 
-            this.bot.log('THIS-OR-THAT', 'Completed the ThisOrThat successfully')
+            this.bot.log(this.bot.isMobile, 'THIS-OR-THAT', 'Completed the ThisOrThat successfully')
         } catch (error) {
             await page.close()
-            this.bot.log('THIS-OR-THAT', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'THIS-OR-THAT', 'An error occurred:' + error, 'error')
         }
     }
 

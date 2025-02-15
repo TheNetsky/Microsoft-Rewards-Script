@@ -1,4 +1,5 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
+import { load } from 'cheerio'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -13,66 +14,41 @@ export default class BrowserUtil {
     async tryDismissAllMessages(page: Page): Promise<boolean> {
         const buttons = [
             { selector: '#acceptButton', label: 'AcceptButton' },
+            { selector: '.ext-secondary.ext-button', label: '"Skip for now" Button' },
             { selector: '#iLandingViewAction', label: 'iLandingViewAction' },
             { selector: '#iShowSkip', label: 'iShowSkip' },
             { selector: '#iNext', label: 'iNext' },
             { selector: '#iLooksGood', label: 'iLooksGood' },
             { selector: '#idSIButton9', label: 'idSIButton9' },
-            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' }
+            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' },
+            { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
+            { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
+            { selector: '//div[@id="cookieConsentContainer"]//button[contains(text(), "Accept")]', label: 'Accept Cookie Consent Container' },
+            { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
+            { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
         ]
 
-        let result = false
-
-        for (const button of buttons) {
+        const dismissTasks = buttons.map(async (button) => {
             try {
-                const element = await page.waitForSelector(button.selector, { state: 'visible', timeout: 1000 })
-                if (element) {
-                    await element.click()
-                    result = true
+                const element = page.locator(button.selector)
+                if (await element.first().isVisible({ timeout: 1000 })) {
+                    await element.first().click({ timeout: 1000 })
+                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${button.label}`)
+                    return true
                 }
-
             } catch (error) {
-                continue
+                // Ignore errors and continue
             }
-        }
+            return false
+        })
 
-        return result
-    }
-
-    async tryDismissCookieBanner(page: Page): Promise<void> {
-        try {
-            await page.waitForSelector('#cookieConsentContainer', { timeout: 1000 })
-            const cookieBanner = await page.$('#cookieConsentContainer')
-
-            if (cookieBanner) {
-                const button = await cookieBanner.$('button')
-                if (button) {
-                    await button.click()
-                    await this.bot.utils.wait(2000)
-                }
-            }
-
-        } catch (error) {
-            // Continue if element is not found or other error occurs
-        }
-    }
-
-    async tryDismissBingCookieBanner(page: Page): Promise<void> {
-        try {
-            await page.waitForSelector('#bnp_btn_accept', { timeout: 1000 })
-            const cookieBanner = await page.$('#bnp_btn_accept')
-
-            if (cookieBanner) {
-                await cookieBanner.click()
-            }
-        } catch (error) {
-            // Continue if element is not found or other error occurs
-        }
+        const results = await Promise.allSettled(dismissTasks)
+        return results.some(result => result.status === 'fulfilled' && result.value === true)
     }
 
     async getLatestTab(page: Page): Promise<Page> {
         try {
-            await this.bot.utils.wait(500)
+            await this.bot.utils.wait(1000)
 
             const browser = page.context()
             const pages = browser.pages()
@@ -82,9 +58,9 @@ export default class BrowserUtil {
                 return newTab
             }
 
-            throw this.bot.log('GET-NEW-TAB', 'Unable to get latest tab', 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'Unable to get latest tab', 'error')
         } catch (error) {
-            throw this.bot.log('GET-NEW-TAB', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'An error occurred:' + error, 'error')
         }
     }
 
@@ -97,19 +73,19 @@ export default class BrowserUtil {
             let homeTabURL: URL
 
             if (!homeTab) {
-                throw this.bot.log('GET-TABS', 'Home tab could not be found!', 'error')
+                throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Home tab could not be found!', 'error')
 
             } else {
                 homeTabURL = new URL(homeTab.url())
 
                 if (homeTabURL.hostname !== 'rewards.bing.com') {
-                    throw this.bot.log('GET-TABS', 'Reward page hostname is invalid: ' + homeTabURL.host, 'error')
+                    throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Reward page hostname is invalid: ' + homeTabURL.host, 'error')
                 }
             }
 
             const workerTab = pages[2]
             if (!workerTab) {
-                throw this.bot.log('GET-TABS', 'Worker tab could not be found!', 'error')
+                throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Worker tab could not be found!', 'error')
             }
 
             return {
@@ -118,7 +94,24 @@ export default class BrowserUtil {
             }
 
         } catch (error) {
-            throw this.bot.log('GET-TABS', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'An error occurred:' + error, 'error')
+        }
+    }
+
+    async reloadBadPage(page: Page): Promise<void> {
+        try {
+            const html = await page.content().catch(() => '')
+            const $ = load(html)
+
+            const isNetworkError = $('body.neterror').length
+
+            if (isNetworkError) {
+                this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'Bad page detected, reloading!')
+                await page.reload()
+            }
+
+        } catch (error) {
+            throw this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'An error occurred:' + error, 'error')
         }
     }
 

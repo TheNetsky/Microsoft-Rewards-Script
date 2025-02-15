@@ -1,4 +1,4 @@
-import { Page } from 'playwright'
+import { Page } from 'rebrowser-playwright'
 
 import { MicrosoftRewardsBot } from '../index'
 
@@ -8,10 +8,11 @@ import { Poll } from './activities/Poll'
 import { Quiz } from './activities/Quiz'
 import { ThisOrThat } from './activities/ThisOrThat'
 import { UrlReward } from './activities/UrlReward'
+import { SearchOnBing } from './activities/SearchOnBing'
 import { ReadToEarn } from './activities/ReadToEarn'
 import { DailyCheckIn } from './activities/DailyCheckIn'
 
-import { DashboardData } from '../interface/DashboardData'
+import { DashboardData, MorePromotion, PromotionalItem } from '../interface/DashboardData'
 
 
 export default class Activities {
@@ -49,6 +50,11 @@ export default class Activities {
     doUrlReward = async (page: Page): Promise<void> => {
         const urlReward = new UrlReward(this.bot)
         await urlReward.doUrlReward(page)
+    }
+
+    doSearchOnBing = async (page: Page, activity: MorePromotion | PromotionalItem): Promise<void> => {
+        const searchOnBing = new SearchOnBing(this.bot)
+        await searchOnBing.doSearchOnBing(page, activity)
     }
 
     doReadToEarn = async (accessToken: string, data: DashboardData): Promise<void> => {

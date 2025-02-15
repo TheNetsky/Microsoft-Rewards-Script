@@ -1,12 +1,13 @@
-import { BrowserContext, Cookie } from 'playwright'
+import { BrowserContext, Cookie } from 'rebrowser-playwright'
 import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 import fs from 'fs'
 import path from 'path'
 
 
 import { Account } from '../interface/Account'
-import { Config } from '../interface/Config'
+import { Config, ConfigSaveFingerprint } from '../interface/Config'
 
+let configCache: Config
 
 export function loadAccounts(): Account[] {
     try {
@@ -28,16 +29,23 @@ export function loadAccounts(): Account[] {
 
 export function loadConfig(): Config {
     try {
+        if (configCache) {
+            return configCache
+        }
+
         const configDir = path.join(__dirname, '../', 'config.json')
         const config = fs.readFileSync(configDir, 'utf-8')
 
-        return JSON.parse(config)
+        const configData = JSON.parse(config)
+        configCache = configData // Set as cache
+
+        return configData
     } catch (error) {
         throw new Error(error as string)
     }
 }
 
-export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, getFingerprint: boolean) {
+export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, saveFingerprint: ConfigSaveFingerprint) {
     try {
         // Fetch cookie file
         const cookieFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`)
@@ -52,7 +60,7 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
         const fingerprintFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
 
         let fingerprint!: BrowserFingerprintWithHeaders
-        if (getFingerprint && fs.existsSync(fingerprintFile)) {
+        if (((saveFingerprint.desktop && !isMobile) || (saveFingerprint.mobile && isMobile)) && fs.existsSync(fingerprintFile)) {
             const fingerprintData = await fs.promises.readFile(fingerprintFile, 'utf-8')
             fingerprint = JSON.parse(fingerprintData)
         }

@@ -1,10 +1,14 @@
 {
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
-    "headless": false,
+    "headless": true,
+    "parallel": true,
     "runOnZeroPoints": false,
     "clusters": 1,
-    "saveFingerprint": false,
+    "saveFingerprint": {
+        "mobile": false,
+        "desktop": false
+    },
     "workers": {
         "doDailySet": true,
         "doMorePromotions": true,
@@ -14,20 +18,23 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true
     },
-    "globalTimeout": 30000,
+    "searchOnBingLocalQueries": false,
+    "globalTimeout": "30s",
     "searchSettings": {
-        "useGeoLocaleQueries": true,
+        "useGeoLocaleQueries": false,
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {
-            "min": 10000,
-            "max": 20000
+            "min": "3min",
+            "max": "5min"
         },
-        "retryMobileSearch": true
+        "retryMobileSearchAmount": 2
     },
+    "logExcludeFunc": [
+        "SEARCH-CLOSE-TABS"
+    ],
     "webhook": {
         "enabled": false,
         "url": ""
-    },
-    "cronStartTime": "0 5,11 * * *"
+    }
 }
