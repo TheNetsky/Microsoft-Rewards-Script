@@ -88,10 +88,13 @@ Push notifications can be optionally enabled using [NTFY](https://ntfy.sh/).
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` |
 |  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `3` |
+|  logExcludeFunc | Functions to exclude out of the logs and webhooks | `SEARCH-CLOSE-TABS` |
 |  webhook.enabled     | Enable or disable your set webhook | `false` |
 |  webhook.url     | Your Discord webhook URL | `null` |
-| cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) |
-|  | Run the script immediately when the Docker container starts | `true` |
+|  ntfy.enabled   | Enable or disable NTFY notification | `false` |
+|  ntfy.url     | Your NTFY URL | `null` |
+|  ntfy.topic    | Your NTFY topic | `null` |
+|  ntfy.authToken   | Your NTFY authentication token, if applicable | `null` |
 
 ## Features ##
 - [x] Multi-Account Support
