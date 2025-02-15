@@ -10,6 +10,7 @@ export interface Config {
     globalTimeout: number | string;
     searchSettings: SearchSettings;
     webhook: Webhook;
+    ntfy: Ntfy;
     logExcludeFunc: string[];
     saveFingerprint: ConfigSaveFingerprint;
 }
@@ -35,6 +36,13 @@ export interface SearchDelay {
 export interface Webhook {
     enabled: boolean;
     url: string;
+}
+
+export interface Ntfy {
+    enabled: boolean;
+    url: string;
+    topic: string;
+    authToken?: string; // Optional authentication token
 }
 
 export interface Workers {

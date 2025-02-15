@@ -1,6 +1,6 @@
 import chalk from 'chalk'
-
 import { Webhook } from './Webhook'
+import { Ntfy } from './Ntfy';
 import { loadConfig } from './Load'
 
 
@@ -20,6 +20,26 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     // Send the clean string to the Webhook
     Webhook(configData, cleanStr)
+
+    // Define conditions for sending to NTFY (customize keywords below)
+    const ntfyConditions = {
+        log: [
+            message.toLowerCase().includes('started tasks for account'),
+            message.toLowerCase().includes('press the number'),
+            message.toLowerCase().includes('completed tasks for account'),
+            message.toLowerCase().includes('the script collected'),
+            message.toLowerCase().includes('no points to earn')
+        ],
+        error: [],
+        warn: [
+            message.toLowerCase().includes('aborting'),
+            message.toLowerCase().includes('didn\'t gain')
+        ]
+    }
+
+    // Check if the current log type and message meet the NTFY conditions
+    if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition))
+        await Ntfy(cleanStr, type)
 
     // Formatted string with chalk for terminal logging
     const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`
