@@ -4,7 +4,7 @@ import { Ntfy } from './Ntfy';
 import { loadConfig } from './Load'
 
 
-export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): void {
+export async function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk) {
     const configData = loadConfig()
 
     if (configData.logExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
