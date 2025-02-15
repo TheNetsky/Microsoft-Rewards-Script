@@ -2,9 +2,9 @@ import { loadConfig } from './Load'
 import axios from 'axios'
 
 const NOTIFICATION_TYPES = {
-    error: { priority: 'max', tags: 'rotating_light' },
-    warn: { priority: 'high', tags: 'warning' },
-    log: { priority: 'default', tags: 'medal_sports' }
+    error: { priority: 'max', tags: 'rotating_light' }, // Customize the ERROR icon here, see: https://docs.ntfy.sh/emojis/
+    warn: { priority: 'high', tags: 'warning' }, // Customize the WARN icon here, see: https://docs.ntfy.sh/emojis/
+    log: { priority: 'default', tags: 'medal_sports' } // Customize the LOG icon here, see: https://docs.ntfy.sh/emojis/
 }
 
 export async function Ntfy(message: string, type: keyof typeof NOTIFICATION_TYPES = 'log'): Promise<void> {
