@@ -21,7 +21,7 @@
     "searchOnBingLocalQueries": true,
     "globalTimeout": "600s",
     "searchSettings": {
-        "useGeoLocaleQueries": true,
+        "useGeoLocaleQueries": false,
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {
