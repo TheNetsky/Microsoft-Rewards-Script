@@ -1,13 +1,13 @@
 {
-    "baseURL": "https://rewards.bing.com",
+    "baseURL": "http://rewards.bing.com",
     "sessionPath": "sessions",
     "headless": true,
-    "parallel": true,
+    "parallel": false,
     "runOnZeroPoints": false,
     "clusters": 1,
     "saveFingerprint": {
-        "mobile": false,
-        "desktop": false
+        "mobile": true,
+        "desktop": true
     },
     "workers": {
         "doDailySet": true,
@@ -18,10 +18,10 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true
     },
-    "searchOnBingLocalQueries": false,
-    "globalTimeout": "30s",
+    "searchOnBingLocalQueries": true,
+    "globalTimeout": "600s",
     "searchSettings": {
-        "useGeoLocaleQueries": false,
+        "useGeoLocaleQueries": true,
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {
