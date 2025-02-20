@@ -19,7 +19,9 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
 
     // Send the clean string to the Webhook
-    Webhook(configData, cleanStr)
+    if (!configData.webhooklogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
+        Webhook(configData, cleanStr)
+    }
 
     // Formatted string with chalk for terminal logging
     const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`
