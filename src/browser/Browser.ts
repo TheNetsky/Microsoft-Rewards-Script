@@ -30,6 +30,13 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--disable-logging',
+                '--disable-notifications',
+                '--disable-infobars',
+                '--disable-background-timer-throttling',
+                '--disable-sync',
+                '--disable-dev-shm-usage',
+                '--no-first-run',
                 '--disable-renderer-backgrounding',
                 '--disable-gpu',
                 '--disable-background-networking',
