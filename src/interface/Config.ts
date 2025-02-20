@@ -11,6 +11,7 @@ export interface Config {
     searchSettings: SearchSettings;
     webhook: Webhook;
     logExcludeFunc: string[];
+    webhooklogExcludeFunc: string[];
     saveFingerprint: ConfigSaveFingerprint;
 }
 
