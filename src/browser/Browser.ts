@@ -30,6 +30,16 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--disable-extensions',           // 禁用所有扩展
+                '--disable-plugins',              // 禁用插件（如 Flash）
+                '--disable-software-rasterizer',  // 禁用软件光栅化
+                '--disable-component-update',     // 禁止组件自动更新
+                '--disable-domain-reliability',   // 禁用域名可靠性监控
+                '--disable-client-side-phishing-detection',  // 禁用反钓鱼检测
+                '--disable-crash-reporter',       // 禁用崩溃报告
+                '--disable-translate',            // 禁用翻译功能
+                '--disable-background-downloads', // 禁止后台下载
+                '--disable-breakpad',             // 禁用崩溃日志上传
                 '--disable-logging',
                 '--disable-notifications',
                 '--disable-infobars',
