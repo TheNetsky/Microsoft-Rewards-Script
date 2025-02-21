@@ -33,6 +33,9 @@
     "logExcludeFunc": [
         "SEARCH-CLOSE-TABS"
     ],
+    "webhooklogExcludeFunc": [
+        "SEARCH-CLOSE-TABS"
+    ],
     "webhook": {
         "enabled": false,
         "url": ""

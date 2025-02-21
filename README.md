@@ -74,6 +74,7 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` |
 |  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `3` |
 |  logExcludeFunc | Functions to exclude out of the logs and webhooks | `SEARCH-CLOSE-TABS` |
+|  webhooklogExcludeFunc | Functions to exclude out of the webhooks log | `SEARCH-CLOSE-TABS` |
 |  webhook.enabled     | Enable or disable your set webhook | `false` |
 |  webhook.url     | Your Discord webhook URL | `null` |
 | cronStartTime | Scheduled script run-time, *only available for docker implementation* | `0 5,11 * * *` (5:00 am, 11:00 am daily) |
