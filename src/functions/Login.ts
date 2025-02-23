@@ -210,14 +210,14 @@ export class Login {
     private async checkBingLogin(page: Page): Promise<void> {
         try {
             this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing login')
-            await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
+            await page.goto('https://cn.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
 
             const maxIterations = 5
 
             for (let iteration = 1; iteration <= maxIterations; iteration++) {
                 const currentUrl = new URL(page.url())
 
-                if (currentUrl.hostname === 'www.bing.com' && currentUrl.pathname === '/') {
+                if (currentUrl.hostname === 'cn.bing.com' && currentUrl.pathname === '/') {
                     await this.bot.browser.utils.tryDismissAllMessages(page)
 
                     const loggedIn = await this.checkBingLoginStatus(page)
