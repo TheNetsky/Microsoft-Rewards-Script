@@ -9,7 +9,7 @@ import { GoogleSearch } from '../../interface/Search'
 
 
 export class Search extends Workers {
-    private bingHome = 'https://bing.com'
+    private bingHome = 'https://cn.bing.com'
     private searchPageURL = ''
 
     public async doSearch(page: Page, data: DashboardData) {
