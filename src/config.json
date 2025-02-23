@@ -1,5 +1,5 @@
 {
-    "baseURL": "http://rewards.bing.com",
+    "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
     "headless": true,
     "parallel": false,
