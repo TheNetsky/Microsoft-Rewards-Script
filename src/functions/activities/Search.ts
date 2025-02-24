@@ -9,11 +9,11 @@ import { AxiosRequestConfig } from 'axios'
 
 type GoogleTrendsResponse = [
     string,
-    Array<[
+    [
         string,
-        ...Array<null>,
+        ...null[],
         [string, ...string[]]
-    ]>
+    ][]
 ];
 
 export class Search extends Workers {
@@ -225,7 +225,7 @@ export class Search extends Workers {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                 },
-                data: `f.req=[[["i0OFE","[null,null,\\"${geoLocale}\\",0,null,48,1]"]]]`
+                data: `f.req=[[[i0OFE,"[null, null,\\"${geoLocale}\\", 0, null, 48]"]]]`
             }
 
             const response = await this.bot.axios.request(request)
