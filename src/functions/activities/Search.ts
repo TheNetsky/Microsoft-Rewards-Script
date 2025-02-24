@@ -4,9 +4,17 @@ import { platform } from 'os'
 import { Workers } from '../Workers'
 
 import { Counters, DashboardData } from '../../interface/DashboardData'
-import { GoogleTrends } from '../../interface/GoogleDailyTrends'
 import { GoogleSearch } from '../../interface/Search'
+import { AxiosRequestConfig } from 'axios'
 
+type GoogleTrendsResponse = [
+    string,
+    Array<[
+        string,
+        ...Array<null>,
+        [string, ...string[]]
+    ]>
+];
 
 export class Search extends Workers {
     private bingHome = 'https://bing.com'
@@ -26,7 +34,7 @@ export class Search extends Workers {
         }
 
         // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(data.userProfile.attributes.country, missingPoints)
+        let googleSearchQueries = await this.getGoogleTrends(data.userProfile.attributes.country)
         googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
 
         // Deduplicate the search terms
@@ -203,47 +211,65 @@ export class Search extends Workers {
         return await this.bot.browser.func.getSearchPoints()
     }
 
-    private async getGoogleTrends(geoLocale: string, queryCount: number): Promise<GoogleSearch[]> {
+    private async getGoogleTrends(geoLocale: string): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
-        let i = 0
 
         geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'US'
 
         this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
-        while (queryCount > queryTerms.length) {
-            i += 1
-            const date = new Date()
-            date.setDate(date.getDate() - i)
-            const formattedDate = this.formatDate(date)
-
-            try {
-                const request = {
-                    url: `https://trends.google.com/trends/api/dailytrends?geo=${geoLocale}&hl=en&ed=${formattedDate}&ns=15`,
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-
-                const response = await this.bot.axios.request(request)
-
-                const data: GoogleTrends = JSON.parse((await response.data).slice(5))
-
-                for (const topic of data.default.trendingSearchesDays[0]?.trendingSearches ?? []) {
-                    queryTerms.push({
-                        topic: topic.title.query.toLowerCase(),
-                        related: topic.relatedQueries.map(x => x.query.toLowerCase())
-                    })
-                }
-
-            } catch (error) {
-                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
-                break
+        try {
+            const request: AxiosRequestConfig = {
+                url: 'https://trends.google.com/_/TrendsUi/data/batchexecute',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                data: `f.req=[[["i0OFE","[null,null,\\"${geoLocale}\\",0,null,48,1]"]]]`
             }
+
+            const response = await this.bot.axios.request(request)
+            const rawText = response.data
+
+            const trendsData = this.extractJsonFromResponse(rawText)
+            if (!trendsData) {
+                throw new Error('Failed to parse Google Trends response')
+            }
+
+            const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
+            if (mappedTrendsData.length < 90) {
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Failed to get enough data, falling back to US trends', 'warn')
+                return this.getGoogleTrends('US')
+            }
+
+            for (const [topic, relatedQueries] of mappedTrendsData) {
+                queryTerms.push({
+                    topic: topic as string,
+                    related: relatedQueries as string[]
+                })
+            }
+
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
         }
 
         return queryTerms
+    }
+
+    private extractJsonFromResponse(text: string): GoogleTrendsResponse[1] | null {
+        const lines = text.split('\n')
+        for (const line of lines) {
+            const trimmed = line.trim()
+            if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                try {
+                    return JSON.parse(JSON.parse(trimmed)[0][2])[1]
+                } catch {
+                    continue
+                }
+            }
+        }
+
+        return null
     }
 
     private async getRelatedTerms(term: string): Promise<string[]> {
@@ -264,14 +290,6 @@ export class Search extends Workers {
         }
 
         return []
-    }
-
-    private formatDate(date: Date): string {
-        const year = date.getFullYear()
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const day = String(date.getDate()).padStart(2, '0')
-
-        return `${year}${month}${day}`
     }
 
     private async randomScroll(page: Page) {
