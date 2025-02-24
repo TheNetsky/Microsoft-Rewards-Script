@@ -36,7 +36,12 @@ class AxiosClient {
     }
 
     // Generic method to make any Axios request
-    public async request(config: AxiosRequestConfig): Promise<AxiosResponse> {
+    public async request(config: AxiosRequestConfig, bypassProxy = false): Promise<AxiosResponse> {
+        if (bypassProxy) {
+            const bypassInstance = axios.create()
+            return bypassInstance.request(config)
+        }
+
         return this.instance.request(config)
     }
 }

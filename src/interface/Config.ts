@@ -5,14 +5,15 @@ export interface Config {
     parallel: boolean;
     runOnZeroPoints: boolean;
     clusters: number;
-    workers: Workers;
+    saveFingerprint: ConfigSaveFingerprint;
+    workers: ConfigWorkers;
     searchOnBingLocalQueries: boolean;
     globalTimeout: number | string;
-    searchSettings: SearchSettings;
-    webhook: Webhook;
+    searchSettings: ConfigSearchSettings;
     logExcludeFunc: string[];
-    webhooklogExcludeFunc: string[];
-    saveFingerprint: ConfigSaveFingerprint;
+    webhookLogExcludeFunc: string[];
+    proxy: ConfigProxy;
+    webhook: ConfigWebhook;
 }
 
 export interface ConfigSaveFingerprint {
@@ -20,25 +21,30 @@ export interface ConfigSaveFingerprint {
     desktop: boolean;
 }
 
-export interface SearchSettings {
+export interface ConfigSearchSettings {
     useGeoLocaleQueries: boolean;
     scrollRandomResults: boolean;
     clickRandomResults: boolean;
-    searchDelay: SearchDelay;
+    searchDelay: ConfigSearchDelay;
     retryMobileSearchAmount: number;
 }
 
-export interface SearchDelay {
+export interface ConfigSearchDelay {
     min: number | string;
     max: number | string;
 }
 
-export interface Webhook {
+export interface ConfigWebhook {
     enabled: boolean;
     url: string;
 }
 
-export interface Workers {
+export interface ConfigProxy {
+    proxyGoogleTrends: boolean;
+    proxyBingTerms: boolean;
+}
+
+export interface ConfigWorkers {
     doDailySet: boolean;
     doMorePromotions: boolean;
     doPunchCards: boolean;

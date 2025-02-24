@@ -1,7 +1,7 @@
 {
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
-    "headless": true,
+    "headless": false,
     "parallel": true,
     "runOnZeroPoints": false,
     "clusters": 1,
@@ -33,9 +33,13 @@
     "logExcludeFunc": [
         "SEARCH-CLOSE-TABS"
     ],
-    "webhooklogExcludeFunc": [
+    "webhookLogExcludeFunc": [
         "SEARCH-CLOSE-TABS"
     ],
+    "proxy": {
+        "proxyGoogleTrends": true,
+        "proxyBingTerms": true
+    },
     "webhook": {
         "enabled": false,
         "url": ""

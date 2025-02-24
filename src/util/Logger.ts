@@ -19,7 +19,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
 
     // Send the clean string to the Webhook
-    if (!configData.webhooklogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
+    if (!configData.webhookLogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
         Webhook(configData, cleanStr)
     }
 
