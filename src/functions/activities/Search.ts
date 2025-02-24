@@ -34,7 +34,7 @@ export class Search extends Workers {
         }
 
         // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(data.userProfile.attributes.country)
+        let googleSearchQueries = await this.getGoogleTrends(this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : "US")
         googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
 
         // Deduplicate the search terms
@@ -211,11 +211,8 @@ export class Search extends Workers {
         return await this.bot.browser.func.getSearchPoints()
     }
 
-    private async getGoogleTrends(geoLocale: string): Promise<GoogleSearch[]> {
+    public async getGoogleTrends(geoLocale: string = "US"): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
-
-        geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toUpperCase() : 'US'
-
         this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
         try {
@@ -225,7 +222,7 @@ export class Search extends Workers {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                 },
-                data: `f.req=[[[i0OFE,"[null, null,\\"${geoLocale}\\", 0, null, 48]"]]]`
+                data: `f.req=[[[i0OFE,"[null, null, \\"${geoLocale}\\", 0, null, 48]"]]]`
             }
 
             const response = await this.bot.axios.request(request)
@@ -238,8 +235,8 @@ export class Search extends Workers {
 
             const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
             if (mappedTrendsData.length < 90) {
-                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Failed to get enough data, falling back to US trends', 'warn')
-                return this.getGoogleTrends('US')
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Insufficient search queries, falling back to US', 'warn')
+                return this.getGoogleTrends()
             }
 
             for (const [topic, relatedQueries] of mappedTrendsData) {
