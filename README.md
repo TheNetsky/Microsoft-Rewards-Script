@@ -71,7 +71,7 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 |  workers.doReadToEarn    | Complete read to earn activity | `true`  |
 |  searchOnBingLocalQueries    | Complete the activity "search on Bing" using the `queries.json` or fetched from this repo | `false` (Will fetch from this repo)   |
 |  globalTimeout    | The length before the action gets timeout | `30s`   |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `true` (Uses EN-US generated queries)  |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |
 |  searchSettings.scrollRandomResults    | Scroll randomly in search results | `true`   |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
 |  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` |
