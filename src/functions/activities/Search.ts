@@ -34,7 +34,7 @@ export class Search extends Workers {
         }
 
         // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : "US")
+        let googleSearchQueries = await this.getGoogleTrends(this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US')
         googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
 
         // Deduplicate the search terms
@@ -211,7 +211,7 @@ export class Search extends Workers {
         return await this.bot.browser.func.getSearchPoints()
     }
 
-    public async getGoogleTrends(geoLocale: string = "US"): Promise<GoogleSearch[]> {
+    private async getGoogleTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
         this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
 
