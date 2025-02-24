@@ -222,7 +222,7 @@ export class Search extends Workers {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                 },
-                data: `f.req=[[[i0OFE,"[null, null, \\"${geoLocale}\\", 0, null, 48]"]]]`
+                data: `f.req=[[[i0OFE,"[null, null, \\"${geoLocale.toUpperCase()}\\", 0, null, 48]"]]]`
             }
 
             const response = await this.bot.axios.request(request, this.bot.config.proxy.proxyGoogleTrends)
