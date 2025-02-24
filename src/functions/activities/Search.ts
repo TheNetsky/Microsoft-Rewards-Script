@@ -225,12 +225,12 @@ export class Search extends Workers {
                 data: `f.req=[[[i0OFE,"[null, null, \\"${geoLocale}\\", 0, null, 48]"]]]`
             }
 
-            const response = await this.bot.axios.request(request)
+            const response = await this.bot.axios.request(request, this.bot.config.proxy.proxyGoogleTrends)
             const rawText = response.data
 
             const trendsData = this.extractJsonFromResponse(rawText)
             if (!trendsData) {
-                throw new Error('Failed to parse Google Trends response')
+               throw  this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Failed to parse Google Trends response', 'error')
             }
 
             const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
@@ -279,7 +279,7 @@ export class Search extends Workers {
                 }
             }
 
-            const response = await this.bot.axios.request(request)
+            const response = await this.bot.axios.request(request, this.bot.config.proxy.proxyBingTerms)
 
             return response.data[1] as string[]
         } catch (error) {
