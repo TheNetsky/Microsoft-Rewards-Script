@@ -82,7 +82,6 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 |  proxy.proxyBingTerms     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
 |  webhook.enabled     | Enable or disable your set webhook | `false` |
 |  webhook.url     | Your Discord webhook URL | `null` |
-|  | Run the script immediately when the Docker container starts | `true` |
 
 ## Features ##
 - [x] Multi-Account Support
