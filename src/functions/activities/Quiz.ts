@@ -30,7 +30,7 @@ export class Quiz extends Workers {
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
                         const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10_000 })
-                        const answerAttribute = await answerSelector?.evaluate(el => el.getAttribute('iscorrectoption'))
+                        const answerAttribute = await answerSelector?.evaluate((el: { getAttribute: (arg0: string) => any }) => el.getAttribute('iscorrectoption'))
 
                         if (answerAttribute && answerAttribute.toLowerCase() === 'true') {
                             answers.push(`#rqAnswerOption${i}`)
