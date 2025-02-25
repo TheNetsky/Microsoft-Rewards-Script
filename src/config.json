@@ -33,9 +33,13 @@
     "logExcludeFunc": [
         "SEARCH-CLOSE-TABS"
     ],
-    "webhooklogExcludeFunc": [
+    "webhookLogExcludeFunc": [
         "SEARCH-CLOSE-TABS"
     ],
+    "proxy": {
+        "proxyGoogleTrends": true,
+        "proxyBingTerms": true
+    },
     "webhook": {
         "enabled": false,
         "url": ""
