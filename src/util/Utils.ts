@@ -18,11 +18,9 @@ export default class Util {
     }
 
     shuffleArray<T>(array: T[]): T[] {
-        const shuffledArray = array.slice()
-
-        shuffledArray.sort(() => Math.random() - 0.5)
-
-        return shuffledArray
+        return array.map(value => ({ value, sort: Math.random() }))
+            .sort((a, b) => a.sort - b.sort)
+            .map(({ value }) => value)
     }
 
     randomNumber(min: number, max: number): number {
