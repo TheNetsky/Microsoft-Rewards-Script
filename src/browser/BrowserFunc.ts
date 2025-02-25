@@ -332,7 +332,7 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const element = $('.offer-cta').toArray().find((x: { attribs: { href: string | string[] } }) => x.attribs.href?.includes(activity.offerId))
+            const element = $('.offer-cta').toArray().find(x => x.attribs.href?.includes(activity.offerId))
             if (element) {
                 selector = `a[href*="${element.attribs.href}"]`
             }

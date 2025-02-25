@@ -90,7 +90,7 @@ export class MicrosoftRewardsBot {
             worker.send({ chunk })
         }
 
-        cluster.on('exit', (worker, code) => {
+        cluster.on('exit', (worker: { process: { pid: any } }, code: any) => {
             this.activeWorkers -= 1
 
             log('main', 'MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
