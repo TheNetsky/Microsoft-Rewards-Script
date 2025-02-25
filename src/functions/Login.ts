@@ -210,7 +210,7 @@ export class Login {
     private async checkBingLogin(page: Page): Promise<void> {
         try {
             this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing login')
-            await page.goto('https://cn.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
+            await page.goto('https://cn.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fcn.bing.com%2F')
 
             const maxIterations = 5
 
