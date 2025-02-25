@@ -108,7 +108,7 @@ export default class BrowserFunc {
             }
 
             // Extract the dashboard object from the script content
-            const dashboardData = await this.bot.homePage.evaluate(scriptContent => {
+            const dashboardData = await this.bot.homePage.evaluate((scriptContent: string) => {
                 // Extract the dashboard object using regex
                 const regex = /var dashboard = (\{.*?\});/s
                 const match = regex.exec(scriptContent)
@@ -272,7 +272,7 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const scriptContent = $('script').filter((index, element) => {
+            const scriptContent = $('script').filter((index: any, element: any) => {
                 return $(element).text().includes('_w.rewardsQuizRenderInfo')
             }).text()
 
@@ -332,7 +332,7 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const element = $('.offer-cta').toArray().find(x => x.attribs.href?.includes(activity.offerId))
+            const element = $('.offer-cta').toArray().find((x: { attribs: { href: string | string[] } }) => x.attribs.href?.includes(activity.offerId))
             if (element) {
                 selector = `a[href*="${element.attribs.href}"]`
             }

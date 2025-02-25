@@ -60,7 +60,7 @@ export class Quiz extends Workers {
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
 
                         const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10_000 })
-                        const dataOption = await answerSelector?.evaluate(el => el.getAttribute('data-option'))
+                        const dataOption = await answerSelector?.evaluate((el: { getAttribute: (arg0: string) => any }) => el.getAttribute('data-option'))
 
                         if (dataOption === correctOption) {
                             // Click the answer on page
