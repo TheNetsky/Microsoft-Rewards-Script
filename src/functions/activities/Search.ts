@@ -295,7 +295,7 @@ export class Search extends Workers {
             const totalHeight = await page.evaluate(() => document.body.scrollHeight)
             const randomScrollPosition = Math.floor(Math.random() * (totalHeight - viewportHeight))
 
-            await page.evaluate((scrollPos) => {
+            await page.evaluate((scrollPos: number) => {
                 window.scrollTo(0, scrollPos)
             }, randomScrollPosition)
 

@@ -178,7 +178,7 @@ export class Login {
         this.bot.log(this.bot.isMobile, 'LOGIN', 'SMS 2FA code required. Waiting for user input...')
 
         const code = await new Promise<string>((resolve) => {
-            rl.question('Enter 2FA code:\n', (input) => {
+            rl.question('Enter 2FA code:\n', (input: string | PromiseLike<string>) => {
                 rl.close()
                 resolve(input)
             })
