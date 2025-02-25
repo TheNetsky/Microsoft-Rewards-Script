@@ -30,6 +30,9 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--disable-accelerated-video-decode',
+                '--disable-gpu-media-service',
+                '--disable-image-animation',
                 '--autoplay-policy=no-user-gesture-required',
                 '--force-fieldtrials=SiteIsolationExtensions/Control',
                 '--enable-low-end-device-mode',
