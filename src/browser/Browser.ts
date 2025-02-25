@@ -30,6 +30,10 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--force-fieldtrials=SiteIsolationExtensions/Control',
+                '--enable-low-end-device-mode',
+                '--process-per-site',
+                '--mute-audio',                    // 禁用音频
                 '--disable-extensions',           // 禁用所有扩展
                 '--disable-plugins',              // 禁用插件（如 Flash）
                 '--disable-software-rasterizer',  // 禁用软件光栅化
