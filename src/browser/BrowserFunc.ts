@@ -83,8 +83,8 @@ export default class BrowserFunc {
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
     async getDashboardData(): Promise<DashboardData> {
-        const maxRetries = 3;  // 最大重试次数
-        const retryDelay = 5000;  // 重试间隔(ms)
+        const maxRetries = 5;  // 最大重试次数
+        const retryDelay = 30000;  // 重试间隔(ms)
         let lastError: any;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
