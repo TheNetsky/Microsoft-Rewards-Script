@@ -104,7 +104,7 @@ export default class BrowserFunc {
                 }
 
                 // Reload the page to get new data
-                await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
+                await this.bot.homePage.reload({ waitUntil: 'networkidle' })
 
                 const scriptContent = await this.bot.homePage.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
