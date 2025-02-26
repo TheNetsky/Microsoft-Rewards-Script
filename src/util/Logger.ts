@@ -3,6 +3,11 @@ import chalk from 'chalk'
 import { Webhook } from './Webhook'
 import { loadConfig } from './Load'
 
+let monitor: any = null;
+
+export function setLogMonitor(logMonitor: any) {
+    monitor = logMonitor;
+}
 
 export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): void {
     const configData = loadConfig()
@@ -27,6 +32,11 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`
 
     const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null
+
+    // Update activity monitor
+    if (monitor) {
+        monitor.updateActivity();
+    }
 
     // Log based on the type
     switch (type) {

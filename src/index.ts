@@ -15,7 +15,8 @@ import Activities from './functions/Activities'
 
 import { Account } from './interface/Account'
 import Axios from './util/Axios'
-
+import { LogTimeoutMonitor } from './util/LogTimeoutMonitor';
+import { setLogMonitor } from './util/Logger';
 
 // Main bot class
 export class MicrosoftRewardsBot {
@@ -302,15 +303,33 @@ export class MicrosoftRewardsBot {
 }
 
 async function main() {
-    const rewardsBot = new MicrosoftRewardsBot(false)
+    const rewardsBot = new MicrosoftRewardsBot(false);
+    
+    // 创建并启动超时监控
+    const monitor = new LogTimeoutMonitor(30);
+    setLogMonitor(monitor);
+    monitor.start();
 
     try {
-        await rewardsBot.initialize()
-        await rewardsBot.run()
+        await rewardsBot.initialize();
+        await rewardsBot.run();
     } catch (error) {
-        log(false, 'MAIN-ERROR', `Error running desktop bot: ${error}`, 'error')
+        log(false, 'MAIN-ERROR', `Error running desktop bot: ${error}`, 'error');
+    } finally {
+        // 清理监控器
+        monitor.cleanup();
     }
 }
+
+// 确保在进程退出时清理
+process.on('SIGINT', () => {
+    log('main', 'SHUTDOWN', 'Process interrupted. Cleaning up...', 'warn');
+    process.exit(1);
+});
+
+process.on('exit', () => {
+    log('main', 'SHUTDOWN', 'Process exiting. Cleanup complete.', 'warn');
+});
 
 // Start the bots
 main().catch(error => {
