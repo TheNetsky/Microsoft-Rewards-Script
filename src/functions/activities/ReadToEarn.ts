@@ -12,7 +12,7 @@ export class ReadToEarn extends Workers {
 
         try {
             let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
+            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'cn'
 
             const userDataRequest: AxiosRequestConfig = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me',
@@ -20,7 +20,7 @@ export class ReadToEarn extends Workers {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'X-Rewards-Country': geoLocale,
-                    'X-Rewards-Language': 'en'
+                    'X-Rewards-Language': 'zh'
                 }
             }
             const userDataResponse = await this.bot.axios.request(userDataRequest)
@@ -47,7 +47,7 @@ export class ReadToEarn extends Workers {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
                         'X-Rewards-Country': geoLocale,
-                        'X-Rewards-Language': 'en'
+                        'X-Rewards-Language': 'zh'
                     },
                     data: JSON.stringify(jsonData)
                 }
