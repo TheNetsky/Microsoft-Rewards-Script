@@ -90,16 +90,38 @@ export class Workers {
         const morePromotions = data.morePromotions
 
         // Check if there is a promotional item
-        if (data.promotionalItem) { // Convert and add the promotional item to the array
+        if (data.promotionalItem) {
             morePromotions.push(data.promotionalItem as unknown as MorePromotion)
         }
 
-        const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && x.exclusiveLockedFeatureStatus !== 'locked') ?? []
+        // 更严格的筛选条件：
+        // 1. !x.complete - 任务未完成
+        // 2. x.pointProgressMax > 0 - 有积分可赚取
+        // 3. x.exclusiveLockedFeatureStatus !== 'locked' - 任务未锁定
+        // 4. x.promotionType in ['quiz', 'urlreward'] - 支持的任务类型
+        // 5. x.pointProgress < x.pointProgressMax - 确保积分未达到上限
+        const activitiesUncompleted = morePromotions?.filter(x => 
+            !x.complete && 
+            x.pointProgressMax > 0 && 
+            x.exclusiveLockedFeatureStatus !== 'locked' &&
+            ['quiz', 'urlreward'].includes(x.promotionType) &&
+            x.pointProgress < x.pointProgressMax
+        ) ?? []
 
         if (!activitiesUncompleted.length) {
             this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'All "More Promotion" items have already been completed')
             return
         }
+
+        // 添加详细日志
+        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', `Found ${activitiesUncompleted.length} incomplete promotions:`)
+        activitiesUncompleted.forEach(x => {
+            this.bot.log(
+                this.bot.isMobile, 
+                'MORE-PROMOTIONS', 
+                `- ${x.title} (${x.promotionType}): ${x.pointProgress}/${x.pointProgressMax} points`
+            )
+        })
 
         // Solve Activities
         this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'Started solving "More Promotions" items')
