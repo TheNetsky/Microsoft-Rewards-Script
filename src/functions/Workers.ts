@@ -170,6 +170,22 @@ export class Workers {
                     selector = `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
                 }
 
+                // 等待页面加载完成
+                await activityPage.waitForLoadState('domcontentloaded')
+                await this.bot.utils.wait(2000)
+
+                // 检查按钮是否存在
+                const buttonExists = await activityPage.$(selector).then(Boolean)
+                if (!buttonExists) {
+                    this.bot.log(
+                        this.bot.isMobile, 
+                        'ACTIVITY', 
+                        `Activity "${activity.title}" appears to be already completed (button not found)`
+                    )
+                    // 标记任务完成，继续下一个
+                    continue
+                }
+
                 // Wait for the new tab to fully load, ignore error.
                 /*
                 Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster,
@@ -221,13 +237,20 @@ export class Workers {
                         // Search on Bing are subtypes of "urlreward"
                         if (activity.name.toLowerCase().includes('exploreonbing')) {
                             this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "SearchOnBing" title: "${activity.title}"`)
-                            await activityPage.click(selector)
+                            await activityPage.click(selector, { timeout: 5000 }).catch(async (error) => {
+                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Failed to click SearchOnBing button for "${activity.title}": ${error}`, 'warn')
+                                return
+                            })
                             activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                             await this.bot.activities.doSearchOnBing(activityPage, activity)
 
                         } else {
                             this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "UrlReward" title: "${activity.title}"`)
-                            await activityPage.click(selector)
+                            // 尝试点击按钮，如果失败则认为任务已完成
+                            await activityPage.click(selector, { timeout: 5000 }).catch(async (error) => {
+                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Failed to click UrlReward button for "${activity.title}": ${error}`, 'warn')
+                                return
+                            })
                             activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                             await this.bot.activities.doUrlReward(activityPage)
                         }
