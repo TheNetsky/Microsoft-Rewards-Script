@@ -83,52 +83,67 @@ export default class BrowserFunc {
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
     async getDashboardData(): Promise<DashboardData> {
-        const dashboardURL = new URL(this.bot.config.baseURL)
-        const currentURL = new URL(this.bot.homePage.url())
+        const maxRetries = 3;  // 最大重试次数
+        const retryDelay = 5000;  // 重试间隔(ms)
+        let lastError: any;
 
-        try {
-            // Should never happen since tasks are opened in a new tab!
-            if (currentURL.hostname !== dashboardURL.hostname) {
-                this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
-                await this.goHome(this.bot.homePage)
-            }
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const dashboardURL = new URL(this.bot.config.baseURL)
+                const currentURL = new URL(this.bot.homePage.url())
 
-            // Reload the page to get new data
-            await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
-
-            const scriptContent = await this.bot.homePage.evaluate(() => {
-                const scripts = Array.from(document.querySelectorAll('script'))
-                const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
-
-                return targetScript?.innerText ? targetScript.innerText : null
-            })
-
-            if (!scriptContent) {
-                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
-            }
-
-            // Extract the dashboard object from the script content
-            const dashboardData = await this.bot.homePage.evaluate((scriptContent: string) => {
-                // Extract the dashboard object using regex
-                const regex = /var dashboard = (\{.*?\});/s
-                const match = regex.exec(scriptContent)
-
-                if (match && match[1]) {
-                    return JSON.parse(match[1])
+                // Should never happen since tasks are opened in a new tab!
+                if (currentURL.hostname !== dashboardURL.hostname) {
+                    this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
+                    await this.goHome(this.bot.homePage)
                 }
 
-            }, scriptContent)
+                // 重载页面前等待一下
+                if (attempt > 1) {
+                    await this.bot.utils.wait(1000);
+                }
 
-            if (!dashboardData) {
-                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
+                // Reload the page to get new data
+                await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
+
+                const scriptContent = await this.bot.homePage.evaluate(() => {
+                    const scripts = Array.from(document.querySelectorAll('script'))
+                    const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
+                    return targetScript?.innerText ? targetScript.innerText : null
+                })
+
+                if (!scriptContent) {
+                    throw new Error('Dashboard data not found within script')
+                }
+
+                // Extract the dashboard object from the script content
+                const dashboardData = await this.bot.homePage.evaluate((scriptContent: string) => {
+                    // Extract the dashboard object using regex
+                    const regex = /var dashboard = (\{.*?\});/s
+                    const match = regex.exec(scriptContent)
+                    return match && match[1] ? JSON.parse(match[1]) : null
+                }, scriptContent)
+
+                if (!dashboardData) {
+                    throw new Error('Unable to parse dashboard script')
+                }
+
+                if (attempt > 1) {
+                    this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', `Successfully retrieved dashboard data on attempt ${attempt}`)
+                }
+
+                return dashboardData
+
+            } catch (error) {
+                lastError = error
+                if (attempt < maxRetries) {
+                    this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', `Attempt ${attempt}/${maxRetries} failed: ${error}. Retrying in ${retryDelay/1000}s...`, 'warn')
+                    await this.bot.utils.wait(retryDelay)
+                }
             }
-
-            return dashboardData
-
-        } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Error fetching dashboard data: ${error}`, 'error')
         }
 
+        throw this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', `Failed after ${maxRetries} attempts. Last error: ${lastError}`, 'error')
     }
 
     /**
