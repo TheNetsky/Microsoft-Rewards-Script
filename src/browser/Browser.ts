@@ -30,6 +30,7 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                  '--disable-blink-features=AutomationControlled',  // 移除 `navigator.webdriver` 特征
                   '--disable-accelerated-video-decode', // 禁用硬件加速的视频解码
                   '--disable-gpu-media-service', // 禁用 GPU 媒体服务
                   '--disable-image-animation', // 禁用图片动画效果
