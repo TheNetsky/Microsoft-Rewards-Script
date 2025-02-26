@@ -31,7 +31,6 @@ class Browser {
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
                   '--renderer-process-limit=1',  // 限制渲染进程数量
-                  '--process-per-site',  // 每个站点一个进程
                   '--disable-blink-features=AutomationControlled',  // 移除 `navigator.webdriver` 特征
                   '--disable-accelerated-video-decode', // 禁用硬件加速的视频解码
                   '--disable-gpu-media-service', // 禁用 GPU 媒体服务
