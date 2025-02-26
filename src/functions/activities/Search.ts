@@ -30,7 +30,7 @@ export class Search extends Workers {
 
         if (missingPoints === 0) {
             this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Bing searches have already been completed')
-            return
+            return true // 添加明确的返回值
         }
 
         // Generate search queries
@@ -91,7 +91,7 @@ export class Search extends Workers {
 
         // Only for mobile searches
         if (missingPoints > 0 && this.bot.isMobile) {
-            return
+            return false // 添加明确的失败返回值
         }
 
         // If we still got remaining search queries, generate extra ones
@@ -137,6 +137,7 @@ export class Search extends Workers {
         }
 
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Completed searches')
+        return true // 添加明确的成功返回值
     }
 
     private async bingSearch(searchPage: Page, query: string) {

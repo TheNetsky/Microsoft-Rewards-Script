@@ -263,21 +263,33 @@ export class MicrosoftRewardsBot {
                 // Go to homepage on worker page
                 await this.browser.func.goHome(workerPage)
 
-                await this.activities.doSearch(workerPage, data)
+                let searchSuccess = false;
+                try {
+                    await this.activities.doSearch(workerPage, data);
+                    searchSuccess = true;
+                } catch (error) {
+                    searchSuccess = false;
+                }
+                
+                if (!searchSuccess) {
+                    // 搜索未完成
+                    // Fetch current search points
+                    const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
 
-                // Fetch current search points
-                const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
-
-                if (mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0) {
-                    // Increment retry count
-                    this.mobileRetryAttempts++
+                    if (mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0) {
+                        // Increment retry count
+                        this.mobileRetryAttempts++
+                        this.log(this.isMobile, 'MAIN', `Mobile search incomplete - Points remaining: ${mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress}`, 'warn')
+                    }
+                } else {
+                    this.log(this.isMobile, 'MAIN', 'Mobile search completed successfully')
                 }
 
                 // Exit if retries are exhausted
                 if (this.mobileRetryAttempts > this.config.searchSettings.retryMobileSearchAmount) {
-                    log(this.isMobile, 'MAIN', `Max retry limit of ${this.config.searchSettings.retryMobileSearchAmount} reached. Exiting retry loop`, 'warn')
+                    this.log(this.isMobile, 'MAIN', `Max retry limit of ${this.config.searchSettings.retryMobileSearchAmount} reached. Exiting retry loop`, 'warn')
                 } else if (this.mobileRetryAttempts !== 0) {
-                    log(this.isMobile, 'MAIN', `Attempt ${this.mobileRetryAttempts}/${this.config.searchSettings.retryMobileSearchAmount}: Unable to complete mobile searches, bad User-Agent? Increase search delay? Retrying...`, 'log', 'yellow')
+                    this.log(this.isMobile, 'MAIN', `Attempt ${this.mobileRetryAttempts}/${this.config.searchSettings.retryMobileSearchAmount}: Unable to complete mobile searches, bad User-Agent? Increase search delay? Retrying...`, 'log', 'yellow')
 
                     // Close mobile browser
                     await this.browser.func.closeBrowser(browser, account.email)
