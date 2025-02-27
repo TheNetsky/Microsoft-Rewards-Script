@@ -33,7 +33,6 @@ class Browser {
                   '--disable-blink-features=AutomationControlled',  // 移除 `navigator.webdriver` 特征
                   '--disable-accelerated-video-decode', // 禁用硬件加速的视频解码
                   '--disable-gpu-media-service', // 禁用 GPU 媒体服务
-                  '--disable-image-animation', // 禁用图片动画效果
                   '--disable-extensions', // 禁用所有扩展
                   '--disable-plugins', // 禁用插件（例如 Flash）
                   '--disable-software-rasterizer', // 禁用软件光栅化
@@ -54,7 +53,6 @@ class Browser {
                   '--disable-renderer-backgrounding', // 禁用渲染进程后台化
                   '--disable-gpu', // 禁用 GPU 硬件加速
                   '--disable-background-networking', // 禁用后台网络通信
-                  '--blink-settings=imagesEnabled=false', // 设置 Blink 引擎参数，禁用图片加载
                   '--no-sandbox', // 禁用沙盒模式
                   '--mute-audio', // 禁用音频
                   '--disable-setuid-sandbox', // 禁用 setuid 沙盒

@@ -326,25 +326,47 @@ async function main() {
         await rewardsBot.initialize();
         await rewardsBot.run();
     } catch (error) {
+        // 记录错误
         log(false, 'MAIN-ERROR', `Error running desktop bot: ${error}`, 'error');
+        
+        // 强制结束进程，不等待其他操作
+        process.kill(process.pid, 'SIGTERM');
     } finally {
         // 清理监控器
         monitor.cleanup();
     }
 }
 
-// 确保在进程退出时清理
-process.on('SIGINT', () => {
-    log('main', 'SHUTDOWN', 'Process interrupted. Cleaning up...', 'warn');
+// 添加 SIGTERM 信号处理
+process.on('SIGTERM', () => {
+    log('main', 'SHUTDOWN', 'Process terminated. Performing emergency cleanup...', 'error');
     process.exit(1);
 });
 
-process.on('exit', () => {
-    log('main', 'SHUTDOWN', 'Process exiting. Cleanup complete.', 'warn');
+// 添加未捕获异常处理
+process.on('uncaughtException', (error) => {
+    log('main', 'UNCAUGHT-EXCEPTION', `Fatal error: ${error}`, 'error');
+    process.kill(process.pid, 'SIGTERM');
+});
+
+// 添加未处理的 Promise 拒绝处理
+process.on('unhandledRejection', (reason) => {
+    log('main', 'UNHANDLED-REJECTION', `Fatal error in promise: ${reason}`, 'error');
+    process.kill(process.pid, 'SIGTERM');
+});
+
+// 确保在进程退出时清理
+process.on('SIGINT', () => {
+    log('main', 'SHUTDOWN', 'Process interrupted. Cleaning up...', 'error');
+    process.kill(process.pid, 'SIGTERM');
+});
+
+process.on('exit', (code) => {
+    log('main', 'SHUTDOWN', `Process exiting with code ${code}. Final cleanup complete.`, 'error');
 });
 
 // Start the bots
 main().catch(error => {
-    log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
-    process.exit(1)
-})
+    log('main', 'MAIN-ERROR', `Fatal error running bots: ${error}`, 'error');
+    process.kill(process.pid, 'SIGTERM');
+});
