@@ -170,9 +170,15 @@ export class Workers {
                     selector = `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
                 }
 
-                // 等待页面加载完成
+                // 等待页面加载并等待confetti动画消失
                 await activityPage.waitForLoadState('domcontentloaded')
                 await this.bot.utils.wait(2000)
+                
+                // 尝试移除confetti元素
+                await activityPage.evaluate(() => {
+                    const confettiElements = document.querySelectorAll('.confetti-image-block, .dashboardPopUpModalImageContainer');
+                    confettiElements.forEach(el => el.remove());
+                }).catch(() => {});
 
                 // 检查按钮是否存在
                 const buttonExists = await activityPage.$(selector).then(Boolean)
@@ -185,6 +191,15 @@ export class Workers {
                     // 标记任务完成，继续下一个
                     continue
                 }
+
+                // 使用force选项强制点击
+                await activityPage.click(selector, { 
+                    timeout: 5000,
+                    force: true // 忽略覆盖元素强制点击
+                }).catch(async (error) => {
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Failed to click button for "${activity.title}": ${error}`, 'warn')
+                    return
+                })
 
                 // Wait for the new tab to fully load, ignore error.
                 /*

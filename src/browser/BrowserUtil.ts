@@ -48,19 +48,24 @@ export default class BrowserUtil {
 
     async getLatestTab(page: Page): Promise<Page> {
         try {
-            await this.bot.utils.wait(1000)
-
-            const browser = page.context()
-            const pages = browser.pages()
-            const newTab = pages[pages.length - 1]
-
-            if (newTab) {
-                return newTab
+            const pages = page.context().pages()
+            if (!pages || pages.length === 0) {
+                throw new Error('No pages found in context')
             }
 
-            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'Unable to get latest tab', 'error')
+            // 获取最后一个没有关闭的页面
+            const activePage = pages.filter(p => !p.isClosed()).pop()
+            if (!activePage) {
+                throw new Error('No active pages found')
+            }
+
+            return activePage
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'Unable to get latest tab')
+            this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', `An error occurred: ${error}`, 'error')
+            
+            // 如果无法获取新标签页，返回原始页面而不是undefined
+            return page
         }
     }
 
