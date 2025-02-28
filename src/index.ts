@@ -304,10 +304,28 @@ export class MicrosoftRewardsBot {
 async function main() {
     const rewardsBot = new MicrosoftRewardsBot(false)
 
+    const startTime = Date.now()  // start time
+    // add 10min timer
+    const intervalId = setInterval(() => {
+        const runningTime = Math.floor((Date.now() - startTime) / 1000)
+        log(false, 'TIMEOUT', `started ${Math.floor(runningTime / 60)}min${runningTime % 60}s`)
+    }, 10 * 60 * 1000)  // 10min
+
+    // add 6hour timer
+    const timeoutId = setTimeout(() => {
+        log(false, 'TIMEOUT', 'If the program runs for more than the hours, it will be forcibly terminated', 'error')
+        process.exit(1)
+    }, 6 * 60 * 60 *1000) // 6hour
+
     try {
         await rewardsBot.initialize()
         await rewardsBot.run()
+
+        clearTimeout(timeoutId) // clear the timeout timer
+        clearInterval(intervalId)   // clear the timeout timer
     } catch (error) {
+        clearTimeout(timeoutId)
+        clearInterval(intervalId)   // clear the timeout timer
         log(false, 'MAIN-ERROR', `Error running desktop bot: ${error}`, 'error')
     }
 }
