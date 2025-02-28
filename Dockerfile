@@ -37,6 +37,7 @@ RUN touch /var/log/cron.log
 
 # Define the command to run your application with cron optionally
 CMD ["sh", "-c", "echo \"$TZ\" > /etc/timezone && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata && \
     envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && \
     chmod 0644 /etc/cron.d/microsoft-rewards-cron && \
