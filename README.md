@@ -57,7 +57,7 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 |  baseURL    | MS Rewards page | `https://rewards.bing.com` |
 |  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) |
 |  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) |
-|  parallel    | If you want mobile and desktop taks to run parallel or sequential| `true` |
+|  parallel    | If you want mobile and desktop tasks to run parallel or sequential| `true` |
 |  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |
 |  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) |
 |  saveFingerprint.mobile    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
@@ -74,8 +74,8 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 |  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |
 |  searchSettings.scrollRandomResults    | Scroll randomly in search results | `true`   |
 |  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
-|  searchSettings.searchDelay    | Minimum and maximum time in miliseconds between search queries | `min: 1min`    `max: 2min` |
-|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `3` |
+|  searchSettings.searchDelay    | Minimum and maximum time in milliseconds between search queries | `min: 3min`    `max: 5min` |
+|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `2` |
 |  logExcludeFunc | Functions to exclude out of the logs and webhooks | `SEARCH-CLOSE-TABS` |
 |  webhookLogExcludeFunc | Functions to exclude out of the webhooks log | `SEARCH-CLOSE-TABS` |
 |  proxy.proxyGoogleTrends     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
