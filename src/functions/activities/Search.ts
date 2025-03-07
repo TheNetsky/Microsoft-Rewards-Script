@@ -47,7 +47,7 @@ export class Search extends Workers {
 
         await this.bot.browser.utils.tryDismissAllMessages(page)
 
-        let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it ddoesn't continue after 5 more searches with alternative queries, abort search
+        let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it doesn't continue after 5 more searches with alternative queries, abort search
 
         const queries: string[] = []
         // Mobile search doesn't seem to like related queries?
