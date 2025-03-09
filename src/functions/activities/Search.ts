@@ -212,9 +212,10 @@ export class Search extends Workers {
         return await this.bot.browser.func.getSearchPoints()
     }
 
-    private async getGoogleTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
+    private async getGoogleTrends(geoLocale: string = 'US', retryCount = 0): Promise<GoogleSearch[]> {
+        const maxRetries = 3;
         const queryTerms: GoogleSearch[] = []
-        this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}`)
+        this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Generating search queries, can take a while! | GeoLocale: ${geoLocale}${retryCount > 0 ? ` | Retry: ${retryCount}/${maxRetries}` : ''}`)
 
         try {
             const request: AxiosRequestConfig = {
@@ -231,13 +232,19 @@ export class Search extends Workers {
 
             const trendsData = this.extractJsonFromResponse(rawText)
             if (!trendsData) {
-               throw  this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Failed to parse Google Trends response', 'error')
+                throw new Error('Failed to parse Google Trends response')
             }
 
             const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
             if (mappedTrendsData.length < 90) {
-                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Insufficient search queries, falling back to US', 'warn')
-                return this.getGoogleTrends()
+                if (geoLocale !== 'US' || retryCount >= maxRetries) {
+                    this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Insufficient search queries, falling back to US', 'warn')
+                    return this.getGoogleTrends()
+                }
+                // 重试当前地区
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Insufficient search queries, retrying...', 'warn')
+                await this.bot.utils.wait(2000) // 等待2秒后重试
+                return this.getGoogleTrends(geoLocale, retryCount + 1)
             }
 
             for (const [topic, relatedQueries] of mappedTrendsData) {
@@ -248,7 +255,12 @@ export class Search extends Workers {
             }
 
         } catch (error) {
-            this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'An error occurred:' + error, 'error')
+            if (retryCount < maxRetries) {
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Request failed, retrying... Error: ${error}`, 'warn')
+                await this.bot.utils.wait(2000) // 等待2秒后重试
+                return this.getGoogleTrends(geoLocale, retryCount + 1)
+            }
+            this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Failed after ${maxRetries} retries. Error: ${error}`, 'error')
         }
 
         return queryTerms
