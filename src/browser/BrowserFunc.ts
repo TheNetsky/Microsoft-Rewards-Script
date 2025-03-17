@@ -84,7 +84,7 @@ export default class BrowserFunc {
     */
     async getDashboardData(): Promise<DashboardData> {
         const maxRetries = 5;  // 最大重试次数
-        const retryDelay = 30000;  // 重试间隔(ms)
+        const retryDelay = 10000;  // 重试间隔(ms)
         let lastError: any;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -100,11 +100,11 @@ export default class BrowserFunc {
 
                 // 重载页面前等待一下
                 if (attempt > 1) {
-                    await this.bot.utils.wait(1000);
+                    await this.bot.utils.wait(2000);
                 }
 
                 // Reload the page to get new data
-                await this.bot.homePage.reload({ waitUntil: 'networkidle' })
+                await this.bot.homePage.reload({ waitUntil: 'networkidle', timeout: 30000 })
 
                 const scriptContent = await this.bot.homePage.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
