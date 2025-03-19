@@ -241,56 +241,80 @@ export default class BrowserFunc {
      * @returns {number} Total earnable points
     */
     async getAppEarnablePoints(accessToken: string) {
-        try {
-            const points = {
-                readToEarn: 0,
-                checkIn: 0,
-                totalEarnablePoints: 0
-            }
+        const maxRetries = 3;
+        const retryDelay = 5000;
 
-            const eligibleOffers = [
-                'ENUS_readarticle3_30points',
-                'Gamification_Sapphire_DailyCheckIn'
-            ]
-
-            const data = await this.getDashboardData()
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'cn'
-
-            const userDataRequest: AxiosRequestConfig = {
-                url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'X-Rewards-Country': geoLocale,
-                    'X-Rewards-Language': 'zh'
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const points = {
+                    readToEarn: 0,
+                    checkIn: 0,
+                    totalEarnablePoints: 0
                 }
-            }
 
-            const userDataResponse: AppUserData = (await this.bot.axios.request(userDataRequest)).data
-            const userData = userDataResponse.response
-            const eligibleActivities = userData.promotions.filter((x) => eligibleOffers.includes(x.attributes.offerid ?? ''))
+                const eligibleOffers = [
+                    'ENUS_readarticle3_30points',
+                    'Gamification_Sapphire_DailyCheckIn'
+                ]
 
-            for (const item of eligibleActivities) {
-                if (item.attributes.type === 'msnreadearn') {
-                    points.readToEarn = parseInt(item.attributes.pointmax ?? '') - parseInt(item.attributes.pointprogress ?? '')
-                    break
-                } else if (item.attributes.type === 'checkin') {
-                    const checkInDay = parseInt(item.attributes.progress ?? '') % 7
+                const data = await this.getDashboardData()
+                let geoLocale = data.userProfile.attributes.country
+                geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'cn'
 
-                    if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated ?? '')).getDate()) {
-                        points.checkIn = parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '')
+                // 增加请求超时设置和重试
+                const userDataRequest: AxiosRequestConfig = {
+                    url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'X-Rewards-Country': geoLocale,
+                        'X-Rewards-Language': 'zh',
+                        'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36'
+                    },
+                    timeout: 30000, // 30秒超时
+                    validateStatus: (status) => status >= 200 && status < 300
+                }
+
+                const userDataResponse = await this.bot.axios.request(userDataRequest)
+                
+                if (!userDataResponse?.data?.response) {
+                    throw new Error('Invalid response data')
+                }
+
+                const userData: AppUserData = userDataResponse.data
+                const eligibleActivities = userData.response.promotions.filter((x) => eligibleOffers.includes(x.attributes.offerid ?? ''))
+
+                for (const item of eligibleActivities) {
+                    if (item.attributes.type === 'msnreadearn') {
+                        points.readToEarn = parseInt(item.attributes.pointmax ?? '') - parseInt(item.attributes.pointprogress ?? '')
+                        break
+                    } else if (item.attributes.type === 'checkin') {
+                        const checkInDay = parseInt(item.attributes.progress ?? '') % 7
+
+                        if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated ?? '')).getDate()) {
+                            points.checkIn = parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '')
+                        }
+                        break
                     }
-                    break
                 }
+
+                points.totalEarnablePoints = points.readToEarn + points.checkIn
+                return points
+
+            } catch (error: any) {
+                const errorMessage = error?.message || '未知错误'
+                this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', `尝试 ${attempt}/${maxRetries} 失败: ${errorMessage}`, 'warn')
+                
+                if (attempt === maxRetries) {
+                    throw this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', `达到最大重试次数 (${maxRetries}). 最后错误: ${errorMessage}`, 'error')
+                }
+
+                // 等待一段时间后重试
+                await this.bot.utils.wait(retryDelay)
             }
-
-            points.totalEarnablePoints = points.readToEarn + points.checkIn
-
-            return points
-        } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
         }
+
+        throw this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', '无法获取应用可获得积分信息', 'error')
     }
 
     /**
