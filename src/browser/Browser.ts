@@ -30,36 +30,37 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
-                  '--disable-quic', // 禁用quic连接
-                  '--blink-settings=imagesEnabled=false', // 禁用图片加载
-                  '--disable-blink-features=AutomationControlled',  // 移除 `navigator.webdriver` 特征
-                  '--disable-accelerated-video-decode', // 禁用硬件加速的视频解码
-                  '--disable-gpu-media-service', // 禁用 GPU 媒体服务
-                  '--disable-extensions', // 禁用所有扩展
-                  '--disable-plugins', // 禁用插件（例如 Flash）
-                  '--disable-component-update', // 禁止组件自动更新
-                  '--disable-domain-reliability', // 禁用域名可靠性监控
-                  '--disable-client-side-phishing-detection', // 禁用客户端反钓鱼检测
-                  '--disable-crash-reporter', // 禁用崩溃报告
-                  '--disable-translate', // 禁用翻译功能
-                  '--disable-background-downloads', // 禁止后台下载
-                  '--disable-breakpad', // 禁用崩溃日志上传
-                  '--disable-logging', // 禁用日志记录
-                  '--disable-notifications', // 禁用通知功能
-                  '--disable-infobars', // 禁用信息栏
-                  '--disable-background-timer-throttling', // 禁用后台计时器节流
-                  '--disable-sync', // 禁用同步功能
-                  '--disable-dev-shm-usage', // 禁用 /dev/shm 的使用（解决共享内存问题）
-                  '--no-first-run', // 跳过首次运行检查
-                  '--disable-renderer-backgrounding', // 禁用渲染进程后台化
-                  '--disable-gpu', // 禁用 GPU 硬件加速
-                  '--disable-background-networking', // 禁用后台网络通信
-                  '--no-sandbox', // 禁用沙盒模式
-                  '--mute-audio', // 禁用音频
-                  '--disable-setuid-sandbox', // 禁用 setuid 沙盒
-                  '--ignore-certificate-errors', // 忽略所有证书错误
-                  '--ignore-certificate-errors-spki-list', // 忽略指定 SPKI 列表的证书错误
-                  '--ignore-ssl-errors' // 忽略 SSL 错误
+                '--process-per-site', // 每个站点一个进程
+                '--disable-quic', // 禁用quic连接
+                '--blink-settings=imagesEnabled=false', // 禁用图片加载
+                '--disable-blink-features=AutomationControlled',  // 移除 `navigator.webdriver` 特征
+                '--disable-accelerated-video-decode', // 禁用硬件加速的视频解码
+                '--disable-gpu-media-service', // 禁用 GPU 媒体服务
+                '--disable-extensions', // 禁用所有扩展
+                '--disable-plugins', // 禁用插件（例如 Flash）
+                '--disable-component-update', // 禁止组件自动更新
+                '--disable-domain-reliability', // 禁用域名可靠性监控
+                '--disable-client-side-phishing-detection', // 禁用客户端反钓鱼检测
+                '--disable-crash-reporter', // 禁用崩溃报告
+                '--disable-translate', // 禁用翻译功能
+                '--disable-background-downloads', // 禁止后台下载
+                '--disable-breakpad', // 禁用崩溃日志上传
+                '--disable-logging', // 禁用日志记录
+                '--disable-notifications', // 禁用通知功能
+                '--disable-infobars', // 禁用信息栏
+                '--disable-background-timer-throttling', // 禁用后台计时器节流
+                '--disable-sync', // 禁用同步功能
+                '--disable-dev-shm-usage', // 禁用 /dev/shm 的使用（解决共享内存问题）
+                '--no-first-run', // 跳过首次运行检查
+                '--disable-renderer-backgrounding', // 禁用渲染进程后台化
+                '--disable-gpu', // 禁用 GPU 硬件加速
+                '--disable-background-networking', // 禁用后台网络通信
+                '--no-sandbox', // 禁用沙盒模式
+                '--mute-audio', // 禁用音频
+                '--disable-setuid-sandbox', // 禁用 setuid 沙盒
+                '--ignore-certificate-errors', // 忽略所有证书错误
+                '--ignore-certificate-errors-spki-list', // 忽略指定 SPKI 列表的证书错误
+                '--ignore-ssl-errors' // 忽略 SSL 错误
             ]
         })
 
