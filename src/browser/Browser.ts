@@ -30,6 +30,9 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--disable-application-cache', // 禁用应用程序缓存
+                '--disable-cache', // 禁用缓存
+                '--memory-pressure-off', // 禁用内存压力
                 '--process-per-site', // 每个站点一个进程
                 '--disable-quic', // 禁用quic连接
                 '--blink-settings=imagesEnabled=false', // 禁用图片加载
