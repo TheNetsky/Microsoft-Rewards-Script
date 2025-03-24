@@ -30,6 +30,7 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--disable-features=BackForwardCache', // 禁用后退前进缓存
                 '--disable-application-cache', // 禁用应用程序缓存
                 '--disable-cache', // 禁用缓存
                 '--memory-pressure-off', // 禁用内存压力
