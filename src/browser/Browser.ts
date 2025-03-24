@@ -30,6 +30,7 @@ class Browser {
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
+                '--disable-fetching-hints-at-navigation-start', // 禁用导航开始时的提示获取
                 '--disable-features=BackForwardCache,NetworkService', // 禁用后退前进缓存, 网络服务
                 '--disable-application-cache', // 禁用应用程序缓存
                 '--disable-cache', // 禁用缓存
