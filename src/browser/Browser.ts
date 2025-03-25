@@ -32,8 +32,6 @@ class Browser {
             args: [
                 '--disable-fetching-hints-at-navigation-start', // 禁用导航开始时的提示获取
                 '--disable-features=BackForwardCache,NetworkService', // 禁用后退前进缓存, 网络服务
-                '--disable-application-cache', // 禁用应用程序缓存
-                '--disable-cache', // 禁用缓存
                 '--memory-pressure-off', // 禁用内存压力
                 '--process-per-site', // 每个站点一个进程
                 '--disable-quic', // 禁用quic连接
