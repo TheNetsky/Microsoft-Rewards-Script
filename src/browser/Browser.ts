@@ -41,7 +41,7 @@ class Browser {
                 '--disable-accelerated-video-decode', // 禁用硬件加速的视频解码
                 '--disable-gpu-media-service', // 禁用 GPU 媒体服务
                 '--disable-extensions', // 禁用所有扩展
-                '--disable-plugins', // 禁用插件（例如 Flash）
+                '--disable-plugins', // 禁用插件
                 '--disable-component-update', // 禁止组件自动更新
                 '--disable-domain-reliability', // 禁用域名可靠性监控
                 '--disable-client-side-phishing-detection', // 禁用客户端反钓鱼检测
