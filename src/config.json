@@ -23,7 +23,7 @@
     "searchSettings": {
         "useGeoLocaleQueries": false,
         "scrollRandomResults": true,
-        "clickRandomResults": true,
+        "clickRandomResults": false,
         "searchDelay": {
             "min": "3min",
             "max": "4min"
