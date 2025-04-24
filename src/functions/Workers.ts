@@ -153,7 +153,7 @@ export class Workers {
                 Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster,
                 if it didn't then it gave enough time for the page to load.
                 */
-                await activityPage.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => { })
+                await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
                 await this.bot.utils.wait(2000)
 
                 switch (activity.promotionType) {

@@ -11,7 +11,7 @@ export class Poll extends Workers {
         try {
             const buttonId = `#btoption${Math.floor(this.bot.utils.randomNumber(0, 1))}`
 
-            await page.waitForSelector(buttonId, { state: 'visible', timeout: 10_000 }).catch(() => { }) // We're gonna click regardless or not
+            await page.waitForSelector(buttonId, { state: 'visible', timeout: 10000 }).catch(() => { }) // We're gonna click regardless or not
             await this.bot.utils.wait(2000)
 
             await page.click(buttonId)

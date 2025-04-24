@@ -20,7 +20,7 @@ export class SearchOnBing extends Workers {
             const query = await this.getSearchQuery(activity.title)
 
             const searchBar = '#sb_form_q'
-            await page.waitForSelector(searchBar, { state: 'visible', timeout: 10_000 })
+            await page.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
             await page.click(searchBar)
             await this.bot.utils.wait(500)
             await page.keyboard.type(query)

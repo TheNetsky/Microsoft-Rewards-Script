@@ -46,7 +46,7 @@ class Browser {
         const context = await newInjectedContext(browser as any, { fingerprint: fingerprint })
 
         // Set timeout to preferred amount
-        context.setDefaultTimeout(this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? 30_000))
+        context.setDefaultTimeout(this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? 30000))
 
         await context.addCookies(sessionData.cookies)
 

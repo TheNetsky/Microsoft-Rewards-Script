@@ -298,7 +298,7 @@ export default class BrowserFunc {
 
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('span.rqMCredits', { state: 'visible', timeout: 10_000 })
+            await page.waitForSelector('span.rqMCredits', { state: 'visible', timeout: 10000 })
             await this.bot.utils.wait(2000)
 
             return true
