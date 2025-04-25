@@ -1,10 +1,10 @@
 import chalk from 'chalk'
-
 import { Webhook } from './Webhook'
+import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 
 
-export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): void {
+export async function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk) {
     const configData = loadConfig()
 
     if (configData.logExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
@@ -22,6 +22,26 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     if (!configData.webhookLogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
         Webhook(configData, cleanStr)
     }
+
+    // Define conditions for sending to NTFY 
+    const ntfyConditions = {
+        log: [
+            message.toLowerCase().includes('started tasks for account'),
+            message.toLowerCase().includes('press the number'),
+            message.toLowerCase().includes('completed tasks for account'),
+            message.toLowerCase().includes('the script collected'),
+            message.toLowerCase().includes('no points to earn')
+        ], // Add or customize keywords for log messages here
+        error: [], // Add or customize keywords for error messages here
+        warn: [
+            message.toLowerCase().includes('aborting'),
+            message.toLowerCase().includes('didn\'t gain')
+        ] // Add or customize keywords for warning messages here
+    }
+
+    // Check if the current log type and message meet the NTFY conditions
+    if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition))
+        await Ntfy(cleanStr, type)
 
     // Formatted string with chalk for terminal logging
     const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`
