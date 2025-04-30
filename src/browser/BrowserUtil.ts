@@ -11,7 +11,7 @@ export default class BrowserUtil {
         this.bot = bot
     }
 
-    async tryDismissAllMessages(page: Page): Promise<boolean> {
+    async tryDismissAllMessages(page: Page): Promise<void> {
         const buttons = [
             { selector: 'button[type="submit"]', label: 'Submit Button' },
             { selector: '#acceptButton', label: 'AcceptButton' },
@@ -29,26 +29,18 @@ export default class BrowserUtil {
             { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
         ]
 
-        const dismissTasks = buttons.map(async (button) => {
+        for (const button of buttons) {
             try {
-                const element = button.isXPath
-                    ? page.locator(`xpath=${button.selector}`)
-                    : page.locator(button.selector)
+                const element = button.isXPath ? page.locator(`xpath=${button.selector}`) : page.locator(button.selector)
+                await element.first().click({ timeout: 500 })
+                await page.waitForTimeout(500)
 
-                if (await element.first().isVisible({ timeout: 1000 })) {
-                    await element.first().click({ timeout: 1000 })
-                    await page.waitForTimeout(500)
-                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${button.label}`)
-                    return true
-                }
-            } catch {
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${button.label}`)
+
+            } catch (error) {
                 // Silent fail
             }
-            return false
-        })
-
-        const results = await Promise.allSettled(dismissTasks)
-        return results.some(result => result.status === 'fulfilled' && result.value === true)
+        }
     }
 
     async getLatestTab(page: Page): Promise<Page> {
