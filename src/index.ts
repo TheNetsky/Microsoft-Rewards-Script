@@ -134,7 +134,9 @@ export class MicrosoftRewardsBot {
                 await this.Mobile(account)
             }
 
-            await log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
+            const resultPointAmount = await this.browser.func.getCurrentPoints()
+
+            await log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email} (collected ${resultPointAmount - this.pointsInitial} points). Balance: ${resultPointAmount}.`, 'log', 'green')
         }
 
         await log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
@@ -292,7 +294,7 @@ export class MicrosoftRewardsBot {
 
         const afterPointAmount = await this.browser.func.getCurrentPoints()
 
-        log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - this.pointsInitial} points today`)
+        log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - this.pointsInitial}`)
 
         // Close mobile browser
         await this.browser.func.closeBrowser(browser, account.email)
