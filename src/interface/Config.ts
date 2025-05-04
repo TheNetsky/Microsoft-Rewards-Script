@@ -14,6 +14,7 @@ export interface Config {
     webhookLogExcludeFunc: string[];
     proxy: ConfigProxy;
     webhook: ConfigWebhook;
+    ntfy: ConfigNtfy;
 }
 
 export interface ConfigSaveFingerprint {
@@ -37,6 +38,13 @@ export interface ConfigSearchDelay {
 export interface ConfigWebhook {
     enabled: boolean;
     url: string;
+}
+
+export interface ConfigNtfy {
+    enabled: boolean;
+    url: string;
+    topic: string;
+    authToken?: string; // Optional authentication token
 }
 
 export interface ConfigProxy {
