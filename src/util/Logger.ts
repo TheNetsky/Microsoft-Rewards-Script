@@ -32,7 +32,9 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
             message.toLowerCase().includes('the script collected'),
             message.toLowerCase().includes('no points to earn')
         ], // Add or customize keywords for log messages here
-        error: [], // Add or customize keywords for error messages here
+        error: [
+            message.toLowerCase().includes('error')
+        ], // Add or customize keywords for error messages here
         warn: [
             message.toLowerCase().includes('aborting'),
             message.toLowerCase().includes('didn\'t gain')
