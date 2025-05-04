@@ -9,8 +9,8 @@ services:
       - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json 
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
     environment:
+      - COMPOSE_BAKE=true
       - NODE_ENV=production
-      - CRON_SCHEDULE=0 7,15,20 * * * # Customize your schedule, use crontab.guru for formatting
+      - CRON_SCHEDULE=30 5,12,19 * * * # Customize your schedule, use crontab.guru for formatting
       - RUN_ON_START=true # Runs the script on container startup
       - TZ=America/Sao_Paulo # Set your timezone for proper scheduling
-      - COMPOSE_BAKE=true

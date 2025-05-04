@@ -26,10 +26,10 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
     // Define conditions for sending to NTFY 
     const ntfyConditions = {
         log: [
-            message.toLowerCase().includes('started tasks for account'),
+            // message.toLowerCase().includes('started tasks for account'),
             message.toLowerCase().includes('press the number'),
             message.toLowerCase().includes('completed tasks for account'),
-            // message.toLowerCase().includes('the script collected'),
+            message.toLowerCase().includes('the script collected'),
             // message.toLowerCase().includes('no points to earn')
         ], // Add or customize keywords for log messages here
         error: [
