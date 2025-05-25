@@ -1,4 +1,4 @@
-# Use the official Playwright image matching your Playwright version
+# Use the official Playwright image matching the Script Playwright version
 FROM mcr.microsoft.com/playwright:v1.47.2-jammy
 
 # Set working directory inside the container
@@ -18,16 +18,11 @@ COPY . .
 # Run pre-build script (installs playwright browsers, cleans dist) and build TypeScript
 RUN npm run pre-build && npm run build
 
-# Ensure sessions directory exists to avoid runtime errors
-RUN mkdir -p /usr/src/microsoft-rewards-script/dist/browser/sessions
-
 # Copy cron job template to the appropriate location
 COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 
 # Create cron log file and set permissions so cron can write to it
 RUN touch /var/log/cron.log && chmod 666 /var/log/cron.log
-
-# Removed USER pwuser to run as root
 
 # Set default command:
 # - Configure timezone inside container based on $TZ environment variable
