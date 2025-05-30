@@ -177,7 +177,7 @@ export class Login {
 
     private async get2FACode(page: Page): Promise<string | null> {
         try {
-            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         } catch {
             if (this.bot.config.parallel) {
@@ -200,7 +200,7 @@ export class Login {
 
             await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
             await this.bot.utils.wait(2000)
-            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         }
     }
@@ -212,7 +212,7 @@ export class Login {
                 this.bot.log(this.bot.isMobile, 'LOGIN', `Press the number ${numberToPress} on your Authenticator app to approve the login`)
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'If you press the wrong number or the "DENY" button, try again in 60 seconds')
 
-                await page.waitForSelector('#i0281', { state: 'detached', timeout: 60000 })
+                await page.waitForSelector('form[name="f1"]', { state: 'detached', timeout: 60000 })
 
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Login successfully approved!')
                 break
