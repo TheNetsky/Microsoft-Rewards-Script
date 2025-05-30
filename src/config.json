@@ -2,7 +2,7 @@
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
     "headless": false,
-    "parallel": true,
+    "parallel": false,
     "runOnZeroPoints": false,
     "clusters": 1,
     "saveFingerprint": {
