@@ -177,7 +177,7 @@ export class Login {
 
     private async get2FACode(page: Page): Promise<string | null> {
         try {
-            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         } catch {
             if (this.bot.config.parallel) {
@@ -200,7 +200,7 @@ export class Login {
 
             await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
             await this.bot.utils.wait(2000)
-            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         }
     }
