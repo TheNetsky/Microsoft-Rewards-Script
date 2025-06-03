@@ -130,10 +130,34 @@ export class Login {
         try {
             // Wait for password field
             const passwordField = await page.waitForSelector(passwordInputSelector, { state: 'visible', timeout: 5000 }).catch(() => null)
+            const otherWayToSignInButton = await page.waitForSelector('xpath=/html/body/div[1]/div/div/div/div/div[1]/div/div/div/div/div[2]/div/span/div/span', { timeout: 5000 }).catch(() => null)
             if (!passwordField) {
+                if (!otherWayToSignInButton) {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field not found, possibly 2FA required', 'warn')
                 await this.handle2FA(page)
                 return
+            }
+                if(otherWayToSignInButton){
+                    this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field not found, using "Other ways to sign in"', 'warn')
+                    const canContinue = await this.clickOtherWaysToSignIn(page)
+                    if (canContinue) {
+                        // Continue with password entry
+                        await this.bot.utils.wait(1000)
+                        const passwordInputSelector = 'input[type="password"]'
+                        await page.fill(passwordInputSelector, '')
+                        await this.bot.utils.wait(500)
+                        await page.fill(passwordInputSelector, password)
+                        await this.bot.utils.wait(1000)
+                        
+                        const nextButton = await page.waitForSelector('button[type="submit"]', { timeout: 2000 }).catch(() => null)
+                        if (nextButton) {
+                            await nextButton.click()
+                            await this.bot.utils.wait(2000)
+                            this.bot.log(this.bot.isMobile, 'LOGIN', 'Password entered successfully')
+                            return
+                        }
+                    }
+                }
             }
 
             await this.bot.utils.wait(1000)
@@ -221,6 +245,39 @@ export class Login {
                 await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
                 numberToPress = await this.get2FACode(page)
             }
+        }
+    }
+
+    private async clickOtherWaysToSignIn(page: Page) {
+        try {
+            const otherWayToSignInButton = await page.waitForSelector('xpath=/html/body/div[1]/div/div/div/div/div[1]/div/div/div/div/div[2]/div/span/div/span', { timeout: 5000 }).catch(() => null)
+            if (otherWayToSignInButton) {
+                await otherWayToSignInButton.click()
+                await this.bot.utils.wait(2000)
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Other ways to sign in" button')
+                
+                // Click on the second element after the first button
+                const secondButton = await page.waitForSelector('xpath=//*[@id="view"]/div/div[3]/div[2]/div', { timeout: 5000 }).catch(() => null)
+                if (secondButton) {
+                    await secondButton.click()
+                    await this.bot.utils.wait(2000)
+                    this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked on the second button')
+                    
+                    // Wait for password field to appear after clicking the second button
+                    const passwordField = await page.waitForSelector('input[type="password"]', { state: 'visible', timeout: 5000 }).catch(() => null)
+                    if (passwordField) {
+                        return true; // Signal that we can continue with password entry
+                    }
+                } else {
+                    this.bot.log(this.bot.isMobile, 'LOGIN', 'Could not find the second button', 'warn')
+                }
+            } else {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Could not find "Other ways to sign in" button', 'warn')
+            }
+            return false;
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', `Failed to click "Other ways to sign in" button: ${error}`, 'error')
+            return false;
         }
     }
 
