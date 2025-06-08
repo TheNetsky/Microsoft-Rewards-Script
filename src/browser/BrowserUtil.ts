@@ -13,7 +13,6 @@ export default class BrowserUtil {
 
     async tryDismissAllMessages(page: Page): Promise<void> {
         const buttons = [
-            { selector: 'button[type="submit"]', label: 'Submit Button' },
             { selector: '#acceptButton', label: 'AcceptButton' },
             { selector: '.ext-secondary.ext-button', label: '"Skip for now" Button' },
             { selector: '#iLandingViewAction', label: 'iLandingViewAction' },
