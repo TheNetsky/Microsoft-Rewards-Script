@@ -1,7 +1,7 @@
 {
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
-    "headless": false,
+    "headless": true,
     "parallel": false,
     "runOnZeroPoints": false,
     "clusters": 1,
