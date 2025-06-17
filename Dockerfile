@@ -4,6 +4,11 @@ FROM mcr.microsoft.com/playwright:v1.47.2-jammy
 # Set working directory inside the container
 WORKDIR /usr/src/microsoft-rewards-script
 
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y cron gettext-base && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Copy package.json and package-lock.json (if it exists) to leverage Docker cache
 COPY package*.json ./
 
@@ -15,8 +20,10 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 # Copy the rest of the source code into the container
 COPY . .
 
+# Ensure the cron script is executable
 # Run pre-build script (installs playwright browsers, cleans dist) and build TypeScript
-RUN npm run pre-build && npm run build
+RUN chmod +x ./src/run_daily.sh && \
+    npm run pre-build && npm run build
 
 # Copy cron job template to the appropriate location
 COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
