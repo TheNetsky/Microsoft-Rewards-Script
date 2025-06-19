@@ -1,32 +1,34 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Set up environment variables
-export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+# Ensure Playwright uses the preinstalled browsers
+export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Ensure TZ is set
-export TZ=${TZ}
+# Ensure TZ is set (entrypoint sets TZ system-wide); fallback if missing
+export TZ="${TZ:-UTC}"
 
-# Change directory to the application directory
+# Change to project directory
 cd /usr/src/microsoft-rewards-script
 
-# Define the minimum and maximum wait times in seconds
-MINWAIT=$((5*60))  # 5 minutes
-MAXWAIT=$((50*60)) # 50 minutes
+# Optional: prevent overlapping runs
+LOCKFILE=/tmp/run_daily.lock
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+  echo "[$(date -Is)] [run_daily.sh] Previous instance still running; exiting."
+  exit 0
+fi
 
-# Calculate a random sleep time within the specified range
-SLEEPTIME=$((MINWAIT + RANDOM % (MAXWAIT - MINWAIT)))
+# Random sleep between 5 and 50 minutes
+MINWAIT=$((5*60))
+MAXWAIT=$((50*60))
+SLEEPTIME=$(( MINWAIT + RANDOM % (MAXWAIT - MINWAIT) ))
+SLEEP_MINUTES=$(( SLEEPTIME / 60 ))
+echo "[$(date -Is)] [run_daily.sh] Sleeping for $SLEEP_MINUTES minutes ($SLEEPTIME seconds)..."
+sleep "$SLEEPTIME"
 
-# Convert the sleep time to minutes for logging
-SLEEP_MINUTES=$((SLEEPTIME / 60))
-
-# Log the sleep duration
-echo "Sleeping for $SLEEP_MINUTES minutes ($SLEEPTIME seconds)..."
-
-# Sleep for the calculated time
-sleep $SLEEPTIME
-
-# Log the start of the script
-echo "Starting script..."
-
-# Execute the Node.js script directly
-npm run start
+echo "[$(date -Is)] [run_daily.sh] Starting script..."
+if npm start; then
+  echo "[$(date -Is)] [run_daily.sh] Script completed successfully."
+else
+  echo "[$(date -Is)] [run_daily.sh] ERROR: Script failed!" >&2
+fi
