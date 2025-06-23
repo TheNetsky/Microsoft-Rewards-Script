@@ -14,21 +14,29 @@ cd /usr/src/microsoft-rewards-script
 LOCKFILE=/tmp/run_daily.lock
 exec 9>"$LOCKFILE"
 if ! flock -n 9; then
-  echo "[$(date -Is)] [run_daily.sh] Previous instance still running; exiting."
+  echo "[$(date)] [run_daily.sh] Previous instance still running; exiting."
   exit 0
 fi
 
-# Random sleep between 5 and 50 minutes
-MINWAIT=$((5*60))
-MAXWAIT=$((50*60))
-SLEEPTIME=$(( MINWAIT + RANDOM % (MAXWAIT - MINWAIT) ))
-SLEEP_MINUTES=$(( SLEEPTIME / 60 ))
-echo "[$(date -Is)] [run_daily.sh] Sleeping for $SLEEP_MINUTES minutes ($SLEEPTIME seconds)..."
-sleep "$SLEEPTIME"
+# Random sleep between configurable minutes (default 5-50 minutes)
+MINWAIT=${MIN_SLEEP_MINUTES:-5}
+MAXWAIT=${MAX_SLEEP_MINUTES:-50}
+MINWAIT_SEC=$((MINWAIT*60))
+MAXWAIT_SEC=$((MAXWAIT*60))
 
-echo "[$(date -Is)] [run_daily.sh] Starting script..."
-if npm start; then
-  echo "[$(date -Is)] [run_daily.sh] Script completed successfully."
+# Skip sleep if SKIP_RANDOM_SLEEP is set to true
+if [ "${SKIP_RANDOM_SLEEP:-false}" != "true" ]; then
+    SLEEPTIME=$(( MINWAIT_SEC + RANDOM % (MAXWAIT_SEC - MINWAIT_SEC) ))
+    SLEEP_MINUTES=$(( SLEEPTIME / 60 ))
+    echo "[$(date)] [run_daily.sh] Sleeping for $SLEEP_MINUTES minutes ($SLEEPTIME seconds) to randomize execution..."
+    sleep "$SLEEPTIME"
 else
-  echo "[$(date -Is)] [run_daily.sh] ERROR: Script failed!" >&2
+    echo "[$(date)] [run_daily.sh] Skipping random sleep (SKIP_RANDOM_SLEEP=true)"
+fi
+
+echo "[$(date)] [run_daily.sh] Starting script..."
+if npm start; then
+  echo "[$(date)] [run_daily.sh] Script completed successfully."
+else
+  echo "[$(date)] [run_daily.sh] ERROR: Script failed!" >&2
 fi

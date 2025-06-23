@@ -24,8 +24,7 @@ RUN if [ -f package-lock.json ]; then \
 COPY . .
 
 # Build TypeScript
-RUN npx rimraf dist \
-    && npm run build
+RUN npm run build
 
 ###############################################################################
 # Stage 2: Runtime (Playwright image)
@@ -43,31 +42,27 @@ RUN apt-get update \
 # Ensure Playwright uses preinstalled browsers
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Copy built artifacts and package.json
-COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
+# Copy package files first for better caching
 COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 
 # Install only production dependencies, with fallback
 RUN if [ -f package-lock.json ]; then \
-      npm ci --omit=dev; \
+      npm ci --omit=dev --ignore-scripts; \
     else \
-      npm install --production; \
+      npm install --production --ignore-scripts; \
     fi
 
-# Copy automation script and cron template
-COPY src/run_daily.sh ./src/run_daily.sh
-RUN chmod +x ./src/run_daily.sh
-COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
+# Copy built application
+COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 
-# Copy entrypoint and make executable
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Copy runtime scripts with proper permissions from the start
+COPY --chmod=755 src/run_daily.sh ./src/run_daily.sh
+COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Default TZ (overridden by user via environment)
 ENV TZ=UTC
 
 # Entrypoint handles TZ, initial run toggle, cron templating & launch
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-# CMD is a no-op since ENTRYPOINT execs cron; left for clarity
 CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
