@@ -1,47 +1,68 @@
-# Use an official Node.js runtime as a base image
-FROM node:18
+###############################################################################
+# Stage 1: Builder (compile TypeScript)
+###############################################################################
+FROM node:18-slim AS builder
 
-# Set the working directory in the container
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install necessary dependencies for Playwright and cron
-RUN apt-get update && apt-get install -y \
-    jq \
-    cron \
-    gettext-base \
-    xvfb \
-    libgbm-dev \
-    libnss3 \
-    libasound2 \
-    libxss1 \
-    libatk-bridge2.0-0 \
-    libgtk-3-0 \
-    tzdata \
-    wget \
+# Install minimal tooling if needed
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all files to the working directory
+# Copy package manifests
+COPY package*.json ./
+
+# Conditional install: npm ci if lockfile exists, else npm install
+RUN if [ -f package-lock.json ]; then \
+      npm ci; \
+    else \
+      npm install; \
+    fi
+
+# Copy source code
 COPY . .
 
-# Install dependencies, set permissions, and build the script
-RUN npm install && \
-    chmod -R 755 /usr/src/microsoft-rewards-script/node_modules && \
-    npm run pre-build && \
-    npm run build
+# Build TypeScript
+RUN npm run build
 
-# Copy cron file to cron directory
-COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
+###############################################################################
+# Stage 2: Runtime (Playwright image)
+###############################################################################
+FROM mcr.microsoft.com/playwright:v1.52.0-jammy
 
-# Create the log file to be able to run tail
-RUN touch /var/log/cron.log
+WORKDIR /usr/src/microsoft-rewards-script
 
-# Define the command to run your application with cron optionally
-CMD ["sh", "-c", "echo \"$TZ\" > /etc/timezone && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
-    envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && \
-    chmod 0644 /etc/cron.d/microsoft-rewards-cron && \
-    crontab /etc/cron.d/microsoft-rewards-cron && \
-    cron -f & \
-    ([ \"$RUN_ON_START\" = \"true\" ] && npm start) && \
-    tail -f /var/log/cron.log"]
+# Install cron, gettext-base (for envsubst), tzdata noninteractively
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+         cron gettext-base tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure Playwright uses preinstalled browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Copy package files first for better caching
+COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
+
+# Install only production dependencies, with fallback
+RUN if [ -f package-lock.json ]; then \
+      npm ci --omit=dev --ignore-scripts; \
+    else \
+      npm install --production --ignore-scripts; \
+    fi
+
+# Copy built application
+COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
+
+# Copy runtime scripts with proper permissions from the start
+COPY --chmod=755 src/run_daily.sh ./src/run_daily.sh
+COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Default TZ (overridden by user via environment)
+ENV TZ=UTC
+
+# Entrypoint handles TZ, initial run toggle, cron templating & launch
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
