@@ -1,32 +1,42 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Set up environment variables
-export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+# Ensure Playwright uses the preinstalled browsers
+export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Ensure TZ is set
-export TZ=${TZ}
+# Ensure TZ is set (entrypoint sets TZ system-wide); fallback if missing
+export TZ="${TZ:-UTC}"
 
-# Change directory to the application directory
+# Change to project directory
 cd /usr/src/microsoft-rewards-script
 
-# Define the minimum and maximum wait times in seconds
-MINWAIT=$((5*60))  # 5 minutes
-MAXWAIT=$((50*60)) # 50 minutes
+# Optional: prevent overlapping runs
+LOCKFILE=/tmp/run_daily.lock
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+  echo "[$(date)] [run_daily.sh] Previous instance still running; exiting."
+  exit 0
+fi
 
-# Calculate a random sleep time within the specified range
-SLEEPTIME=$((MINWAIT + RANDOM % (MAXWAIT - MINWAIT)))
+# Random sleep between configurable minutes (default 5-50 minutes)
+MINWAIT=${MIN_SLEEP_MINUTES:-5}
+MAXWAIT=${MAX_SLEEP_MINUTES:-50}
+MINWAIT_SEC=$((MINWAIT*60))
+MAXWAIT_SEC=$((MAXWAIT*60))
 
-# Convert the sleep time to minutes for logging
-SLEEP_MINUTES=$((SLEEPTIME / 60))
+# Skip sleep if SKIP_RANDOM_SLEEP is set to true
+if [ "${SKIP_RANDOM_SLEEP:-false}" != "true" ]; then
+    SLEEPTIME=$(( MINWAIT_SEC + RANDOM % (MAXWAIT_SEC - MINWAIT_SEC) ))
+    SLEEP_MINUTES=$(( SLEEPTIME / 60 ))
+    echo "[$(date)] [run_daily.sh] Sleeping for $SLEEP_MINUTES minutes ($SLEEPTIME seconds) to randomize execution..."
+    sleep "$SLEEPTIME"
+else
+    echo "[$(date)] [run_daily.sh] Skipping random sleep (SKIP_RANDOM_SLEEP=true)"
+fi
 
-# Log the sleep duration
-echo "Sleeping for $SLEEP_MINUTES minutes ($SLEEPTIME seconds)..."
-
-# Sleep for the calculated time
-sleep $SLEEPTIME
-
-# Log the start of the script
-echo "Starting script..."
-
-# Execute the Node.js script directly
-npm run start
+echo "[$(date)] [run_daily.sh] Starting script..."
+if npm start; then
+  echo "[$(date)] [run_daily.sh] Script completed successfully."
+else
+  echo "[$(date)] [run_daily.sh] ERROR: Script failed!" >&2
+fi
