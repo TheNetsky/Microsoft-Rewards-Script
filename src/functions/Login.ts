@@ -29,6 +29,8 @@ export class Login {
     async login(page: Page, email: string, password: string) {
 
         try {
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process!')
+
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
 
@@ -126,8 +128,24 @@ export class Login {
 
     private async enterPassword(page: Page, password: string) {
         const passwordInputSelector = 'input[type="password"]'
-
         try {
+            const viewFooter = await page.waitForSelector('[data-testid="viewFooter"]', { timeout: 2000 }).catch(() => null)
+            if (viewFooter) {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Page "Get a code to sign in" found by "viewFooter"')
+
+                const otherWaysButton = await viewFooter.$('span[role="button"]')
+                if (otherWaysButton) {
+                    await otherWaysButton.click()
+                    await this.bot.utils.wait(5000)
+
+                    const secondListItem = page.locator('[role="listitem"]').nth(1)
+                    if (await secondListItem.isVisible()) {
+                        await secondListItem.click()
+                    }
+
+                }
+            }
+
             // Wait for password field
             const passwordField = await page.waitForSelector(passwordInputSelector, { state: 'visible', timeout: 5000 }).catch(() => null)
             if (!passwordField) {
@@ -159,7 +177,6 @@ export class Login {
         }
     }
 
-
     private async handle2FA(page: Page) {
         try {
             const numberToPress = await this.get2FACode(page)
@@ -177,7 +194,7 @@ export class Login {
 
     private async get2FACode(page: Page): Promise<string | null> {
         try {
-            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         } catch {
             if (this.bot.config.parallel) {
@@ -200,7 +217,7 @@ export class Login {
 
             await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
             await this.bot.utils.wait(2000)
-            const element = await page.waitForSelector('#displaySign', { state: 'visible', timeout: 2000 })
+            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         }
     }
@@ -212,7 +229,7 @@ export class Login {
                 this.bot.log(this.bot.isMobile, 'LOGIN', `Press the number ${numberToPress} on your Authenticator app to approve the login`)
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'If you press the wrong number or the "DENY" button, try again in 60 seconds')
 
-                await page.waitForSelector('#i0281', { state: 'detached', timeout: 60000 })
+                await page.waitForSelector('form[name="f1"]', { state: 'detached', timeout: 60000 })
 
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Login successfully approved!')
                 break
@@ -237,62 +254,6 @@ export class Login {
         await page.fill('input[name="otc"]', code)
         await page.keyboard.press('Enter')
         this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code entered successfully')
-    }
-
-    private async checkLoggedIn(page: Page) {
-        const targetHostname = 'rewards.bing.com'
-        const targetPathname = '/'
-
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            await this.bot.browser.utils.tryDismissAllMessages(page)
-            const currentURL = new URL(page.url())
-            if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
-                break
-            }
-        }
-
-        // Wait for login to complete
-        await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 })
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Successfully logged into the rewards portal')
-    }
-
-    private async checkBingLogin(page: Page): Promise<void> {
-        try {
-            this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing login')
-            await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
-
-            const maxIterations = 5
-
-            for (let iteration = 1; iteration <= maxIterations; iteration++) {
-                const currentUrl = new URL(page.url())
-
-                if (currentUrl.hostname === 'www.bing.com' && currentUrl.pathname === '/') {
-                    await this.bot.browser.utils.tryDismissAllMessages(page)
-
-                    const loggedIn = await this.checkBingLoginStatus(page)
-                    // If mobile browser, skip this step
-                    if (loggedIn || this.bot.isMobile) {
-                        this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing login verification passed!')
-                        break
-                    }
-                }
-
-                await this.bot.utils.wait(1000)
-            }
-
-        } catch (error) {
-            this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'An error occurred:' + error, 'error')
-        }
-    }
-
-    private async checkBingLoginStatus(page: Page): Promise<boolean> {
-        try {
-            await page.waitForSelector('#id_n', { timeout: 5000 })
-            return true
-        } catch (error) {
-            return false
-        }
     }
 
     async getMobileAccessToken(page: Page, email: string) {
@@ -343,6 +304,87 @@ export class Login {
 
         this.bot.log(this.bot.isMobile, 'LOGIN-APP', 'Successfully authorized')
         return tokenData.access_token
+    }
+
+    // Utils
+
+    private async checkLoggedIn(page: Page) {
+        const targetHostname = 'rewards.bing.com'
+        const targetPathname = '/'
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            await this.dismissLoginMessages(page)
+            const currentURL = new URL(page.url())
+            if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
+                break
+            }
+        }
+
+        // Wait for login to complete
+        await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 })
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'Successfully logged into the rewards portal')
+    }
+
+    private async dismissLoginMessages(page: Page) {
+        // Use Passekey
+        if (await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 2000 }).catch(() => null)) {
+            const skipButton = await page.$('[data-testid="secondaryButton"]')
+            if (skipButton) {
+                await skipButton.click()
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed "Use Passekey" modal')
+                await page.waitForTimeout(500)
+            }
+        }
+
+        // Use Keep me signed in
+        if (await page.waitForSelector('[data-testid="kmsiVideo"]', { timeout: 2000 }).catch(() => null)) {
+            const yesButton = await page.$('[data-testid="primaryButton"]')
+            if (yesButton) {
+                await yesButton.click()
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed "Keep me signed in" modal')
+                await page.waitForTimeout(500)
+            }
+        }
+
+    }
+
+    private async checkBingLogin(page: Page): Promise<void> {
+        try {
+            this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing login')
+            await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
+
+            const maxIterations = 5
+
+            for (let iteration = 1; iteration <= maxIterations; iteration++) {
+                const currentUrl = new URL(page.url())
+
+                if (currentUrl.hostname === 'www.bing.com' && currentUrl.pathname === '/') {
+                    await this.bot.browser.utils.tryDismissAllMessages(page)
+
+                    const loggedIn = await this.checkBingLoginStatus(page)
+                    // If mobile browser, skip this step
+                    if (loggedIn || this.bot.isMobile) {
+                        this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing login verification passed!')
+                        break
+                    }
+                }
+
+                await this.bot.utils.wait(1000)
+            }
+
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'An error occurred:' + error, 'error')
+        }
+    }
+
+    private async checkBingLoginStatus(page: Page): Promise<boolean> {
+        try {
+            await page.waitForSelector('#id_n', { timeout: 5000 })
+            return true
+        } catch (error) {
+            return false
+        }
     }
 
     private async checkAccountLocked(page: Page) {
