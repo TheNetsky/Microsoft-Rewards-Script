@@ -145,6 +145,9 @@ export interface SupportedLevels {
     level1?: string;
     level2: string;
     level2XBoxGold: string;
+    newLevel1?: string;
+    newLevel2?: string;
+    newLevel3: string;
 }
 
 export interface Slide {
