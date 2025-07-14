@@ -686,6 +686,8 @@ export interface LevelInfo {
     progressMax: number;
     levels: Level[];
     benefitsPromotion: DashboardImpression;
+    hvaLevelUpActivityDefaultSearchEngineDays_V2?: string;
+    hvaLevelUpActivityDefaultSearchEngineDaysMax_V2?: string;
 }
 
 export interface Level {
