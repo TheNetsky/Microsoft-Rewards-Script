@@ -11,6 +11,7 @@ import { UrlReward } from './activities/UrlReward'
 import { SearchOnBing } from './activities/SearchOnBing'
 import { ReadToEarn } from './activities/ReadToEarn'
 import { DailyCheckIn } from './activities/DailyCheckIn'
+import { DefaultSearchEngine } from './activities/DefaultSearchEngine'
 
 import { DashboardData, MorePromotion, PromotionalItem } from '../interface/DashboardData'
 
@@ -65,6 +66,11 @@ export default class Activities {
     doDailyCheckIn = async (accessToken: string, data: DashboardData): Promise<void> => {
         const dailyCheckIn = new DailyCheckIn(this.bot)
         await dailyCheckIn.doDailyCheckIn(accessToken, data)
+    }
+
+    doEngineReward = async (page: Page, data: DashboardData): Promise<void> => {
+        const engineReward = new DefaultSearchEngine(this.bot)
+        await engineReward.doEngineReward(page, data)
     }
 
 }
