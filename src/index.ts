@@ -198,6 +198,11 @@ export class MicrosoftRewardsBot {
             await this.workers.doPunchCard(workerPage, data)
         }
 
+        // Do default engine search
+        if (data.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDays_V2) {
+            await this.activities.doEngineReward(await browser.newPage(), data)
+        }
+
         // Do desktop searches
         if (this.config.workers.doDesktopSearch) {
             await this.activities.doSearch(workerPage, data)
