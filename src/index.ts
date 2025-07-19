@@ -183,7 +183,7 @@ export class MicrosoftRewardsBot {
 
                 //influx//
                 if (typeof this.pointsInitial === 'number') {
-                writePoints(account, this.pointsInitial, this.log, 'initial');
+                writePoints(account, this.pointsInitial, this.log, 'final');
                 }
             
 
