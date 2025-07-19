@@ -15,6 +15,8 @@ import Activities from './functions/Activities'
 
 import { Account } from './interface/Account'
 import Axios from './util/Axios'
+import { writePoints } from './influx';
+
 
 
 // Main bot class
@@ -136,6 +138,7 @@ export class MicrosoftRewardsBot {
 
             log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
+        
 
         log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
         process.exit()
@@ -167,10 +170,22 @@ export class MicrosoftRewardsBot {
             + browserEnarablePoints.morePromotionsPoints
 
         log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today`)
+        
+            //influx//
+            if (typeof this.pointsInitial === 'number') {
+            writePoints(account, this.pointsInitial, this.log, 'initial');
+            }
+            
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
             log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
+
+                //influx//
+                if (typeof this.pointsInitial === 'number') {
+                writePoints(account, this.pointsInitial, this.log, 'final');
+                }
+            
 
             // Close desktop browser
             await this.browser.func.closeBrowser(browser, account.email)
@@ -215,6 +230,7 @@ export class MicrosoftRewardsBot {
     async Mobile(account: Account) {
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
+        const afterPointAmount = await this.browser.func.getCurrentPoints()
 
         log(this.isMobile, 'MAIN', 'Starting browser')
 
@@ -233,11 +249,21 @@ export class MicrosoftRewardsBot {
 
         log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today (Browser: ${browserEnarablePoints.mobileSearchPoints} points, App: ${appEarnablePoints.totalEarnablePoints} points)`)
 
+        //influx//
+            if (typeof afterPointAmount === 'number') {
+            writePoints(account, this.pointsInitial, this.log, 'initial');
+            }
+
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
             log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
 
-            // Close mobile browser
+            //influx//
+                if (typeof afterPointAmount === 'number') {
+                writePoints(account, afterPointAmount, this.log, 'final');
+                }
+
+        // Close mobile browser
             await this.browser.func.closeBrowser(browser, account.email)
             return
         }
@@ -290,9 +316,12 @@ export class MicrosoftRewardsBot {
             }
         }
 
-        const afterPointAmount = await this.browser.func.getCurrentPoints()
-
         log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - this.pointsInitial} points today`)
+
+        //influx//
+            if (typeof afterPointAmount === 'number') {
+            writePoints(account, afterPointAmount, this.log, 'final');
+            }
 
         // Close mobile browser
         await this.browser.func.closeBrowser(browser, account.email)
