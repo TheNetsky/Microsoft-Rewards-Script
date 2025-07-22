@@ -123,6 +123,74 @@ export default class BrowserFunc {
                 throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
             }
 
+            const currentLevel = dashboardData.userStatus.levelInfo.benefitsPromotion.activeLevel
+            let pointProgressMax: string | undefined = undefined
+            switch (currentLevel) {
+                case 'newLevel1': {
+                    pointProgressMax = dashboardData.userStatus.levelInfo.benefitsPromotion.benefits?.find(x => x.key == 'SearchAndEarn')?.supportedLevels.newLevel1
+                    break
+                }
+                case 'newLevel2': {
+                    pointProgressMax = dashboardData.userStatus.levelInfo.benefitsPromotion.benefits?.find(x => x.key == 'SearchAndEarn')?.supportedLevels.newLevel2
+                    break
+                }
+                case 'newLevel3': {
+                    pointProgressMax = dashboardData.userStatus.levelInfo.benefitsPromotion.benefits?.find(x => x.key == 'SearchAndEarn')?.supportedLevels.newLevel3
+                    break
+                }
+            }
+            if (pointProgressMax) {
+                dashboardData.userStatus.counters.pcSearch = [
+                    {
+                        name: null,
+                        priority: 0,
+                        attributes: null,
+                        offerId: '',
+                        complete: false,
+                        counter: 0,
+                        activityProgress: 0,
+                        activityProgressMax: 0,
+                        pointProgressMax: parseInt(pointProgressMax || '0'),
+                        pointProgress: dashboardData.userStatus.levelInfo.bingSearchDailyPoints,
+                        promotionType: '',
+                        promotionSubtype: '',
+                        title: '',
+                        extBannerTitle: '',
+                        titleStyle: '',
+                        theme: '',
+                        description: '',
+                        extBannerDescription: '',
+                        descriptionStyle: '',
+                        showcaseTitle: '',
+                        showcaseDescription: '',
+                        imageUrl: '',
+                        dynamicImage: '',
+                        smallImageUrl: '',
+                        backgroundImageUrl: '',
+                        showcaseBackgroundImageUrl: '',
+                        showcaseBackgroundLargeImageUrl: '',
+                        promotionBackgroundLeft: '',
+                        promotionBackgroundRight: '',
+                        iconUrl: '',
+                        animatedIconUrl: '',
+                        animatedLargeBackgroundImageUrl: '',
+                        destinationUrl: '',
+                        linkText: '',
+                        hash: '',
+                        activityType: '',
+                        isRecurring: false,
+                        isHidden: false,
+                        isTestOnly: false,
+                        isGiveEligible: false,
+                        level: '',
+                        slidesCount: 0,
+                        legalText: '',
+                        legalLinkText: '',
+                        deviceType: ''
+                    }
+                ]
+            }
+
             return dashboardData
 
         } catch (error) {
