@@ -25,6 +25,19 @@ export class Search extends Workers {
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
+        // Generate search queries
+        let googleSearchQueries = await this.getGoogleTrends(this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US')
+        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
+
+        // Deduplicate the search terms
+        googleSearchQueries = [...new Set(googleSearchQueries)]
+
+        //Try to do the default engine search
+        await this.doEngineSearch(page, data, googleSearchQueries)
+
+        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
+
+        //Update counters
         let searchCounters: Counters = await this.bot.browser.func.getSearchPoints()
         let missingPoints = this.calculatePoints(searchCounters)
 
@@ -32,13 +45,6 @@ export class Search extends Workers {
             this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Bing searches have already been completed')
             return
         }
-
-        // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US')
-        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
-
-        // Deduplicate the search terms
-        googleSearchQueries = [...new Set(googleSearchQueries)]
 
         // Go to bing
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
@@ -394,6 +400,51 @@ export class Search extends Workers {
             }
         } catch (error) {
             // Continue if element is not found or other error occurs
+        }
+    }
+
+    private async doEngineSearch(page: Page, data: DashboardData, queries: GoogleSearch[]) {
+        if (
+            data.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDaysMax_V2 == null ||
+            data.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDays_V2 == null
+        ) {
+            return
+        }
+        try {
+            let success = false
+            let count = 0
+            const max = parseInt(data.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDaysMax_V2)
+            const progress = parseInt(data.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDays_V2)
+            if (progress < max) {
+                this.bot.log(this.bot.isMobile, 'ENGINE-REWARD', 'Trying to complete default Engine Search')
+            } else {
+                this.bot.log(this.bot.isMobile, 'ENGINE-REWARD', `Default Engine Search completed | ${progress}/${max} days`)
+                return
+            }
+
+            while (!success && count < 3) {
+                await page.goto(`https://www.bing.com/search?q=${encodeURI(queries[count]?.topic?.replace(' ', '+') as string)}&PC=U316&FORM=CHROMN`)
+
+                await this.bot.utils.wait(2000)
+
+                const nData = await this.bot.browser.func.getDashboardData()
+                if (nData.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDays_V2 != null) {
+                    const nProgress = parseInt(nData.userStatus.levelInfo.hvaLevelUpActivityDefaultSearchEngineDays_V2)
+                    if (nProgress > progress) {
+                        this.bot.log(this.bot.isMobile, 'ENGINE-REWARD', `Completed the default Engine Search successfully | ${nProgress}/${max} days`)
+                        success = true
+                    } else {
+                        count++
+                    }
+                }
+            }
+
+            if (!success) {
+                this.bot.log(this.bot.isMobile, 'ENGINE-REWARD', 'Default Engine Search was unsuccessfully')
+            }
+
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, 'ENGINE-REWARD', 'An error occurred:' + error, 'error')
         }
     }
 
