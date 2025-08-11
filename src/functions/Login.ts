@@ -128,9 +128,19 @@ export class Login {
 
     private async enterPassword(page: Page, password: string) {
         const passwordInputSelector = 'input[type="password"]'
+        const skip2FASelector = '#idA_PWD_SwitchToPassword';
         try {
-            const viewFooter = await page.waitForSelector('[data-testid="viewFooter"]', { timeout: 2000 }).catch(() => null)
-            if (viewFooter) {
+            const skip2FAButton = await page.waitForSelector(skip2FASelector, { timeout: 2000 }).catch(() => null)
+            if (skip2FAButton) {
+                await skip2FAButton.click()
+                await this.bot.utils.wait(2000)
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Skipped 2FA')
+            } else {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'No 2FA skip button found, proceeding with password entry')
+            }
+            const viewFooter = await page.waitForSelector('#view > div > span:nth-child(6)', { timeout: 2000 }).catch(() => null)
+            const passwordField1 = await page.waitForSelector(passwordInputSelector, { timeout: 5000 }).catch(() => null)
+            if (viewFooter && !passwordField1) {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Page "Get a code to sign in" found by "viewFooter"')
 
                 const otherWaysButton = await viewFooter.$('span[role="button"]')
@@ -142,7 +152,6 @@ export class Login {
                     if (await secondListItem.isVisible()) {
                         await secondListItem.click()
                     }
-
                 }
             }
 
