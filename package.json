@@ -49,5 +49,8 @@
     "rebrowser-playwright": "1.52.0",
     "socks-proxy-agent": "^8.0.5",
     "ts-node": "^10.9.2"
+  },
+  "overrides": {
+    "undici": "5.28.3"
   }
 }
