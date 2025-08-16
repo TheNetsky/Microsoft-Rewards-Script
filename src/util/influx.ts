@@ -7,7 +7,8 @@ import { Account } from '../interface/Account';
 import { log } from './Logger';
 type LogFunction = typeof log;
 
-const configPath = path.join(__dirname, 'config.json');
+const configPath = path.join(__dirname, '..', 'config.json');
+
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
 
 const influxConfig = config.influxdb;
