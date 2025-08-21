@@ -5,11 +5,19 @@ Under development, however mainly for personal use!
 
 ## How to setup ##
 1. Download or clone source code
-2. Run `npm i` to install the packages
-3. Change `accounts.example.json` to `accounts.json` and add your account details
-4. Change `config.json` to your liking
-5. Run `npm run build` to build the script
-6. Run `npm run start` to start the built script
+2. Change `accounts.example.json` to `accounts.json` and add your account details
+3. Change `config.json` to your liking
+4. Either go the nix or non-nix route
+
+### How to setup (not with nix) ###
+5. Run `npm i` to install the packages
+6. Run `npm run build` to build the script
+7. Run `npm run start` to start the built script
+
+### How to setup (with nix) ##
+5. Get [Nix](https://nixos.org/)
+6. Run `./run.sh`
+7. That's it!
 
 ## Notes ##
 - If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run kill-chrome-win` script. (Windows)
