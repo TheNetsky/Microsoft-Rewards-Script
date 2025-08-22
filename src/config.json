@@ -43,5 +43,23 @@
     "webhook": {
         "enabled": false,
         "url": ""
-    }
+    },
+"influxdb": {
+  "version": 1,
+
+  "v1": {
+    "host": "localhost",
+    "port": 8086,
+    "protocol": "http",
+    "username": "tuo_username_v1",
+    "password": "tua_password_v1",
+    "database": "microsoft_rewards"
+  },
+  "v2": {
+    "url": "http://localhost:8086",
+    "token": "IL_TUO_TOKEN_V2",
+    "org": "la_tua_organizzazione",
+    "bucket": "microsoft_rewards"
+  }
+}
 }
