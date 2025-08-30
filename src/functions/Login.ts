@@ -34,6 +34,13 @@ export class Login {
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
 
+            // Disable FIDO support in login request
+            await page.route('**/GetCredentialType.srf*', (route) => {
+                const body = JSON.parse(route.request().postData() || '{}')
+                body.isFidoSupported = false
+                route.continue({ postData: JSON.stringify(body) })
+            })
+
             await page.waitForLoadState('domcontentloaded').catch(() => { })
 
             await this.bot.browser.utils.reloadBadPage(page)
@@ -190,7 +197,7 @@ export class Login {
         try {
             const numberToPress = await this.get2FACode(page)
             if (numberToPress) {
-                // Authentictor App verification
+                // Authenticator App verification
                 await this.authAppVerification(page, numberToPress)
             } else {
                 // SMS verification
@@ -244,7 +251,11 @@ export class Login {
                 break
             } catch {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'The code is expired. Trying to get a new code...')
-                await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
+                // await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
+                const primaryButton = await page.waitForSelector('button[data-testid="primaryButton"]', { state: 'visible', timeout: 5000 }).catch(() => null)
+                if (primaryButton) {
+                    await primaryButton.click()
+                }
                 numberToPress = await this.get2FACode(page)
             }
         }
