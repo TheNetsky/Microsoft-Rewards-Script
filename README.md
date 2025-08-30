@@ -35,24 +35,16 @@ Under development, however mainly for personal use!
 
 2. **Update `accounts.json`**
 
-3. **Edit `config.json`,** ensuring the following values are set (other settings are up to your preference):
-
-   ```json
-   "headless": true,
-   "clusters": 1,
-   ```
+3. **Edit `config.json`,** ensuring "headless": true, other settings are up to your preference
 
 ### **Customize the `compose.yaml` File**
 
 A basic docker `compose.yaml` is provided. Follow these steps to configure and run the container:
 
 1. **Set Your Timezone:** Adjust the `TZ` variable to ensure correct scheduling.
-2. **Configure Persistent Storage:**
-   - Map `config.json` and `accounts.json` to retain settings and accounts.
-   - (Optional) Use a persistent `sessions` folder to save login sessions.
 3. **Customize the Schedule:**
    - Modify `CRON_SCHEDULE` to set run times. Use [crontab.guru](https://crontab.guru) for help.
-   - **Note:** The container adds 5–50 minutes of random variability to each scheduled start time.
+   - **Note:** The container adds 5–50 minutes of random variability to each scheduled start time. This can be optionally disabled or customized in the compose file.
 4. **(Optional) Run on Startup:**
    - Set `RUN_ON_START=true` to execute the script immediately when the container starts.
 5. **Start the Container:** Run `docker compose up -d` to build and launch.
