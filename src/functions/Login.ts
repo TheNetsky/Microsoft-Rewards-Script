@@ -14,6 +14,32 @@ const rl = readline.createInterface({
     output: process.stdout
 })
 
+// ------------------------------
+// Central constants (selectors / timeouts / limits)
+// Centralizing these avoids scattering magic numbers and eases future tuning.
+// ------------------------------
+const SELECTORS = {
+    emailInput: 'input[type="email"]',
+    passwordInput: 'input[type="password"]',
+    submitButton: 'button[type="submit"]',
+    userDisplayName: '#userDisplayName',
+    rewardsPortalHtml: 'html[data-role-name="RewardsPortal"]',
+    passkeyVideo: '[data-testid="biometricVideo"]',
+    kmsiVideo: '[data-testid="kmsiVideo"]'
+} as const
+
+const TIMEOUTS = {
+    veryShort: 500,
+    short: 1000,
+    medium: 2000,
+    long: 5000,
+    checkLoggedInMaxMs: 60000
+} as const
+
+const LIMITS = {
+    authAppCycles: 10
+} as const
+
 export class Login {
     private bot: MicrosoftRewardsBot
     private clientId: string = '0000000040170455'
@@ -26,6 +52,10 @@ export class Login {
         this.bot = bot
     }
 
+    /**
+     * Full login flow (Rewards portal desktop): navigation, credentials, potential 2FA (Authenticator / SMS),
+     * dismissal of passkey/KMSI prompts, Bing validation, and session persistence.
+     */
     async login(page: Page, email: string, password: string) {
 
         try {
@@ -35,7 +65,7 @@ export class Login {
             await page.goto('https://rewards.bing.com/signin')
 
             // Disable FIDO support in login request
-            await page.route('**/GetCredentialType.srf*', (route) => {
+            await page.route('**/GetCredentialType.srf*', (route: any) => { // route typed as any due to external lib lacking types here
                 const body = JSON.parse(route.request().postData() || '{}')
                 body.isFidoSupported = false
                 route.continue({ postData: JSON.stringify(body) })
@@ -48,7 +78,7 @@ export class Login {
             // Check if account is locked
             await this.checkAccountLocked(page)
 
-            const isLoggedIn = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 }).then(() => true).catch(() => false)
+            const isLoggedIn = await page.waitForSelector(SELECTORS.rewardsPortalHtml, { timeout: 10000 }).then(() => true).catch(() => false)
 
             if (!isLoggedIn) {
                 await this.execLogin(page, email, password)
@@ -95,7 +125,7 @@ export class Login {
     }
 
     private async enterEmail(page: Page, email: string) {
-        const emailInputSelector = 'input[type="email"]'
+        const emailInputSelector = SELECTORS.emailInput
 
         try {
             // Wait for email field
@@ -108,7 +138,7 @@ export class Login {
             await this.bot.utils.wait(1000)
 
             // Check if email is prefilled
-            const emailPrefilled = await page.waitForSelector('#userDisplayName', { timeout: 5000 }).catch(() => null)
+            const emailPrefilled = await page.waitForSelector(SELECTORS.userDisplayName, { timeout: 5000 }).catch(() => null)
             if (emailPrefilled) {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Email already prefilled by Microsoft')
             } else {
@@ -119,7 +149,7 @@ export class Login {
                 await this.bot.utils.wait(1000)
             }
 
-            const nextButton = await page.waitForSelector('button[type="submit"]', { timeout: 2000 }).catch(() => null)
+            const nextButton = await page.waitForSelector(SELECTORS.submitButton, { timeout: 2000 }).catch(() => null)
             if (nextButton) {
                 await nextButton.click()
                 await this.bot.utils.wait(2000)
@@ -134,7 +164,7 @@ export class Login {
     }
 
     private async enterPassword(page: Page, password: string) {
-        const passwordInputSelector = 'input[type="password"]'
+    const passwordInputSelector = SELECTORS.passwordInput
         const skip2FASelector = '#idA_PWD_SwitchToPassword';
         try {
             const skip2FAButton = await page.waitForSelector(skip2FASelector, { timeout: 2000 }).catch(() => null)
@@ -178,7 +208,7 @@ export class Login {
             await page.fill(passwordInputSelector, password)
             await this.bot.utils.wait(1000)
 
-            const nextButton = await page.waitForSelector('button[type="submit"]', { timeout: 2000 }).catch(() => null)
+            const nextButton = await page.waitForSelector(SELECTORS.submitButton, { timeout: 2000 }).catch(() => null)
             if (nextButton) {
                 await nextButton.click()
                 await this.bot.utils.wait(2000)
@@ -292,7 +322,7 @@ export class Login {
          * Added guidance for multiple simultaneous prompts (clustered accounts case).
          */
         // eslint-disable-next-line no-constant-condition
-        while (true) {
+        for (let cycle = 1; cycle <= LIMITS.authAppCycles; cycle++) {
             try {
                 this.bot.log(this.bot.isMobile, 'LOGIN', `Open Microsoft Authenticator and tap the matching number: ${numberToPress}`)
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'If multiple prompts were sent at once and one disappeared, open Authenticator menu > Notifications to find the other.')
@@ -313,6 +343,9 @@ export class Login {
                     this.bot.log(this.bot.isMobile, 'LOGIN', 'No new Authenticator number retrieved; attempting SMS fallback (if available)...', 'warn')
                     break
                 }
+                if (cycle === LIMITS.authAppCycles) {
+                    this.bot.log(this.bot.isMobile, 'LOGIN', 'Reached maximum Authenticator retry cycles; aborting 2FA app loop.', 'warn')
+                }
             }
         }
     }
@@ -321,7 +354,7 @@ export class Login {
         this.bot.log(this.bot.isMobile, 'LOGIN', 'SMS 2FA code required. Waiting for user input...')
 
         const code = await new Promise<string>((resolve) => {
-            rl.question('Enter 2FA code:\n', (input) => {
+            rl.question('Enter 2FA code:\n', (input: string) => {
                 rl.close()
                 resolve(input)
             })
@@ -387,25 +420,28 @@ export class Login {
     private async checkLoggedIn(page: Page) {
         const targetHostname = 'rewards.bing.com'
         const targetPathname = '/'
-
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        const start = Date.now()
+        let landed = false
+        while (Date.now() - start < TIMEOUTS.checkLoggedInMaxMs) {
             await this.dismissLoginMessages(page)
             const currentURL = new URL(page.url())
             if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
+                landed = true
                 break
             }
+            await this.bot.utils.wait(500)
         }
-
-        // Wait for login to complete
-        await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 })
+        if (!landed) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Timeout waiting for final rewards portal redirect; proceeding (state may already be authenticated).', 'warn')
+        }
+        await page.waitForSelector(SELECTORS.rewardsPortalHtml, { timeout: 10000 })
         this.bot.log(this.bot.isMobile, 'LOGIN', 'Successfully logged into the rewards portal')
     }
 
     private async dismissLoginMessages(page: Page) {
         // Passkey / Windows Hello prompt ("Sign in faster"), click "Skip for now"
         // Primary heuristics: presence of biometric video OR title mentions passkey/sign in faster
-        const passkeyVideo = await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 2000 }).catch(() => null)
+    const passkeyVideo = await page.waitForSelector(SELECTORS.passkeyVideo, { timeout: 2000 }).catch(() => null)
         let handledPasskey = false
         if (passkeyVideo) {
             const skipButton = await page.$('[data-testid="secondaryButton"]')
@@ -457,7 +493,7 @@ export class Login {
         }
 
         // Use Keep me signed in
-        if (await page.waitForSelector('[data-testid="kmsiVideo"]', { timeout: 2000 }).catch(() => null)) {
+        if (await page.waitForSelector(SELECTORS.kmsiVideo, { timeout: 2000 }).catch(() => null)) {
             const yesButton = await page.$('[data-testid="primaryButton"]')
             if (yesButton) {
                 await yesButton.click()
