@@ -209,54 +209,110 @@ export class Login {
     }
 
     private async get2FACode(page: Page): Promise<string | null> {
-        try {
-            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
-            return await element.textContent()
-        } catch {
-            if (this.bot.config.parallel) {
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'Script running in parallel, can only send 1 2FA request per account at a time!', 'log', 'yellow')
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'Trying again in 60 seconds! Please wait...', 'log', 'yellow')
+        /*
+         * Enhancements based on user feedback:
+         * Note: The Authenticator approval number can appear a little AFTER the push notification shows up on your device.
+         * We now poll for a short period (progressively) before deciding we must re-trigger a notification.
+         * Note2: When multiple (clustered) accounts trigger Authenticator at the exact same time, two prompts can arrive together.
+         * If one disappears after approving the other, open the Authenticator app menu and check Notifications to bring the second one back.
+         */
+        const selector = '#displaySign, div[data-testid="displaySign"]>span'
+        const maxInitialWaitMs = 8000 // total time slice to patiently wait for first code appearance
+        const pollIntervalMs = 400
+        const started = Date.now()
+        let attempt = 0
 
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                    const button = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { state: 'visible', timeout: 2000 }).catch(() => null)
-                    if (button) {
-                        await this.bot.utils.wait(60000)
-                        await button.click()
-
-                        continue
+        // First phase: gentle polling for the code to appear without forcing another push
+        while (Date.now() - started < maxInitialWaitMs) {
+            attempt++
+            const element = await page.waitForSelector(selector, { state: 'visible', timeout: pollIntervalMs }).catch(() => null)
+            if (element) {
+                const txt = (await element.textContent())?.trim()
+                if (txt) {
+                    if (attempt === 1) {
+                        this.bot.log(this.bot.isMobile, 'LOGIN', `Authenticator number detected instantly: ${txt}`)
                     } else {
-                        break
+                        this.bot.log(this.bot.isMobile, 'LOGIN', `Authenticator number detected after ${attempt} short poll(s): ${txt}`)
                     }
+                    return txt
                 }
+            } else if (attempt === 1) {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Waiting for Authenticator number to appear (it can take a second)...')
             }
-
-            await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
-            await this.bot.utils.wait(2000)
-            const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
-            return await element.textContent()
         }
+
+        // If we are here, initial passive wait failed; proceed with legacy / retry logic
+        if (this.bot.config.parallel) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Running in parallel mode: only one fresh Authenticator push can be active per account.', 'log', 'yellow')
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Will retry sending a new push every 60s until a code is received...', 'log', 'yellow')
+
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                const resendBtn = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { state: 'visible', timeout: 2000 }).catch(() => null)
+                if (resendBtn) {
+                    await this.bot.utils.wait(60000)
+                    await resendBtn.click().catch(() => { })
+
+                    // After clicking resend, attempt a short polling burst again
+                    const burstStart = Date.now()
+                    while (Date.now() - burstStart < 5000) {
+                        const element = await page.waitForSelector(selector, { state: 'visible', timeout: 500 }).catch(() => null)
+                        if (element) {
+                            const code = (await element.textContent())?.trim()
+                            if (code) {
+                                this.bot.log(this.bot.isMobile, 'LOGIN', `Authenticator number obtained after resend: ${code}`)
+                                return code
+                            }
+                        }
+                    }
+                    continue
+                }
+                break
+            }
+        }
+
+        // Try clicking the primary confirm/send button (classic path) then poll briefly again
+        await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
+        await this.bot.utils.wait(1500)
+        const finalElement = await page.waitForSelector(selector, { state: 'visible', timeout: 4000 }).catch(() => null)
+        if (finalElement) {
+            const txt = (await finalElement.textContent())?.trim()
+            if (txt) {
+                this.bot.log(this.bot.isMobile, 'LOGIN', `Authenticator number received after manual resend: ${txt}`)
+                return txt
+            }
+        }
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'Failed to capture Authenticator number (will fallback to SMS if available)', 'warn')
+        return null
     }
 
     private async authAppVerification(page: Page, numberToPress: string | null) {
+        /*
+         * Loop until the Authenticator form disappears (approved) or we give up (handled externally).
+         * Added guidance for multiple simultaneous prompts (clustered accounts case).
+         */
         // eslint-disable-next-line no-constant-condition
         while (true) {
             try {
-                this.bot.log(this.bot.isMobile, 'LOGIN', `Press the number ${numberToPress} on your Authenticator app to approve the login`)
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'If you press the wrong number or the "DENY" button, try again in 60 seconds')
+                this.bot.log(this.bot.isMobile, 'LOGIN', `Open Microsoft Authenticator and tap the matching number: ${numberToPress}`)
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'If multiple prompts were sent at once and one disappeared, open Authenticator menu > Notifications to find the other.')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'If you tap the wrong number or deny it, a new code will be requested automatically (can take up to 60s).')
 
                 await page.waitForSelector('form[name="f1"]', { state: 'detached', timeout: 60000 })
 
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'Login successfully approved!')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Login successfully approved via Authenticator!')
                 break
             } catch {
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'The code is expired. Trying to get a new code...')
-                // await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Authenticator code expired or approval not received in time. Requesting a new one...')
                 const primaryButton = await page.waitForSelector('button[data-testid="primaryButton"]', { state: 'visible', timeout: 5000 }).catch(() => null)
                 if (primaryButton) {
-                    await primaryButton.click()
+                    await primaryButton.click().catch(() => { })
                 }
                 numberToPress = await this.get2FACode(page)
+                if (!numberToPress) {
+                    this.bot.log(this.bot.isMobile, 'LOGIN', 'No new Authenticator number retrieved; attempting SMS fallback (if available)...', 'warn')
+                    break
+                }
             }
         }
     }
