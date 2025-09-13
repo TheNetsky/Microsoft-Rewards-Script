@@ -34,6 +34,13 @@ export class Login {
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
 
+            // Disable FIDO support in login request
+            await page.route('**/GetCredentialType.srf*', (route) => {
+                const body = JSON.parse(route.request().postData() || '{}')
+                body.isFidoSupported = false
+                route.continue({ postData: JSON.stringify(body) })
+            })
+
             await page.waitForLoadState('domcontentloaded').catch(() => { })
 
             await this.bot.browser.utils.reloadBadPage(page)
@@ -190,7 +197,7 @@ export class Login {
         try {
             const numberToPress = await this.get2FACode(page)
             if (numberToPress) {
-                // Authentictor App verification
+                // Authenticator App verification
                 await this.authAppVerification(page, numberToPress)
             } else {
                 // SMS verification
@@ -244,7 +251,11 @@ export class Login {
                 break
             } catch {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'The code is expired. Trying to get a new code...')
-                await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
+                // await page.click('button[aria-describedby="pushNotificationsTitle errorDescription"]')
+                const primaryButton = await page.waitForSelector('button[data-testid="primaryButton"]', { state: 'visible', timeout: 5000 }).catch(() => null)
+                if (primaryButton) {
+                    await primaryButton.click()
+                }
                 numberToPress = await this.get2FACode(page)
             }
         }
@@ -336,13 +347,56 @@ export class Login {
     }
 
     private async dismissLoginMessages(page: Page) {
-        // Use Passekey
-        if (await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 2000 }).catch(() => null)) {
+        // Passkey / Windows Hello prompt ("Sign in faster"), click "Skip for now"
+        // Primary heuristics: presence of biometric video OR title mentions passkey/sign in faster
+        const passkeyVideo = await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 2000 }).catch(() => null)
+        let handledPasskey = false
+        if (passkeyVideo) {
             const skipButton = await page.$('[data-testid="secondaryButton"]')
             if (skipButton) {
                 await skipButton.click()
-                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed "Use Passekey" modal')
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed "Use Passkey" modal via data-testid=secondaryButton')
                 await page.waitForTimeout(500)
+                handledPasskey = true
+            }
+        }
+
+        if (!handledPasskey) {
+            // Fallback heuristics: title text or presence of primary+secondary buttons typical of the passkey screen
+            const titleEl = await page.waitForSelector('[data-testid="title"]', { timeout: 1000 }).catch(() => null)
+            const titleText = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
+            const looksLikePasskeyTitle = /sign in faster|passkey/i.test(titleText)
+
+            const secondaryBtn = await page.waitForSelector('button[data-testid="secondaryButton"]', { timeout: 1000 }).catch(() => null)
+            const primaryBtn = await page.waitForSelector('button[data-testid="primaryButton"]', { timeout: 1000 }).catch(() => null)
+
+            if (looksLikePasskeyTitle && secondaryBtn) {
+                await secondaryBtn.click()
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed Passkey screen by title + secondaryButton')
+                await page.waitForTimeout(500)
+                handledPasskey = true
+            } else if (secondaryBtn && primaryBtn) {
+                // If both buttons are visible (Next + Skip for now), prefer the secondary (Skip for now)
+                await secondaryBtn.click()
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed Passkey screen by button pair heuristic')
+                await page.waitForTimeout(500)
+                handledPasskey = true
+            } else if (!handledPasskey) {
+                // Last-resort fallbacks by text and close icon
+                const skipByText = await page.locator('xpath=//button[contains(normalize-space(.), "Skip for now")]').first()
+                if (await skipByText.isVisible().catch(() => false)) {
+                    await skipByText.click()
+                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Dismissed Passkey screen via text fallback')
+                    await page.waitForTimeout(500)
+                    handledPasskey = true
+                } else {
+                    const closeBtn = await page.$('#close-button')
+                    if (closeBtn) {
+                        await closeBtn.click().catch(() => { })
+                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-LOGIN-MESSAGES', 'Attempted to close Passkey screen via close button')
+                        await page.waitForTimeout(500)
+                    }
+                }
             }
         }
 
