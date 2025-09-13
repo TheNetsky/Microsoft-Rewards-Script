@@ -1,5 +1,6 @@
 import cluster from 'cluster'
-import { Page } from 'rebrowser-playwright'
+// Use Page type from playwright for typings; at runtime rebrowser-playwright extends playwright
+import type { Page } from 'playwright'
 
 import Browser from './browser/Browser'
 import BrowserFunc from './browser/BrowserFunc'
@@ -15,6 +16,8 @@ import Activities from './functions/Activities'
 
 import { Account } from './interface/Account'
 import Axios from './util/Axios'
+import fs from 'fs'
+import path from 'path'
 
 
 // Main bot class
@@ -41,6 +44,9 @@ export class MicrosoftRewardsBot {
     private login = new Login(this)
     private accessToken: string = ''
 
+    // Summary collection (per process)
+    private accountSummaries: AccountSummary[] = []
+
     //@ts-expect-error Will be initialized later
     public axios: Axios
 
@@ -65,6 +71,7 @@ export class MicrosoftRewardsBot {
     }
 
     async run() {
+        this.printBanner()
         log('main', 'MAIN', `Bot started with ${this.config.clusters} clusters`)
 
         // Only cluster when there's more than 1 cluster demanded
@@ -79,6 +86,37 @@ export class MicrosoftRewardsBot {
         }
     }
 
+    private printBanner() {
+        // Only print once (primary process or single cluster execution)
+        if (this.config.clusters > 1 && !cluster.isPrimary) return
+        try {
+            const pkgPath = path.join(__dirname, '../', 'package.json')
+            let version = 'unknown'
+            if (fs.existsSync(pkgPath)) {
+                const raw = fs.readFileSync(pkgPath, 'utf-8')
+                const pkg = JSON.parse(raw)
+                version = pkg.version || version
+            }
+            const banner = [
+                '  __  __  _____       _____                            _     ',
+                ' |  \/  |/ ____|     |  __ \\                          | |    ',
+                ' | \  / | (___ ______| |__) |_____      ____ _ _ __ __| |___ ',
+                ' | |\/| |\\___ \\______|  _  // _ \\ \\ /\\ / / _` | \'__/ _` / __|',
+                ' | |  | |____) |     | | \\ \\  __/ \\ V  V / (_| | | | (_| \\__ \\',
+                ' |_|  |_|_____/      |_|  \\_\\___| \\_/\\_/ \\__,_|_|  \\__,_|___/',
+                '',
+                ` Version: v${version}`,
+                ''
+            ].join('\n')
+            console.log(banner)
+        } catch { /* ignore banner errors */ }
+    }
+
+    // Return summaries (used when clusters==1)
+    public getSummaries() {
+        return this.accountSummaries
+    }
+
     private runMaster() {
         log('main', 'MAIN-PRIMARY', 'Primary process started')
 
@@ -87,18 +125,27 @@ export class MicrosoftRewardsBot {
         for (let i = 0; i < accountChunks.length; i++) {
             const worker = cluster.fork()
             const chunk = accountChunks[i]
-            worker.send({ chunk })
+            ;(worker as any).send?.({ chunk })
+            // Collect summaries from workers
+            worker.on('message', (msg: any) => {
+                if (msg && msg.type === 'summary' && Array.isArray(msg.data)) {
+                    this.accountSummaries.push(...msg.data)
+                }
+            })
         }
 
-        cluster.on('exit', (worker, code) => {
+    cluster.on('exit', (worker: any, code: number) => {
             this.activeWorkers -= 1
 
             log('main', 'MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
 
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
-                log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
-                process.exit(0)
+                // All workers done -> send conclusion (if enabled) then exit
+                this.sendConclusion(this.accountSummaries).finally(() => {
+                    log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                    process.exit(0)
+                })
             }
         })
     }
@@ -106,7 +153,7 @@ export class MicrosoftRewardsBot {
     private runWorker() {
         log('main', 'MAIN-WORKER', `Worker ${process.pid} spawned`)
         // Receive the chunk of accounts from the master
-        process.on('message', async ({ chunk }) => {
+    ;(process as any).on('message', async ({ chunk }: { chunk: Account[] }) => {
             await this.runTasks(chunk)
         })
     }
@@ -115,29 +162,74 @@ export class MicrosoftRewardsBot {
         for (const account of accounts) {
             log('main', 'MAIN-WORKER', `Started tasks for account ${account.email}`)
 
+            const accountStart = Date.now()
+            let desktopInitial = 0
+            let mobileInitial = 0
+            let desktopCollected = 0
+            let mobileCollected = 0
+            const errors: string[] = []
+
             this.axios = new Axios(account.proxy)
             if (this.config.parallel) {
-                await Promise.all([
-                    this.Desktop(account),
-                    (() => {
-                        const mobileInstance = new MicrosoftRewardsBot(true)
-                        mobileInstance.axios = this.axios
-
-                        return mobileInstance.Mobile(account)
-                    })()
+                const mobileInstance = new MicrosoftRewardsBot(true)
+                mobileInstance.axios = this.axios
+                // Run both and capture results
+                const [desktopResult, mobileResult] = await Promise.all([
+                    this.Desktop(account).catch(e => { errors.push(`desktop:${shortErr(e)}`); return null }),
+                    mobileInstance.Mobile(account).catch(e => { errors.push(`mobile:${shortErr(e)}`); return null })
                 ])
+                if (desktopResult) {
+                    desktopInitial = desktopResult.initialPoints
+                    desktopCollected = desktopResult.collectedPoints
+                }
+                if (mobileResult) {
+                    mobileInitial = mobileResult.initialPoints
+                    mobileCollected = mobileResult.collectedPoints
+                }
             } else {
                 this.isMobile = false
-                await this.Desktop(account)
+                const desktopResult = await this.Desktop(account).catch(e => { errors.push(`desktop:${shortErr(e)}`); return null })
+                if (desktopResult) {
+                    desktopInitial = desktopResult.initialPoints
+                    desktopCollected = desktopResult.collectedPoints
+                }
 
                 this.isMobile = true
-                await this.Mobile(account)
+                const mobileResult = await this.Mobile(account).catch(e => { errors.push(`mobile:${shortErr(e)}`); return null })
+                if (mobileResult) {
+                    mobileInitial = mobileResult.initialPoints
+                    mobileCollected = mobileResult.collectedPoints
+                }
             }
+
+            const accountEnd = Date.now()
+            const durationMs = accountEnd - accountStart
+            const totalCollected = desktopCollected + mobileCollected
+            const initialTotal = (desktopInitial || 0) + (mobileInitial || 0)
+            this.accountSummaries.push({
+                email: account.email,
+                durationMs,
+                desktopCollected,
+                mobileCollected,
+                totalCollected,
+                initialTotal,
+                endTotal: initialTotal + totalCollected,
+                errors
+            })
 
             log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
 
         log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
+        // If in worker mode (clusters>1) send summaries to primary
+        if (this.config.clusters > 1 && !cluster.isPrimary) {
+            if (process.send) {
+                process.send({ type: 'summary', data: this.accountSummaries })
+            }
+        } else {
+            // Single process mode -> build and send conclusion directly
+            await this.sendConclusion(this.accountSummaries)
+        }
         process.exit()
     }
 
@@ -155,7 +247,8 @@ export class MicrosoftRewardsBot {
 
         const data = await this.browser.func.getDashboardData()
 
-        this.pointsInitial = data.userStatus.availablePoints
+    this.pointsInitial = data.userStatus.availablePoints
+    const initial = this.pointsInitial
 
         log(this.isMobile, 'MAIN-POINTS', `Current point count: ${this.pointsInitial}`)
 
@@ -206,9 +299,14 @@ export class MicrosoftRewardsBot {
         // Save cookies
         await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile)
 
+        // Fetch points BEFORE closing (avoid page closed reload error)
+        const after = await this.browser.func.getCurrentPoints().catch(()=>initial)
         // Close desktop browser
         await this.browser.func.closeBrowser(browser, account.email)
-        return
+        return {
+            initialPoints: initial,
+            collectedPoints: (after - initial) || 0
+        }
     }
 
     // Mobile
@@ -224,7 +322,8 @@ export class MicrosoftRewardsBot {
 
         await this.browser.func.goHome(this.homePage)
 
-        const data = await this.browser.func.getDashboardData()
+    const data = await this.browser.func.getDashboardData()
+    const initialPoints = data.userStatus.availablePoints || this.pointsInitial || 0
 
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
         const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken)
@@ -239,9 +338,11 @@ export class MicrosoftRewardsBot {
 
             // Close mobile browser
             await this.browser.func.closeBrowser(browser, account.email)
-            return
+            return {
+                initialPoints: initialPoints,
+                collectedPoints: 0
+            }
         }
-
         // Do daily check in
         if (this.config.workers.doDailyCheckIn) {
             await this.activities.doDailyCheckIn(this.accessToken, data)
@@ -292,13 +393,113 @@ export class MicrosoftRewardsBot {
 
         const afterPointAmount = await this.browser.func.getCurrentPoints()
 
-        log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - this.pointsInitial} points today`)
+        log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - initialPoints} points today`)
 
         // Close mobile browser
         await this.browser.func.closeBrowser(browser, account.email)
-        return
+        return {
+            initialPoints: initialPoints,
+            collectedPoints: (afterPointAmount - initialPoints) || 0
+        }
     }
 
+    private async sendConclusion(summaries: AccountSummary[]) {
+        const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+        const cfg = this.config
+        if (!cfg.conclusionWebhook || !cfg.conclusionWebhook.enabled) return
+
+        const totalAccounts = summaries.length
+        if (totalAccounts === 0) return
+
+        let totalCollected = 0
+        let totalInitial = 0
+        let totalEnd = 0
+        let totalDuration = 0
+        let accountsWithErrors = 0
+
+        const accountFields: any[] = []
+        for (const s of summaries) {
+            totalCollected += s.totalCollected
+            totalInitial += s.initialTotal
+            totalEnd += s.endTotal
+            totalDuration += s.durationMs
+            if (s.errors.length) accountsWithErrors++
+
+            const statusEmoji = s.errors.length ? '⚠️' : '✅'
+            const diff = s.totalCollected
+            const duration = formatDuration(s.durationMs)
+            const valueLines: string[] = [
+                `Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )`,
+                `Breakdown: 🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
+                `Duration: ⏱️ ${duration}`
+            ]
+            if (s.errors.length) {
+                valueLines.push(`Errors: ${s.errors.slice(0,2).join(' | ')}`)
+            }
+            accountFields.push({
+                name: `${statusEmoji} ${s.email}`.substring(0, 256),
+                value: valueLines.join('\n').substring(0, 1024),
+                inline: false
+            })
+        }
+
+        const avgDuration = totalDuration / totalAccounts
+        const embed = {
+            title: '🎯 Microsoft Rewards Summary',
+            description: `Processed **${totalAccounts}** account(s)${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
+            color: accountsWithErrors ? 0xFFAA00 : 0x32CD32,
+            fields: [
+                {
+                    name: 'Global Totals',
+                    value: [
+                        `Total Points: ${totalInitial} → ${totalEnd} ( +${totalCollected} )`,
+                        `Average Duration: ${formatDuration(avgDuration)}`,
+                        `Cumulative Runtime: ${formatDuration(totalDuration)}`
+                    ].join('\n')
+                },
+                ...accountFields
+            ].slice(0, 25), // Discord max 25 fields
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: 'Script conclusion webhook'
+            }
+        }
+
+        // Fallback plain text (rare) & embed send
+        const fallback = `Microsoft Rewards Summary\nAccounts: ${totalAccounts}\nTotal: ${totalInitial} -> ${totalEnd} (+${totalCollected})\nRuntime: ${formatDuration(totalDuration)}`
+        await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
+    }
+}
+
+interface AccountSummary {
+    email: string
+    durationMs: number
+    desktopCollected: number
+    mobileCollected: number
+    totalCollected: number
+    initialTotal: number
+    endTotal: number
+    errors: string[]
+}
+
+function shortErr(e: any): string {
+    if (!e) return 'unknown'
+    if (e instanceof Error) return e.message.substring(0, 120)
+    const s = String(e)
+    return s.substring(0, 120)
+}
+
+function formatDuration(ms: number): string {
+    if (!ms || ms < 1000) return `${ms}ms`
+    const sec = Math.floor(ms / 1000)
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = sec % 60
+    const parts: string[] = []
+    if (h) parts.push(`${h}h`)
+    if (m) parts.push(`${m}m`)
+    if (s) parts.push(`${s}s`)
+    return parts.join(' ') || `${ms}ms`
 }
 
 async function main() {
