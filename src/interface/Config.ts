@@ -14,6 +14,7 @@ export interface Config {
     webhookLogExcludeFunc: string[];
     proxy: ConfigProxy;
     webhook: ConfigWebhook;
+    conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
 }
 
 export interface ConfigSaveFingerprint {

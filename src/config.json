@@ -43,5 +43,9 @@
     "webhook": {
         "enabled": false,
         "url": ""
+    },
+    "conclusionWebhook": {
+        "enabled": false,
+        "url": ""
     }
 }

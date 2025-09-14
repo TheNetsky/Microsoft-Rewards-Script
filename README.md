@@ -82,6 +82,8 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 |  proxy.proxyBingTerms     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
 |  webhook.enabled     | Enable or disable your set webhook | `false` |
 |  webhook.url     | Your Discord webhook URL | `null` |
+|  conclusionWebhook.enabled | Enable or disable the final summary dedicated webhook | `false` |
+|  conclusionWebhook.url | Discord webhook URL used ONLY for the end summary | `null` |
 
 ## Features ##
 - [x] Multi-Account Support
@@ -90,6 +92,7 @@ A basic docker `compose.yaml` is provided. Follow these steps to configure and r
 - [x] Passwordless Support
 - [x] Headless Support
 - [x] Discord Webhook Support
+ - [x] Final Summary Webhook (dedicated optional)
 - [x] Desktop Searches
 - [x] Configurable Tasks
 - [x] Microsoft Edge Searches
