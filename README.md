@@ -7,12 +7,23 @@ Under development, however mainly for personal use!
 1. Download or clone source code
 2. Change `accounts.example.json` to `accounts.json` and add your account details
 3. Change `config.json` to your liking
-4. Either go the nix or non-nix route
+4. (New) You can now run the unified interactive setup script:
+    - Windows: `./setup/setup.bat`
+    - Linux/macOS/WSL: `bash ./setup/setup.sh` (make executable first if needed `chmod +x ./setup/setup.sh`)
+    - Cross‑platform alternative: `npm run setup`
+    The script will:
+       * Rename `accounts.example.json` to `accounts.json` if needed
+       * Ask you to fill passwords (loops until confirmed)
+       * Remind you to review `config.json`
+       * Run `npm install` and `npm run build`
+       * Ask if you want to start the program immediately
+5. Either go the nix or non-nix route (manual steps below still work if you prefer)
 
-### How to setup (not with nix) ###
-5. Run `npm i` to install the packages
-6. Run `npm run build` to build the script
-7. Run `npm run start` to start the built script
+### How to setup (not with nix) (manual path) ###
+If you skip the unified script:
+1. Run `npm i` to install the packages
+2. Run `npm run build` to build the script
+3. Run `npm run start` to start the built script
 
 ### How to setup (with nix) ##
 5. Get [Nix](https://nixos.org/)
