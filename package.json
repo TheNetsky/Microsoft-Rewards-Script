@@ -27,6 +27,7 @@
   "author": "Netsky",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^20.14.11",
     "@types/ms": "^0.7.34",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "eslint": "^8.57.0",
