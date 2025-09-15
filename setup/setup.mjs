@@ -83,30 +83,60 @@ async function ensureNpmAvailable() {
   }
 }
 
+async function startOnly() {
+  log('Starting program (npm run start)...');
+  await ensureNpmAvailable();
+  // Assume user already installed & built; if dist missing inform user.
+  const distIndex = path.join(PROJECT_ROOT, 'dist', 'index.js');
+  if (!fs.existsSync(distIndex)) {
+    warn('Build output not found. Running build first.');
+    await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build']);
+  }
+  await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start']);
+}
+
+async function fullSetup() {
+  renameAccountsIfNeeded();
+  await loopForAccountsConfirmation();
+  log('\nYou can now review config.json (same folder) to adjust settings such as conclusionWebhook.');
+  log('(How to enable it is documented in the repository README.)\n');
+  await ensureNpmAvailable();
+  await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install']);
+  await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build']);
+  const start = (await prompt('Do you want to start the program now? (yes/no) : ')).toLowerCase();
+  if (['yes', 'y'].includes(start)) {
+    await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start']);
+  } else {
+    log('Finished setup without starting.');
+  }
+}
+
 async function main() {
   if (!fs.existsSync(SRC_DIR)) {
     error('[ERROR] Cannot find src directory at ' + SRC_DIR);
     process.exit(1);
   }
-
-  // Change working directory to project root so npm commands run in correct location
   process.chdir(PROJECT_ROOT);
 
-  renameAccountsIfNeeded();
-  await loopForAccountsConfirmation();
+  log('============================');
+  log(' Microsoft Rewards Setup ');
+  log('============================');
+  log('Select an option:');
+  log('  1) Start program now (skip setup)');
+  log('  2) Full first-time setup');
+  log('  3) Exit');
 
-  log('\nYou can now review config.json (same folder) to adjust settings such as conclusionWebhook.');
-  log('(How to enable it is documented in the repository README.)\n');
-
-  await ensureNpmAvailable();
-  await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install']);
-  await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build']);
-
-  const start = (await prompt('Do you want to start the program now? (yes/no) : ')).toLowerCase();
-  if (['yes', 'y'].includes(start)) {
-    await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start']);
-  } else {
-    log('Exiting without starting.');
+  const choice = (await prompt('Enter choice (1/2/3): ')).trim();
+  switch (choice) {
+    case '1':
+      await startOnly();
+      break;
+    case '2':
+      await fullSetup();
+      break;
+    default:
+      log('Exiting.');
+      process.exit(0);
   }
   process.exit(0);
 }
