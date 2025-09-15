@@ -91,6 +91,10 @@ async function startOnly() {
   if (!fs.existsSync(distIndex)) {
     warn('Build output not found. Running build first.');
     await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build']);
+    await installPlaywrightBrowsers();
+  } else {
+    // Even if build exists, ensure browsers are installed once.
+    await installPlaywrightBrowsers();
   }
   await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start']);
 }
@@ -103,11 +107,29 @@ async function fullSetup() {
   await ensureNpmAvailable();
   await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install']);
   await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build']);
+  await installPlaywrightBrowsers();
   const start = (await prompt('Do you want to start the program now? (yes/no) : ')).toLowerCase();
   if (['yes', 'y'].includes(start)) {
     await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start']);
   } else {
     log('Finished setup without starting.');
+  }
+}
+
+async function installPlaywrightBrowsers() {
+  const PLAYWRIGHT_MARKER = path.join(PROJECT_ROOT, '.playwright-chromium-installed');
+  // Idempotent: skip if marker exists
+  if (fs.existsSync(PLAYWRIGHT_MARKER)) {
+    log('Playwright chromium already installed (marker found).');
+    return;
+  }
+  log('Ensuring Playwright chromium browser is installed...');
+  try {
+    await runCommand(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['playwright', 'install', 'chromium']);
+    fs.writeFileSync(PLAYWRIGHT_MARKER, new Date().toISOString());
+    log('Playwright chromium install complete.');
+  } catch (e) {
+    warn('Failed to install Playwright chromium automatically. You can manually run: npx playwright install chromium');
   }
 }
 
@@ -118,25 +140,24 @@ async function main() {
   }
   process.chdir(PROJECT_ROOT);
 
-  log('============================');
-  log(' Microsoft Rewards Setup ');
-  log('============================');
-  log('Select an option:');
-  log('  1) Start program now (skip setup)');
-  log('  2) Full first-time setup');
-  log('  3) Exit');
-
-  const choice = (await prompt('Enter choice (1/2/3): ')).trim();
-  switch (choice) {
-    case '1':
-      await startOnly();
-      break;
-    case '2':
-      await fullSetup();
-      break;
-    default:
-      log('Exiting.');
-      process.exit(0);
+  for (;;) {
+    log('============================');
+    log(' Microsoft Rewards Setup ');
+    log('============================');
+    log('Select an option:');
+    log('  1) Start program now (skip setup)');
+    log('  2) Full first-time setup');
+    log('  3) Exit');
+    const choice = (await prompt('Enter choice (1/2/3): ')).trim();
+    if (choice === '1') { await startOnly(); break; }
+    if (choice === '2') { await fullSetup(); break; }
+    if (choice === '3') { log('Exiting.'); process.exit(0); }
+    log('\nInvalid choice. Please select 1, 2 or 3.\n');
+  }
+  // After completing action, optionally pause if launched by double click on Windows (no TTY detection simple heuristic)
+  if (process.platform === 'win32' && process.stdin.isTTY) {
+    log('\nDone. Press Enter to close.');
+    await prompt('');
   }
   process.exit(0);
 }

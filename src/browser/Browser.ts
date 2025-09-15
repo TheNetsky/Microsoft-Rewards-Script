@@ -25,19 +25,40 @@ class Browser {
     }
 
     async createBrowser(proxy: AccountProxy, email: string): Promise<BrowserContext> {
-        const browser = await playwright.chromium.launch({
-            //channel: 'msedge', // Uses Edge instead of chrome
-            headless: this.bot.config.headless,
-            ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
-            args: [
-                '--no-sandbox',
-                '--mute-audio',
-                '--disable-setuid-sandbox',
-                '--ignore-certificate-errors',
-                '--ignore-certificate-errors-spki-list',
-                '--ignore-ssl-errors'
-            ]
-        })
+        // Optional automatic browser installation (set AUTO_INSTALL_BROWSERS=1)
+        if (process.env.AUTO_INSTALL_BROWSERS === '1') {
+            try {
+                // Dynamically import child_process to avoid overhead otherwise
+                const { execSync } = await import('child_process') as any
+                execSync('npx playwright install chromium', { stdio: 'ignore' })
+            } catch { /* silent */ }
+        }
+
+        let browser: any
+        try {
+            browser = await playwright.chromium.launch({
+                //channel: 'msedge', // Uses Edge instead of chrome
+                headless: this.bot.config.headless,
+                ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
+                args: [
+                    '--no-sandbox',
+                    '--mute-audio',
+                    '--disable-setuid-sandbox',
+                    '--ignore-certificate-errors',
+                    '--ignore-certificate-errors-spki-list',
+                    '--ignore-ssl-errors'
+                ]
+            })
+        } catch (e: any) {
+            const msg = (e instanceof Error ? e.message : String(e))
+            // Common missing browser executable guidance
+            if (/Executable doesn't exist/i.test(msg)) {
+                this.bot.log(this.bot.isMobile, 'BROWSER', 'Chromium not installed for Playwright. Run: "npx playwright install chromium" (or set AUTO_INSTALL_BROWSERS=1 to auto attempt).', 'error')
+            } else {
+                this.bot.log(this.bot.isMobile, 'BROWSER', 'Failed to launch browser: ' + msg, 'error')
+            }
+            throw e
+        }
 
         const sessionData = await loadSessionData(this.bot.config.sessionPath, email, this.bot.isMobile, this.bot.config.saveFingerprint)
 
