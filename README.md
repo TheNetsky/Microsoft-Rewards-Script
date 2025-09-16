@@ -1,122 +1,191 @@
 # Microsoft-Rewards-Script
-Automated Microsoft Rewards script, however this time using TypeScript, Cheerio and Playwright.
+Automated Microsoft Rewards script built with TypeScript, Cheerio and Playwright.
 
 Under development, however mainly for personal use!
 
-## How to setup ##
-1. Download or clone source code
-2. Change `accounts.example.json` to `accounts.json` and add your account details
-3. Change `config.json` to your liking
-4. Either go the nix or non-nix route
+---
 
-### How to setup (not with nix) ###
-5. Run `npm i` to install the packages
-6. Run `npm run build` to build the script
-7. Run `npm run start` to start the built script
+## 🚀 Quick Setup (Recommended)
 
-### How to setup (with nix) ##
-5. Get [Nix](https://nixos.org/)
-6. Run `./run.sh`
-7. That's it!
+**The easiest way to get started - just download and run!**
 
-## Notes ##
-- If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run kill-chrome-win` script. (Windows)
-- If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
+1. **Download or clone** the source code
+2. **Run the setup script:**
+   
+   **Windows:** Double-click `setup/setup.bat` or run it from command line
+   
+   **Linux/macOS/WSL:** `bash setup/setup.sh` 
+   
+   **Alternative (any platform):** `npm run setup`
 
-## Docker (Experimental) ##
-### **Before Starting**
+3. **Follow the prompts:** The setup script will automatically:
+   - Rename `accounts.example.json` to `accounts.json` 
+   - Ask you to enter your Microsoft account credentials
+   - Remind you to review configuration options in `config.json`
+   - Install all dependencies (`npm install`)
+   - Build the project (`npm run build`)
+   - Optionally start the script immediately
 
-- If you had previously built and run the script locally, **remove** the `/node_modules` and `/dist` folders from your `Microsoft-Rewards-Script` directory.
-- If you had used Docker with an older version of the script (e.g., 1.4), **remove** any persistently saved `config.json` and session folders. Old `accounts.json` files can be reused.
+**That's it!** The setup script handles everything for you.
 
-### **Setup the Source Files**
+---
 
-1. **Download the Source Code**
+## ⚙️ Advanced Setup Options
 
-2. **Update `accounts.json`**
+### Nix Users
+1. Get [Nix](https://nixos.org/)
+2. Run `./run.sh`
+3. Done!
 
-3. **Edit `config.json`,** ensuring "headless": true, other settings are up to your preference
+### Manual Setup (Troubleshooting)
+If the automatic setup script doesn't work for your environment:
 
-### **Customize the `compose.yaml` File**
+1. Manually rename `src/accounts.example.json` to `src/accounts.json`
+2. Add your Microsoft account details to `accounts.json`
+3. Customize `src/config.json` to your preferences
+4. Install dependencies: `npm install`
+5. Build the project: `npm run build`
+6. Start the script: `npm run start`---
 
-A basic docker `compose.yaml` is provided. Follow these steps to configure and run the container:
+## 🐳 Docker Setup (Experimental)
 
-1. **Set Your Timezone:** Adjust the `TZ` variable to ensure correct scheduling.
-3. **Customize the Schedule:**
-   - Modify `CRON_SCHEDULE` to set run times. Use [crontab.guru](https://crontab.guru) for help.
-   - **Note:** The container adds 5–50 minutes of random variability to each scheduled start time. This can be optionally disabled or customized in the compose file.
-4. **(Optional) Run on Startup:**
-   - Set `RUN_ON_START=true` to execute the script immediately when the container starts.
-5. **Start the Container:** Run `docker compose up -d` to build and launch.
-6. **Monitor Logs:** Use `docker logs microsoft-rewards-script` to view script execution and to retrieve 'passwordless' login codes.
+For automated scheduling and containerized deployment.
 
+### Before Starting
+- Remove `/node_modules` and `/dist` folders if you previously built locally
+- Remove old Docker volumes if upgrading from version 1.4 or earlier
+- Old `accounts.json` files can be reused
 
-## Config ## 
-| Setting        | Description           | Default  |
-| :------------- |:-------------| :-----|
-|  baseURL    | MS Rewards page | `https://rewards.bing.com` |
-|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) |
-|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) |
-|  parallel    | If you want mobile and desktop tasks to run parallel or sequential| `true` |
-|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |
-|  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) |
-|  saveFingerprint.mobile    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
-|  saveFingerprint.desktop    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
-|  workers.doDailySet    | Complete daily set items | `true`  |
-|  workers.doMorePromotions    | Complete promotional items | `true`  |
-|  workers.doPunchCards    | Complete punchcards | `true`  |
-|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  |
-|  workers.doMobileSearch    | Complete daily mobile searches | `true`  |
-|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  |
-|  workers.doReadToEarn    | Complete read to earn activity | `true`  |
-|  searchOnBingLocalQueries    | Complete the activity "search on Bing" using the `queries.json` or fetched from this repo | `false` (Will fetch from this repo)   |
-|  globalTimeout    | The length before the action gets timeout | `30s`   |
-|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |
-|  searchSettings.scrollRandomResults    | Scroll randomly in search results | `true`   |
-|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
-|  searchSettings.searchDelay    | Minimum and maximum time in milliseconds between search queries | `min: 3min`    `max: 5min` |
-|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `2` |
-|  logExcludeFunc | Functions to exclude out of the logs and webhooks | `SEARCH-CLOSE-TABS` |
-|  webhookLogExcludeFunc | Functions to exclude out of the webhooks log | `SEARCH-CLOSE-TABS` |
-|  proxy.proxyGoogleTrends     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
-|  proxy.proxyBingTerms     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
-|  webhook.enabled     | Enable or disable your set webhook | `false` |
-|  webhook.url     | Your Discord webhook URL | `null` |
-|  conclusionWebhook.enabled | Enable or disable the final summary dedicated webhook | `false` |
-|  conclusionWebhook.url | Discord webhook URL used ONLY for the end summary | `null` |
+### Quick Docker Setup
+1. **Download source code** and configure `accounts.json`
+2. **Edit `config.json`** - ensure `"headless": true`
+3. **Customize `compose.yaml`:**
+   - Set your timezone (`TZ` variable)
+   - Configure schedule (`CRON_SCHEDULE`) - use [crontab.guru](https://crontab.guru) for help
+   - Optional: Set `RUN_ON_START=true` for immediate execution
+4. **Start container:** `docker compose up -d`
+5. **Monitor logs:** `docker logs microsoft-rewards-script`
 
-## Features ##
-- [x] Multi-Account Support
-- [x] Session Storing
-- [x] 2FA Support
-- [x] Passwordless Support
-- [x] Headless Support
-- [x] Discord Webhook Support
- - [x] Final Summary Webhook (dedicated optional)
-- [x] Desktop Searches
-- [x] Configurable Tasks
-- [x] Microsoft Edge Searches
-- [x] Mobile Searches
-- [x] Emulated Scrolling Support
-- [x] Emulated Link Clicking Support
-- [x] Geo Locale Search Queries
-- [x] Completing Daily Set
-- [x] Completing More Promotions
-- [x] Solving Quiz (10 point variant)
-- [x] Solving Quiz (30-40 point variant)
-- [x] Completing Click Rewards
-- [x] Completing Polls
-- [x] Completing Punchcards
-- [x] Solving This Or That Quiz (Random)
-- [x] Solving ABC Quiz
-- [x] Completing Daily Check In
-- [x] Completing Read To Earn
-- [x] Clustering Support
-- [x] Proxy Support
-- [x] Docker Support (experimental)
-- [x] Automatic scheduling (via Docker)
+**Note:** The container adds 5–50 minutes random delay to scheduled runs for more natural behavior.
 
-## Disclaimer ##
-Your account may be at risk of getting banned or suspended using this script, you've been warned!
-<br /> 
-Use this script at your own risk!
+---
+
+## 📋 Usage Notes
+
+- **Browser Instances:** If you stop the script without closing browser windows (headless=false), use Task Manager or `npm run kill-chrome-win` to clean up
+- **Automation Scheduling:** Run at least twice daily, set `"runOnZeroPoints": false` to skip when no points available
+- **Multiple Accounts:** The script supports clustering - configure `clusters` in `config.json`
+
+--- 
+## ⚙️ Configuration Reference
+
+Customize behavior by editing `src/config.json`:
+
+### Core Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `baseURL` | Microsoft Rewards page URL | `https://rewards.bing.com` |
+| `sessionPath` | Session/fingerprint storage location | `sessions` |
+| `headless` | Run browser in background | `false` (visible) |
+| `parallel` | Run mobile/desktop tasks simultaneously | `true` |
+| `runOnZeroPoints` | Continue when no points available | `false` |
+| `clusters` | Number of concurrent account instances | `1` |
+
+### Fingerprint Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `saveFingerprint.mobile` | Reuse mobile browser fingerprint | `false` |
+| `saveFingerprint.desktop` | Reuse desktop browser fingerprint | `false` |
+
+### Task Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `workers.doDailySet` | Complete daily set activities | `true` |
+| `workers.doMorePromotions` | Complete promotional offers | `true` |
+| `workers.doPunchCards` | Complete punchcard activities | `true` |
+| `workers.doDesktopSearch` | Perform desktop searches | `true` |
+| `workers.doMobileSearch` | Perform mobile searches | `true` |
+| `workers.doDailyCheckIn` | Complete daily check-in | `true` |
+| `workers.doReadToEarn` | Complete read-to-earn activities | `true` |
+
+### Search Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `searchOnBingLocalQueries` | Use local queries vs. fetched | `false` |
+| `searchSettings.useGeoLocaleQueries` | Generate location-based queries | `false` |
+| `searchSettings.scrollRandomResults` | Randomly scroll search results | `true` |
+| `searchSettings.clickRandomResults` | Click random result links | `true` |
+| `searchSettings.searchDelay` | Delay between searches (min/max) | `3-5 minutes` |
+| `searchSettings.retryMobileSearchAmount` | Mobile search retry attempts | `2` |
+
+### Advanced Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `globalTimeout` | Action timeout duration | `30s` |
+| `logExcludeFunc` | Functions to exclude from logs | `SEARCH-CLOSE-TABS` |
+| `webhookLogExcludeFunc` | Functions to exclude from webhooks | `SEARCH-CLOSE-TABS` |
+| `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
+| `proxy.proxyBingTerms` | Proxy Bing Terms requests | `true` |
+
+### Webhook Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `webhook.enabled` | Enable Discord notifications | `false` |
+| `webhook.url` | Discord webhook URL | `null` |
+| `conclusionWebhook.enabled` | Enable summary-only webhook | `false` |
+| `conclusionWebhook.url` | Summary webhook URL | `null` |
+
+---
+
+## ✨ Features
+
+**Account Management:**
+- ✅ Multi-Account Support
+- ✅ Session Storage & Persistence
+- ✅ 2FA Support
+- ✅ Passwordless Login Support
+
+**Automation & Control:**
+- ✅ Headless Browser Operation
+- ✅ Clustering Support (Multiple accounts simultaneously)
+- ✅ Configurable Task Selection
+- ✅ Proxy Support
+- ✅ Automatic Scheduling (Docker)
+
+**Search & Activities:**
+- ✅ Desktop & Mobile Searches
+- ✅ Microsoft Edge Search Simulation
+- ✅ Geo-Located Search Queries
+- ✅ Emulated Scrolling & Link Clicking
+- ✅ Daily Set Completion
+- ✅ Promotional Activities
+- ✅ Punchcard Completion
+- ✅ Daily Check-in
+- ✅ Read to Earn Activities
+
+**Quiz & Interactive Content:**
+- ✅ Quiz Solving (10 & 30-40 point variants)
+- ✅ This Or That Quiz (Random answers)
+- ✅ ABC Quiz Solving
+- ✅ Poll Completion
+- ✅ Click Rewards
+
+**Notifications & Monitoring:**
+- ✅ Discord Webhook Integration
+- ✅ Dedicated Summary Webhook
+- ✅ Comprehensive Logging
+- ✅ Docker Support with Monitoring
+
+---
+
+## ⚠️ Disclaimer
+
+**Use at your own risk!** Your Microsoft Rewards account may be suspended or banned when using automation scripts.
+
+This script is provided for educational purposes. The authors are not responsible for any account actions taken by Microsoft.
+
+---
+
+## 🤝 Contributing
+
+This project is primarily for personal use but contributions are welcome. Please ensure any changes maintain compatibility with the existing configuration system.

@@ -170,14 +170,28 @@ export class MicrosoftRewardsBot {
             const errors: string[] = []
 
             this.axios = new Axios(account.proxy)
+            const verbose = process.env.DEBUG_REWARDS_VERBOSE === '1'
+            const formatFullErr = (label: string, e: any) => {
+                const base = shortErr(e)
+                if (verbose && e instanceof Error) {
+                    return `${label}:${base} :: ${e.stack?.split('\n').slice(0,4).join(' | ')}`
+                }
+                return `${label}:${base}`
+            }
+
             if (this.config.parallel) {
                 const mobileInstance = new MicrosoftRewardsBot(true)
                 mobileInstance.axios = this.axios
-                // Run both and capture results
-                const [desktopResult, mobileResult] = await Promise.all([
-                    this.Desktop(account).catch(e => { errors.push(`desktop:${shortErr(e)}`); return null }),
-                    mobileInstance.Mobile(account).catch(e => { errors.push(`mobile:${shortErr(e)}`); return null })
-                ])
+                // Run both and capture results with detailed logging
+                const desktopPromise = this.Desktop(account).catch(e => {
+                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('desktop', e)); return null
+                })
+                const mobilePromise = mobileInstance.Mobile(account).catch(e => {
+                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('mobile', e)); return null
+                })
+                const [desktopResult, mobileResult] = await Promise.all([desktopPromise, mobilePromise])
                 if (desktopResult) {
                     desktopInitial = desktopResult.initialPoints
                     desktopCollected = desktopResult.collectedPoints
@@ -188,14 +202,20 @@ export class MicrosoftRewardsBot {
                 }
             } else {
                 this.isMobile = false
-                const desktopResult = await this.Desktop(account).catch(e => { errors.push(`desktop:${shortErr(e)}`); return null })
+                const desktopResult = await this.Desktop(account).catch(e => {
+                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('desktop', e)); return null
+                })
                 if (desktopResult) {
                     desktopInitial = desktopResult.initialPoints
                     desktopCollected = desktopResult.collectedPoints
                 }
 
                 this.isMobile = true
-                const mobileResult = await this.Mobile(account).catch(e => { errors.push(`mobile:${shortErr(e)}`); return null })
+                const mobileResult = await this.Mobile(account).catch(e => {
+                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('mobile', e)); return null
+                })
                 if (mobileResult) {
                     mobileInitial = mobileResult.initialPoints
                     mobileCollected = mobileResult.collectedPoints
@@ -221,6 +241,12 @@ export class MicrosoftRewardsBot {
         }
 
         log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
+        // Extra diagnostic summary when verbose
+        if (process.env.DEBUG_REWARDS_VERBOSE === '1') {
+            for (const summary of this.accountSummaries) {
+                log('main','SUMMARY-DEBUG',`Account ${summary.email} collected D:${summary.desktopCollected} M:${summary.mobileCollected} TOTAL:${summary.totalCollected} ERRORS:${summary.errors.length ? summary.errors.join(';') : 'none'}`)
+            }
+        }
         // If in worker mode (clusters>1) send summaries to primary
         if (this.config.clusters > 1 && !cluster.isPrimary) {
             if (process.send) {
@@ -235,6 +261,7 @@ export class MicrosoftRewardsBot {
 
     // Desktop
     async Desktop(account: Account) {
+        log(false,'FLOW','Desktop() invoked')
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
 
@@ -311,6 +338,7 @@ export class MicrosoftRewardsBot {
 
     // Mobile
     async Mobile(account: Account) {
+        log(true,'FLOW','Mobile() invoked')
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
 
