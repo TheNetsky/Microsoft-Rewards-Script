@@ -237,10 +237,10 @@ export class MicrosoftRewardsBot {
                 errors
             })
 
-            log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
+            await log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
 
-        log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
+        await log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
         // Extra diagnostic summary when verbose
         if (process.env.DEBUG_REWARDS_VERBOSE === '1') {
             for (const summary of this.accountSummaries) {
@@ -434,7 +434,10 @@ export class MicrosoftRewardsBot {
     private async sendConclusion(summaries: AccountSummary[]) {
         const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
         const cfg = this.config
-        if (!cfg.conclusionWebhook || !cfg.conclusionWebhook.enabled) return
+
+        const conclusionWebhookEnabled = !!(cfg.conclusionWebhook && cfg.conclusionWebhook.enabled)
+        const ntfyEnabled = !!(cfg.ntfy && cfg.ntfy.enabled)
+        if (!conclusionWebhookEnabled && !ntfyEnabled) return
 
         const totalAccounts = summaries.length
         if (totalAccounts === 0) return
@@ -446,6 +449,8 @@ export class MicrosoftRewardsBot {
         let accountsWithErrors = 0
 
         const accountFields: any[] = []
+        const accountLines: string[] = []
+
         for (const s of summaries) {
             totalCollected += s.totalCollected
             totalInitial += s.initialTotal
@@ -456,22 +461,35 @@ export class MicrosoftRewardsBot {
             const statusEmoji = s.errors.length ? '⚠️' : '✅'
             const diff = s.totalCollected
             const duration = formatDuration(s.durationMs)
+
+            // Build embed fields (Discord)
             const valueLines: string[] = [
                 `Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )`,
                 `Breakdown: 🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
                 `Duration: ⏱️ ${duration}`
             ]
             if (s.errors.length) {
-                valueLines.push(`Errors: ${s.errors.slice(0,2).join(' | ')}`)
+                valueLines.push(`Errors: ${s.errors.slice(0, 2).join(' | ')}`)
             }
             accountFields.push({
                 name: `${statusEmoji} ${s.email}`.substring(0, 256),
                 value: valueLines.join('\n').substring(0, 1024),
                 inline: false
             })
+
+            // Build plain text lines (NTFY)
+            accountLines.push(
+                `${statusEmoji} ${s.email}\n` +
+                `  Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )\n` +
+                `  🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}\n` +
+                `  Duration: ${duration}\n` +
+                (s.errors.length ? `  Errors: ${s.errors.slice(0, 2).join(' | ')}\n` : '')
+            )
         }
 
         const avgDuration = totalDuration / totalAccounts
+
+        // Discord/Webhook embed
         const embed = {
             title: '🎯 Microsoft Rewards Summary',
             description: `Processed **${totalAccounts}** account(s)${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
@@ -493,8 +511,18 @@ export class MicrosoftRewardsBot {
             }
         }
 
-        // Fallback plain text (rare) & embed send
-        const fallback = `Microsoft Rewards Summary\nAccounts: ${totalAccounts}\nTotal: ${totalInitial} -> ${totalEnd} (+${totalCollected})\nRuntime: ${formatDuration(totalDuration)}`
+        // NTFY-compatible plain text (includes per-account breakdown)
+        const fallback = [
+            `Microsoft Rewards Summary`,
+            `Accounts: ${totalAccounts}${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
+            `Total: ${totalInitial} -> ${totalEnd} (+${totalCollected})`,
+            `Average Duration: ${formatDuration(avgDuration)}`,
+            `Cumulative Runtime: ${formatDuration(totalDuration)}`,
+            ``,
+            ...accountLines
+        ].join('\n')
+
+        // Send both: Discord gets embed, NTFY gets fallback
         await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
     }
 }

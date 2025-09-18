@@ -135,6 +135,16 @@ Customize behavior by editing `src/config.json`:
 | `conclusionWebhook.enabled` | Enable summary-only webhook | `false` |
 | `conclusionWebhook.url` | Summary webhook URL | `null` |
 
+### NTFY Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `ntfy.enabled` | Enable NTFY push notifications | `false` |
+| `ntfy.url` | NTFY URL | `null` |
+| `ntfy.topic` | Set NTFY topic | `rewards` |
+| `ntfy.authToken` | NTFY authorization token | `null` |
+
+>NTFY customization: To customize the emojis used in the notifications, edit the tags in `Ntfy.sh`. Visit NTFY's emoji customization [guide](https://docs.ntfy.sh/emojis) for available options. To customize which keywords trigger notifications, add or customize the keywords in `Logger.ts`.
+
 ---
 
 ## ✨ Features
