@@ -1,6 +1,6 @@
 import axios from 'axios'
-
 import { Config } from '../interface/Config'
+import { Ntfy } from './Ntfy'
 
 interface ConclusionPayload {
     content?: string
@@ -8,25 +8,53 @@ interface ConclusionPayload {
 }
 
 /**
- * Send a final structured summary to the dedicated conclusion webhook (if enabled),
- * otherwise do nothing. Does NOT fallback to the normal logging webhook to avoid spam.
+ * Send a final structured summary to the configured webhook,
+ * and optionally mirror a plain-text summary to NTFY.
+ *
+ * This preserves existing webhook behavior while adding NTFY
+ * as a separate, optional channel.
  */
-export async function ConclusionWebhook(configData: Config, content: string, embed?: ConclusionPayload) {
-    const webhook = configData.conclusionWebhook
+export async function ConclusionWebhook(config: Config, content: string, embed?: ConclusionPayload) {
+    // Webhook: structured JSON (embeds or content)
+    if (config.webhook?.enabled && config.webhook.url) {
+        const body: ConclusionPayload =
+            embed?.embeds ? { embeds: embed.embeds } : { content }
 
-    if (!webhook || !webhook.enabled || webhook.url.length < 10) return
-
-    const body: ConclusionPayload = embed?.embeds ? { embeds: embed.embeds } : { content }
-    if (content && !body.content && !body.embeds) body.content = content
-
-    const request = {
-        method: 'POST',
-        url: webhook.url,
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        data: body
+        try {
+            await axios.post(config.webhook.url, body, {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            console.log('Conclusion summary sent to webhook.')
+        } catch (err) {
+            console.error('Failed to send conclusion summary to webhook:', err)
+        }
     }
 
-    await axios(request).catch(() => { })
+    // NTFY: plain text summary
+    if (config.ntfy?.enabled && config.ntfy.url && config.ntfy.topic) {
+        let message = content || ''
+
+        if (!message && embed?.embeds?.length) {
+            const e = embed.embeds[0]
+            const title = e.title ? `${e.title}\n` : ''
+            const desc = e.description ? `${e.description}\n` : ''
+            const totals = e.fields?.[0]?.value ? `\n${e.fields[0].value}\n` : ''
+            message = `${title}${desc}${totals}`.trim()
+        }
+
+        if (!message) {
+            message = 'Microsoft Rewards run complete.'
+        }
+
+        // Pick notification type based on embed color (yellow = warn)
+        const embedColor = embed?.embeds?.[0]?.color
+        const ntfyType = embedColor === 0xFFAA00 ? 'warn' : 'log'
+
+        try {
+            await Ntfy(message, ntfyType)
+            console.log('Conclusion summary sent to NTFY.')
+        } catch (err) {
+            console.error('Failed to send conclusion summary to NTFY:', err)
+        }
+    }
 }

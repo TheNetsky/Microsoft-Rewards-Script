@@ -15,6 +15,7 @@ export interface Config {
     proxy: ConfigProxy;
     webhook: ConfigWebhook;
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
+    ntfy: ConfigNtfy;
 }
 
 export interface ConfigSaveFingerprint {
@@ -40,6 +41,13 @@ export interface ConfigWebhook {
     url: string;
 }
 
+export interface ConfigNtfy {
+    enabled: boolean;
+    url: string;
+    topic: string;
+    authToken?: string; // Optional authentication token
+}
+
 export interface ConfigProxy {
     proxyGoogleTrends: boolean;
     proxyBingTerms: boolean;
@@ -54,3 +62,4 @@ export interface ConfigWorkers {
     doDailyCheckIn: boolean;
     doReadToEarn: boolean;
 }
+
