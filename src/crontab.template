@@ -1,0 +1,2 @@
+# Run automation according to CRON_SCHEDULE; redirect both stdout & stderr to Docker logs
+${CRON_SCHEDULE} TZ=${TZ} /bin/bash /usr/src/microsoft-rewards-script/src/run_daily.sh >> /proc/1/fd/1 2>&1

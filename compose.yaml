@@ -1,0 +1,42 @@
+services:
+  microsoft-rewards-script:
+    build: .
+    container_name: microsoft-rewards-script
+    restart: unless-stopped
+
+    # Volume mounts: Specify a location where you want to save the files on your local machine.
+    volumes:
+      - ./src/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
+      - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
+      - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
+
+    environment:
+      TZ: "America/Toronto" # Set your timezone for proper scheduling
+      NODE_ENV: "production"
+      CRON_SCHEDULE: "0 7,16,20 * * *" # Customize your schedule, use crontab.guru for formatting
+      RUN_ON_START: "true" # Runs the script immediately on container startup
+
+      # Add scheduled start-time randomization (uncomment to customize or disable, default: enabled)
+      #MIN_SLEEP_MINUTES: "5"
+      #MAX_SLEEP_MINUTES: "50"
+      SKIP_RANDOM_SLEEP: "false"
+
+      # Optionally set how long to wait before killing a stuck script run (prevents blocking future runs, default: 8 hours)
+      #STUCK_PROCESS_TIMEOUT_HOURS: "8"
+
+    # Optional resource limits for the container
+    mem_limit: 4g
+    cpus: 2
+
+    # Health check - monitors if cron daemon is running to ensure scheduled jobs can execute
+    # Container marked unhealthy if cron process dies
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pgrep cron > /dev/null || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true

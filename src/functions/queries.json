@@ -1,0 +1,289 @@
+[
+    {
+        "title": "Houses near you",
+        "queries": [
+            "Houses near me"
+        ]
+    },
+    {
+        "title": "Feeling symptoms?",
+        "queries": [
+            "Rash on forearm",
+            "Stuffy nose",
+            "Tickling cough"
+        ]
+    },
+    {
+        "title": "Get your shopping done faster",
+        "queries": [
+            "Buy PS5",
+            "Buy Xbox",
+            "Chair deals"
+        ]
+    },
+    {
+        "title": "Translate anything",
+        "queries": [
+            "Translate welcome home to Korean",
+            "Translate welcome home to Japanese",
+            "Translate goodbye to Japanese"
+        ]
+    },
+    {
+        "title": "Search the lyrics of a song",
+        "queries": [
+            "Debarge rhythm of the night lyrics"
+        ]
+    },
+    {
+        "title": "Let's watch that movie again!",
+        "queries": [
+            "Alien movie",
+            "Aliens movie",
+            "Alien 3 movie",
+            "Predator movie"
+        ]
+    },
+    {
+        "title": "Plan a quick getaway",
+        "queries": [
+            "Flights Amsterdam to Tokyo",
+            "Flights New York to Tokyo"
+        ]
+    },
+    {
+        "title": "Discover open job roles",
+        "queries": [
+            "jobs at Microsoft",
+            "Microsoft Job Openings",
+            "Jobs near me",
+            "jobs at Boeing worked"
+        ]
+    },
+    {
+        "title": "You can track your package",
+        "queries": [
+            "USPS tracking"
+        ]
+    },
+    {
+        "title": "Find somewhere new to explore",
+        "queries": [
+            "Directions to Berlin",
+            "Directions to Tokyo",
+            "Directions to New York"
+        ]
+    },
+    {
+        "title": "Too tired to cook tonight?",
+        "queries": [
+            "KFC near me",
+            "Burger King near me",
+            "McDonalds near me"
+        ]
+    },
+    {
+        "title": "Quickly convert your money",
+        "queries": [
+            "convert 250 USD to yen",
+            "convert 500 USD to yen"
+        ]
+    },
+    {
+        "title": "Learn to cook a new recipe",
+        "queries": [
+            "How to cook ratatouille",
+            "How to cook lasagna"
+        ]
+    },
+    {
+        "title": "Find places to stay!",
+        "queries": [
+            "Hotels Berlin Germany",
+            "Hotels Amsterdam Netherlands"
+        ]
+    },
+    {
+        "title": "How's the economy?",
+        "queries": [
+            "sp 500"
+        ]
+    },
+    {
+        "title": "Who won?",
+        "queries": [
+            "braves score"
+        ]
+    },
+    {
+        "title": "Gaming time",
+        "queries": [
+            "Overwatch video game",
+            "Call of duty video game"
+        ]
+    },
+    {
+        "title": "Expand your vocabulary",
+        "queries": [
+            "definition definition"
+        ]
+    },
+    {
+        "title": "What time is it?",
+        "queries": [
+            "Japan time",
+            "New York time"
+        ]
+    },
+
+    {
+        "title": "Maisons près de chez vous",
+        "queries": [
+            "Maisons près de chez moi"
+        ]
+    },
+    {
+        "title": "Vous ressentez des symptômes ?",
+        "queries": [
+            "Éruption cutanée sur l'avant-bras",
+            "Nez bouché",
+            "Toux chatouilleuse"
+        ]
+    },
+    {
+        "title": "Faites vos achats plus vite",
+        "queries": [
+            "Acheter une PS5",
+            "Acheter une Xbox",
+            "Offres sur les chaises"
+        ]
+    },
+    {
+        "title": "Traduisez tout !",
+        "queries": [
+            "Traduction bienvenue à la maison en coréen",
+            "Traduction bienvenue à la maison en japonais",
+            "Traduction au revoir en japonais"
+        ]
+    },
+    {
+        "title": "Rechercher paroles de chanson",
+        "queries": [
+            "Paroles de Debarge rhythm of the night"
+        ]
+    },
+    {
+        "title": "Et si nous regardions ce film une nouvelle fois?",
+        "queries": [
+            "Alien film",
+            "Film Aliens",
+            "Film Alien 3",
+            "Film Predator"
+        ]
+    },
+    {
+        "title": "Planifiez une petite escapade",
+        "queries": [
+            "Vols Amsterdam-Tokyo",
+            "Vols New York-Tokyo"
+        ]
+    },
+    {
+        "title": "Consulter postes à pourvoir",
+        "queries": [
+            "emplois chez Microsoft",
+            "Offres d'emploi Microsoft",
+            "Emplois près de chez moi",
+            "emplois chez Boeing"
+        ]
+    },
+    {
+        "title": "Vous pouvez suivre votre colis",
+        "queries": [
+            "Suivi Chronopost"
+        ]
+    },
+    {
+        "title": "Trouver un endroit à découvrir",
+        "queries": [
+            "Itinéraire vers Berlin",
+            "Itinéraire vers Tokyo",
+            "Itinéraire vers New York"
+        ]
+    },
+    {
+        "title": "Trop fatigué pour cuisiner ce soir ?",
+        "queries": [
+            "KFC près de chez moi",
+            "Burger King près de chez moi",
+            "McDonalds près de chez moi"
+        ]
+    },
+    {
+        "title": "Convertissez rapidement votre argent",
+        "queries": [
+            "convertir 250 EUR en yen",
+            "convertir 500 EUR en yen"
+        ]
+    },
+    {
+        "title": "Apprenez à cuisiner une nouvelle recette",
+        "queries": [
+            "Comment faire cuire la ratatouille",
+            "Comment faire cuire les lasagnes"
+        ]
+    },
+    {
+        "title": "Trouvez des emplacements pour rester!",
+        "queries": [
+            "Hôtels Berlin Allemagne",
+            "Hôtels Amsterdam Pays-Bas"
+        ]
+    },
+    {
+        "title": "Comment se porte l'économie ?",
+        "queries": [
+            "CAC 40"
+        ]
+    },
+    {
+        "title": "Qui a gagné ?",
+        "queries": [
+            "score du Paris Saint-Germain"
+        ]
+    },
+    {
+        "title": "Temps de jeu",
+        "queries": [
+            "Jeu vidéo Overwatch",
+            "Jeu vidéo Call of Duty"
+        ]
+    },
+    {
+        "title": "Enrichissez votre vocabulaire",
+        "queries": [
+            "definition definition"
+        ]
+    },
+    {
+        "title": "Quelle heure est-il ?",
+        "queries": [
+            "Heure du Japon",
+            "Heure de New York"
+        ]
+    },
+    {
+        "title": "Vérifier la météo",
+        "queries": [
+            "Météo de Paris",
+            "Météo de la France"
+        ]
+    },
+    {
+        "title": "Tenez-vous informé des sujets d'actualité",
+        "queries": [
+            "Augmentation Impots",
+            "Mort célébrité"
+        ]
+    }
+]
