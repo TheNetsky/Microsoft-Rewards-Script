@@ -68,7 +68,7 @@
         "authToken": ""  
     },
     "diagnostics": {
-        "enabled": false,
+        "enabled": true,
         "saveScreenshot": true,
         "saveHtml": true,
         "maxPerRun": 2,

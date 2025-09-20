@@ -56,6 +56,24 @@ npm run build
 npm start
 ```
 
+### 🛒 Manual Buy Mode (No automation)
+
+If you want to log in and manually redeem or purchase without any automated actions, use the buy mode:
+
+```bash
+npm start -- -buy your@email.com
+```
+
+What it does:
+- Logs into the specified account and opens the Rewards homepage, then hands full control to you.
+- Opens a separate background tab that passively reads your points (no clicks).
+- Detects point spends (decreases) while you redeem, without interfering with your actions.
+- Sends a final summary (Discord/NTFY if enabled) showing initial points, final points, and total spent.
+
+Notes:
+- Passive monitoring runs ~45 minutes by default (configurable via `buyModeMaxMinutes`).
+- Your main tab is untouched by automation in this mode.
+
 ## Alternative Setup Methods
 
 <details>
@@ -149,6 +167,30 @@ docker logs -f rewards
 | `parallel` | Run mobile/desktop tasks simultaneously | `true` |
 | `runOnZeroPoints` | Continue when no points available | `false` |
 | `clusters` | Number of concurrent account instances | `1` |
+
+</details>
+
+<details>
+<summary><strong>Manual Buy Mode (Optional)</strong></summary>
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `buyModeMaxMinutes` | Passive monitoring duration (in minutes) after login when using `-buy <email>` | `45` |
+
+Usage example:
+
+```jsonc
+// src/config.json
+{
+  // ...existing config...
+  "buyModeMaxMinutes": 30
+}
+```
+
+Behavior:
+- During this period, a separate tab periodically refreshes the Rewards dashboard to read points only.
+- No clicks or navigation are performed in your active tab; you can safely redeem/spend points.
+- The final conclusion webhook includes a negative totalCollected value to indicate spent points.
 
 </details>
 
@@ -324,7 +366,7 @@ docker compose up -d
 ✓ Quiz Solving (10 & 30-40 point variants) • ✓ This Or That Quiz • ✓ ABC Quiz Solving • ✓ Poll Completion • ✓ Click Rewards
 
 ### Notifications & Monitoring
-✓ Discord Webhook Integration • ✓ Rich Summary Reports • ✓ Comprehensive Logging • ✓ NTFY Push Notifications
+✓ Discord Webhook Integration • ✓ Rich Summary Reports • ✓ Comprehensive Logging • ✓ NTFY Push Notifications • Buy Mode summary (initial/final/total spent)
 
 </div>
 

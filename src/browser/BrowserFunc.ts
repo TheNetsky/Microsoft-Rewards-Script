@@ -89,21 +89,22 @@ export default class BrowserFunc {
      * Fetch user dashboard data
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
-    async getDashboardData(): Promise<DashboardData> {
+    async getDashboardData(page?: Page): Promise<DashboardData> {
+        const target = page ?? this.bot.homePage
         const dashboardURL = new URL(this.bot.config.baseURL)
-        const currentURL = new URL(this.bot.homePage.url())
+        const currentURL = new URL(target.url())
 
         try {
             // Should never happen since tasks are opened in a new tab!
             if (currentURL.hostname !== dashboardURL.hostname) {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
-                await this.goHome(this.bot.homePage)
+                await this.goHome(target)
             }
                 let lastError: unknown = null
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     // Reload the page to get new data
-                    await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
+                    await target.reload({ waitUntil: 'domcontentloaded' })
                     lastError = null
                     break
                 } catch (re) {
@@ -115,7 +116,7 @@ export default class BrowserFunc {
                         if (attempt === 1) {
                             this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Page appears closed; trying one navigation fallback', 'warn')
                             try {
-                                await this.goHome(this.bot.homePage)
+                                await this.goHome(target)
                             } catch {/* ignore */}
                         } else {
                             break
@@ -126,7 +127,7 @@ export default class BrowserFunc {
                 }
             }
 
-            const scriptContent = await this.bot.homePage.evaluate(() => {
+            const scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
 
@@ -138,7 +139,7 @@ export default class BrowserFunc {
             }
 
             // Extract the dashboard object from the script content
-            const dashboardData = await this.bot.homePage.evaluate((scriptContent: string) => {
+            const dashboardData = await target.evaluate((scriptContent: string) => {
                 // Extract the dashboard object using regex
                 const regex = /var dashboard = (\{.*?\});/s
                 const match = regex.exec(scriptContent)
