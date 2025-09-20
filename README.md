@@ -350,8 +350,6 @@ docker compose up -d
 
 ### 🙌 Contributors
 
-These contributor grids are generated dynamically via contrib.rocks (GitHub API-based image service) and auto-refresh on cache expiry.
-
 This repo: <a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors"><img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" alt="TheNetsky/Microsoft-Rewards-Script contributors" /></a>
 
 If you contributed, thank you! Open a PR to add yourself explicitly if you wish.
