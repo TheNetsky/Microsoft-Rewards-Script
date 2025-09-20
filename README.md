@@ -157,104 +157,16 @@ docker compose up -d
 
 ---
 
-## 🌟 **What Makes V2 Special?**
+## ✨ Features
 
-<div align="center">
-
-<table>
-<tr>
-<td width="25%" align="center">
-<h3>🤖 <strong>Smart Automation</strong></h3>
-Human-like behavior patterns<br/>
-Multi-account orchestration<br/>
-Session persistence magic
-</td>
-<td width="25%" align="center">
-<h3>🔍 <strong>Search Mastery</strong></h3>
-Desktop & mobile searches<br/>
-Geo-located queries<br/>
-Real scrolling & clicking
-</td>
-<td width="25%" align="center">
-<h3>🧠 <strong>Quiz Genius</strong></h3>
-Multiple choice solver<br/>
-This or That expertise<br/>
-ABC quiz automation
-</td>
-<td width="25%" align="center">
-<h3>📊 <strong>Smart Monitoring</strong></h3>
-Discord live updates<br/>
-NTFY push notifications<br/>
-Comprehensive diagnostics
-</td>
-</tr>
-</table>
-
-</div>
-
-### ✨ **Full Feature Showcase**
-
-<details>
-<summary><strong>🔧 Account Management & Control</strong></summary>
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Multi-Account Support | ✅ | Run multiple Microsoft accounts simultaneously |
-| Session Persistence | ✅ | Remember login state between runs |
-| 2FA Support | ✅ | Full two-factor authentication compatibility |
-| Passwordless Login | ✅ | Use Microsoft's passwordless authentication |
-| Headless Operation | ✅ | Run invisibly in background |
-| Clustering Support | ✅ | Parallel account processing |
-| Proxy Support | ✅ | Route traffic through proxies |
-| Docker Scheduling | ✅ | Automated container deployment |
-
-</details>
-
-<details>
-<summary><strong>🔍 Search & Activity Automation</strong></summary>
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Desktop & Mobile Searches | ✅ | Simulate both browser types |
-| Microsoft Edge Simulation | ✅ | Perfect Edge browser mimicking |
-| Geo-Located Queries | ✅ | Location-based search terms |
-| Emulated Scrolling & Clicking | ✅ | Realistic human behavior |
-| Daily Set Completion | ✅ | Automatic daily task completion |
-| Promotional Activities | ✅ | Special offer participation |
-| Punchcard Completion | ✅ | Multi-day challenge automation |
-| Daily Check-in | ✅ | Never miss your daily bonus |
-| Read to Earn | ✅ | Article reading automation |
-
-</details>
-
-<details>
-<summary><strong>🧠 Quiz & Interactive Content</strong></summary>
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Quiz Solving (10 & 30-40 points) | ✅ | Intelligent answer selection |
-| This Or That Quiz | ✅ | Binary choice automation |
-| ABC Quiz Solving | ✅ | Multiple choice mastery |
-| Poll Completion | ✅ | Survey participation |
-| Click Rewards | ✅ | Simple click-through offers |
-| URL Rewards | ✅ | Link-based point collection |
-
-</details>
-
-<details>
-<summary><strong>📊 Monitoring & Notifications</strong></summary>
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| Discord Webhook Integration | ✅ | Real-time Discord notifications |
-| Rich Summary Reports | ✅ | Detailed run summaries |
-| NTFY Push Notifications | ✅ | Mobile/desktop alerts |
-| Comprehensive Logging | ✅ | Detailed execution logs |
-| Error Diagnostics | ✅ | Screenshot capture on failures |
-| Buy Mode Tracking | ✅ | Monitor manual point spending |
-| Community Error Reports | ✅ | Anonymous error sharing for improvements |
-
-</details>
+- Multi-account support with session persistence and 2FA
+- Daily set, promotions, punchcards, check-in, read-to-earn
+- Desktop and mobile searches with Edge-like behavior
+- Human-like scrolling/clicking and natural delays
+- Quiz automation: multiple choice, This or That, ABC, polls, click/URL rewards
+- Discord live notifications + rich summaries; NTFY push support
+- Headless mode, clustering, proxy, Docker scheduling
+- Diagnostics (screenshots/HTML), logs, and job state recovery
 
 ---
 
@@ -413,41 +325,11 @@ docker logs -f microsoft-rewards
 
 <div align="center">
 
-## ⚠️ **Important Legal Notice**
+## ⚠️ Disclaimer
 
-<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; margin: 20px 0;">
+This project is for educational purposes only. Use at your own risk. Microsoft may suspend or ban accounts that use automation tools. The authors are not responsible for any account actions taken by Microsoft.
 
-### **🛡️ Use Responsibly**
-
-**This script is provided for educational purposes only.**
-
-⚠️ **Your Microsoft Rewards account may be suspended or banned when using automation tools.**  
-🔒 **Microsoft's Terms of Service prohibit automated interactions.**  
-📋 **The authors are not responsible for any account actions taken by Microsoft.**
-
-**🎯 Best Practices:**
-- Use reasonable delays between actions
-- Don't run 24/7 continuously  
-- Monitor your account for any warnings
-- Consider the risks before automating
-
-</div>
-
-### **📜 License & Responsibility**
-
-This project is primarily for personal use and educational purposes. By using this script, you acknowledge and accept all risks associated with automated interactions with Microsoft's services.
-
-**🤝 Contribute Responsibly:** Ensure any contributions maintain compatibility and don't encourage abuse.
-
-</div>
-
----
-
-<div align="center">
-
-**🌟 Made with ❤️ by the community • For the community**
-
-*Happy automating! 🎉*
+<em>Made with ❤️ by the community • Happy automating! 🎉</em>
 
 </div>
 
