@@ -69,5 +69,12 @@
         "git": true,
         "docker": false,
         "scriptPath": "setup/update/update.mjs"
-    }
+    },
+    "schedule": {
+        "enabled": false,
+        "time": "09:00",
+        "timeZone": "America/New_York",
+        "runImmediatelyOnStart": true
+    },
+    "passesPerRun": 1
 }

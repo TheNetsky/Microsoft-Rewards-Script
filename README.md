@@ -8,13 +8,17 @@
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 
+<a href="https://github.com/LightZirconite/MSN-V2/graphs/contributors">
+  <img alt="Repo Contributors" src="https://img.shields.io/github/contributors/LightZirconite/MSN-V2?label=Repo%20Contributors&color=00b894" />
+  </a>
+
 *Comprehensive automation for daily sets, searches, quizzes, and promotional activities*
 
 </div>
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 **Get up and running in 3 steps:**
 
@@ -88,7 +92,7 @@ npm start
 
 ---
 
-## Docker Deployment
+## 🐳 Docker Deployment
 
 **Perfect for servers and automated scheduling**
 
@@ -130,7 +134,7 @@ docker logs -f rewards
 - Use `"headless": true` in config.json for Docker
 - Dev mode: Use `-dev` flag to load `accounts.dev.json`
 
-## Configuration Reference
+## ⚙️ Configuration Reference
 
 **Customize behavior by editing `src/config.json`**
 
@@ -227,6 +231,32 @@ docker logs -f rewards
 </details>
 
 <details>
+<summary><strong>⏰ Scheduling (non-Docker)</strong></summary>
+
+Add a built-in scheduler for non-Docker usage. Configure in `src/config.json`:
+
+```
+"schedule": {
+  "enabled": true,
+  "time": "09:00",           // Daily run time (HH:mm)
+  "timeZone": "America/New_York", // IANA time zone
+  "runImmediatelyOnStart": true // Run once on process start
+},
+"passesPerRun": 1               // How many full passes per run (min 1)
+```
+
+Behavior:
+- If you start the process before the scheduled time and `runImmediatelyOnStart` is true, it runs once, then waits until the configured time.
+- If you start after the scheduled time, it runs once, then waits until the time on the next day.
+- Each occurrence will execute `passesPerRun` full passes (e.g., set to 3 to loop accounts 3 times).
+
+Run the scheduler:
+- Dev: `npm run ts-schedule`
+- Prod: `npm run build` then `npm run start:schedule`
+
+</details>
+
+<details>
 <summary><strong>Diagnostics & Troubleshooting</strong></summary>
 
 | Setting | Description | Default |
@@ -276,7 +306,7 @@ docker compose up -d
 
 ---
 
-## Features Overview
+## ✨ Features Overview
 
 <div align="center">
 
@@ -300,7 +330,7 @@ docker compose up -d
 
 ---
 
-## Usage Tips
+## 💡 Usage Tips
 
 **Browser Management:**
 - Use `"headless": true` for server deployments
@@ -318,7 +348,7 @@ docker compose up -d
 
 ---
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 > **⚠️ Important Notice**
 > 
@@ -328,13 +358,10 @@ docker compose up -d
 
 ---
 
-## Contributing
+### 🙌 Contributors
 
-This project welcomes contributions while maintaining focus on personal use. Please ensure any changes:
+These contributor grids are generated dynamically via contrib.rocks (GitHub API-based image service) and auto-refresh on cache expiry.
 
-- Maintain compatibility with the existing configuration system
-- Follow the established code patterns and TypeScript standards  
-- Include appropriate documentation for new features
-- Consider Docker and headless deployment scenarios
+This repo: <a href="https://github.com/LightZirconite/MSN-V2/graphs/contributors"><img src="https://contrib.rocks/image?repo=LightZirconite/MSN-V2" alt="LightZirconite/MSN-V2 contributors" /></a>
 
-For major changes, please open an issue first to discuss the proposed modifications.
+If you contributed, thank you! Open a PR to add yourself explicitly if you wish.

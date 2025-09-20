@@ -18,6 +18,8 @@ export interface Config {
     ntfy: ConfigNtfy;
     diagnostics?: ConfigDiagnostics;
     update?: ConfigUpdate;
+    schedule?: ConfigSchedule;
+    passesPerRun?: number;
 }
 
 export interface ConfigSaveFingerprint {
@@ -67,6 +69,13 @@ export interface ConfigUpdate {
     git?: boolean; // if true, run git pull + npm ci + npm run build after completion
     docker?: boolean; // if true, run docker update routine (compose pull/up) after completion
     scriptPath?: string; // optional custom path to update script relative to repo root
+}
+
+export interface ConfigSchedule {
+    enabled?: boolean;
+    time?: string; // "HH:mm"
+    timeZone?: string; // IANA TZ e.g., "America/New_York"
+    runImmediatelyOnStart?: boolean; // if true, run once immediately when process starts
 }
 
 export interface ConfigWorkers {
