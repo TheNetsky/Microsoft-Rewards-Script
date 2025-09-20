@@ -156,20 +156,38 @@ export class Search extends Workers {
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
-                await searchPage.click(searchBar) // Focus on the textarea
-                await this.bot.utils.wait(500)
-                await searchPage.keyboard.down(platformControlKey)
-                await searchPage.keyboard.press('A')
-                await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up(platformControlKey)
-                await searchPage.keyboard.type(query)
-                await searchPage.keyboard.press('Enter')
+                // Prefer attached over visible to avoid strict visibility waits when overlays exist
+                const box = searchPage.locator(searchBar)
+                await box.waitFor({ state: 'attached', timeout: 15000 })
+
+                // Try dismissing overlays before interacting
+                await this.bot.browser.utils.tryDismissAllMessages(searchPage)
+                await this.bot.utils.wait(200)
+
+                let navigatedDirectly = false
+                try {
+                    // Try focusing and filling instead of clicking (more reliable on mobile)
+                    await box.focus({ timeout: 2000 }).catch(() => { /* ignore focus errors */ })
+                    await box.fill('')
+                    await this.bot.utils.wait(200)
+                    await searchPage.keyboard.down(platformControlKey)
+                    await searchPage.keyboard.press('A')
+                    await searchPage.keyboard.press('Backspace')
+                    await searchPage.keyboard.up(platformControlKey)
+                    await box.type(query, { delay: 20 })
+                    await searchPage.keyboard.press('Enter')
+                } catch (typeErr) {
+                    // As a robust fallback, navigate directly to the search results URL
+                    const q = encodeURIComponent(query)
+                    const url = `https://www.bing.com/search?q=${q}`
+                    await searchPage.goto(url)
+                    navigatedDirectly = true
+                }
 
                 await this.bot.utils.wait(3000)
 
-                // Bing.com in Chrome opens a new tab when searching
-                const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
+                // Bing.com in Chrome opens a new tab when searching via Enter; if we navigated directly, stay on current tab
+                const resultPage = navigatedDirectly ? searchPage : await this.bot.browser.utils.getLatestTab(searchPage)
                 this.searchPageURL = new URL(resultPage.url()).href // Set the results page
 
                 await this.bot.browser.utils.reloadBadPage(resultPage)
