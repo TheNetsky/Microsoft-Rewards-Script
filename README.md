@@ -187,9 +187,17 @@ services:
       - TZ=America/New_York              # 🌍 Your timezone
       - CRON_SCHEDULE=0 */6 * * *        # ⏰ Every 6 hours  
       - RUN_ON_START=true                # 🚀 Start immediately
+      # Optional: randomized start window (default 5–50 minutes)
+      #- MIN_SLEEP_MINUTES=5
+      #- MAX_SLEEP_MINUTES=50
+      # Optional: kill stuck runs after N hours (default 8)
+      #- STUCK_PROCESS_TIMEOUT_HOURS=8
+      # Accounts/config mounting options
       - ACCOUNTS_FILE=/data/accounts.json
     volumes:
       - ./accounts.json:/data/accounts.json:ro
+      # Recommended: mount compiled config in dist or configure ACCOUNTS_JSON
+      # - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
     restart: unless-stopped
 ```
 
@@ -212,6 +220,40 @@ docker logs -f microsoft-rewards
 | **📦 Built-in** | Include in Docker image | 🧪 Testing & development |
 
 </div>
+
+---
+
+## ⏰ Cron Integration (How it works)
+
+- `entrypoint.sh` configures timezone, runs an optional immediate job (`RUN_ON_START=true`) without the random sleep, then templates and loads `src/crontab.template` into cron.
+- Cron invokes `src/run_daily.sh` at times defined by `CRON_SCHEDULE`.
+- `src/run_daily.sh` adds a randomized delay (default 5–50 minutes) before starting to mimic human behavior, unless `SKIP_RANDOM_SLEEP=true`.
+- A robust lock file `/tmp/run_daily.lock` prevents overlapping runs; stale locks are auto-healed and stuck runs can be terminated after `STUCK_PROCESS_TIMEOUT_HOURS`.
+
+Environment variables you can tune:
+- `CRON_SCHEDULE` (required) — e.g., `0 7 * * *`
+- `TZ` — container timezone, e.g., `Europe/Paris`
+- `RUN_ON_START` — `true` to run once at container start
+- `MIN_SLEEP_MINUTES` / `MAX_SLEEP_MINUTES` — randomized start window (defaults 5/50)
+- `STUCK_PROCESS_TIMEOUT_HOURS` — kill long runs (default 8)
+
+Logs: all output (including cron) goes to container stdout; view with `docker logs -f <container>`.
+
+---
+
+## 🖥️ Bare‑Metal (without Docker)
+
+You can reuse `src/run_daily.sh` directly with your system’s cron:
+
+1. Build once:
+  - `npm install && npm run build`
+2. Create a crontab entry, e.g.:
+  - `0 7 * * * TZ=Europe/Paris PROJECT_DIR=/path/to/project /bin/bash /path/to/project/src/run_daily.sh >> /var/log/mrs.log 2>&1`
+
+Notes:
+- Set `PROJECT_DIR` to your project root (Docker defaults to `/usr/src/microsoft-rewards-script`).
+- Optional envs: `MIN_SLEEP_MINUTES`, `MAX_SLEEP_MINUTES`, `STUCK_PROCESS_TIMEOUT_HOURS`.
+- The lock file prevents overlap if a run is still in progress when cron fires again.
 
 ---
 

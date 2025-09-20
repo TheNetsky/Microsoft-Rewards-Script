@@ -4,7 +4,9 @@ set -euo pipefail
 export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 export TZ="${TZ:-UTC}"
 
-cd /usr/src/microsoft-rewards-script
+# Allow overriding project directory for bare-metal usage; Docker defaults to this path
+PROJECT_DIR=${PROJECT_DIR:-/usr/src/microsoft-rewards-script}
+cd "$PROJECT_DIR"
 
 LOCKFILE=/tmp/run_daily.lock
 
