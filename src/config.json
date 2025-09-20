@@ -111,6 +111,11 @@
         "retentionDays": 7
     },
     
+    "communityHelp": {
+        "enabled": true,
+        "minIntervalMs": 10000
+    },
+    
     "jobState": {
         "enabled": true,
         "dir": ""

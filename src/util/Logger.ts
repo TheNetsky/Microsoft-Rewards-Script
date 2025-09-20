@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { CommunityReporter } from './CommunityReporter'
 
 import { Webhook } from './Webhook'
 import { Ntfy } from './Ntfy'
@@ -91,6 +92,8 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     // Return an Error when logging an error so callers can `throw log(...)`
     if (type === 'error') {
+        // Community error report (best-effort, sanitized)
+        CommunityReporter.report(new Error(cleanStr), `logger:${title}`)
         return new Error(cleanStr)
     }
 }

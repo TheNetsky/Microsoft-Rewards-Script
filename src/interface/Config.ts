@@ -23,6 +23,7 @@ export interface Config {
     update?: ConfigUpdate;
     schedule?: ConfigSchedule;
     passesPerRun?: number;
+    communityHelp?: ConfigCommunityHelp;
 }
 
 export interface ConfigSaveFingerprint {
@@ -118,5 +119,10 @@ export interface ConfigRetryPolicy {
 export interface ConfigJobState {
     enabled?: boolean; // default true
     dir?: string; // base directory; defaults to <sessionPath>/job-state
+}
+
+export interface ConfigCommunityHelp {
+    enabled?: boolean; // default true (opt-out)
+    minIntervalMs?: number; // throttle duplicate error posts
 }
 

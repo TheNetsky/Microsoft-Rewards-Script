@@ -8,6 +8,7 @@ import BrowserFunc from './browser/BrowserFunc'
 import BrowserUtil from './browser/BrowserUtil'
 
 import { log } from './util/Logger'
+import { CommunityReporter } from './util/CommunityReporter'
 import Util from './util/Utils'
 import { loadAccounts, loadConfig, saveSessionData } from './util/Load'
 
@@ -987,6 +988,14 @@ function formatDuration(ms: number): string {
 }
 
 async function main() {
+    // Initialize community reporter and attach global hooks
+    CommunityReporter.init()
+    process.on('uncaughtException', (err) => {
+        CommunityReporter.report(err, 'uncaughtException').catch(() => {})
+    })
+    process.on('unhandledRejection', (reason) => {
+        CommunityReporter.report(reason as unknown, 'unhandledRejection').catch(() => {})
+    })
     const rewardsBot = new MicrosoftRewardsBot(false)
 
     try {
@@ -1000,5 +1009,6 @@ async function main() {
 // Start the bots
 main().catch(error => {
     log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
+    CommunityReporter.report(error, 'main.catch').catch(() => {})
     process.exit(1)
 })
