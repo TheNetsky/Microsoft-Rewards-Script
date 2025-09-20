@@ -179,19 +179,19 @@ docker compose up -d
 </div>
 
 ```yaml
-# docker-compose.yml
+# docker-compose.yml (uses built-in scheduler by default)
 services:
   microsoft-rewards:
     build: .
     environment:
       - TZ=America/New_York              # 🌍 Your timezone
-      - CRON_SCHEDULE=0 */6 * * *        # ⏰ Every 6 hours  
-      - RUN_ON_START=true                # 🚀 Start immediately
-      # Optional: randomized start window (default 5–50 minutes)
-      #- MIN_SLEEP_MINUTES=5
-      #- MAX_SLEEP_MINUTES=50
-      # Optional: kill stuck runs after N hours (default 8)
-      #- STUCK_PROCESS_TIMEOUT_HOURS=8
+      # Built-in scheduler randomization (optional)
+      #- SCHEDULER_INITIAL_JITTER_MINUTES_MIN=5
+      #- SCHEDULER_INITIAL_JITTER_MINUTES_MAX=20
+      #- SCHEDULER_DAILY_JITTER_MINUTES_MIN=2
+      #- SCHEDULER_DAILY_JITTER_MINUTES_MAX=10
+      # Watchdog timeout (minutes)
+      #- SCHEDULER_PASS_TIMEOUT_MINUTES=180
       # Accounts/config mounting options
       - ACCOUNTS_FILE=/data/accounts.json
     volumes:
@@ -223,21 +223,15 @@ docker logs -f microsoft-rewards
 
 ---
 
-## ⏰ Cron Integration (How it works)
+## ⏰ Scheduling Options
 
-- `entrypoint.sh` configures timezone, runs an optional immediate job (`RUN_ON_START=true`) without the random sleep, then templates and loads `src/crontab.template` into cron.
-- Cron invokes `src/run_daily.sh` at times defined by `CRON_SCHEDULE`.
-- `src/run_daily.sh` adds a randomized delay (default 5–50 minutes) before starting to mimic human behavior, unless `SKIP_RANDOM_SLEEP=true`.
-- A robust lock file `/tmp/run_daily.lock` prevents overlapping runs; stale locks are auto-healed and stuck runs can be terminated after `STUCK_PROCESS_TIMEOUT_HOURS`.
-
-Environment variables you can tune:
-- `CRON_SCHEDULE` (required) — e.g., `0 7 * * *`
+By default, the Docker image now runs the built‑in scheduler (no cron in the container). Configure time and timezone in `src/config.json` under `schedule`, and use these optional envs for randomization/robustesse:
 - `TZ` — container timezone, e.g., `Europe/Paris`
-- `RUN_ON_START` — `true` to run once at container start
-- `MIN_SLEEP_MINUTES` / `MAX_SLEEP_MINUTES` — randomized start window (defaults 5/50)
-- `STUCK_PROCESS_TIMEOUT_HOURS` — kill long runs (default 8)
+- `SCHEDULER_INITIAL_JITTER_MINUTES_MIN` / `SCHEDULER_INITIAL_JITTER_MINUTES_MAX`
+- `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX`
+- `SCHEDULER_PASS_TIMEOUT_MINUTES`
 
-Logs: all output (including cron) goes to container stdout; view with `docker logs -f <container>`.
+Alternative (external cron): you can still drive the script with cron outside the container or with the provided `src/run_daily.sh` on bare‑metal. See the next section.
 
 Tip: If you switch to the built‑in scheduler, you can also enable start‑time variation and a watchdog timeout via env vars:
 - `SCHEDULER_INITIAL_JITTER_MINUTES_MIN` / `SCHEDULER_INITIAL_JITTER_MINUTES_MAX` — random delay before the very first run inside the scheduler process (e.g., 5/20)
@@ -261,7 +255,7 @@ Notes:
 - Optional envs: `MIN_SLEEP_MINUTES`, `MAX_SLEEP_MINUTES`, `STUCK_PROCESS_TIMEOUT_HOURS`.
 - The lock file prevents overlap if a run is still in progress when cron fires again.
 
-For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. cron), see: [information/schedule.md](./information/schedule.md)
+For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. external cron), see: [information/schedule.md](./information/schedule.md)
 
 ---
 

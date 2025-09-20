@@ -13,30 +13,23 @@ services:
     environment:
       TZ: "America/Toronto" # Set your timezone for proper scheduling
       NODE_ENV: "production"
-      CRON_SCHEDULE: "0 7,16,20 * * *" # Customize your schedule, use crontab.guru for formatting
-      RUN_ON_START: "true" # Runs the script immediately on container startup
-
-      # Add scheduled start-time randomization (uncomment to customize or disable, default: enabled)
-      #MIN_SLEEP_MINUTES: "5"
-      #MAX_SLEEP_MINUTES: "50"
-      SKIP_RANDOM_SLEEP: "false"
-
-      # Optionally set how long to wait before killing a stuck script run (prevents blocking future runs, default: 8 hours)
-      #STUCK_PROCESS_TIMEOUT_HOURS: "8"
+      # Built-in scheduler jitter (optional):
+      #SCHEDULER_INITIAL_JITTER_MINUTES_MIN: "5"
+      #SCHEDULER_INITIAL_JITTER_MINUTES_MAX: "20"
+      #SCHEDULER_DAILY_JITTER_MINUTES_MIN: "2"
+      #SCHEDULER_DAILY_JITTER_MINUTES_MAX: "10"
+      # Watchdog timeout per pass (minutes, default 180)
+      #SCHEDULER_PASS_TIMEOUT_MINUTES: "180"
+      # Run pass in child process (default true). Set to "false" to disable for debugging.
+      #SCHEDULER_FORK_PER_PASS: "true"
 
     # Optional resource limits for the container
     mem_limit: 4g
     cpus: 2
 
-    # Health check - monitors if cron daemon is running to ensure scheduled jobs can execute
-    # Container marked unhealthy if cron process dies
-    healthcheck:
-      test: ["CMD", "sh", "-c", "pgrep cron > /dev/null || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    
     # Security hardening
     security_opt:
       - no-new-privileges:true
+
+    # Use the built-in scheduler by default
+    command: ["npm", "run", "start:schedule"]

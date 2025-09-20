@@ -33,10 +33,10 @@ FROM mcr.microsoft.com/playwright:v1.52.0-jammy
 
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install cron, gettext-base (for envsubst), tzdata noninteractively
+# Install tzdata noninteractively (keep image slim)
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-         cron gettext-base tzdata \
+      tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure Playwright uses preinstalled browsers
@@ -55,14 +55,10 @@ RUN if [ -f package-lock.json ]; then \
 # Copy built application
 COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 
-# Copy runtime scripts with proper permissions from the start
-COPY --chmod=755 src/run_daily.sh ./src/run_daily.sh
-COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
-COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+# No cron/entrypoint needed when using built-in scheduler
 
 # Default TZ (overridden by user via environment)
 ENV TZ=UTC
 
-# Entrypoint handles TZ, initial run toggle, cron templating & launch
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
+# Default command runs the built-in scheduler; can be overridden by docker-compose
+CMD ["npm", "run", "start:schedule"]
