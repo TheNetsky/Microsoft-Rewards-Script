@@ -5,6 +5,7 @@ import { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
+import { generateTOTP } from '../util/Totp'
 
 import { OAuth } from '../interface/OAuth'
 
@@ -23,15 +24,18 @@ export class Login {
     private scope: string = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL'
     // Flag to prevent spamming passkey logs after first handling
     private passkeyHandled: boolean = false
+    // Optional TOTP secret for current login attempt (Base32)
+    private currentTotpSecret?: string
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
     }
 
-    async login(page: Page, email: string, password: string) {
+    async login(page: Page, email: string, password: string, totpSecret?: string) {
 
         try {
             this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process!')
+            this.currentTotpSecret = typeof totpSecret === 'string' && totpSecret.trim() ? totpSecret.trim() : undefined
 
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
@@ -70,6 +74,7 @@ export class Login {
 
             // We're done logging in
             this.bot.log(this.bot.isMobile, 'LOGIN', 'Logged in successfully, saved login session!')
+            this.currentTotpSecret = undefined
 
         } catch (error) {
             // Throw and don't continue
@@ -264,7 +269,19 @@ export class Login {
     }
 
     private async authSMSVerification(page: Page) {
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'SMS 2FA code required. Waiting for user input...')
+        // If a TOTP secret is configured for this account, auto-generate and submit the code.
+        try {
+            const secret = this.currentTotpSecret
+            if (secret && typeof secret === 'string' && secret.trim().length > 0) {
+                const code = generateTOTP(secret.trim())
+                await page.fill('input[name="otc"]', code)
+                await page.keyboard.press('Enter')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP code automatically')
+                return
+            }
+        } catch { /* ignore and fallback to manual prompt */ }
+
+        this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code required. Waiting for user input...')
 
         const code = await new Promise<string>((resolve) => {
             rl.question('Enter 2FA code:\n', (input: string) => {

@@ -128,7 +128,7 @@ export class MicrosoftRewardsBot {
             const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
             // Open the monitor tab FIRST so auto-refresh happens out of the way
             let monitor = await browser.newPage()
-            await this.login.login(monitor, account.email, account.password)
+            await this.login.login(monitor, account.email, account.password, account.totp)
             await this.browser.func.goHome(monitor)
             this.log(false, 'BUY-MODE', 'Opened MONITOR tab (auto-refreshes to track points).', 'log', 'yellow')
 
@@ -549,7 +549,7 @@ export class MicrosoftRewardsBot {
         log(this.isMobile, 'MAIN', 'Starting browser')
 
         // Login into MS Rewards, then go to rewards homepage
-        await this.login.login(this.homePage, account.email, account.password)
+    await this.login.login(this.homePage, account.email, account.password, account.totp)
 
         await this.browser.func.goHome(this.homePage)
 
@@ -626,7 +626,7 @@ export class MicrosoftRewardsBot {
         log(this.isMobile, 'MAIN', 'Starting browser')
 
         // Login into MS Rewards, then go to rewards homepage
-        await this.login.login(this.homePage, account.email, account.password)
+    await this.login.login(this.homePage, account.email, account.password, account.totp)
         this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email)
 
         await this.browser.func.goHome(this.homePage)
