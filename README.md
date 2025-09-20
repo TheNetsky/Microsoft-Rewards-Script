@@ -1,140 +1,157 @@
-# Microsoft-Rewards-Script
-Automated Microsoft Rewards script built with TypeScript, Cheerio and Playwright.
+<div align="center">
 
-Under development, however mainly for personal use!
+# Microsoft Rewards Script
 
----
+**Automated Microsoft Rewards point collection with TypeScript, Cheerio, and Playwright**
 
-## 🚀 Quick Setup (Recommended)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 
-**The easiest way to get started - just download and run!**
+*Comprehensive automation for daily sets, searches, quizzes, and promotional activities*
 
-1. **Download or clone** the source code
-2. **Run the setup script:**
-   
-   **Windows:** Double-click `setup/setup.bat` or run it from command line
-   
-   **Linux/macOS/WSL:** `bash setup/setup.sh` 
-   
-   **Alternative (any platform):** `npm run setup`
-
-3. **Follow the prompts:** The setup script will automatically:
-   - Rename `accounts.example.json` to `accounts.json` 
-   - Ask you to enter your Microsoft account credentials
-   - Remind you to review configuration options in `config.json`
-   - Install all dependencies (`npm install`)
-   - Build the project (`npm run build`)
-   - Optionally start the script immediately
-
-**That's it!** The setup script handles everything for you.
+</div>
 
 ---
 
-## ⚙️ Advanced Setup Options
+## Quick Start
 
-### Nix Users
-1. Get [Nix](https://nixos.org/)
-2. Run `./run.sh`
-3. Done!
+**Get up and running in 3 steps:**
 
-### Manual Setup (Troubleshooting)
-If the automatic setup script doesn't work for your environment:
+### Method 1: Automated Setup (Recommended)
 
-1. Manually rename `src/accounts.example.json` to `src/accounts.json`
-2. Add your Microsoft account details to `accounts.json`
-3. Customize `src/config.json` to your preferences
-4. Install dependencies: `npm install`
-5. Build the project: `npm run build`
-6. Start the script: `npm run start`---
+```bash
+# Windows
+setup/setup.bat
 
-## 🐳 Docker Setup (Experimental)
+# Linux/macOS/WSL
+bash setup/setup.sh
 
-For automated scheduling and containerized deployment.
+# Any platform
+npm run setup
+```
 
-### Before Starting
-- Remove `/node_modules` and `/dist` folders if you previously built locally
-- Remove old Docker volumes if upgrading from version 1.4 or earlier
-- Old `accounts.json` files can be reused
+The setup script will:
+- Configure your accounts automatically
+- Install dependencies and build the project
+- Guide you through initial configuration
+- Optionally start the script immediately
+
+### Method 2: Manual Setup
+
+```bash
+# 1. Configure accounts
+cp src/accounts.example.json src/accounts.json
+# Edit accounts.json with your credentials
+
+# 2. Install and build
+npm install
+npm run build
+
+# 3. Start
+npm start
+```
+
+## Alternative Setup Methods
+
+<details>
+<summary><strong>🐧 Nix Users</strong></summary>
+
+```bash
+# Get Nix from https://nixos.org/
+./run.sh
+```
+
+</details>
+
+<details>
+<summary><strong>🔧 Manual Troubleshooting</strong></summary>
+
+If the automated setup fails:
+
+```bash
+# 1. Manual file setup
+mv src/accounts.example.json src/accounts.json
+# Edit accounts.json with your Microsoft credentials
+
+# 2. Install dependencies
+npm install
+
+# 3. Build project
+npm run build
+
+# 4. Start script
+npm start
+```
+
+</details>
+
+---
+
+## Docker Deployment
+
+**Perfect for servers and automated scheduling**
 
 ### Quick Docker Setup
-1. **Download source code** and configure `accounts.json`
-2. **Edit `config.json`** - ensure `"headless": true`
-3. **Customize `compose.yaml`:**
-   - Set your timezone (`TZ` variable)
-   - Configure schedule (`CRON_SCHEDULE`) - use [crontab.guru](https://crontab.guru) for help
-   - Optional: Set `RUN_ON_START=true` for immediate execution
-4. **Start container:** `docker compose up -d`
-5. **Monitor logs:** `docker logs microsoft-rewards-script`
 
-**Note:** The container adds 5–50 minutes random delay to scheduled runs for more natural behavior.
-
-#### Providing accounts in Docker
-- Option A (default): bind-mount or bake `src/accounts.json` into the image.
-- Option B (env file path): set `ACCOUNTS_FILE=/data/accounts.json` and mount that path in the container.
-- Option C (inline JSON): set `ACCOUNTS_JSON` to a JSON array string of accounts (escape quotes properly).
-
-Examples (docker-compose):
 ```yaml
+# docker-compose.yml
 services:
-   app:
-      image: your/image:tag
-      environment:
-         - ACCOUNTS_FILE=/data/accounts.json
-         # or
-         # - ACCOUNTS_JSON=[{"email":"a@b","password":"..."}]
-      volumes:
-         - ./accounts.json:/data/accounts.json:ro
+  rewards:
+    build: .
+    environment:
+      - TZ=America/New_York
+      - CRON_SCHEDULE=0 */6 * * *  # Every 6 hours
+      - RUN_ON_START=true
+      - ACCOUNTS_FILE=/data/accounts.json
+    volumes:
+      - ./accounts.json:/data/accounts.json:ro
+    restart: unless-stopped
 ```
-When `-dev` is passed to the app, it uses `accounts.dev.json` inside the container instead of the env/file overrides.
 
----
+```bash
+# Deploy
+docker compose up -d
 
-## 📋 Usage Notes
+# Monitor
+docker logs -f rewards
+```
 
-- **Browser Instances:** If you stop the script without closing browser windows (headless=false), use Task Manager or `npm run kill-chrome-win` to clean up
-- **Automation Scheduling:** Run at least twice daily, set `"runOnZeroPoints": false` to skip when no points available
+### Account Configuration Options
 
-Customize behavior by editing `src/config.json`:
+| Method | Description | Use Case |
+|--------|-------------|----------|
+| **File Mount** | `ACCOUNTS_FILE=/data/accounts.json` | Production (recommended) |
+| **Environment** | `ACCOUNTS_JSON='[{"email":"...","password":"..."}]'` | CI/CD pipelines |
+| **Image Baked** | Include `src/accounts.json` in image | Testing only |
 
-### Core Settings
+**Notes:**
+- Container adds 5-50 minute random delays for natural behavior
+- Use `"headless": true` in config.json for Docker
+- Dev mode: Use `-dev` flag to load `accounts.dev.json`
+
+## Configuration Reference
+
+**Customize behavior by editing `src/config.json`**
+
+<details>
+<summary><strong>Core Settings</strong></summary>
+
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `baseURL` | Microsoft Rewards page URL | `https://rewards.bing.com` |
 | `sessionPath` | Session/fingerprint storage location | `sessions` |
-| `headless` | Run browser in background | `false` (visible) |
+| `headless` | Run browser in background | `false` |
 | `parallel` | Run mobile/desktop tasks simultaneously | `true` |
 | `runOnZeroPoints` | Continue when no points available | `false` |
 | `clusters` | Number of concurrent account instances | `1` |
 
-### Fingerprint Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `saveFingerprint.mobile` | Reuse mobile browser fingerprint | `false` |
+</details>
 
-Enhanced conclusion webhook:
-- Sends a rich embed summary (totals, OK/KO counts, durations) and per-account breakdown.
-- Automatically chunks details to respect Discord limits (max 10 embeds, 25 fields per embed). Adds a small note if some accounts are omitted.
-- Footer includes the runId and package version.
-| `saveFingerprint.desktop` | Reuse desktop browser fingerprint | `false` |
-
-### Task Settings
-| Setting | Description | Default |
-
-### Auto-Update (Post-Run)
-
-Control whether the script updates itself after a run. Useful for headless/cron workflows.
+<details>
+<summary><strong>Task Management</strong></summary>
 
 | Setting | Description | Default |
-|---------|-------------|---------|
-| `update.git` | After completion, run `git fetch --all --prune`, `git pull --ff-only`, `npm ci`, then `npm run build` | `true` |
-| `update.docker` | After completion, run `docker compose pull` then `docker compose up -d` | `false` |
-| `update.scriptPath` | Path to the update script relative to repo root | `setup/update/update.mjs` |
-
-Notes:
-- Set `update.git` to `false` to disable Git-based auto-update.
-- Set `update.docker` to `true` to update a Docker deployment (requires Docker CLI and a compose file in the current directory).
-- The update steps are executed only if the corresponding tools are available. Failures are ignored to not break the main script.
-- Docker and Git updates are independent; you can enable either one or both.
 |---------|-------------|---------|
 | `workers.doDailySet` | Complete daily set activities | `true` |
 | `workers.doMorePromotions` | Complete promotional offers | `true` |
@@ -144,7 +161,11 @@ Notes:
 | `workers.doDailyCheckIn` | Complete daily check-in | `true` |
 | `workers.doReadToEarn` | Complete read-to-earn activities | `true` |
 
-### Search Settings
+</details>
+
+<details>
+<summary><strong>Search Configuration</strong></summary>
+
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `searchOnBingLocalQueries` | Use local queries vs. fetched | `false` |
@@ -154,98 +175,166 @@ Notes:
 | `searchSettings.searchDelay` | Delay between searches (min/max) | `3-5 minutes` |
 | `searchSettings.retryMobileSearchAmount` | Mobile search retry attempts | `2` |
 
-### Advanced Settings
+</details>
+
+<details>
+<summary><strong>Browser & Fingerprinting</strong></summary>
+
 | Setting | Description | Default |
 |---------|-------------|---------|
+| `saveFingerprint.mobile` | Reuse mobile browser fingerprint | `false` |
+| `saveFingerprint.desktop` | Reuse desktop browser fingerprint | `false` |
 | `globalTimeout` | Action timeout duration | `30s` |
-| `logExcludeFunc` | Functions to exclude from logs | `SEARCH-CLOSE-TABS` |
-| `webhookLogExcludeFunc` | Functions to exclude from webhooks | `SEARCH-CLOSE-TABS` |
 | `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
 | `proxy.proxyBingTerms` | Proxy Bing Terms requests | `true` |
 
-Tip — silencing noisy tags:
-- To hide specific log lines in the console, add their tags to `logExcludeFunc`.
-- To hide them from Discord webhooks, add the tags to `webhookLogExcludeFunc`.
-- Example: add `"LOGIN-NO-PROMPT"` and `"FLOW"` to both lists to silence the login heartbeat and flow messages.
+</details>
 
-### Webhook Settings
+<details>
+<summary><strong>Logging & Debugging</strong></summary>
+
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `webhook.enabled` | Enable Discord notifications | `false` |
+| `logExcludeFunc` | Functions to exclude from console logs | `["SEARCH-CLOSE-TABS"]` |
+| `webhookLogExcludeFunc` | Functions to exclude from webhook logs | `["SEARCH-CLOSE-TABS"]` |
+
+**Log Filtering:**
+- Add tags like `"LOGIN-NO-PROMPT"` or `"FLOW"` to reduce console noise
+- Separate control for webhook vs console output
+
+</details>
+
+<details>
+<summary><strong>Notifications</strong></summary>
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `webhook.enabled` | Enable Discord live notifications | `false` |
 | `webhook.url` | Discord webhook URL | `null` |
-| `conclusionWebhook.enabled` | Enable summary-only webhook | `false` |
+| `conclusionWebhook.enabled` | Enable end-of-run summary | `false` |
 | `conclusionWebhook.url` | Summary webhook URL | `null` |
-
-### NTFY Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
 | `ntfy.enabled` | Enable NTFY push notifications | `false` |
-| `ntfy.url` | NTFY URL | `null` |
-| `ntfy.topic` | Set NTFY topic | `rewards` |
-| `ntfy.authToken` | NTFY authorization token | `null` |
+| `ntfy.url` | NTFY server URL | `null` |
+| `ntfy.topic` | NTFY topic | `rewards` |
+| `ntfy.authToken` | NTFY authentication token | `null` |
 
->NTFY customization: To customize the emojis used in the notifications, edit the tags in `Ntfy.sh`. Visit NTFY's emoji customization [guide](https://docs.ntfy.sh/emojis) for available options. To customize which keywords trigger notifications, add or customize the keywords in `Logger.ts`.
+**Enhanced Summary Webhook:**
+- Rich Discord embeds with totals, success/error counts, and per-account breakdown
+- Automatic chunking for Discord limits (max 10 embeds, 25 fields each)
+- Footer includes run ID and version info
+- NTFY receives a clean text fallback
 
----
+</details>
 
-### Diagnostics Settings
+<details>
+<summary><strong>Diagnostics & Troubleshooting</strong></summary>
+
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `diagnostics.enabled` | Enable diagnostics captures | `false` |
-| `diagnostics.saveScreenshot` | Save PNG screenshot on failure | `true` |
+| `diagnostics.enabled` | Enable error diagnostics capture | `false` |
+| `diagnostics.saveScreenshot` | Save PNG screenshots on failure | `true` |
 | `diagnostics.saveHtml` | Save page HTML on failure | `true` |
-| `diagnostics.maxPerRun` | Max number of captures per run | `2` |
+| `diagnostics.maxPerRun` | Max captures per run | `2` |
 | `diagnostics.retentionDays` | Delete reports older than N days | `7` |
 
-## ✨ Features
+**Notes:**
+- Disabled by default to avoid clutter
+- Captures are saved to `reports/YYYY-MM-DD/` with run IDs
+- Automatic cleanup based on retention period
 
-**Account Management:**
-- ✅ Multi-Account Support
-- ✅ Session Storage & Persistence
-- ✅ 2FA Support
-- ✅ Passwordless Login Support
+</details>
 
-**Automation & Control:**
-- ✅ Headless Browser Operation
-- ✅ Clustering Support (Multiple accounts simultaneously)
-- ✅ Configurable Task Selection
-- ✅ Proxy Support
-- ✅ Automatic Scheduling (Docker)
+<details>
+<summary><strong>Auto-Update (Post-Run)</strong></summary>
 
-**Search & Activities:**
-- ✅ Desktop & Mobile Searches
-- ✅ Microsoft Edge Search Simulation
-- ✅ Geo-Located Search Queries
-- ✅ Emulated Scrolling & Link Clicking
-- ✅ Daily Set Completion
-- ✅ Promotional Activities
-- ✅ Punchcard Completion
-- ✅ Daily Check-in
-- ✅ Read to Earn Activities
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `update.git` | Auto-update via Git after completion | `true` |
+| `update.docker` | Auto-update Docker containers after completion | `false` |
+| `update.scriptPath` | Custom update script path | `setup/update/update.mjs` |
 
-**Quiz & Interactive Content:**
-- ✅ Quiz Solving (10 & 30-40 point variants)
-- ✅ This Or That Quiz (Random answers)
-- ✅ ABC Quiz Solving
-- ✅ Poll Completion
-- ✅ Click Rewards
+**Git Update Process:**
+```bash
+git fetch --all --prune
+git pull --ff-only
+npm ci
+npm run build
+```
 
-**Notifications & Monitoring:**
-- ✅ Discord Webhook Integration
-- ✅ Dedicated Summary Webhook
-- ✅ Comprehensive Logging
-- ✅ Docker Support with Monitoring
+**Docker Update Process:**
+```bash
+docker compose pull
+docker compose up -d
+```
+
+**Notes:**
+- Updates only run if tools are available
+- Failures don't break the main script
+- Git and Docker updates are independent
+
+</details>
 
 ---
 
-## ⚠️ Disclaimer
+## Features Overview
 
-**Use at your own risk!** Your Microsoft Rewards account may be suspended or banned when using automation scripts.
+<div align="center">
 
-This script is provided for educational purposes. The authors are not responsible for any account actions taken by Microsoft.
+### Account Management
+✓ Multi-Account Support • ✓ Session Persistence • ✓ 2FA Support • ✓ Passwordless Login
+
+### Automation & Control  
+✓ Headless Operation • ✓ Clustering Support • ✓ Task Selection • ✓ Proxy Support • ✓ Docker Scheduling
+
+### Search & Activities
+✓ Desktop & Mobile Searches • ✓ Edge Simulation • ✓ Geo-Located Queries • ✓ Emulated Scrolling & Clicking  
+✓ Daily Set Completion • ✓ Promotional Activities • ✓ Punchcard Completion • ✓ Daily Check-in • ✓ Read to Earn
+
+### Quiz & Interactive Content
+✓ Quiz Solving (10 & 30-40 point variants) • ✓ This Or That Quiz • ✓ ABC Quiz Solving • ✓ Poll Completion • ✓ Click Rewards
+
+### Notifications & Monitoring
+✓ Discord Webhook Integration • ✓ Rich Summary Reports • ✓ Comprehensive Logging • ✓ NTFY Push Notifications
+
+</div>
 
 ---
 
-## 🤝 Contributing
+## Usage Tips
 
-This project is primarily for personal use but contributions are welcome. Please ensure any changes maintain compatibility with the existing configuration system.
+**Browser Management:**
+- Use `"headless": true` for server deployments
+- Clean up browser instances with Task Manager or `npm run kill-chrome-win` if needed
+
+**Scheduling Recommendations:**
+- Run at least twice daily for optimal point collection
+- Set `"runOnZeroPoints": false` to skip runs when no points are available
+- Use Docker with cron for automated scheduling
+
+**Troubleshooting:**
+- Enable `diagnostics.enabled` for error screenshots and HTML dumps
+- Check Discord webhooks for real-time monitoring
+- Review logs in `reports/` directory for detailed run information
+
+---
+
+## Disclaimer
+
+> **⚠️ Important Notice**
+> 
+> This script is provided for educational purposes only. Use at your own risk.
+> 
+> Microsoft may suspend or ban accounts that use automation tools. The authors are not responsible for any account actions taken by Microsoft.
+
+---
+
+## Contributing
+
+This project welcomes contributions while maintaining focus on personal use. Please ensure any changes:
+
+- Maintain compatibility with the existing configuration system
+- Follow the established code patterns and TypeScript standards  
+- Include appropriate documentation for new features
+- Consider Docker and headless deployment scenarios
+
+For major changes, please open an issue first to discuss the proposed modifications.

@@ -13,9 +13,8 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
 
     const currentTime = new Date().toLocaleString()
     const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP'
-    const chalkedPlatform = isMobile === 'main' ? chalk.bgCyan('MAIN') : isMobile ? chalk.bgBlue('MOBILE') : chalk.bgMagenta('DESKTOP')
-
-    // Clean string for the Webhook (no chalk)
+    
+    // Clean string for the Webhook (no chalk, structured)
     const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
 
     // Send the clean string to the Webhook
@@ -28,38 +27,47 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
         log: [
             message.toLowerCase().includes('started tasks for account'),
             message.toLowerCase().includes('press the number'),
-            // message.toLowerCase().includes('completed tasks for account'),
-            // message.toLowerCase().includes('the script collected'),
             message.toLowerCase().includes('no points to earn')
-        ], // Add or customize keywords for log messages here
-        error: [], // Add or customize keywords for error messages here
+        ],
+        error: [], 
         warn: [
             message.toLowerCase().includes('aborting'),
             message.toLowerCase().includes('didn\'t gain')
-        ] // Add or customize keywords for warning messages here
+        ]
     }
 
     // Check if the current log type and message meet the NTFY conditions
     if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition))
         await Ntfy(cleanStr, type)
 
-    // Formatted string with chalk for terminal logging
-    const str = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${chalkedPlatform} [${title}] ${message}`
+    // Console output with better formatting
+    const typeIndicator = type === 'error' ? '✗' : type === 'warn' ? '⚠' : '●'
+    const platformColor = isMobile === 'main' ? chalk.cyan : isMobile ? chalk.blue : chalk.magenta
+    const typeColor = type === 'error' ? chalk.red : type === 'warn' ? chalk.yellow : chalk.green
+    
+    const formattedStr = [
+        chalk.gray(`[${currentTime}]`),
+        chalk.gray(`[${process.pid}]`),
+        typeColor(`${typeIndicator} ${type.toUpperCase()}`),
+        platformColor(`[${platformText}]`),
+        chalk.bold(`[${title}]`),
+        message
+    ].join(' ')
 
     const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null
 
     // Log based on the type
     switch (type) {
         case 'warn':
-            applyChalk ? console.warn(applyChalk(str)) : console.warn(str)
+            applyChalk ? console.warn(applyChalk(formattedStr)) : console.warn(formattedStr)
             break
 
         case 'error':
-            applyChalk ? console.error(applyChalk(str)) : console.error(str)
+            applyChalk ? console.error(applyChalk(formattedStr)) : console.error(formattedStr)
             break
 
         default:
-            applyChalk ? console.log(applyChalk(str)) : console.log(str)
+            applyChalk ? console.log(applyChalk(formattedStr)) : console.log(formattedStr)
             break
     }
 }

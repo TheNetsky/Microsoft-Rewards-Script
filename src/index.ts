@@ -93,6 +93,18 @@ export class MicrosoftRewardsBot {
     private printBanner() {
         // Only print once (primary process or single cluster execution)
         if (this.config.clusters > 1 && !cluster.isPrimary) return
+        
+        const banner = `
+ ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
+ ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
+ ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
+ ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
+ ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
+ ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+                                                                                   
+                      TypeScript • Playwright • Automated Point Collection        
+`
+        
         try {
             const pkgPath = path.join(__dirname, '../', 'package.json')
             let version = 'unknown'
@@ -101,24 +113,19 @@ export class MicrosoftRewardsBot {
                 const pkg = JSON.parse(raw)
                 version = pkg.version || version
             }
-                /* eslint-disable no-useless-escape */
-                const banner = [
-                    '  __  __  _____       _____                            _     ',
-                    ' |  \/  |/ ____|     |  __ \\                          | |    ',
-                    ' | \\  / | (___ ______| |__) |_____      ____ _ _ __ __| |___ ',
-                    ' | |\/| |\\___ \\______|  _  // _ \\ \\ /\\ / / _` | \'__/ _` / __|',
-                    ' | |  | |____) |     | | \\ \\  __/ \\ V  V / (_| | | | (_| \\__ \\',
-                    ' |_|  |_|_____/      |_|  \\_\\___| \\_/\\_/ \\__,_|_|  \\__,_|___/',
-                    '',
-                    ` Version: v${version}`,
-                    ''
-                ].join('\n')
-                /* eslint-enable no-useless-escape */
+            
             console.log(banner)
-        } catch { /* ignore banner errors */ }
-    }
-
-    // Return summaries (used when clusters==1)
+            console.log('='.repeat(80))
+            console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
+            console.log(`  Mode: ${this.config.headless ? 'Headless' : 'Visible'} | Parallel: ${this.config.parallel ? 'Yes' : 'No'}`)
+            console.log('='.repeat(80) + '\n')
+        } catch { 
+            console.log(banner)
+            console.log('='.repeat(50))
+            console.log('  Microsoft Rewards Script Started')
+            console.log('='.repeat(50) + '\n')
+        }
+    }    // Return summaries (used when clusters==1)
     public getSummaries() {
         return this.accountSummaries
     }
