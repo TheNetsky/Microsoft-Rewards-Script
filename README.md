@@ -239,6 +239,12 @@ Environment variables you can tune:
 
 Logs: all output (including cron) goes to container stdout; view with `docker logs -f <container>`.
 
+Tip: If you switch to the built‑in scheduler, you can also enable start‑time variation and a watchdog timeout via env vars:
+- `SCHEDULER_INITIAL_JITTER_MINUTES_MIN` / `SCHEDULER_INITIAL_JITTER_MINUTES_MAX` — random delay before the very first run inside the scheduler process (e.g., 5/20)
+- `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX` — extra random delay added to each daily scheduled time
+- `SCHEDULER_PASS_TIMEOUT_MINUTES` — kill a stuck pass after N minutes (default 180)
+- `SCHEDULER_FORK_PER_PASS` — if `false`, runs passes in‑process (can’t be force‑killed)
+
 ---
 
 ## 🖥️ Bare‑Metal (without Docker)

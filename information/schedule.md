@@ -133,6 +133,24 @@ npm run build
 npm run start:schedule
 ```
 
+### Optional Randomization and Watchdog
+
+You can introduce slight randomness to the start times and protect against stuck runs:
+
+- `SCHEDULER_INITIAL_JITTER_MINUTES_MIN` / `SCHEDULER_INITIAL_JITTER_MINUTES_MAX`
+  - Adds a one‑time random delay before the very first run after the scheduler starts.
+  - Example: `SCHEDULER_INITIAL_JITTER_MINUTES_MIN=5` and `SCHEDULER_INITIAL_JITTER_MINUTES_MAX=20` delays the first run by 5–20 minutes.
+
+- `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX`
+  - Adds an extra random delay to each daily scheduled execution.
+  - Example: 2–10 minutes of daily jitter to avoid exact same second each day.
+
+- `SCHEDULER_PASS_TIMEOUT_MINUTES`
+  - Kills a stuck pass after N minutes (default 180). Useful if the underlying browser gets stuck.
+
+- `SCHEDULER_FORK_PER_PASS`
+  - Defaults to `true`. When `true`, each pass runs in a child Node process so a stuck pass can be terminated without killing the scheduler. Set to `false` to run passes in‑process (not recommended).
+
 ### Background Execution
 ```bash
 # Linux/macOS (background process)
