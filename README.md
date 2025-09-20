@@ -164,7 +164,7 @@ docker compose up -d
 <table>
 <tr>
 <td width="25%" align="center">
-<h3>🤖 <strong>AI-Smart Automation</strong></h3>
+<h3>🤖 <strong>Smart Automation</strong></h3>
 Human-like behavior patterns<br/>
 Multi-account orchestration<br/>
 Session persistence magic
@@ -367,299 +367,6 @@ docker logs -f microsoft-rewards
 
 ---
 
-## ⚡ Quick Setup
-
-### Automated Installation (Recommended)
-
-```bash
-# Windows
-setup/setup.bat
-
-# Linux/macOS/WSL  
-bash setup/setup.sh
-
-# Any platform
-npm run setup
-```
-
-The setup script automatically configures accounts, installs dependencies, and starts the script.
-
-### Manual Installation
-
-```bash
-# 1. Configure accounts
-cp src/accounts.example.json src/accounts.json
-# Edit accounts.json with your Microsoft credentials
-
-# 2. Install and build
-npm install && npm run build
-
-# 3. Start
-npm start
-```
-
----
-
-## � Usage
-
-### Basic Commands
-
-```bash
-# Run the script
-npm start
-
-# Manual purchase mode (no automation)
-npm start -- -buy your@email.com
-
-# Development mode
-npm run dev
-```
-
-### Key Features
-
-- **Multi-account support** with session persistence
-- **Complete automation** of daily sets, searches, and quizzes
-- **Smart browser simulation** with realistic human behavior
-- **Headless operation** for server deployments
-- **Docker support** with scheduling
-- **Real-time notifications** via Discord/NTFY
-
----
-
-## 🐳 Docker Deployment
-
-### Quick Start with Docker
-
-```yaml
-# docker-compose.yml
-services:
-  rewards:
-    build: .
-    environment:
-      - TZ=America/New_York
-      - CRON_SCHEDULE=0 */6 * * *  # Every 6 hours
-      - RUN_ON_START=true
-      - ACCOUNTS_FILE=/data/accounts.json
-    volumes:
-      - ./accounts.json:/data/accounts.json:ro
-    restart: unless-stopped
-```
-
-```bash
-# Deploy and monitor
-docker compose up -d
-docker logs -f rewards
-```
-
-### Account Configuration Methods
-
-| Method | Configuration | Use Case |
-|--------|---------------|----------|
-| **File Mount** | `ACCOUNTS_FILE=/data/accounts.json` | Production (recommended) |
-| **Environment** | `ACCOUNTS_JSON='[{"email":"...","password":"..."}]'` | CI/CD pipelines |
-| **Built-in** | Include `src/accounts.json` in image | Testing only |
-
----
-
-## ⚙️ Configuration
-
-### Basic Settings (`src/config.json`)
-
-```jsonc
-{
-  "headless": true,           // Run browser in background
-  "parallel": true,           // Run mobile/desktop tasks simultaneously  
-  "clusters": 1,              // Number of concurrent accounts
-  "runOnZeroPoints": false,   // Skip when no points available
-  
-  // Task selection
-  "workers": {
-    "doDailySet": true,
-    "doMorePromotions": true,
-    "doPunchCards": true,
-    "doDesktopSearch": true,
-    "doMobileSearch": true
-  }
-}
-```
-
-### Advanced Configuration
-
-For detailed configuration options including search settings, notifications, scheduling, and diagnostics, see:
-- **[Complete Configuration Guide](./information/schedule.md)** - All available settings
-- **[Proxy Setup](./information/proxy.md)** - Network configuration
-- **[Notifications](./information/ntfy.md)** - Discord and NTFY setup
-
----
-
----
-
-## 📱 **Notifications & Real-Time Monitoring**
-
-<div align="center">
-
-### **Stay Connected to Your Automation** 📡
-
-</div>
-
-<table>
-<tr>
-<td width="50%" align="center">
-<h3>🎯 <strong>Discord Webhooks</strong></h3>
-<img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" /><br/><br/>
-✅ <strong>Live notifications</strong> during execution<br/>
-✅ <strong>Rich summary reports</strong> with point totals<br/>
-✅ <strong>Error alerts</strong> with diagnostic info<br/>
-✅ <strong>Account status</strong> tracking<br/><br/>
-<em>Perfect for: Desktop monitoring & team updates</em>
-</td>
-<td width="50%" align="center">
-<h3>📱 <strong>NTFY Push Notifications</strong></h3>
-<img src="https://img.shields.io/badge/NTFY-00A7E1?style=for-the-badge&logoColor=white" /><br/><br/>
-✅ <strong>Mobile notifications</strong> anywhere, anytime<br/>
-✅ <strong>Desktop alerts</strong> across all platforms<br/>
-✅ <strong>Real-time status updates</strong><br/>
-✅ <strong>Cross-platform support</strong><br/><br/>
-<em>Perfect for: Mobile alerts & instant updates</em>
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-**🎛️ Quick Setup:** Add your webhook URLs to `src/config.json` and get instant notifications!
-
-[📖 **Notification Setup Guide**](./information/ntfy.md) • [🎯 **Discord Webhook Guide**](./information/conclusionwebhook.md)
-
-</div>
-
----
-
-## 🛠️ **Troubleshooting & Support**
-
-<div align="center">
-
-### **We've Got Your Back** 🤝
-
-</div>
-
-<details>
-<summary><strong>🔧 Common Issues & Quick Fixes</strong></summary>
-
-### 🌐 **Browser Issues**
-```bash
-# 🪟 Windows - Kill stuck Chrome processes
-npm run kill-chrome-win
-
-# 🐧 Linux/macOS - Force close browsers  
-pkill -f chrome
-```
-
-### 🔐 **Login Problems**
-- ✅ **Enable 2FA** on Microsoft accounts (recommended)
-- 🔍 **Check proxy configuration** in config.json
-- 📋 **Review error logs** in `reports/` directory
-- 🔄 **Clear browser sessions** by deleting `sessions/` folder
-
-### 💰 **Missing Points**
-- 🔑 **Verify account credentials** are correct
-- 🌍 **Check regional availability** of activities
-- 🧪 **Enable diagnostics** for detailed error capture
-- ⏰ **Adjust timing** - some activities are time-sensitive
-
-</details>
-
-<details>
-<summary><strong>🔍 Debug Mode & Advanced Diagnostics</strong></summary>
-
-```bash
-# 🐛 Enable comprehensive debugging
-npm start -- --debug
-
-# 📸 Capture screenshots and HTML on failures
-# Edit config.json: "diagnostics.enabled": true
-
-# 📊 Enable community error reporting
-# Edit config.json: "communityHelp.enabled": true
-```
-
-**🎯 Pro Debugging Tips:**
-- Screenshots saved to `reports/YYYY-MM-DD/` 
-- HTML snapshots help diagnose page issues
-- Logs include detailed timing and error context
-- Community reports help improve the script for everyone
-
-</details>
-
-<div align="center">
-
-**🆘 Need More Help?**
-
-[![Issues](https://img.shields.io/badge/🐛_Report_Bug-GitHub_Issues-red?style=for-the-badge)](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
-[![Discord](https://img.shields.io/badge/💬_Get_Help-Discord_Community-7289DA?style=for-the-badge)](https://discord.gg/KRBFxxsU)
-[![Documentation](https://img.shields.io/badge/📚_Read_Docs-Information_Folder-blue?style=for-the-badge)](./information/)
-
-</div>
-
----
-
-## 🎓 **Advanced Documentation Hub**
-
-<div align="center">
-
-### **Dive Deeper Into the Magic** 🪄
-
-</div>
-
-<table>
-<tr>
-<td width="33%" align="center">
-<h4>🔧 <strong>System Management</strong></h4>
-<a href="./information/diagnostics.md">
-<img src="https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge" />
-</a><br/>
-<a href="./information/jobstate.md">
-<img src="https://img.shields.io/badge/💾_Job_State-Task_Recovery-4ECDC4?style=for-the-badge" />
-</a><br/>
-<a href="./information/update.md">
-<img src="https://img.shields.io/badge/🔄_Auto_Update-Version_Control-9B59B6?style=for-the-badge" />
-</a>
-</td>
-<td width="33%" align="center">
-<h4>⏰ <strong>Automation & Scheduling</strong></h4>
-<a href="./information/schedule.md">
-<img src="https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-FFD93D?style=for-the-badge" />
-</a><br/>
-<a href="./information/proxy.md">
-<img src="https://img.shields.io/badge/🌐_Proxy-Network_Setup-FF9F43?style=for-the-badge" />
-</a><br/>
-<a href="./information/buy-mode.md">
-<img src="https://img.shields.io/badge/💳_Buy_Mode-Purchase_Track-00D2D3?style=for-the-badge" />
-</a>
-</td>
-<td width="33%" align="center">
-<h4>📱 <strong>Notifications & Alerts</strong></h4>
-<a href="./information/ntfy.md">
-<img src="https://img.shields.io/badge/📱_NTFY-Push_Notifications-00A7E1?style=for-the-badge" />
-</a><br/>
-<a href="./information/conclusionwebhook.md">
-<img src="https://img.shields.io/badge/🎯_Discord-Webhook_Reports-7289DA?style=for-the-badge" />
-</a><br/>
-<a href="./information/">
-<img src="https://img.shields.io/badge/📚_All_Guides-Complete_Docs-6C5CE7?style=for-the-badge" />
-</a>
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-**🔥 Pro Tip:** Each guide includes real examples, configuration templates, and troubleshooting tips!
-
-</div>
-
----
-
 ## 🌟 **Community & Contributing**
 
 <div align="center">
@@ -746,9 +453,10 @@ This project is primarily for personal use and educational purposes. By using th
 
 ---
 
-## 🛠️ Troubleshooting
+## 🛠️ **Quick Troubleshooting**
 
-### Common Issues
+<details>
+<summary><strong>🔧 Common Issues & Fixes</strong></summary>
 
 **Browser not closing properly:**
 ```bash
@@ -760,24 +468,64 @@ pkill -f chrome
 ```
 
 **Login failures:**
-- Enable 2FA on Microsoft accounts
-- Check proxy configuration
+- Enable 2FA on Microsoft accounts  
+- Check proxy configuration in `src/config.json`
 - Review error logs in `reports/` directory
 
 **Missing points:**
-- Verify account credentials
+- Verify account credentials are correct
 - Check if activities are available in your region
-- Enable diagnostics for detailed error capture
+- Enable diagnostics: `"diagnostics.enabled": true` in config
 
-### Debug Mode
-
+**Debug mode:**
 ```bash
-# Enable detailed logging and screenshots
 npm start -- --debug
-
-# Save diagnostic reports
-# Edit config.json: "diagnostics.enabled": true
 ```
+
+</details>
+
+---
+
+## 📚 **Advanced Documentation**
+
+Need to go deeper? Check out these comprehensive guides:
+
+[![Diagnostics](https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge)](./information/diagnostics.md)
+[![Job State](https://img.shields.io/badge/💾_Job_State-Task_Recovery-4ECDC4?style=for-the-badge)](./information/jobstate.md)
+[![Scheduling](https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-FFD93D?style=for-the-badge)](./information/schedule.md)
+[![Auto Update](https://img.shields.io/badge/🔄_Auto_Update-Version_Control-9B59B6?style=for-the-badge)](./information/update.md)
+[![NTFY](https://img.shields.io/badge/📱_NTFY-Push_Alerts-00A7E1?style=for-the-badge)](./information/ntfy.md)
+[![Discord](https://img.shields.io/badge/🎯_Discord-Webhook_Reports-7289DA?style=for-the-badge)](./information/conclusionwebhook.md)
+[![Proxy](https://img.shields.io/badge/🌐_Proxy-Network_Setup-FF9F43?style=for-the-badge)](./information/proxy.md)
+[![Buy Mode](https://img.shields.io/badge/💳_Buy_Mode-Purchase_Track-00D2D3?style=for-the-badge)](./information/buy-mode.md)
+
+---
+
+<div align="center">
+
+## ⚠️ **Important Legal Notice**
+
+### **🛡️ Use Responsibly**
+
+**This script is provided for educational purposes only.**
+
+⚠️ **Your Microsoft Rewards account may be suspended or banned when using automation tools.**  
+🔒 **Microsoft's Terms of Service prohibit automated interactions.**  
+📋 **The authors are not responsible for any account actions taken by Microsoft.**
+
+**🎯 Best Practices:**
+- Use reasonable delays between actions
+- Don't run 24/7 continuously  
+- Monitor your account for any warnings
+- Consider the risks before automating
+
+---
+
+**🌟 Made with ❤️ by the community • For the community**
+
+*Happy automating! 🎉*
+
+</div>
 
 ---
 
