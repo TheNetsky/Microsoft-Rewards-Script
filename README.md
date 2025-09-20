@@ -68,6 +68,25 @@ For automated scheduling and containerized deployment.
 
 **Note:** The container adds 5–50 minutes random delay to scheduled runs for more natural behavior.
 
+#### Providing accounts in Docker
+- Option A (default): bind-mount or bake `src/accounts.json` into the image.
+- Option B (env file path): set `ACCOUNTS_FILE=/data/accounts.json` and mount that path in the container.
+- Option C (inline JSON): set `ACCOUNTS_JSON` to a JSON array string of accounts (escape quotes properly).
+
+Examples (docker-compose):
+```yaml
+services:
+   app:
+      image: your/image:tag
+      environment:
+         - ACCOUNTS_FILE=/data/accounts.json
+         # or
+         # - ACCOUNTS_JSON=[{"email":"a@b","password":"..."}]
+      volumes:
+         - ./accounts.json:/data/accounts.json:ro
+```
+When `-dev` is passed to the app, it uses `accounts.dev.json` inside the container instead of the env/file overrides.
+
 ---
 
 ## 📋 Usage Notes

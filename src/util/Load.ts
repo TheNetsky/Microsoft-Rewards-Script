@@ -11,17 +11,39 @@ let configCache: Config
 
 export function loadAccounts(): Account[] {
     try {
+        // 1) CLI dev override
         let file = 'accounts.json'
-
-        // If dev mode, use dev account(s)
         if (process.argv.includes('-dev')) {
             file = 'accounts.dev.json'
         }
 
-        const accountDir = path.join(__dirname, '../', file)
-        const accounts = fs.readFileSync(accountDir, 'utf-8')
+        // 2) Docker-friendly env overrides
+        const envJson = process.env.ACCOUNTS_JSON
+        const envFile = process.env.ACCOUNTS_FILE
 
-        return JSON.parse(accounts)
+        let raw: string | undefined
+        if (envJson && envJson.trim().startsWith('[')) {
+            raw = envJson
+        } else if (envFile && envFile.trim()) {
+            const full = path.isAbsolute(envFile) ? envFile : path.join(process.cwd(), envFile)
+            if (!fs.existsSync(full)) {
+                throw new Error(`ACCOUNTS_FILE not found: ${full}`)
+            }
+            raw = fs.readFileSync(full, 'utf-8')
+        } else {
+            const accountDir = path.join(__dirname, '../', file)
+            raw = fs.readFileSync(accountDir, 'utf-8')
+        }
+
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) throw new Error('accounts must be an array')
+        // minimal shape validation
+        for (const a of parsed) {
+            if (!a || typeof a.email !== 'string' || typeof a.password !== 'string') {
+                throw new Error('each account must have email and password strings')
+            }
+        }
+        return parsed as Account[]
     } catch (error) {
         throw new Error(error as string)
     }
