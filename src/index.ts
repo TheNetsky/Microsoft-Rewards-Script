@@ -189,6 +189,7 @@ export class MicrosoftRewardsBot {
             let desktopCollected = 0
             let mobileCollected = 0
             const errors: string[] = []
+            const banned = { status: false, reason: '' }
 
             this.axios = new Axios(account.proxy)
             const verbose = process.env.DEBUG_REWARDS_VERBOSE === '1'
@@ -205,11 +206,21 @@ export class MicrosoftRewardsBot {
                 mobileInstance.axios = this.axios
                 // Run both and capture results with detailed logging
                 const desktopPromise = this.Desktop(account).catch(e => {
-                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    const msg = e instanceof Error ? e.message : String(e)
+                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
+                    if (/suspend|locked|serviceabuse/i.test(msg)) {
+                        banned.status = true
+                        banned.reason = msg.substring(0, 200)
+                    }
                     errors.push(formatFullErr('desktop', e)); return null
                 })
                 const mobilePromise = mobileInstance.Mobile(account).catch(e => {
-                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    const msg = e instanceof Error ? e.message : String(e)
+                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
+                    if (/suspend|locked|serviceabuse/i.test(msg)) {
+                        banned.status = true
+                        banned.reason = msg.substring(0, 200)
+                    }
                     errors.push(formatFullErr('mobile', e)); return null
                 })
                 const [desktopResult, mobileResult] = await Promise.all([desktopPromise, mobilePromise])
@@ -224,7 +235,12 @@ export class MicrosoftRewardsBot {
             } else {
                 this.isMobile = false
                 const desktopResult = await this.Desktop(account).catch(e => {
-                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    const msg = e instanceof Error ? e.message : String(e)
+                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
+                    if (/suspend|locked|serviceabuse/i.test(msg)) {
+                        banned.status = true
+                        banned.reason = msg.substring(0, 200)
+                    }
                     errors.push(formatFullErr('desktop', e)); return null
                 })
                 if (desktopResult) {
@@ -232,14 +248,24 @@ export class MicrosoftRewardsBot {
                     desktopCollected = desktopResult.collectedPoints
                 }
 
-                this.isMobile = true
-                const mobileResult = await this.Mobile(account).catch(e => {
-                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
-                    errors.push(formatFullErr('mobile', e)); return null
-                })
-                if (mobileResult) {
-                    mobileInitial = mobileResult.initialPoints
-                    mobileCollected = mobileResult.collectedPoints
+                // If banned detected, skip mobile to save time
+                if (!banned.status) {
+                    this.isMobile = true
+                    const mobileResult = await this.Mobile(account).catch(e => {
+                        const msg = e instanceof Error ? e.message : String(e)
+                        log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
+                        if (/suspend|locked|serviceabuse/i.test(msg)) {
+                            banned.status = true
+                            banned.reason = msg.substring(0, 200)
+                        }
+                        errors.push(formatFullErr('mobile', e)); return null
+                    })
+                    if (mobileResult) {
+                        mobileInitial = mobileResult.initialPoints
+                        mobileCollected = mobileResult.collectedPoints
+                    }
+                } else {
+                    log(true, 'TASK', `Skipping mobile flow for ${account.email} due to banned status`, 'warn')
                 }
             }
 
@@ -255,7 +281,8 @@ export class MicrosoftRewardsBot {
                 totalCollected,
                 initialTotal,
                 endTotal: initialTotal + totalCollected,
-                errors
+                errors,
+                banned
             })
 
             await log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
@@ -494,7 +521,7 @@ export class MicrosoftRewardsBot {
             if (s.errors.length) accountsWithErrors++
             else successes++
 
-            const statusEmoji = s.errors.length ? '⚠️' : '✅'
+            const statusEmoji = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
             const diff = s.totalCollected
             const duration = formatDuration(s.durationMs)
 
@@ -504,6 +531,9 @@ export class MicrosoftRewardsBot {
                 `Breakdown: 🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
                 `Duration: ⏱️ ${duration}`
             ]
+            if (s.banned?.status) {
+                valueLines.push(`Banned: ${s.banned.reason || 'detected by heuristics'}`)
+            }
             if (s.errors.length) {
                 valueLines.push(`Errors: ${s.errors.slice(0, 2).join(' | ')}`)
             }
@@ -514,13 +544,15 @@ export class MicrosoftRewardsBot {
             })
 
             // Build plain text lines (NTFY)
-            accountLines.push(
-                `${statusEmoji} ${s.email}\n` +
-                `  Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )\n` +
-                `  🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}\n` +
-                `  Duration: ${duration}\n` +
-                (s.errors.length ? `  Errors: ${s.errors.slice(0, 2).join(' | ')}\n` : '')
-            )
+            const lines = [
+                `${statusEmoji} ${s.email}`,
+                `  Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )`,
+                `  🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
+                `  Duration: ${duration}`
+            ]
+            if (s.banned?.status) lines.push(`  Banned: ${s.banned.reason || 'detected by heuristics'}`)
+            if (s.errors.length) lines.push(`  Errors: ${s.errors.slice(0, 2).join(' | ')}`)
+            accountLines.push(lines.join('\n') + '\n')
         }
 
         const avgDuration = totalDuration / totalAccounts
@@ -700,6 +732,7 @@ interface AccountSummary {
     initialTotal: number
     endTotal: number
     errors: string[]
+    banned?: { status: boolean; reason: string }
 }
 
 function shortErr(e: unknown): string {
