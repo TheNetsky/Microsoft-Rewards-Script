@@ -1,4 +1,5 @@
 import cluster from 'cluster'
+import type { Worker } from 'cluster'
 // Use Page type from playwright for typings; at runtime rebrowser-playwright extends playwright
 import type { Page } from 'playwright'
 
@@ -99,17 +100,19 @@ export class MicrosoftRewardsBot {
                 const pkg = JSON.parse(raw)
                 version = pkg.version || version
             }
-            const banner = [
-                '  __  __  _____       _____                            _     ',
-                ' |  \/  |/ ____|     |  __ \\                          | |    ',
-                ' | \  / | (___ ______| |__) |_____      ____ _ _ __ __| |___ ',
-                ' | |\/| |\\___ \\______|  _  // _ \\ \\ /\\ / / _` | \'__/ _` / __|',
-                ' | |  | |____) |     | | \\ \\  __/ \\ V  V / (_| | | | (_| \\__ \\',
-                ' |_|  |_|_____/      |_|  \\_\\___| \\_/\\_/ \\__,_|_|  \\__,_|___/',
-                '',
-                ` Version: v${version}`,
-                ''
-            ].join('\n')
+                /* eslint-disable no-useless-escape */
+                const banner = [
+                    '  __  __  _____       _____                            _     ',
+                    ' |  \/  |/ ____|     |  __ \\                          | |    ',
+                    ' | \\  / | (___ ______| |__) |_____      ____ _ _ __ __| |___ ',
+                    ' | |\/| |\\___ \\______|  _  // _ \\ \\ /\\ / / _` | \'__/ _` / __|',
+                    ' | |  | |____) |     | | \\ \\  __/ \\ V  V / (_| | | | (_| \\__ \\',
+                    ' |_|  |_|_____/      |_|  \\_\\___| \\_/\\_/ \\__,_|_|  \\__,_|___/',
+                    '',
+                    ` Version: v${version}`,
+                    ''
+                ].join('\n')
+                /* eslint-enable no-useless-escape */
             console.log(banner)
         } catch { /* ignore banner errors */ }
     }
@@ -127,16 +130,18 @@ export class MicrosoftRewardsBot {
         for (let i = 0; i < accountChunks.length; i++) {
             const worker = cluster.fork()
             const chunk = accountChunks[i]
-            ;(worker as any).send?.({ chunk })
+            const msg = { chunk: chunk as Account[] }
+            ;(worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.(msg)
             // Collect summaries from workers
-            worker.on('message', (msg: any) => {
-                if (msg && msg.type === 'summary' && Array.isArray(msg.data)) {
-                    this.accountSummaries.push(...msg.data)
+            worker.on('message', (msg: unknown) => {
+                const m = msg as { type?: string; data?: AccountSummary[] }
+                if (m && m.type === 'summary' && Array.isArray(m.data)) {
+                    this.accountSummaries.push(...m.data)
                 }
             })
         }
 
-    cluster.on('exit', (worker: any, code: number) => {
+    cluster.on('exit', (worker: Worker, code: number) => {
             this.activeWorkers -= 1
 
             log('main', 'MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
@@ -155,7 +160,7 @@ export class MicrosoftRewardsBot {
     private runWorker() {
         log('main', 'MAIN-WORKER', `Worker ${process.pid} spawned`)
         // Receive the chunk of accounts from the master
-    ;(process as any).on('message', async ({ chunk }: { chunk: Account[] }) => {
+    ;(process as unknown as { on: (ev: 'message', cb: (m: { chunk: Account[] }) => void) => void }).on('message', async ({ chunk }: { chunk: Account[] }) => {
             await this.runTasks(chunk)
         })
     }
@@ -173,7 +178,7 @@ export class MicrosoftRewardsBot {
 
             this.axios = new Axios(account.proxy)
             const verbose = process.env.DEBUG_REWARDS_VERBOSE === '1'
-            const formatFullErr = (label: string, e: any) => {
+            const formatFullErr = (label: string, e: unknown) => {
                 const base = shortErr(e)
                 if (verbose && e instanceof Error) {
                     return `${label}:${base} :: ${e.stack?.split('\n').slice(0,4).join(' | ')}`
@@ -449,8 +454,20 @@ export class MicrosoftRewardsBot {
         let totalEnd = 0
         let totalDuration = 0
         let accountsWithErrors = 0
+        let successes = 0
 
-        const accountFields: any[] = []
+        type DiscordField = { name: string; value: string; inline?: boolean }
+        type DiscordFooter = { text: string }
+        type DiscordEmbed = {
+            title?: string
+            description?: string
+            color?: number
+            fields?: DiscordField[]
+            timestamp?: string
+            footer?: DiscordFooter
+        }
+
+        const accountFields: DiscordField[] = []
         const accountLines: string[] = []
 
         for (const s of summaries) {
@@ -459,6 +476,7 @@ export class MicrosoftRewardsBot {
             totalEnd += s.endTotal
             totalDuration += s.durationMs
             if (s.errors.length) accountsWithErrors++
+            else successes++
 
             const statusEmoji = s.errors.length ? '⚠️' : '✅'
             const diff = s.totalCollected
@@ -491,41 +509,87 @@ export class MicrosoftRewardsBot {
 
         const avgDuration = totalDuration / totalAccounts
 
-        // Discord/Webhook embed
-        const embed = {
+        // Read package version (best-effort)
+        let version = 'unknown'
+        try {
+            const pkgPath = path.join(process.cwd(), 'package.json')
+            if (fs.existsSync(pkgPath)) {
+                const raw = fs.readFileSync(pkgPath, 'utf-8')
+                const pkg = JSON.parse(raw)
+                version = pkg.version || version
+            }
+        } catch { /* ignore */ }
+
+        // Discord/Webhook embeds with chunking (limits: 10 embeds/message, 25 fields/embed)
+        const MAX_EMBEDS = 10
+        const MAX_FIELDS = 25
+
+        const baseFields = [
+            {
+                name: 'Global Totals',
+                value: [
+                    `Total Points: ${totalInitial} → ${totalEnd} ( +${totalCollected} )`,
+                    `Accounts: ✅ ${successes} • ⚠️ ${accountsWithErrors} (of ${totalAccounts})`,
+                    `Average Duration: ${formatDuration(avgDuration)}`,
+                    `Cumulative Runtime: ${formatDuration(totalDuration)}`
+                ].join('\n')
+            }
+        ]
+
+        // Prepare embeds: first embed for totals, subsequent for accounts
+        const embeds: DiscordEmbed[] = []
+        const headerEmbed: DiscordEmbed = {
             title: '🎯 Microsoft Rewards Summary',
             description: `Processed **${totalAccounts}** account(s)${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
             color: accountsWithErrors ? 0xFFAA00 : 0x32CD32,
-            fields: [
-                {
-                    name: 'Global Totals',
-                    value: [
-                        `Total Points: ${totalInitial} → ${totalEnd} ( +${totalCollected} )`,
-                        `Average Duration: ${formatDuration(avgDuration)}`,
-                        `Cumulative Runtime: ${formatDuration(totalDuration)}`
-                    ].join('\n')
-                },
-                ...accountFields
-            ].slice(0, 25), // Discord max 25 fields
+            fields: baseFields,
             timestamp: new Date().toISOString(),
-            footer: {
-                text: 'Script conclusion webhook'
+            footer: { text: `Run ${this.runId}${version !== 'unknown' ? ` • v${version}` : ''}` }
+        }
+        embeds.push(headerEmbed)
+
+        // Chunk account fields across remaining embeds
+        const fieldsPerEmbed = Math.min(MAX_FIELDS, 25)
+        const availableEmbeds = MAX_EMBEDS - embeds.length
+        const chunks: DiscordField[][] = []
+        for (let i = 0; i < accountFields.length; i += fieldsPerEmbed) {
+            chunks.push(accountFields.slice(i, i + fieldsPerEmbed))
+        }
+
+        const includedChunks = chunks.slice(0, availableEmbeds)
+        for (const [idx, chunk] of includedChunks.entries()) {
+            const chunkEmbed: DiscordEmbed = {
+                title: `Accounts ${idx * fieldsPerEmbed + 1}–${Math.min((idx + 1) * fieldsPerEmbed, accountFields.length)}`,
+                color: accountsWithErrors ? 0xFFAA00 : 0x32CD32,
+                fields: chunk,
+                timestamp: new Date().toISOString()
+            }
+            embeds.push(chunkEmbed)
+        }
+
+        const omitted = chunks.length - includedChunks.length
+        if (omitted > 0 && embeds.length > 0) {
+            // Add a small note to the last embed about omitted accounts
+            const last = embeds[embeds.length - 1]!
+            const noteField: DiscordField = { name: 'Note', value: `And ${omitted * fieldsPerEmbed} more account entries not shown due to Discord limits.`, inline: false }
+            if (last.fields && Array.isArray(last.fields)) {
+                last.fields = [...last.fields, noteField].slice(0, MAX_FIELDS)
             }
         }
 
         // NTFY-compatible plain text (includes per-account breakdown)
         const fallback = [
-            `Microsoft Rewards Summary`,
+            'Microsoft Rewards Summary',
             `Accounts: ${totalAccounts}${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
             `Total: ${totalInitial} -> ${totalEnd} (+${totalCollected})`,
             `Average Duration: ${formatDuration(avgDuration)}`,
             `Cumulative Runtime: ${formatDuration(totalDuration)}`,
-            ``,
+            '',
             ...accountLines
         ].join('\n')
 
-        // Send both: Discord gets embed, NTFY gets fallback
-        await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
+    // Send both: Discord gets embeds, NTFY gets fallback
+    await ConclusionWebhook(cfg, fallback, { embeds })
 
         // Write local JSON report for observability
         try {

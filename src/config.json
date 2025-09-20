@@ -32,11 +32,13 @@
     },
     "logExcludeFunc": [
         "SEARCH-CLOSE-TABS",
-        "LOGIN-NO-PROMPT"
+        "LOGIN-NO-PROMPT",
+        "FLOW"
     ],
     "webhookLogExcludeFunc": [
         "SEARCH-CLOSE-TABS",
-        "LOGIN-NO-PROMPT"
+        "LOGIN-NO-PROMPT",
+        "FLOW"
     ],
     "proxy": {
         "proxyGoogleTrends": true,

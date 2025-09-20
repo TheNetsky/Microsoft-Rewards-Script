@@ -123,6 +123,11 @@ Customize behavior by editing `src/config.json`:
 | `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
 | `proxy.proxyBingTerms` | Proxy Bing Terms requests | `true` |
 
+Tip — silencing noisy tags:
+- To hide specific log lines in the console, add their tags to `logExcludeFunc`.
+- To hide them from Discord webhooks, add the tags to `webhookLogExcludeFunc`.
+- Example: add `"LOGIN-NO-PROMPT"` and `"FLOW"` to both lists to silence the login heartbeat and flow messages.
+
 ### Webhook Settings
 | Setting | Description | Default |
 |---------|-------------|---------|
