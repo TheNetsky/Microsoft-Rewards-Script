@@ -145,13 +145,46 @@ else
     echo "[$(date)] [run_daily.sh] Skipping random sleep"
 fi
 
-# Start the actual script
-echo "[$(date)] [run_daily.sh] Starting script..."
-if npm start; then
-    echo "[$(date)] [run_daily.sh] Script completed successfully."
-else
-    echo "[$(date)] [run_daily.sh] ERROR: Script failed!" >&2
-fi
+# Optional multi-pass loop: run until zero collected or max passes
+REPEAT_UNTIL_ZERO=${REPEAT_UNTIL_ZERO:-false}
+MAX_PASSES=${MAX_PASSES:-1}
+DELAY_BETWEEN_PASSES_SEC=${DELAY_BETWEEN_PASSES_SEC:-60}
 
-echo "[$(date)] [run_daily.sh] Script finished"
+passes=0
+while true; do
+    passes=$((passes+1))
+    echo "[$(date)] [run_daily.sh] Starting script (pass ${passes}/${MAX_PASSES})..."
+    if npm start; then
+        echo "[$(date)] [run_daily.sh] Script completed successfully (pass ${passes})."
+    else
+        echo "[$(date)] [run_daily.sh] ERROR: Script failed (pass ${passes})!" >&2
+        # On failure, break to avoid infinite loops
+        break
+    fi
+
+    if [ "$REPEAT_UNTIL_ZERO" != "true" ]; then
+        break
+    fi
+
+    # Locate latest report JSON for today and extract totals.totalCollected
+    REPORT_DIR="reports/$(date +%Y-%m-%d)"
+    LATEST_REPORT=$(ls -t "$REPORT_DIR"/summary_*.json 2>/dev/null | head -n 1 || true)
+    if [ -z "$LATEST_REPORT" ]; then
+        echo "[$(date)] [run_daily.sh] No report found to evaluate; stopping repeats."
+        break
+    fi
+
+    TOTAL_COLLECTED=$(node -e "try{const fs=require('fs');const p=process.argv[1];const j=JSON.parse(fs.readFileSync(p,'utf-8'));console.log(j.totals && j.totals.totalCollected || 0)}catch(e){console.log('0')}" "$LATEST_REPORT")
+    echo "[$(date)] [run_daily.sh] Latest collected points: ${TOTAL_COLLECTED}"
+
+    if [ "$TOTAL_COLLECTED" = "0" ] || [ $passes -ge $MAX_PASSES ]; then
+        echo "[$(date)] [run_daily.sh] Stopping: collected=0 or reached max passes (${MAX_PASSES})."
+        break
+    fi
+
+    echo "[$(date)] [run_daily.sh] Sleeping ${DELAY_BETWEEN_PASSES_SEC}s before next pass..."
+    sleep "$DELAY_BETWEEN_PASSES_SEC"
+done
+
+echo "[$(date)] [run_daily.sh] All passes finished"
 # Lock is released automatically via trap

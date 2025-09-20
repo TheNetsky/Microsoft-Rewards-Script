@@ -720,7 +720,6 @@ export class MicrosoftRewardsBot {
     const conclusionWebhookEnabled = !!(cfg.conclusionWebhook && cfg.conclusionWebhook.enabled)
     const ntfyEnabled = !!(cfg.ntfy && cfg.ntfy.enabled)
     const webhookEnabled = !!(cfg.webhook && cfg.webhook.enabled)
-    if (!conclusionWebhookEnabled && !ntfyEnabled && !webhookEnabled) return
 
         const totalAccounts = summaries.length
         if (totalAccounts === 0) return
@@ -869,8 +868,10 @@ export class MicrosoftRewardsBot {
             ...accountLines
         ].join('\n')
 
-    // Send both: Discord gets embeds, NTFY gets fallback
-    await ConclusionWebhook(cfg, fallback, { embeds })
+    // Send both when any channel is enabled: Discord gets embeds, NTFY gets fallback
+    if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
+        await ConclusionWebhook(cfg, fallback, { embeds })
+    }
 
         // Write local JSON report for observability
         try {
@@ -893,7 +894,7 @@ export class MicrosoftRewardsBot {
             log('main','REPORT',`Failed to save report: ${e instanceof Error ? e.message : e}`,'warn')
         }
 
-        // Optionally cleanup old diagnostics folders
+    // Optionally cleanup old diagnostics folders
         try {
             const days = cfg.diagnostics?.retentionDays
             if (typeof days === 'number' && days > 0) {

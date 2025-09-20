@@ -49,6 +49,10 @@ When `runImmediatelyOnStart` is `false`:
 - Each pass processes all accounts through all configured tasks
 - Useful for maximum point collection
 
+Note:
+- `passesPerRun` s'applique au scheduler intégré (via `npm run start:schedule` ou `ts-schedule`).
+- Si vous utilisez l'intégration Docker + cron externe, le nombre d'exécutions est contrôlé par `CRON_SCHEDULE`. Vous pouvez toujours utiliser le scheduler intégré à l'intérieur d'un conteneur en lançant `start:schedule` plutôt que `npm start` si vous préférez `passesPerRun`.
+
 ## Usage Examples
 
 ### Basic Daily Run
@@ -271,6 +275,28 @@ RUN apt-get update && apt-get install -y cron
 COPY crontab /etc/cron.d/rewards-cron
 RUN crontab /etc/cron.d/rewards-cron
 ```
+
+### Docker + Built-in Scheduler
+Au lieu d'utiliser cron, vous pouvez lancer le scheduler intégré dans le conteneur (un seul process long‑vivant) :
+
+```yaml
+services:
+  microsoft-rewards-script:
+    build: .
+    environment:
+      TZ: Europe/Paris
+    command: ["npm", "run", "start:schedule"]
+```
+
+Dans ce mode :
+- `passesPerRun` fonctionne (exécutera plusieurs passes à chaque horaire interne défini par `src/config.json`).
+- Vous n'avez plus besoin de `CRON_SCHEDULE` ni de `run_daily.sh`.
+
+### Docker + External Cron (par défaut du projet)
+Si vous préférez la planification par cron système dans le conteneur (valeur par défaut du projet) :
+- Utilisez `CRON_SCHEDULE` (ex.: `0 7,16,20 * * *`).
+- `run_daily.sh` introduit un délai aléatoire (par défaut 5–50 min) et un lockfile pour éviter les chevauchements.
+- `RUN_ON_START=true` déclenche une exécution immédiate au démarrage du conteneur (sans délai aléatoire).
 
 ## Performance Considerations
 

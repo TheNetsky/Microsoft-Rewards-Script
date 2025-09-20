@@ -255,6 +255,8 @@ Notes:
 - Optional envs: `MIN_SLEEP_MINUTES`, `MAX_SLEEP_MINUTES`, `STUCK_PROCESS_TIMEOUT_HOURS`.
 - The lock file prevents overlap if a run is still in progress when cron fires again.
 
+For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. cron), see: [information/schedule.md](./information/schedule.md)
+
 ---
 
 ## ⚙️ **Configuration Made Simple**
