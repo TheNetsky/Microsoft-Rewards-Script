@@ -156,65 +156,15 @@ export class Workers {
                 await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
                 await this.bot.utils.wait(2000)
 
-                switch (activity.promotionType) {
-                    // Quiz (Poll, Quiz or ABC)
-                    case 'quiz':
-                        switch (activity.pointProgressMax) {
-                            // Poll or ABC (Usually 10 points)
-                            case 10:
-                                // Normal poll
-                                if (activity.destinationUrl.toLowerCase().includes('pollscenarioid')) {
-                                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "Poll" title: "${activity.title}"`)
-                                    await activityPage.click(selector)
-                                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                    await this.bot.activities.doPoll(activityPage)
-                                } else { // ABC
-                                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "ABC" title: "${activity.title}"`)
-                                    await activityPage.click(selector)
-                                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                    await this.bot.activities.doABC(activityPage)
-                                }
-                                break
-
-                            // This Or That Quiz (Usually 50 points)
-                            case 50:
-                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "ThisOrThat" title: "${activity.title}"`)
-                                await activityPage.click(selector)
-                                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                await this.bot.activities.doThisOrThat(activityPage)
-                                break
-
-                            // Quizzes are usually 30-40 points
-                            default:
-                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "Quiz" title: "${activity.title}"`)
-                                await activityPage.click(selector)
-                                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                await this.bot.activities.doQuiz(activityPage)
-                                break
-                        }
-                        break
-
-                    // UrlReward (Visit)
-                    case 'urlreward':
-                        // Search on Bing are subtypes of "urlreward"
-                        if (activity.name.toLowerCase().includes('exploreonbing')) {
-                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "SearchOnBing" title: "${activity.title}"`)
-                            await activityPage.click(selector)
-                            activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                            await this.bot.activities.doSearchOnBing(activityPage, activity)
-
-                        } else {
-                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "UrlReward" title: "${activity.title}"`)
-                            await activityPage.click(selector)
-                            activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                            await this.bot.activities.doUrlReward(activityPage)
-                        }
-                        break
-
-                    // Unsupported types
-                    default:
-                        this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
-                        break
+                // Log the detected type using the same heuristics as before
+                const typeLabel = this.bot.activities.getTypeLabel(activity)
+                if (typeLabel !== 'Unsupported') {
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "${typeLabel}" title: "${activity.title}"`)
+                    await activityPage.click(selector)
+                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                    await this.bot.activities.run(activityPage, activity)
+                } else {
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
                 }
 
                 // Cooldown

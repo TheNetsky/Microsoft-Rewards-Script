@@ -199,3 +199,38 @@ This script is provided for educational purposes. The authors are not responsibl
 ## 🤝 Contributing
 
 This project is primarily for personal use but contributions are welcome. Please ensure any changes maintain compatibility with the existing configuration system.
+
+---
+
+## 🧩 Extending Activities (Coherent & Pluggable)
+
+To keep behavior consistent while making new features easier to add, the bot includes a centralized activity dispatcher:
+
+- `src/functions/Activities.ts` exposes `activities.run(page, activity)` which maps dashboard items to existing solvers (Poll, ABC, ThisOrThat, Quiz, UrlReward, SearchOnBing) using the same logic as before.
+- `Workers.solveActivities(...)` delegates to this dispatcher after opening the activity tab, so classification and execution happen in one place.
+- You can optionally plug custom handlers via `activities.registerHandler(handler)` implementing `ActivityHandler`.
+
+Minimal contract for custom handlers: `src/interface/ActivityHandler.ts`
+
+- `canHandle(activity)`: return true if you want to take ownership of this activity.
+- `run(page, activity)`: perform the work on the provided page.
+
+Example usage:
+
+```ts
+// Somewhere in your initialization code
+import type { ActivityHandler } from "./src/interface/ActivityHandler"
+
+activities.registerHandler({
+   id: "myCustomPromo",
+   canHandle(a) {
+      return a.promotionType === "urlreward" && a.title?.includes("My Promo")
+   },
+   async run(page, a) {
+      // Your custom steps here
+      await page.waitForLoadState("domcontentloaded")
+   }
+})
+```
+
+If no custom handler claims an activity, the built‑in mapping preserves the previous behavior: Poll/ABC/ThisOrThat/Quiz discrimination by points and URL, and SearchOnBing as a subtype of UrlReward.
