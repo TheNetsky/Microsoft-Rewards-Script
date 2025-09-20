@@ -2,6 +2,16 @@
 
 # Microsoft Rewards Script V2 IT'S NOW!!
 
+```
+ ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
+ ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
+ ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
+ ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
+ ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
+ ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+                                                                                   
+```
+
 **Automated Microsoft Rewards point collection with TypeScript, Cheerio, and Playwright**
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)
@@ -140,6 +150,19 @@ docker compose up -d
 # Monitor
 docker logs -f rewards
 ```
+
+## 📚 Documentation
+
+For detailed information about specific features, see the documentation in the `information/` directory:
+
+- 📊 **[Diagnostics System](./information/diagnostics.md)** - Error capture, logging, and troubleshooting
+- 💾 **[Job State Management](./information/jobstate.md)** - Task persistence and session recovery
+- ⏰ **[Scheduling Configuration](./information/schedule.md)** - Automated execution and cron setup
+- 🔄 **[Auto-Update System](./information/update.md)** - Automatic script updates and version management
+- 📱 **[NTFY Push Notifications](./information/ntfy.md)** - Real-time mobile and desktop notifications
+- 🎯 **[Conclusion Webhook](./information/conclusionwebhook.md)** - End-of-session Discord summaries
+- 🌐 **[Proxy Configuration](./information/proxy.md)** - Proxy setup for enhanced privacy and routing
+- 💳 **[Buy Mode Guide](./buy-mode.md)** - Point spending detection and tracking system
 
 ### Account Configuration Options
 
