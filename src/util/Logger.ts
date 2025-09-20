@@ -8,7 +8,17 @@ import { loadConfig } from './Load'
 export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): Error | void {
     const configData = loadConfig()
 
-    if (configData.logExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
+    // Access logging config with fallback for backward compatibility
+    const configAny = configData as unknown as Record<string, unknown>
+    const loggingConfig = configAny.logging || configData
+    const loggingConfigAny = loggingConfig as unknown as Record<string, unknown>
+    
+    const logExcludeFunc = Array.isArray(loggingConfigAny.excludeFunc) ? loggingConfigAny.excludeFunc : 
+                          Array.isArray(loggingConfigAny.logExcludeFunc) ? loggingConfigAny.logExcludeFunc : []
+    const webhookLogExcludeFunc = Array.isArray(loggingConfigAny.webhookExcludeFunc) ? loggingConfigAny.webhookExcludeFunc : 
+                                 Array.isArray(loggingConfigAny.webhookLogExcludeFunc) ? loggingConfigAny.webhookLogExcludeFunc : []
+
+    if (Array.isArray(logExcludeFunc) && logExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
         return
     }
 
@@ -20,7 +30,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     // Send the clean string to the Webhook (fire-and-forget)
     try {
-        if (!configData.webhookLogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
+        if (!Array.isArray(webhookLogExcludeFunc) || !webhookLogExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
             // Intentionally not awaited to keep logger synchronous
             Promise.resolve(Webhook(configData, cleanStr)).catch(() => { /* ignore webhook errors */ })
         }

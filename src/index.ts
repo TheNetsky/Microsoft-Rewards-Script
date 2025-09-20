@@ -183,8 +183,9 @@ export class MicrosoftRewardsBot {
             let spent = 0
 
             const cfgAny = this.config as unknown as Record<string, unknown>
-            const bm = typeof cfgAny['buyModeMaxMinutes'] === 'number' ? (cfgAny['buyModeMaxMinutes'] as number) : 45
-            const maxMinutes = Math.max(10, Number(bm))
+            const buyModeConfig = cfgAny['buyMode'] as Record<string, unknown> | undefined
+            const maxMinutesRaw = buyModeConfig?.['maxMinutes'] ?? 45
+            const maxMinutes = Math.max(10, Number(maxMinutesRaw))
             const endAt = start + maxMinutes * 60 * 1000
 
             while (Date.now() < endAt) {
@@ -261,6 +262,17 @@ export class MicrosoftRewardsBot {
                                                                                    
                       TypeScript • Playwright • Automated Point Collection        
 `
+
+        const buyModeBanner = `
+ ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗
+ ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝
+ ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝ 
+ ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝  
+ ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║   
+ ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝   
+                                                   
+            Manual Purchase Mode • Passive Monitoring
+`
         
         try {
             const pkgPath = path.join(__dirname, '../', 'package.json')
@@ -271,15 +283,29 @@ export class MicrosoftRewardsBot {
                 version = pkg.version || version
             }
             
-            console.log(banner)
+            // Show appropriate banner based on mode
+            const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
+            console.log(displayBanner)
             console.log('='.repeat(80))
-            console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
-            console.log(`  Mode: ${this.config.headless ? 'Headless' : 'Visible'} | Parallel: ${this.config.parallel ? 'Yes' : 'No'}`)
+            
+            if (this.buyMode.enabled) {
+                console.log(`  Version: ${version} | Process: ${process.pid} | Buy Mode: Active`)
+                console.log(`  Target: ${this.buyMode.email || 'First account'} | Documentation: buy-mode.md`)
+            } else {
+                console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
+                console.log(`  Mode: ${this.config.headless ? 'Headless' : 'Visible'} | Parallel: ${this.config.parallel ? 'Yes' : 'No'}`)
+            }
             console.log('='.repeat(80) + '\n')
         } catch { 
-            console.log(banner)
+            const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
+            console.log(displayBanner)
             console.log('='.repeat(50))
-            console.log('  Microsoft Rewards Script Started')
+            if (this.buyMode.enabled) {
+                console.log('  Microsoft Rewards Buy Mode Started')
+                console.log('  See buy-mode.md for details')
+            } else {
+                console.log('  Microsoft Rewards Script Started')
+            }
             console.log('='.repeat(50) + '\n')
         }
     }    // Return summaries (used when clusters==1)

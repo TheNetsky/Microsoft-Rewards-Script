@@ -1,6 +1,6 @@
 <div align="center">
 
-# Microsoft Rewards Script V2 IS NOW!
+# Microsoft Rewards Script V2 IT'S NOW!!
 
 **Automated Microsoft Rewards point collection with TypeScript, Cheerio, and Playwright**
 
@@ -56,13 +56,15 @@ npm run build
 npm start
 ```
 
-### 🛒 Manual Buy Mode (No automation)
+### 🛒 Manual Buy Mode
 
 If you want to log in and manually redeem or purchase without any automated actions, use the buy mode:
 
 ```bash
 npm start -- -buy your@email.com
 ```
+
+**See [buy-mode.md](information/buy-mode.md) for complete documentation.**
 
 What it does:
 - Logs into the specified account and opens the Rewards homepage, then hands full control to you.
@@ -71,7 +73,7 @@ What it does:
 - Sends a final summary (Discord/NTFY if enabled) showing initial points, final points, and total spent.
 
 Notes:
-- Passive monitoring runs ~45 minutes by default (configurable via `buyModeMaxMinutes`).
+- Passive monitoring runs ~45 minutes by default (configurable via `buyMode.maxMinutes`).
 - Your main tab is untouched by automation in this mode.
 
 ## Alternative Setup Methods
@@ -394,7 +396,7 @@ docker compose up -d
 
 This repo: <a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors"><img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" alt="TheNetsky/Microsoft-Rewards-Script contributors" /></a>
 
-If you contributed, thank you! Open a PR to add yourself explicitly if you wish.
+If you contributed, thank you! Open a PR to add yourself explicitly if you wish [here](https://discord.gg/KRBFxxsU).
 
 ---
 

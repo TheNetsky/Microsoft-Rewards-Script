@@ -1,33 +1,54 @@
 {
     "baseURL": "https://rewards.bing.com",
     "sessionPath": "sessions",
-    "headless": false,
-    "parallel": false,
-    "runOnZeroPoints": false,
-    "clusters": 1,
-    "saveFingerprint": {
-        "mobile": false,
-        "desktop": false
+    
+    "browser": {
+        "headless": false,
+        "globalTimeout": "30s"
     },
     
-    "searchOnBingLocalQueries": false,
-    "globalTimeout": "30s",
-    "searchSettings": {
-        "useGeoLocaleQueries": false,
-        "scrollRandomResults": true,
-        "clickRandomResults": true,
-        "searchDelay": {
-            "min": "3min",
-            "max": "5min"
-        },
-        "retryMobileSearchAmount": 2
+    "execution": {
+        "parallel": false,
+        "runOnZeroPoints": false,
+        "clusters": 1,
+        "passesPerRun": 1
     },
+    
+    "buyMode": {
+        "maxMinutes": 45
+    },
+    
+    "fingerprinting": {
+        "saveFingerprint": {
+            "mobile": false,
+            "desktop": false
+        }
+    },
+    
+    "search": {
+        "useLocalQueries": false,
+        "settings": {
+            "useGeoLocaleQueries": false,
+            "scrollRandomResults": true,
+            "clickRandomResults": true,
+            "retryMobileSearchAmount": 2,
+            "delay": {
+                "min": "3min",
+                "max": "5min"
+            }
+        }
+    },
+    
     "humanization": {
-        "actionDelay": { "min": 150, "max": 450 },
+        "actionDelay": { 
+            "min": 150, 
+            "max": 450 
+        },
         "gestureMoveProb": 0.4,
         "gestureScrollProb": 0.2,
         "allowedWindows": []
     },
+    
     "retryPolicy": {
         "maxAttempts": 3,
         "baseDelay": 1000,
@@ -35,38 +56,53 @@
         "multiplier": 2,
         "jitter": 0.2
     },
-    "jobState": {
-        "enabled": true,
-        "dir": ""
+    
+    "workers": {
+        "doDailySet": true,
+        "doMorePromotions": true,
+        "doPunchCards": true,
+        "doDesktopSearch": true,
+        "doMobileSearch": true,
+        "doDailyCheckIn": true,
+        "doReadToEarn": true,
+        "bundleDailySetWithSearch": false
     },
-    "logExcludeFunc": [
-        "SEARCH-CLOSE-TABS",
-        "LOGIN-NO-PROMPT",
-        "FLOW"
-    ],
-    "webhookLogExcludeFunc": [
-        "SEARCH-CLOSE-TABS",
-        "LOGIN-NO-PROMPT",
-        "FLOW"
-    ],
+    
     "proxy": {
         "proxyGoogleTrends": true,
         "proxyBingTerms": true
     },
-    "webhook": {
-        "enabled": false,
-        "url": ""
+    
+    "notifications": {
+        "webhook": {
+            "enabled": false,
+            "url": ""
+        },
+        "conclusionWebhook": {
+            "enabled": false,
+            "url": ""
+        },
+        "ntfy": {
+            "enabled": false,
+            "url": "",
+            "topic": "rewards",
+            "authToken": ""
+        }
     },
-    "conclusionWebhook": {
-        "enabled": false,
-        "url": ""
+    
+    "logging": {
+        "excludeFunc": [
+            "SEARCH-CLOSE-TABS",
+            "LOGIN-NO-PROMPT",
+            "FLOW"
+        ],
+        "webhookExcludeFunc": [
+            "SEARCH-CLOSE-TABS",
+            "LOGIN-NO-PROMPT",
+            "FLOW"
+        ]
     },
-    "ntfy": {
-        "enabled": false,
-        "url": "",  
-        "topic": "rewards", 
-        "authToken": ""  
-    },
+    
     "diagnostics": {
         "enabled": true,
         "saveScreenshot": true,
@@ -74,17 +110,22 @@
         "maxPerRun": 2,
         "retentionDays": 7
     },
-    "update": {
-        "git": true,
-        "docker": false,
-        "scriptPath": "setup/update/update.mjs"
+    
+    "jobState": {
+        "enabled": true,
+        "dir": ""
     },
+    
     "schedule": {
         "enabled": false,
         "time": "09:00",
         "timeZone": "America/New_York",
         "runImmediatelyOnStart": true
     },
-    "passesPerRun": 1,
-    "workers": {"doDailySet": true, "doMorePromotions": true, "doPunchCards": true, "doDesktopSearch": true, "doMobileSearch": true, "doDailyCheckIn": true, "doReadToEarn": true, "bundleDailySetWithSearch": false}
+    
+    "update": {
+        "git": true,
+        "docker": false,
+        "scriptPath": "setup/update/update.mjs"
+    }
 }

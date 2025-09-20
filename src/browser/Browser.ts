@@ -35,10 +35,15 @@ class Browser {
         }
 
         let browser: import('rebrowser-playwright').Browser
+        // Support both legacy and new config structures (wider scope for later usage)
+        const cfgAny = this.bot.config as unknown as Record<string, unknown>
         try {
+            const headlessValue = (cfgAny['headless'] as boolean | undefined) ?? (cfgAny['browser'] && (cfgAny['browser'] as Record<string, unknown>)['headless'] as boolean | undefined) ?? false
+            const headless: boolean = Boolean(headlessValue)
+
             browser = await playwright.chromium.launch({
                 //channel: 'msedge', // Uses Edge instead of chrome
-                headless: this.bot.config.headless,
+                headless,
                 ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
                 args: [
                     '--no-sandbox',
@@ -60,18 +65,24 @@ class Browser {
             throw e
         }
 
-        const sessionData = await loadSessionData(this.bot.config.sessionPath, email, this.bot.isMobile, this.bot.config.saveFingerprint)
+    // Resolve saveFingerprint from legacy root or new fingerprinting.saveFingerprint
+    const fpConfig = (cfgAny['saveFingerprint'] as unknown) || ((cfgAny['fingerprinting'] as Record<string, unknown> | undefined)?.['saveFingerprint'] as unknown)
+    const saveFingerprint: { mobile: boolean; desktop: boolean } = (fpConfig as { mobile: boolean; desktop: boolean }) || { mobile: false, desktop: false }
+
+    const sessionData = await loadSessionData(this.bot.config.sessionPath, email, this.bot.isMobile, saveFingerprint)
 
         const fingerprint = sessionData.fingerprint ? sessionData.fingerprint : await this.generateFingerprint()
 
     const context = await newInjectedContext(browser as unknown as import('playwright').Browser, { fingerprint: fingerprint })
 
-        // Set timeout to preferred amount
-        context.setDefaultTimeout(this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? 30000))
+    // Set timeout to preferred amount (supports legacy globalTimeout or browser.globalTimeout)
+    const globalTimeout = (cfgAny['globalTimeout'] as unknown) ?? ((cfgAny['browser'] as Record<string, unknown> | undefined)?.['globalTimeout'] as unknown) ?? 30000
+    context.setDefaultTimeout(this.bot.utils.stringToMs(globalTimeout as (number | string)))
 
         await context.addCookies(sessionData.cookies)
 
-        if (this.bot.config.saveFingerprint) {
+        // Persist fingerprint when feature is configured
+        if (fpConfig) {
             await saveFingerprintData(this.bot.config.sessionPath, email, this.bot.isMobile, fingerprint)
         }
 
