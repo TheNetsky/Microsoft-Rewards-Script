@@ -64,5 +64,10 @@
         "saveHtml": true,
         "maxPerRun": 2,
         "retentionDays": 7
+    },
+    "update": {
+        "git": true,
+        "docker": false,
+        "scriptPath": "setup/update/update.mjs"
     }
 }

@@ -17,6 +17,7 @@ export interface Config {
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
     ntfy: ConfigNtfy;
     diagnostics?: ConfigDiagnostics;
+    update?: ConfigUpdate;
 }
 
 export interface ConfigSaveFingerprint {
@@ -60,6 +61,12 @@ export interface ConfigDiagnostics {
     saveHtml?: boolean; // capture .html
     maxPerRun?: number; // cap number of captures per run
     retentionDays?: number; // delete older diagnostic folders
+}
+
+export interface ConfigUpdate {
+    git?: boolean; // if true, run git pull + npm ci + npm run build after completion
+    docker?: boolean; // if true, run docker update routine (compose pull/up) after completion
+    scriptPath?: string; // optional custom path to update script relative to repo root
 }
 
 export interface ConfigWorkers {

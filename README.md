@@ -91,10 +91,31 @@ Customize behavior by editing `src/config.json`:
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `saveFingerprint.mobile` | Reuse mobile browser fingerprint | `false` |
+
+Enhanced conclusion webhook:
+- Sends a rich embed summary (totals, OK/KO counts, durations) and per-account breakdown.
+- Automatically chunks details to respect Discord limits (max 10 embeds, 25 fields per embed). Adds a small note if some accounts are omitted.
+- Footer includes the runId and package version.
 | `saveFingerprint.desktop` | Reuse desktop browser fingerprint | `false` |
 
 ### Task Settings
 | Setting | Description | Default |
+
+### Auto-Update (Post-Run)
+
+Control whether the script updates itself after a run. Useful for headless/cron workflows.
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `update.git` | After completion, run `git fetch --all --prune`, `git pull --ff-only`, `npm ci`, then `npm run build` | `true` |
+| `update.docker` | After completion, run `docker compose pull` then `docker compose up -d` | `false` |
+| `update.scriptPath` | Path to the update script relative to repo root | `setup/update/update.mjs` |
+
+Notes:
+- Set `update.git` to `false` to disable Git-based auto-update.
+- Set `update.docker` to `true` to update a Docker deployment (requires Docker CLI and a compose file in the current directory).
+- The update steps are executed only if the corresponding tools are available. Failures are ignored to not break the main script.
+- Docker and Git updates are independent; you can enable either one or both.
 |---------|-------------|---------|
 | `workers.doDailySet` | Complete daily set activities | `true` |
 | `workers.doMorePromotions` | Complete promotional offers | `true` |
