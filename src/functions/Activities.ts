@@ -74,7 +74,7 @@ export default class Activities {
                     await this.doUrlReward(page)
                     break
                 default:
-                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${(activity as any).promotionType}"!`, 'warn')
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${String((activity as { promotionType?: string }).promotionType)}"!`, 'warn')
                     break
             }
         } catch (e) {

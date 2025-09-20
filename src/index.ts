@@ -20,6 +20,7 @@ import Axios from './util/Axios'
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
+import Humanizer from './util/Humanizer'
 
 
 // Main bot class
@@ -32,8 +33,10 @@ export class MicrosoftRewardsBot {
         func: BrowserFunc,
         utils: BrowserUtil
     }
+    public humanizer: Humanizer
     public isMobile: boolean
     public homePage!: Page
+    public currentAccountEmail?: string
 
     private pointsCanCollect: number = 0
     private pointsInitial: number = 0
@@ -60,12 +63,13 @@ export class MicrosoftRewardsBot {
 
         this.accounts = []
         this.utils = new Util()
-        this.workers = new Workers(this)
+        this.config = loadConfig()
         this.browser = {
             func: new BrowserFunc(this),
             utils: new BrowserUtil(this)
         }
-        this.config = loadConfig()
+        this.workers = new Workers(this)
+        this.humanizer = new Humanizer(this.utils, this.config.humanization)
         this.activeWorkers = this.config.clusters
         this.mobileRetryAttempts = 0
     }
@@ -181,6 +185,18 @@ export class MicrosoftRewardsBot {
 
     private async runTasks(accounts: Account[]) {
         for (const account of accounts) {
+            // If humanization allowed windows are configured, wait until within a window
+            try {
+                const windows: string[] | undefined = this.config?.humanization?.allowedWindows
+                if (Array.isArray(windows) && windows.length > 0) {
+                    const waitMs = this.computeWaitForAllowedWindow(windows)
+                    if (waitMs > 0) {
+                        log('main','HUMANIZATION',`Waiting ${Math.ceil(waitMs/1000)}s until next allowed window before starting ${account.email}`,'warn')
+                        await new Promise<void>(r => setTimeout(r, waitMs))
+                    }
+                }
+            } catch {/* ignore */}
+            this.currentAccountEmail = account.email
             log('main', 'MAIN-WORKER', `Started tasks for account ${account.email}`)
 
             const accountStart = Date.now()
@@ -307,6 +323,42 @@ export class MicrosoftRewardsBot {
             await this.runAutoUpdate().catch(() => {/* ignore update errors */})
         }
         process.exit()
+    }
+
+    /** Compute milliseconds to wait until within one of the allowed windows (HH:mm-HH:mm). Returns 0 if already inside. */
+    private computeWaitForAllowedWindow(windows: string[]): number {
+        const now = new Date()
+        const minsNow = now.getHours() * 60 + now.getMinutes()
+        let nextStartMins: number | null = null
+        for (const w of windows) {
+            const [start, end] = w.split('-')
+            if (!start || !end) continue
+            const pStart = start.split(':').map(v=>parseInt(v,10))
+            const pEnd = end.split(':').map(v=>parseInt(v,10))
+            if (pStart.length !== 2 || pEnd.length !== 2) continue
+            const sh = pStart[0]!, sm = pStart[1]!
+            const eh = pEnd[0]!, em = pEnd[1]!
+            if ([sh,sm,eh,em].some(n=>Number.isNaN(n))) continue
+            const s = sh*60 + sm
+            const e = eh*60 + em
+            if (s <= e) {
+                // same-day window
+                if (minsNow >= s && minsNow <= e) return 0
+                if (minsNow < s) nextStartMins = Math.min(nextStartMins ?? s, s)
+            } else {
+                // wraps past midnight (e.g., 22:00-02:00)
+                if (minsNow >= s || minsNow <= e) return 0
+                // next start today is s
+                nextStartMins = Math.min(nextStartMins ?? s, s)
+            }
+        }
+        const msPerMin = 60*1000
+        if (nextStartMins != null) {
+            const targetTodayMs = (nextStartMins - minsNow) * msPerMin
+            return targetTodayMs > 0 ? targetTodayMs : (24*60 + nextStartMins - minsNow) * msPerMin
+        }
+        // No valid windows parsed -> do not block
+        return 0
     }
 
     // Desktop

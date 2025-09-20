@@ -10,6 +10,9 @@ export interface Config {
     searchOnBingLocalQueries: boolean;
     globalTimeout: number | string;
     searchSettings: ConfigSearchSettings;
+    humanization?: ConfigHumanization; // Anti-ban humanization controls
+    retryPolicy?: ConfigRetryPolicy; // Global retry/backoff policy
+    jobState?: ConfigJobState; // Persistence of per-activity checkpoints
     logExcludeFunc: string[];
     webhookLogExcludeFunc: string[];
     proxy: ConfigProxy;
@@ -86,5 +89,34 @@ export interface ConfigWorkers {
     doMobileSearch: boolean;
     doDailyCheckIn: boolean;
     doReadToEarn: boolean;
+    bundleDailySetWithSearch?: boolean; // If true, run desktop search right after Daily Set
+}
+
+// Anti-ban humanization
+export interface ConfigHumanization {
+    // Additional random waits between actions
+    actionDelay?: { min: number | string; max: number | string };
+    // Probability [0..1] to perform micro mouse moves per step
+    gestureMoveProb?: number;
+    // Probability [0..1] to perform tiny scrolls per step
+    gestureScrollProb?: number;
+    // Allowed execution windows (local time). Each item is "HH:mm-HH:mm".
+    // If provided, runs outside these windows will be delayed until the next allowed window.
+    allowedWindows?: string[];
+}
+
+// Retry/backoff policy
+export interface ConfigRetryPolicy {
+    maxAttempts?: number; // default 3
+    baseDelay?: number | string; // default 1000ms
+    maxDelay?: number | string; // default 30s
+    multiplier?: number; // default 2
+    jitter?: number; // 0..1; default 0.2
+}
+
+// Job state persistence
+export interface ConfigJobState {
+    enabled?: boolean; // default true
+    dir?: string; // base directory; defaults to <sessionPath>/job-state
 }
 

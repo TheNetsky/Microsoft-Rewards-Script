@@ -3,19 +3,29 @@ import { Page } from 'rebrowser-playwright'
 import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../interface/DashboardData'
 
 import { MicrosoftRewardsBot } from '../index'
+import JobState from '../util/JobState'
+import Retry from '../util/Retry'
 
 export class Workers {
     public bot: MicrosoftRewardsBot
+    private jobState: JobState
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
+        this.jobState = new JobState(this.bot.config)
     }
 
     // Daily Set
     async doDailySet(page: Page, data: DashboardData) {
         const todayData = data.dailySetPromotions[this.bot.utils.getFormattedDate()]
 
-        const activitiesUncompleted = todayData?.filter(x => !x.complete && x.pointProgressMax > 0) ?? []
+        const today = this.bot.utils.getFormattedDate()
+        const activitiesUncompleted = (todayData?.filter(x => !x.complete && x.pointProgressMax > 0) ?? [])
+            .filter(x => {
+                if (this.bot.config.jobState?.enabled === false) return true
+                const email = this.bot.currentAccountEmail || 'unknown'
+                return !this.jobState.isDone(email, today, x.offerId)
+            })
 
         if (!activitiesUncompleted.length) {
             this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All Daily Set" items have already been completed')
@@ -27,12 +37,30 @@ export class Workers {
 
         await this.solveActivities(page, activitiesUncompleted)
 
+        // Mark as done to prevent duplicate work if checkpoints enabled
+        if (this.bot.config.jobState?.enabled !== false) {
+            const email = this.bot.currentAccountEmail || 'unknown'
+            for (const a of activitiesUncompleted) {
+                this.jobState.markDone(email, today, a.offerId)
+            }
+        }
+
         page = await this.bot.browser.utils.getLatestTab(page)
 
         // Always return to the homepage if not already
         await this.bot.browser.func.goHome(page)
 
         this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All "Daily Set" items have been completed')
+
+        // Optional: immediately run desktop search bundle
+        if (!this.bot.isMobile && this.bot.config.workers.bundleDailySetWithSearch && this.bot.config.workers.doDesktopSearch) {
+            try {
+                await this.bot.utils.waitRandom(1200, 2600)
+                await this.bot.activities.doSearch(page, data)
+            } catch (e) {
+                this.bot.log(this.bot.isMobile, 'DAILY-SET', `Post-DailySet search failed: ${e instanceof Error ? e.message : e}`, 'warn')
+            }
+        }
     }
 
     // Punch Card
@@ -120,7 +148,8 @@ export class Workers {
     private async solveActivities(activityPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
         const activityInitial = activityPage.url() // Homepage for Daily/More and Index for promotions
 
-        for (const activity of activities) {
+    const retry = new Retry(this.bot.config.retryPolicy)
+    for (const activity of activities) {
             try {
                 // Reselect the worker page
                 activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
@@ -132,7 +161,8 @@ export class Workers {
                     activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                 }
 
-                await this.bot.utils.wait(1000)
+                await this.bot.browser.utils.humanizePage(activityPage)
+                await this.bot.utils.waitRandom(800, 1400)
 
                 if (activityPage.url() !== activityInitial) {
                     await activityPage.goto(activityInitial)
@@ -170,17 +200,14 @@ export class Workers {
                         p,
                         new Promise<void>((_, rej) => setTimeout(() => rej(new Error('activity-timeout')), timeoutMs))
                     ])
-                    try {
-                        await runWithTimeout(this.bot.activities.run(activityPage, activity))
-                    } catch (e) {
-                        await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_timeout_${activity.title || activity.offerId}`)
-                        this.bot.log(this.bot.isMobile, 'ACTIVITY', `Activity timeout -> retry once: ${activity.title}`, 'warn')
-                        // Single retry
-                        await this.bot.utils.waitRandom(800, 1600)
-                        await runWithTimeout(this.bot.activities.run(activityPage, activity)).catch(err => {
-                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Retry failed: ${err instanceof Error ? err.message : err}`, 'error')
-                        })
-                    }
+                    await retry.run(async () => {
+                        try {
+                            await runWithTimeout(this.bot.activities.run(activityPage, activity))
+                        } catch (e) {
+                            await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_timeout_${activity.title || activity.offerId}`)
+                            throw e
+                        }
+                    }, () => true)
                 } else {
                     this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
                 }

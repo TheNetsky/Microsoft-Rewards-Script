@@ -4,7 +4,8 @@ import { Webhook } from './Webhook'
 import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 
-export async function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk) {
+// Synchronous logger that returns an Error when type === 'error' so callers can `throw log(...)` safely.
+export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): Error | void {
     const configData = loadConfig()
 
     if (configData.logExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
@@ -17,10 +18,13 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
     // Clean string for the Webhook (no chalk, structured)
     const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
 
-    // Send the clean string to the Webhook
-    if (!configData.webhookLogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
-        Webhook(configData, cleanStr)
-    }
+    // Send the clean string to the Webhook (fire-and-forget)
+    try {
+        if (!configData.webhookLogExcludeFunc.some(x => x.toLowerCase() === title.toLowerCase())) {
+            // Intentionally not awaited to keep logger synchronous
+            Promise.resolve(Webhook(configData, cleanStr)).catch(() => { /* ignore webhook errors */ })
+        }
+    } catch { /* ignore */ }
 
     // Define conditions for sending to NTFY 
     const ntfyConditions = {
@@ -37,8 +41,12 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
     }
 
     // Check if the current log type and message meet the NTFY conditions
-    if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition))
-        await Ntfy(cleanStr, type)
+    try {
+        if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition)) {
+            // Fire-and-forget
+            Promise.resolve(Ntfy(cleanStr, type)).catch(() => { /* ignore ntfy errors */ })
+        }
+    } catch { /* ignore */ }
 
     // Console output with better formatting
     const typeIndicator = type === 'error' ? '✗' : type === 'warn' ? '⚠' : '●'
@@ -69,5 +77,10 @@ export async function log(isMobile: boolean | 'main', title: string, message: st
         default:
             applyChalk ? console.log(applyChalk(formattedStr)) : console.log(formattedStr)
             break
+    }
+
+    // Return an Error when logging an error so callers can `throw log(...)`
+    if (type === 'error') {
+        return new Error(cleanStr)
     }
 }

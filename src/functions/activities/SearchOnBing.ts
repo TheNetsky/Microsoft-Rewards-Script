@@ -39,8 +39,8 @@ export class SearchOnBing extends Workers {
     private async safeClick(page: Page, selector: string) {
         try {
             await page.click(selector, { timeout: 5000 })
-        } catch (e: any) {
-            const msg = (e?.message || '')
+        } catch (e: unknown) {
+            const msg = (e instanceof Error ? e.message : '')
             if (/Timeout.*click/i.test(msg) || /intercepts pointer events/i.test(msg)) {
                 // Try to dismiss overlays then retry once
                 await this.bot.browser.utils.tryDismissAllMessages(page)

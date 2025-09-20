@@ -29,12 +29,12 @@ class Browser {
         if (process.env.AUTO_INSTALL_BROWSERS === '1') {
             try {
                 // Dynamically import child_process to avoid overhead otherwise
-                const { execSync } = await import('child_process') as any
+                const { execSync } = await import('child_process')
                 execSync('npx playwright install chromium', { stdio: 'ignore' })
             } catch { /* silent */ }
         }
 
-        let browser: any
+        let browser: import('rebrowser-playwright').Browser
         try {
             browser = await playwright.chromium.launch({
                 //channel: 'msedge', // Uses Edge instead of chrome
@@ -49,7 +49,7 @@ class Browser {
                     '--ignore-ssl-errors'
                 ]
             })
-        } catch (e: any) {
+        } catch (e: unknown) {
             const msg = (e instanceof Error ? e.message : String(e))
             // Common missing browser executable guidance
             if (/Executable doesn't exist/i.test(msg)) {
@@ -64,7 +64,7 @@ class Browser {
 
         const fingerprint = sessionData.fingerprint ? sessionData.fingerprint : await this.generateFingerprint()
 
-        const context = await newInjectedContext(browser as any, { fingerprint: fingerprint })
+    const context = await newInjectedContext(browser as unknown as import('playwright').Browser, { fingerprint: fingerprint })
 
         // Set timeout to preferred amount
         context.setDefaultTimeout(this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? 30000))

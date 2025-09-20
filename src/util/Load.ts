@@ -78,13 +78,19 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
             cookies = JSON.parse(cookiesData)
         }
 
-        // Fetch fingerprint file
-        const fingerprintFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+        // Fetch fingerprint file (support both legacy typo "fingerpint" and corrected "fingerprint")
+        const baseDir = path.join(__dirname, '../browser/', sessionPath, email)
+        const legacyFile = path.join(baseDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+        const correctFile = path.join(baseDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
 
         let fingerprint!: BrowserFingerprintWithHeaders
-        if (((saveFingerprint.desktop && !isMobile) || (saveFingerprint.mobile && isMobile)) && fs.existsSync(fingerprintFile)) {
-            const fingerprintData = await fs.promises.readFile(fingerprintFile, 'utf-8')
-            fingerprint = JSON.parse(fingerprintData)
+        const shouldLoad = (saveFingerprint.desktop && !isMobile) || (saveFingerprint.mobile && isMobile)
+        if (shouldLoad) {
+            const chosen = fs.existsSync(correctFile) ? correctFile : (fs.existsSync(legacyFile) ? legacyFile : '')
+            if (chosen) {
+                const fingerprintData = await fs.promises.readFile(chosen, 'utf-8')
+                fingerprint = JSON.parse(fingerprintData)
+            }
         }
 
         return {
@@ -118,7 +124,7 @@ export async function saveSessionData(sessionPath: string, browser: BrowserConte
     }
 }
 
-export async function saveFingerprintData(sessionPath: string, email: string, isMobile: boolean, fingerpint: BrowserFingerprintWithHeaders): Promise<string> {
+export async function saveFingerprintData(sessionPath: string, email: string, isMobile: boolean, fingerprint: BrowserFingerprintWithHeaders): Promise<string> {
     try {
         // Fetch path
         const sessionDir = path.join(__dirname, '../browser/', sessionPath, email)
@@ -128,8 +134,12 @@ export async function saveFingerprintData(sessionPath: string, email: string, is
             await fs.promises.mkdir(sessionDir, { recursive: true })
         }
 
-        // Save fingerprint to a file
-        await fs.promises.writeFile(path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`), JSON.stringify(fingerpint))
+    // Save fingerprint to files (write both legacy and corrected names for compatibility)
+    const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+    const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
+    const payload = JSON.stringify(fingerprint)
+    await fs.promises.writeFile(correct, payload)
+    try { await fs.promises.writeFile(legacy, payload) } catch { /* ignore */ }
 
         return sessionDir
     } catch (error) {

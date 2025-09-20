@@ -41,7 +41,6 @@
         /* Module Resolution Options */
     "moduleResolution":"node", /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */
     "types": ["node"],
-    "typeRoots": ["./node_modules/@types"],
     // Keep explicit typeRoots to ensure resolution in environments that don't auto-detect before full install.
         // "baseUrl": "./",                             /* Base directory to resolve non-absolute module names. */
         // "paths": {},                                 /* A series of entries which re-map imports to lookup locations relative to the 'baseUrl'. */

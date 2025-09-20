@@ -4,7 +4,7 @@ import { loadConfig } from './util/Load'
 import { log } from './util/Logger'
 import type { Config } from './interface/Config'
 
-function parseTargetToday(now: Date, timeHHmm: string, tz: string): DateTime {
+function parseTargetToday(now: Date, timeHHmm: string, tz: string) {
   const [hh, mm] = timeHHmm.split(':').map((v) => parseInt(v, 10))
   const zone = IANAZone.isValidZone(tz) ? tz : 'UTC'
   const dtn = DateTime.fromJSDate(now, { zone })

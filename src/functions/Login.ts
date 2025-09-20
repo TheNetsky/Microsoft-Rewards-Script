@@ -10,9 +10,8 @@ import { OAuth } from '../interface/OAuth'
 
 
 const rl = readline.createInterface({
-    // Use as any to avoid strict typing issues with our minimal process shim
-    input: (process as any).stdin,
-    output: (process as any).stdout
+    input: process.stdin as NodeJS.ReadStream,
+    output: process.stdout as NodeJS.WriteStream
 })
 
 export class Login {
@@ -38,7 +37,7 @@ export class Login {
             await page.goto('https://rewards.bing.com/signin')
 
             // Disable FIDO support in login request
-            await page.route('**/GetCredentialType.srf*', (route: any) => {
+            await page.route('**/GetCredentialType.srf*', (route) => {
                 const body = JSON.parse(route.request().postData() || '{}')
                 body.isFidoSupported = false
                 route.continue({ postData: JSON.stringify(body) })
@@ -137,8 +136,8 @@ export class Login {
     }
 
     private async enterPassword(page: Page, password: string) {
-        const passwordInputSelector = 'input[type="password"]'
-        const skip2FASelector = '#idA_PWD_SwitchToPassword';
+    const passwordInputSelector = 'input[type="password"]'
+    const skip2FASelector = '#idA_PWD_SwitchToPassword'
         try {
             const skip2FAButton = await page.waitForSelector(skip2FASelector, { timeout: 2000 }).catch(() => null)
             if (skip2FAButton) {
@@ -291,7 +290,7 @@ export class Login {
         authorizeUrl.searchParams.append('login_hint', email)
 
         // Disable FIDO for OAuth flow as well (reduces passkey prompts resurfacing)
-        await page.route('**/GetCredentialType.srf*', (route: any) => {
+        await page.route('**/GetCredentialType.srf*', (route) => {
             const body = JSON.parse(route.request().postData() || '{}')
             body.isFidoSupported = false
             route.continue({ postData: JSON.stringify(body) })

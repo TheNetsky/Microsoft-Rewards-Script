@@ -78,40 +78,6 @@ export default class BrowserUtil {
         }
     }
 
-    async getTabs(page: Page) {
-        try {
-            const browser = page.context()
-            const pages = browser.pages()
-
-            const homeTab = pages[1]
-            let homeTabURL: URL
-
-            if (!homeTab) {
-                throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Home tab could not be found!', 'error')
-
-            } else {
-                homeTabURL = new URL(homeTab.url())
-
-                if (homeTabURL.hostname !== 'rewards.bing.com') {
-                    throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Reward page hostname is invalid: ' + homeTabURL.host, 'error')
-                }
-            }
-
-            const workerTab = pages[2]
-            if (!workerTab) {
-                throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'Worker tab could not be found!', 'error')
-            }
-
-            return {
-                homeTab: homeTab,
-                workerTab: workerTab
-            }
-
-        } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-TABS', 'An error occurred:' + error, 'error')
-        }
-    }
-
     async reloadBadPage(page: Page): Promise<void> {
         try {
             const html = await page.content().catch(() => '')
@@ -135,19 +101,38 @@ export default class BrowserUtil {
      */
     async humanizePage(page: Page): Promise<void> {
         try {
-            // 40% minor mouse move
-            if (Math.random() < 0.4) {
+            const h = this.bot.config?.humanization || {}
+            const moveProb = typeof h.gestureMoveProb === 'number' ? h.gestureMoveProb : 0.4
+            const scrollProb = typeof h.gestureScrollProb === 'number' ? h.gestureScrollProb : 0.2
+            // minor mouse move
+            if (Math.random() < moveProb) {
                 const x = Math.floor(Math.random() * 30) + 5
                 const y = Math.floor(Math.random() * 20) + 3
                 await page.mouse.move(x, y, { steps: 2 }).catch(() => { })
             }
-            // 20% tiny scroll
-            if (Math.random() < 0.2) {
+            // tiny scroll
+            if (Math.random() < scrollProb) {
                 const dy = (Math.random() < 0.5 ? 1 : -1) * (Math.floor(Math.random() * 150) + 50)
                 await page.mouse.wheel(0, dy).catch(() => { })
             }
-            // Random short wait 150–450ms
-            await this.bot.utils.wait(this.bot.utils.randomNumber(150, 450))
+            // Random short wait; override via humanization.actionDelay
+            const range = h.actionDelay
+            if (range && typeof range.min !== 'undefined' && typeof range.max !== 'undefined') {
+                try {
+                    const ms = (await import('ms')).default
+                    const min = typeof range.min === 'number' ? range.min : ms(String(range.min))
+                    const max = typeof range.max === 'number' ? range.max : ms(String(range.max))
+                    if (typeof min === 'number' && typeof max === 'number' && max >= min) {
+                        await this.bot.utils.wait(this.bot.utils.randomNumber(Math.max(0, min), Math.min(max, 5000)))
+                    } else {
+                        await this.bot.utils.wait(this.bot.utils.randomNumber(150, 450))
+                    }
+                } catch {
+                    await this.bot.utils.wait(this.bot.utils.randomNumber(150, 450))
+                }
+            } else {
+                await this.bot.utils.wait(this.bot.utils.randomNumber(150, 450))
+            }
         } catch { /* swallow */ }
     }
 

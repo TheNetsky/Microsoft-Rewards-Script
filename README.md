@@ -1,6 +1,6 @@
 <div align="center">
 
-# Microsoft Rewards Script
+# Microsoft Rewards Script V2 IS NOW!
 
 **Automated Microsoft Rewards point collection with TypeScript, Cheerio, and Playwright**
 

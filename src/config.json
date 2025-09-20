@@ -9,15 +9,7 @@
         "mobile": false,
         "desktop": false
     },
-    "workers": {
-        "doDailySet": true,
-        "doMorePromotions": true,
-        "doPunchCards": true,
-        "doDesktopSearch": true,
-        "doMobileSearch": true,
-        "doDailyCheckIn": true,
-        "doReadToEarn": true
-    },
+    
     "searchOnBingLocalQueries": false,
     "globalTimeout": "30s",
     "searchSettings": {
@@ -29,6 +21,23 @@
             "max": "5min"
         },
         "retryMobileSearchAmount": 2
+    },
+    "humanization": {
+        "actionDelay": { "min": 150, "max": 450 },
+        "gestureMoveProb": 0.4,
+        "gestureScrollProb": 0.2,
+        "allowedWindows": []
+    },
+    "retryPolicy": {
+        "maxAttempts": 3,
+        "baseDelay": 1000,
+        "maxDelay": "30s",
+        "multiplier": 2,
+        "jitter": 0.2
+    },
+    "jobState": {
+        "enabled": true,
+        "dir": ""
     },
     "logExcludeFunc": [
         "SEARCH-CLOSE-TABS",
@@ -76,5 +85,6 @@
         "timeZone": "America/New_York",
         "runImmediatelyOnStart": true
     },
-    "passesPerRun": 1
+    "passesPerRun": 1,
+    "workers": {"doDailySet": true, "doMorePromotions": true, "doPunchCards": true, "doDesktopSearch": true, "doMobileSearch": true, "doDailyCheckIn": true, "doReadToEarn": true, "bundleDailySetWithSearch": false}
 }
