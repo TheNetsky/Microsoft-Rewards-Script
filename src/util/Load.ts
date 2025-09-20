@@ -9,6 +9,90 @@ import { Config, ConfigSaveFingerprint } from '../interface/Config'
 
 let configCache: Config
 
+// Normalize both legacy (flat) and new (nested) config schemas into the flat Config interface
+function normalizeConfig(raw: any): Config {
+    const n = raw || {}
+
+    // Browser / execution
+    const headless = n.browser?.headless ?? n.headless ?? false
+    const globalTimeout = n.browser?.globalTimeout ?? n.globalTimeout ?? '30s'
+    const parallel = n.execution?.parallel ?? n.parallel ?? false
+    const runOnZeroPoints = n.execution?.runOnZeroPoints ?? n.runOnZeroPoints ?? false
+    const clusters = n.execution?.clusters ?? n.clusters ?? 1
+    const passesPerRun = n.execution?.passesPerRun ?? n.passesPerRun
+
+    // Search
+    const useLocalQueries = n.search?.useLocalQueries ?? n.searchOnBingLocalQueries ?? false
+    const searchSettingsSrc = n.search?.settings ?? n.searchSettings ?? {}
+    const delaySrc = searchSettingsSrc.delay ?? searchSettingsSrc.searchDelay ?? { min: '3min', max: '5min' }
+    const searchSettings = {
+        useGeoLocaleQueries: !!(searchSettingsSrc.useGeoLocaleQueries ?? false),
+        scrollRandomResults: !!(searchSettingsSrc.scrollRandomResults ?? false),
+        clickRandomResults: !!(searchSettingsSrc.clickRandomResults ?? false),
+        retryMobileSearchAmount: Number(searchSettingsSrc.retryMobileSearchAmount ?? 2),
+        searchDelay: {
+            min: delaySrc.min ?? '3min',
+            max: delaySrc.max ?? '5min'
+        }
+    }
+
+    // Workers
+    const workers = n.workers ?? {
+        doDailySet: true,
+        doMorePromotions: true,
+        doPunchCards: true,
+        doDesktopSearch: true,
+        doMobileSearch: true,
+        doDailyCheckIn: true,
+        doReadToEarn: true,
+        bundleDailySetWithSearch: false
+    }
+
+    // Logging
+    const logging = n.logging ?? {}
+    const logExcludeFunc = Array.isArray(logging.excludeFunc) ? logging.excludeFunc : (n.logExcludeFunc ?? [])
+    const webhookLogExcludeFunc = Array.isArray(logging.webhookExcludeFunc) ? logging.webhookExcludeFunc : (n.webhookLogExcludeFunc ?? [])
+
+    // Notifications
+    const notifications = n.notifications ?? {}
+    const webhook = notifications.webhook ?? n.webhook ?? { enabled: false, url: '' }
+    const conclusionWebhook = notifications.conclusionWebhook ?? n.conclusionWebhook ?? { enabled: false, url: '' }
+    const ntfy = notifications.ntfy ?? n.ntfy ?? { enabled: false, url: '', topic: '', authToken: '' }
+
+    // Fingerprinting
+    const saveFingerprint = (n.fingerprinting?.saveFingerprint ?? n.saveFingerprint) ?? { mobile: false, desktop: false }
+
+    const cfg: Config = {
+        baseURL: n.baseURL ?? 'https://rewards.bing.com',
+        sessionPath: n.sessionPath ?? 'sessions',
+        headless,
+        parallel,
+        runOnZeroPoints,
+        clusters,
+        saveFingerprint,
+        workers,
+        searchOnBingLocalQueries: !!useLocalQueries,
+        globalTimeout,
+        searchSettings,
+        humanization: n.humanization,
+        retryPolicy: n.retryPolicy,
+        jobState: n.jobState,
+        logExcludeFunc,
+        webhookLogExcludeFunc,
+        proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
+        webhook,
+        conclusionWebhook,
+        ntfy,
+        diagnostics: n.diagnostics,
+        update: n.update,
+        schedule: n.schedule,
+        passesPerRun: passesPerRun,
+        communityHelp: n.communityHelp
+    }
+
+    return cfg
+}
+
 export function loadAccounts(): Account[] {
     try {
         // 1) CLI dev override
@@ -58,10 +142,11 @@ export function loadConfig(): Config {
         const configDir = path.join(__dirname, '../', 'config.json')
         const config = fs.readFileSync(configDir, 'utf-8')
 
-        const configData = JSON.parse(config)
-        configCache = configData // Set as cache
+        const raw = JSON.parse(config)
+        const normalized = normalizeConfig(raw)
+        configCache = normalized // Set as cache
 
-        return configData
+        return normalized
     } catch (error) {
         throw new Error(error as string)
     }

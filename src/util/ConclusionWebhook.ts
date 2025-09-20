@@ -23,17 +23,30 @@ interface ConclusionPayload {
  * as a separate, optional channel.
  */
 export async function ConclusionWebhook(config: Config, content: string, payload?: ConclusionPayload) {
-    // Discord/Webhook: use the dedicated conclusionWebhook endpoint
-    if (config.conclusionWebhook?.enabled && config.conclusionWebhook.url) {
-        const body: ConclusionPayload = payload?.embeds ? { embeds: payload.embeds } : { content }
+    // Prefer the dedicated conclusionWebhook, else fall back to general webhook
+    const hasConclusion = !!(config.conclusionWebhook?.enabled && config.conclusionWebhook.url)
+    const hasWebhook = !!(config.webhook?.enabled && config.webhook.url)
 
+    const body: ConclusionPayload = payload?.embeds ? { embeds: payload.embeds } : { content }
+
+    if (hasConclusion) {
         try {
-                    await axios.post(config.conclusionWebhook.url, body, {
-                        headers: { 'Content-Type': 'application/json' }
-                    })
-                    console.log('Conclusion summary sent to conclusionWebhook.')
+            await axios.post(config.conclusionWebhook!.url, body, {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            console.log('Conclusion summary sent to conclusionWebhook.')
         } catch (err) {
-                    console.error('Failed to send conclusion summary to conclusionWebhook:', err)
+            console.error('Failed to send conclusion summary to conclusionWebhook:', err)
+        }
+    } else if (hasWebhook) {
+        // Fallback to primary webhook if conclusion webhook not configured
+        try {
+            await axios.post(config.webhook!.url, body, {
+                headers: { 'Content-Type': 'application/json' }
+            })
+            console.log('Conclusion summary sent to webhook (fallback).')
+        } catch (err) {
+            console.error('Failed to send conclusion summary to webhook (fallback):', err)
         }
     }
 

@@ -717,9 +717,10 @@ export class MicrosoftRewardsBot {
         const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
         const cfg = this.config
 
-        const conclusionWebhookEnabled = !!(cfg.conclusionWebhook && cfg.conclusionWebhook.enabled)
-        const ntfyEnabled = !!(cfg.ntfy && cfg.ntfy.enabled)
-        if (!conclusionWebhookEnabled && !ntfyEnabled) return
+    const conclusionWebhookEnabled = !!(cfg.conclusionWebhook && cfg.conclusionWebhook.enabled)
+    const ntfyEnabled = !!(cfg.ntfy && cfg.ntfy.enabled)
+    const webhookEnabled = !!(cfg.webhook && cfg.webhook.enabled)
+    if (!conclusionWebhookEnabled && !ntfyEnabled && !webhookEnabled) return
 
         const totalAccounts = summaries.length
         if (totalAccounts === 0) return
