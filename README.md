@@ -428,6 +428,8 @@ pkill -f chrome
 npm start -- --debug
 ```
 
+- `LOGIN_MAX_WAIT_MS` — Max time the login flow will wait for the portal to load before failing with guidance. Default: 180000 (3 min). Increase if your login routinely takes longer.
+
 </details>
 
 ---
@@ -447,6 +449,4 @@ Need to go deeper? Check out these comprehensive guides:
 
 ---
 
-## 🔧 Advanced environment variables
-
-- `LOGIN_MAX_WAIT_MS` — Max time the login flow will wait for the portal to load before failing with guidance. Default: 180000 (3 min). Increase if your login routinely takes longer.
+<img width="1536" height="1024" alt="msn-rw" src="https://github.com/user-attachments/assets/4e396ab3-5292-4948-9778-7b385d751e4d" />
