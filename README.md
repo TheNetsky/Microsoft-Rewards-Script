@@ -253,7 +253,7 @@ This repo: <a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs
 - **Issues:** Report bugs and request features on GitHub
 - **Discord:** Join the community for help and discussions
 - **Pull Requests:** Contributions are welcome!
-
+[🤐](https://discord.gg/h6Z69ZPPCz)
 ---
 
 ## ⚠️ Disclaimer
