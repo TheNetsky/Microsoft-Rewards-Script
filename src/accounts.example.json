@@ -2,7 +2,7 @@
     {
         "email": "email_1",
         "password": "password_1",
-    "totp": "JBSWY3DPEHPK3PXP",
+    "totp": "",
         "proxy": {
             "proxyAxios": true,
             "url": "",
