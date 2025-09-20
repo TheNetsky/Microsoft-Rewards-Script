@@ -317,7 +317,7 @@ For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. external c
   {
     "email": "email_1",
     "password": "password_1",
-    "totp": "JBSWY3DPEHPK3PXP",  
+    "totp": "",  
     "proxy": { "proxyAxios": true, "url": "", "port": 0, "username": "", "password": "" }
   }
 ]
