@@ -154,7 +154,9 @@ export class Workers {
                 if it didn't then it gave enough time for the page to load.
                 */
                 await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
-                await this.bot.utils.wait(2000)
+                // Small human-like jitter before executing
+                await this.bot.browser.utils.humanizePage(activityPage)
+                await this.bot.utils.waitRandom(1200, 2600)
 
                 // Log the detected type using the same heuristics as before
                 const typeLabel = this.bot.activities.getTypeLabel(activity)
@@ -162,15 +164,33 @@ export class Workers {
                     this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "${typeLabel}" title: "${activity.title}"`)
                     await activityPage.click(selector)
                     activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                    await this.bot.activities.run(activityPage, activity)
+                    // Watchdog: abort if the activity hangs too long
+                    const timeoutMs = this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? '30s') * 2
+                    const runWithTimeout = (p: Promise<void>) => Promise.race([
+                        p,
+                        new Promise<void>((_, rej) => setTimeout(() => rej(new Error('activity-timeout')), timeoutMs))
+                    ])
+                    try {
+                        await runWithTimeout(this.bot.activities.run(activityPage, activity))
+                    } catch (e) {
+                        await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_timeout_${activity.title || activity.offerId}`)
+                        this.bot.log(this.bot.isMobile, 'ACTIVITY', `Activity timeout -> retry once: ${activity.title}`, 'warn')
+                        // Single retry
+                        await this.bot.utils.waitRandom(800, 1600)
+                        await runWithTimeout(this.bot.activities.run(activityPage, activity)).catch(err => {
+                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Retry failed: ${err instanceof Error ? err.message : err}`, 'error')
+                        })
+                    }
                 } else {
                     this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
                 }
 
-                // Cooldown
-                await this.bot.utils.wait(2000)
+                // Cooldown with jitter
+                await this.bot.browser.utils.humanizePage(activityPage)
+                await this.bot.utils.waitRandom(1200, 2600)
 
             } catch (error) {
+                await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_error_${activity.title || activity.offerId}`)
                 this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
             }
 

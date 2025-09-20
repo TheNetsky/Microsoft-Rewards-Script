@@ -31,10 +31,12 @@
         "retryMobileSearchAmount": 2
     },
     "logExcludeFunc": [
-        "SEARCH-CLOSE-TABS"
+        "SEARCH-CLOSE-TABS",
+        "LOGIN-NO-PROMPT"
     ],
     "webhookLogExcludeFunc": [
-        "SEARCH-CLOSE-TABS"
+        "SEARCH-CLOSE-TABS",
+        "LOGIN-NO-PROMPT"
     ],
     "proxy": {
         "proxyGoogleTrends": true,
@@ -53,5 +55,12 @@
         "url": "",  
         "topic": "rewards", 
         "authToken": ""  
-    }    
+    },
+    "diagnostics": {
+        "enabled": false,
+        "saveScreenshot": true,
+        "saveHtml": true,
+        "maxPerRun": 2,
+        "retentionDays": 7
+    }
 }

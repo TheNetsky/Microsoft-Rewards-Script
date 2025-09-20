@@ -46,6 +46,8 @@ export class MicrosoftRewardsBot {
 
     // Summary collection (per process)
     private accountSummaries: AccountSummary[] = []
+    private runId: string = Math.random().toString(36).slice(2)
+    private diagCount: number = 0
 
     //@ts-expect-error Will be initialized later
     public axios: Axios
@@ -524,6 +526,67 @@ export class MicrosoftRewardsBot {
 
         // Send both: Discord gets embed, NTFY gets fallback
         await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
+
+        // Write local JSON report for observability
+        try {
+            const fs = await import('fs')
+            const path = await import('path')
+            const now = new Date()
+            const day = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+            const baseDir = path.join(process.cwd(), 'reports', day)
+            if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
+            const file = path.join(baseDir, `summary_${this.runId}.json`)
+            const payload = {
+                runId: this.runId,
+                timestamp: now.toISOString(),
+                totals: { totalCollected, totalInitial, totalEnd, totalDuration, totalAccounts, accountsWithErrors },
+                perAccount: summaries
+            }
+            fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf-8')
+            log('main','REPORT',`Saved report to ${file}`)
+        } catch (e) {
+            log('main','REPORT',`Failed to save report: ${e instanceof Error ? e.message : e}`,'warn')
+        }
+
+        // Optionally cleanup old diagnostics folders
+        try {
+            const days = cfg.diagnostics?.retentionDays
+            if (typeof days === 'number' && days > 0) {
+                await this.cleanupOldDiagnostics(days)
+            }
+        } catch (e) {
+            log('main','REPORT',`Failed diagnostics cleanup: ${e instanceof Error ? e.message : e}`,'warn')
+        }
+    }
+
+    /** Reserve one diagnostics slot for this run (caps captures). */
+    public tryReserveDiagSlot(maxPerRun: number): boolean {
+        if (this.diagCount >= Math.max(0, maxPerRun || 0)) return false
+        this.diagCount += 1
+        return true
+    }
+
+    /** Delete diagnostics folders older than N days under ./reports */
+    private async cleanupOldDiagnostics(retentionDays: number) {
+        const base = path.join(process.cwd(), 'reports')
+        if (!fs.existsSync(base)) return
+        const entries = fs.readdirSync(base, { withFileTypes: true })
+        const now = Date.now()
+        const keepMs = retentionDays * 24 * 60 * 60 * 1000
+        for (const e of entries) {
+            if (!e.isDirectory()) continue
+            const name = e.name // expect YYYY-MM-DD
+            const parts = name.split('-').map((n: string) => parseInt(n, 10))
+            if (parts.length !== 3 || parts.some(isNaN)) continue
+            const [yy, mm, dd] = parts
+            if (yy === undefined || mm === undefined || dd === undefined) continue
+            const dirDate = new Date(yy, mm - 1, dd).getTime()
+            if (isNaN(dirDate)) continue
+            if (now - dirDate > keepMs) {
+                const dirPath = path.join(base, name)
+                try { fs.rmSync(dirPath, { recursive: true, force: true }) } catch { /* ignore */ }
+            }
+        }
     }
 }
 
@@ -538,8 +601,8 @@ interface AccountSummary {
     errors: string[]
 }
 
-function shortErr(e: any): string {
-    if (!e) return 'unknown'
+function shortErr(e: unknown): string {
+    if (e == null) return 'unknown'
     if (e instanceof Error) return e.message.substring(0, 120)
     const s = String(e)
     return s.substring(0, 120)

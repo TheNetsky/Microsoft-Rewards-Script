@@ -16,6 +16,7 @@ export interface Config {
     webhook: ConfigWebhook;
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
     ntfy: ConfigNtfy;
+    diagnostics?: ConfigDiagnostics;
 }
 
 export interface ConfigSaveFingerprint {
@@ -51,6 +52,14 @@ export interface ConfigNtfy {
 export interface ConfigProxy {
     proxyGoogleTrends: boolean;
     proxyBingTerms: boolean;
+}
+
+export interface ConfigDiagnostics {
+    enabled?: boolean; // master toggle
+    saveScreenshot?: boolean; // capture .png
+    saveHtml?: boolean; // capture .html
+    maxPerRun?: number; // cap number of captures per run
+    retentionDays?: number; // delete older diagnostic folders
 }
 
 export interface ConfigWorkers {

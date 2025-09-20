@@ -129,4 +129,60 @@ export default class BrowserUtil {
         }
     }
 
+    /**
+     * Perform small human-like gestures: short waits, minor mouse moves and occasional scrolls.
+     * This should be called sparingly between actions to avoid a fixed cadence.
+     */
+    async humanizePage(page: Page): Promise<void> {
+        try {
+            // 40% minor mouse move
+            if (Math.random() < 0.4) {
+                const x = Math.floor(Math.random() * 30) + 5
+                const y = Math.floor(Math.random() * 20) + 3
+                await page.mouse.move(x, y, { steps: 2 }).catch(() => { })
+            }
+            // 20% tiny scroll
+            if (Math.random() < 0.2) {
+                const dy = (Math.random() < 0.5 ? 1 : -1) * (Math.floor(Math.random() * 150) + 50)
+                await page.mouse.wheel(0, dy).catch(() => { })
+            }
+            // Random short wait 150–450ms
+            await this.bot.utils.wait(this.bot.utils.randomNumber(150, 450))
+        } catch { /* swallow */ }
+    }
+
+    /**
+     * Capture minimal diagnostics for a page: screenshot + HTML content.
+     * Files are written under ./reports/<date>/ with a safe label.
+     */
+    async captureDiagnostics(page: Page, label: string): Promise<void> {
+        try {
+            const cfg = this.bot.config?.diagnostics || {}
+            if (cfg.enabled === false) return
+            const maxPerRun = typeof cfg.maxPerRun === 'number' ? cfg.maxPerRun : 8
+            if (!this.bot.tryReserveDiagSlot(maxPerRun)) return
+
+            const safe = label.replace(/[^a-z0-9-_]/gi, '_').slice(0, 64)
+            const now = new Date()
+            const day = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+            const baseDir = `${process.cwd()}/reports/${day}`
+            const fs = await import('fs')
+            const path = await import('path')
+            if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
+            const ts = `${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
+            const shot = path.join(baseDir, `${ts}_${safe}.png`)
+            const htmlPath = path.join(baseDir, `${ts}_${safe}.html`)
+            if (cfg.saveScreenshot !== false) {
+                await page.screenshot({ path: shot }).catch(()=>{})
+            }
+            if (cfg.saveHtml !== false) {
+                const html = await page.content().catch(()=> '<html></html>')
+                fs.writeFileSync(htmlPath, html)
+            }
+            this.bot.log(this.bot.isMobile, 'DIAG', `Saved diagnostics to ${shot} and ${htmlPath}`)
+        } catch (e) {
+            this.bot.log(this.bot.isMobile, 'DIAG', `Failed to capture diagnostics: ${e instanceof Error ? e.message : e}`, 'warn')
+        }
+    }
+
 }
