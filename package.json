@@ -7,11 +7,15 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "pre-build": "npm i && rimraf dist && npx playwright install chromium",
+    "clean": "rimraf dist",
+    "pre-build": "npm i && npm run clean && npx playwright install chromium",
+    "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "start": "node ./dist/index.js",
-    "ts-start": "ts-node ./src/index.ts",
+    "start": "node --enable-source-maps ./dist/index.js",
+    "ts-start": "node --loader ts-node/esm ./src/index.ts",
     "dev": "ts-node ./src/index.ts -dev",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "prepare": "npm run build",
     "setup": "node ./setup/setup.mjs",
     "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",
     "create-docker": "docker build -t microsoft-rewards-script-docker ."

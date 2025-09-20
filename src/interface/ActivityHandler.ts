@@ -1,4 +1,5 @@
-import type { MorePromotion, PromotionalItem } from "./DashboardData"
+import type { MorePromotion, PromotionalItem } from './DashboardData'
+import type { Page } from 'playwright'
 
 /**
  * Activity handler contract for solving a single dashboard activity.
@@ -16,6 +17,5 @@ export interface ActivityHandler {
    * Execute the activity on the provided page. The page is already
    * navigated to the activity tab/window by the caller.
    */
-  // Use "any" for Page to avoid cross-package type resolution requirements
-  run(page: any, activity: MorePromotion | PromotionalItem): Promise<void>
+  run(page: Page, activity: MorePromotion | PromotionalItem): Promise<void>
 }
