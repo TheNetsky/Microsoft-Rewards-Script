@@ -8,8 +8,8 @@
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=flat&logo=node.js&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 
-<a href="https://github.com/LightZirconite/MSN-V2/graphs/contributors">
-  <img alt="Repo Contributors" src="https://img.shields.io/github/contributors/LightZirconite/MSN-V2?label=Repo%20Contributors&color=00b894" />
+<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
+  <img alt="Repo Contributors" src="https://img.shields.io/github/contributors/TheNetsky/Microsoft-Rewards-Script?label=Repo%20Contributors&color=00b894" />
   </a>
 
 *Comprehensive automation for daily sets, searches, quizzes, and promotional activities*
@@ -348,6 +348,16 @@ docker compose up -d
 
 ---
 
+### 🙌 Contributors
+
+These contributor grids are generated dynamically via contrib.rocks (GitHub API-based image service) and auto-refresh on cache expiry.
+
+This repo: <a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors"><img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" alt="TheNetsky/Microsoft-Rewards-Script contributors" /></a>
+
+If you contributed, thank you! Open a PR to add yourself explicitly if you wish.
+
+---
+
 ## ⚠️ Disclaimer
 
 > **⚠️ Important Notice**
@@ -355,13 +365,3 @@ docker compose up -d
 > This script is provided for educational purposes only. Use at your own risk.
 > 
 > Microsoft may suspend or ban accounts that use automation tools. The authors are not responsible for any account actions taken by Microsoft.
-
----
-
-### 🙌 Contributors
-
-These contributor grids are generated dynamically via contrib.rocks (GitHub API-based image service) and auto-refresh on cache expiry.
-
-This repo: <a href="https://github.com/LightZirconite/MSN-V2/graphs/contributors"><img src="https://contrib.rocks/image?repo=LightZirconite/MSN-V2" alt="LightZirconite/MSN-V2 contributors" /></a>
-
-If you contributed, thank you! Open a PR to add yourself explicitly if you wish.
