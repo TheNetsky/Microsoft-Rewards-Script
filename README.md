@@ -308,6 +308,26 @@ For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. external c
 }
 ```
 
+### Two‑Factor (TOTP) support
+
+- You can add a Base32 TOTP secret per account in `src/accounts.json`:
+
+```json
+[
+  {
+    "email": "email_1",
+    "password": "password_1",
+    "totp": "JBSWY3DPEHPK3PXP",  
+    "proxy": { "proxyAxios": true, "url": "", "port": 0, "username": "", "password": "" }
+  }
+]
+```
+
+- When Microsoft asks for a code (input `name="otc"`), the bot generates and submits it automatically.
+- If `totp` is not set, the bot falls back to manual prompt in the terminal.
+
+Tip: Accounts set to passwordless (Microsoft Authenticator with number match) also work very well.
+
 <div align="center">
 
 **🎓 Need More Power?** Check out our [comprehensive guides](./information/):
@@ -426,3 +446,7 @@ Need to go deeper? Check out these comprehensive guides:
 [![Buy Mode](https://img.shields.io/badge/💳_Buy_Mode-Purchase_Track-00D2D3?style=for-the-badge)](./information/buy-mode.md)
 
 ---
+
+## 🔧 Advanced environment variables
+
+- `LOGIN_MAX_WAIT_MS` — Max time the login flow will wait for the portal to load before failing with guidance. Default: 180000 (3 min). Increase if your login routinely takes longer.

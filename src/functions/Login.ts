@@ -363,12 +363,27 @@ export class Login {
         const targetHostname = 'rewards.bing.com'
         const targetPathname = '/'
 
+        const start = Date.now()
+        const maxWaitMs = Number(process.env.LOGIN_MAX_WAIT_MS || 180000) // default 3 minutes
+        let guidanceLogged = false
         // eslint-disable-next-line no-constant-condition
         while (true) {
             await this.dismissLoginMessages(page)
             const currentURL = new URL(page.url())
             if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
                 break
+            }
+
+            // If we keep looping without prompts for too long, advise and fail fast
+            const elapsed = Date.now() - start
+            if (elapsed > maxWaitMs) {
+                if (!guidanceLogged) {
+                    this.bot.log(this.bot.isMobile, 'LOGIN-GUIDE', 'Login taking too long without prompts.')
+                    this.bot.log(this.bot.isMobile, 'LOGIN-GUIDE', 'Tip: Enable passwordless sign-in (Microsoft Authenticator “number match”) or add a TOTP secret in accounts.json to auto-fill OTP.')
+                    this.bot.log(this.bot.isMobile, 'LOGIN-GUIDE', 'You can also set LOGIN_MAX_WAIT_MS to increase this timeout if needed.')
+                    guidanceLogged = true
+                }
+                throw this.bot.log(this.bot.isMobile, 'LOGIN-TIMEOUT', `Login timed out after ${Math.round(elapsed/1000)}s without completing`, 'error')
             }
         }
 
