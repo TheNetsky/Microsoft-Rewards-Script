@@ -279,7 +279,7 @@ export class MicrosoftRewardsBot {
  ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║   
  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝   
                                                    
-            Manual Purchase Mode • Passive Monitoring
+            By @Light • Manual Purchase Mode • Passive Monitoring
 `
         
         try {
@@ -301,7 +301,43 @@ export class MicrosoftRewardsBot {
                 console.log(`  Target: ${this.buyMode.email || 'First account'} | Documentation: buy-mode.md`)
             } else {
                 console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
-                console.log(`  Mode: ${this.config.headless ? 'Headless' : 'Visible'} | Parallel: ${this.config.parallel ? 'Yes' : 'No'}`)
+                // Replace visibility/parallel with concise enabled feature status
+                const upd = this.config.update || {}
+                const updTargets: string[] = []
+                if (upd.git !== false) updTargets.push('Git')
+                if (upd.docker) updTargets.push('Docker')
+                if (updTargets.length > 0) {
+                    console.log(`  Update: ${updTargets.join(', ')}`)
+                }
+
+                const sched = this.config.schedule || {}
+                const schedEnabled = !!sched.enabled
+                if (!schedEnabled) {
+                    console.log('  Schedule: OFF')
+                } else {
+                    // Determine active format + time string to display
+                    const tz = sched.timeZone || 'UTC'
+                    let formatName = ''
+                    let timeShown = ''
+                    const srec: Record<string, unknown> = sched as unknown as Record<string, unknown>
+                    const useAmPmVal = typeof srec['useAmPm'] === 'boolean' ? (srec['useAmPm'] as boolean) : undefined
+                    const time12Val = typeof srec['time12'] === 'string' ? String(srec['time12']) : undefined
+                    const time24Val = typeof srec['time24'] === 'string' ? String(srec['time24']) : undefined
+
+                    if (useAmPmVal === true) {
+                        formatName = 'AM/PM'
+                        timeShown = time12Val || sched.time || '9:00 AM'
+                    } else if (useAmPmVal === false) {
+                        formatName = '24h'
+                        timeShown = time24Val || sched.time || '09:00'
+                    } else {
+                        // Back-compat: infer from provided fields if possible
+                        if (time24Val && time24Val.trim()) { formatName = '24h'; timeShown = time24Val }
+                        else if (time12Val && time12Val.trim()) { formatName = 'AM/PM'; timeShown = time12Val }
+                        else { formatName = 'legacy'; timeShown = sched.time || '09:00' }
+                    }
+                    console.log(`  Schedule: ON — ${formatName} • ${timeShown} • TZ=${tz}`)
+                }
             }
             console.log('='.repeat(80) + '\n')
         } catch { 

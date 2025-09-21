@@ -79,6 +79,39 @@ class Browser {
     const globalTimeout = (cfgAny['globalTimeout'] as unknown) ?? ((cfgAny['browser'] as Record<string, unknown> | undefined)?.['globalTimeout'] as unknown) ?? 30000
     context.setDefaultTimeout(this.bot.utils.stringToMs(globalTimeout as (number | string)))
 
+        // Normalize viewport and page rendering so content fits typical screens
+        try {
+            const desktopViewport = { width: 1280, height: 800 }
+            const mobileViewport = { width: 390, height: 844 }
+
+            context.on('page', async (page) => {
+                try {
+                    // Set a reasonable viewport size depending on device type
+                    if (this.bot.isMobile) {
+                        await page.setViewportSize(mobileViewport)
+                    } else {
+                        await page.setViewportSize(desktopViewport)
+                    }
+
+                    // Inject a tiny CSS to avoid gigantic scaling on some environments
+                    await page.addInitScript(() => {
+                        try {
+                            const style = document.createElement('style')
+                            style.id = '__mrs_fit_style'
+                            style.textContent = `
+                              html, body { overscroll-behavior: contain; }
+                              /* Mild downscale to keep content within window on very large DPI */
+                              @media (min-width: 1000px) {
+                                html { zoom: 0.9 !important; }
+                              }
+                            `
+                            document.documentElement.appendChild(style)
+                        } catch { /* ignore */ }
+                    })
+                } catch { /* ignore */ }
+            })
+        } catch { /* ignore */ }
+
         await context.addCookies(sessionData.cookies)
 
         // Persist fingerprint when feature is configured
