@@ -102,6 +102,7 @@ export default class BrowserUtil {
     async humanizePage(page: Page): Promise<void> {
         try {
             const h = this.bot.config?.humanization || {}
+            if (h.enabled === false) return
             const moveProb = typeof h.gestureMoveProb === 'number' ? h.gestureMoveProb : 0.4
             const scrollProb = typeof h.gestureScrollProb === 'number' ? h.gestureScrollProb : 0.2
             // minor mouse move

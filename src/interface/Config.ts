@@ -101,6 +101,8 @@ export interface ConfigWorkers {
 
 // Anti-ban humanization
 export interface ConfigHumanization {
+    // Master toggle for Human Mode. When false, humanization is minimized.
+    enabled?: boolean;
     // Additional random waits between actions
     actionDelay?: { min: number | string; max: number | string };
     // Probability [0..1] to perform micro mouse moves per step

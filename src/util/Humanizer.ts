@@ -12,6 +12,7 @@ export class Humanizer {
   }
 
   async microGestures(page: Page): Promise<void> {
+    if (this.cfg && this.cfg.enabled === false) return
     const moveProb = this.cfg?.gestureMoveProb ?? 0.4
     const scrollProb = this.cfg?.gestureScrollProb ?? 0.2
     try {
@@ -28,6 +29,7 @@ export class Humanizer {
   }
 
   async actionPause(): Promise<void> {
+    if (this.cfg && this.cfg.enabled === false) return
     const defMin = 150
     const defMax = 450
     let min = defMin

@@ -1,24 +1,35 @@
 {
+    // Base URL for Rewards dashboard and APIs (do not change unless you know what you're doing)
     "baseURL": "https://rewards.bing.com",
+    // Where to store sessions (cookies, fingerprints)
     "sessionPath": "sessions",
     
     "browser": {
+        // Run browser without UI (true=headless, false=visible). Visible can help with stability.
         "headless": false,
+        // Max time to wait for common operations (supports ms/s/min: e.g. 30000, "30s", "2min")
         "globalTimeout": "30s"
     },
     
     "execution": {
+        // Run desktop+mobile in parallel (needs more resources). If false, runs sequentially.
         "parallel": false,
+        // If false and there are 0 points available, the run is skipped early to save time.
         "runOnZeroPoints": false,
+        // Number of account clusters (processes) to run concurrently.
         "clusters": 1,
+        // Number of passes per invocation (advanced; usually 1).
         "passesPerRun": 1
     },
     
     "buyMode": {
+        // Manual purchase/redeem mode. Use CLI -buy to enable, or set buyMode.enabled in config.
+        // Session duration cap in minutes.
         "maxMinutes": 45
     },
     
     "fingerprinting": {
+        // Persist browser fingerprints per device type to improve consistency across runs
         "saveFingerprint": {
             "mobile": false,
             "desktop": false
@@ -26,12 +37,18 @@
     },
     
     "search": {
+        // Use locale-specific query sources
         "useLocalQueries": false,
         "settings": {
+            // Add geo/locale signal into query selection
             "useGeoLocaleQueries": false,
+            // Randomly scroll search result pages to look more natural
             "scrollRandomResults": true,
+            // Occasionally click a result (safe targets only)
             "clickRandomResults": true,
+            // Number of times to retry mobile searches if points didn’t progress
             "retryMobileSearchAmount": 2,
+            // Delay between searches (supports numbers in ms or time strings)
             "delay": {
                 "min": "3min",
                 "max": "5min"
@@ -40,16 +57,24 @@
     },
     
     "humanization": {
+        // Global Human Mode switch. true=adds subtle micro-gestures & pauses. false=classic behavior.
+        "enabled": true,
+        // Extra random pause between actions (ms or time string e.g., "300ms", "1s")
         "actionDelay": { 
             "min": 150, 
             "max": 450 
         },
+        // Probability (0..1) to move mouse a tiny bit in between actions
         "gestureMoveProb": 0.4,
+        // Probability (0..1) to perform a very small scroll
         "gestureScrollProb": 0.2,
+        // Optional local-time windows for execution (e.g., ["08:30-11:00", "19:00-22:00"]).
+        // If provided, runs will wait until inside a window before starting.
         "allowedWindows": []
     },
     
     "retryPolicy": {
+        // Generic retry/backoff for transient failures
         "maxAttempts": 3,
         "baseDelay": 1000,
         "maxDelay": "30s",
@@ -58,6 +83,7 @@
     },
     
     "workers": {
+        // Select what the bot should complete on desktop/mobile
         "doDailySet": true,
         "doMorePromotions": true,
         "doPunchCards": true,
@@ -65,23 +91,28 @@
         "doMobileSearch": true,
         "doDailyCheckIn": true,
         "doReadToEarn": true,
+        // If true, run a desktop search bundle right after Daily Set
         "bundleDailySetWithSearch": false
     },
     
     "proxy": {
+        // Control which outbound calls go through your proxy
         "proxyGoogleTrends": true,
         "proxyBingTerms": true
     },
     
     "notifications": {
+        // Live logs (Discord or similar). URL is your webhook endpoint.
         "webhook": {
             "enabled": false,
             "url": ""
         },
+        // Rich end-of-run summary (Discord or similar)
         "conclusionWebhook": {
             "enabled": false,
             "url": ""
         },
+        // NTFY push notifications (plain text)
         "ntfy": {
             "enabled": false,
             "url": "",
@@ -91,6 +122,7 @@
     },
     
     "logging": {
+        // Filter out noisy log buckets locally and on webhook
         "excludeFunc": [
             "SEARCH-CLOSE-TABS",
             "LOGIN-NO-PROMPT",
@@ -104,6 +136,7 @@
     },
     
     "diagnostics": {
+        // Capture minimal evidence on failures (screenshots/HTML) and prune old runs
         "enabled": true,
         "saveScreenshot": true,
         "saveHtml": true,
@@ -112,25 +145,34 @@
     },
     
     "communityHelp": {
+        // Opt-in telemetry/help (if present). Throttles duplicate error posts.
         "enabled": true,
         "minIntervalMs": 10000
     },
     
     "jobState": {
+        // Checkpoint to avoid duplicate work across restarts
         "enabled": true,
+        // Custom state directory (defaults to sessionPath/job-state if empty)
         "dir": ""
     },
     
     "schedule": {
+        // Built-in scheduler (no cron needed in container). Uses local time zone setting below.
         "enabled": false,
+        // Daily time to start a pass (24h format)
         "time": "09:00",
+        // IANA timezone, e.g. "Europe/Paris"
         "timeZone": "America/New_York",
+        // If true, run one pass immediately when the process starts
         "runImmediatelyOnStart": true
     },
     
     "update": {
+        // Optional post-run auto-update
         "git": true,
         "docker": false,
+        // Custom updater script path (relative to repo root)
         "scriptPath": "setup/update/update.mjs"
     }
 }

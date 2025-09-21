@@ -341,6 +341,7 @@ Tip: Accounts set to passwordless (Microsoft Authenticator with number match) al
 **🎓 Need More Power?** Check out our [comprehensive guides](./information/):
 
 [![Diagnostics](https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge)](./information/diagnostics.md)
+[![Humanization](https://img.shields.io/badge/🧠_Humanization-Human_Mode-2ecc71?style=for-the-badge)](./information/humanization.md)
 [![Scheduling](https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-4ECDC4?style=for-the-badge)](./information/schedule.md)
 [![Notifications](https://img.shields.io/badge/📱_NTFY-Push_Alerts-9B59B6?style=for-the-badge)](./information/ntfy.md)
 [![Webhooks](https://img.shields.io/badge/🎯_Discord-Live_Updates-7289DA?style=for-the-badge)](./information/conclusionwebhook.md)
@@ -447,6 +448,7 @@ npm start -- --debug
 Need to go deeper? Start here:
 
 - [Diagnostics](./information/diagnostics.md)
+- [Humanization](./information/humanization.md)
 - [Job State](./information/jobstate.md)
 - [Scheduling](./information/schedule.md)
 - [Auto Update](./information/update.md)

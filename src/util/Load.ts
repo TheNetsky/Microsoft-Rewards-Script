@@ -9,6 +9,63 @@ import { Config, ConfigSaveFingerprint } from '../interface/Config'
 
 let configCache: Config
 
+// Basic JSON comment stripper (supports // line and /* block */ comments while preserving strings)
+function stripJsonComments(input: string): string {
+    let out = ''
+    let inString = false
+    let stringChar = ''
+    let inLine = false
+    let inBlock = false
+    for (let i = 0; i < input.length; i++) {
+        const ch = input[i]!
+        const next = input[i + 1]
+        if (inLine) {
+            if (ch === '\n' || ch === '\r') {
+                inLine = false
+                out += ch
+            }
+            continue
+        }
+        if (inBlock) {
+            if (ch === '*' && next === '/') {
+                inBlock = false
+                i++
+            }
+            continue
+        }
+        if (inString) {
+            out += ch
+            if (ch === '\\') { // escape next char
+                i++
+                if (i < input.length) out += input[i]
+                continue
+            }
+            if (ch === stringChar) {
+                inString = false
+            }
+            continue
+        }
+        if (ch === '"' || ch === '\'') {
+            inString = true
+            stringChar = ch
+            out += ch
+            continue
+        }
+        if (ch === '/' && next === '/') {
+            inLine = true
+            i++
+            continue
+        }
+        if (ch === '/' && next === '*') {
+            inBlock = true
+            i++
+            continue
+        }
+        out += ch
+    }
+    return out
+}
+
 // Normalize both legacy (flat) and new (nested) config schemas into the flat Config interface
 function normalizeConfig(raw: unknown): Config {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,9 +127,18 @@ function normalizeConfig(raw: unknown): Config {
     // Fingerprinting
     const saveFingerprint = (n.fingerprinting?.saveFingerprint ?? n.saveFingerprint) ?? { mobile: false, desktop: false }
 
-    // Humanization defaults
-    if (n.humanization && typeof n.humanization.randomOffDaysPerWeek !== 'number') {
+    // Humanization defaults (single on/off)
+    if (!n.humanization) n.humanization = {}
+    if (typeof n.humanization.enabled !== 'boolean') n.humanization.enabled = true
+    if (typeof n.humanization.randomOffDaysPerWeek !== 'number') {
         n.humanization.randomOffDaysPerWeek = 1
+    }
+    // Strong default gestures when enabled (explicit values still win)
+    if (typeof n.humanization.gestureMoveProb !== 'number') {
+        n.humanization.gestureMoveProb = n.humanization.enabled === false ? 0 : 0.5
+    }
+    if (typeof n.humanization.gestureScrollProb !== 'number') {
+        n.humanization.gestureScrollProb = n.humanization.enabled === false ? 0 : 0.25
     }
 
     const cfg: Config = {
@@ -155,8 +221,8 @@ export function loadConfig(): Config {
 
         const configDir = path.join(__dirname, '../', 'config.json')
         const config = fs.readFileSync(configDir, 'utf-8')
-
-        const raw = JSON.parse(config)
+        const text = config.replace(/^\uFEFF/, '')
+        const raw = JSON.parse(stripJsonComments(text))
         const normalized = normalizeConfig(raw)
         configCache = normalized // Set as cache
 
