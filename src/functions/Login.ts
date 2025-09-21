@@ -255,7 +255,7 @@ export class Login {
             const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         } catch {
-            if (this.bot.config.parallel) {
+            if (this.bot.config.parallel) {s
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Script running in parallel, can only send 1 2FA request per account at a time!', 'log', 'yellow')
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Trying again in 60 seconds! Please wait...', 'log', 'yellow')
 
