@@ -237,20 +237,16 @@ Tip: With the built‑in scheduler you can enable a watchdog timeout via env var
 
 ---
 
-## 🖥️ Bare‑Metal (without Docker)
+## 🛒 Buy Mode
 
-Use the built‑in scheduler directly and your OS scheduler if desired:
-
-1. Build once:
-  - `npm install && npm run build`
-2. Run now (one pass or scheduled loop):
-  - Single run: `npm start`
-  - Scheduler: `npm run start:schedule`
-3. Optional host scheduling:
-  - Linux/macOS cron example: `0 7 * * * TZ=Europe/Paris /usr/bin/node /path/to/repo/dist/scheduler.js >> /var/log/mrs.log 2>&1`
-  - Windows Task Scheduler: run `node` with arguments `C:\path\to\repo\dist\scheduler.js`
-
-For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. external cron), see: [information/schedule.md](./information/schedule.md)
+- What: manual redeem/purchase mode. The bot logs in and opens two tabs: one monitor tab that auto‑refreshes your points, and one free tab for your actions.
+- Enable:
+  - CLI: `npm start -- -buy your@email`
+  - Config: set `buyMode.enabled: true` (optional `buyMode.maxMinutes`)
+- Safety: the monitor tab only reads dashboard data; it doesn’t click or redeem.
+- Duration: default 45 minutes; adjustable via `buyMode.maxMinutes`.
+- Notifications: a short summary is sent if webhooks/NTFY are enabled; spend events are reflected in the session total.
+- Exit: close the browser or wait until the session ends.
 
 ---
 
@@ -446,16 +442,16 @@ npm start -- --debug
 
 ## 📚 **Advanced Documentation**
 
-Need to go deeper? Check out these comprehensive guides:
+Need to go deeper? Start here:
 
-[![Diagnostics](https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge)](./information/diagnostics.md)
-[![Job State](https://img.shields.io/badge/💾_Job_State-Task_Recovery-4ECDC4?style=for-the-badge)](./information/jobstate.md)
-[![Scheduling](https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-FFD93D?style=for-the-badge)](./information/schedule.md)
-[![Auto Update](https://img.shields.io/badge/🔄_Auto_Update-Version_Control-9B59B6?style=for-the-badge)](./information/update.md)
-[![NTFY](https://img.shields.io/badge/📱_NTFY-Push_Alerts-00A7E1?style=for-the-badge)](./information/ntfy.md)
-[![Discord](https://img.shields.io/badge/🎯_Discord-Webhook_Reports-7289DA?style=for-the-badge)](./information/conclusionwebhook.md)
-[![Proxy](https://img.shields.io/badge/🌐_Proxy-Network_Setup-FF9F43?style=for-the-badge)](./information/proxy.md)
-[![Buy Mode](https://img.shields.io/badge/💳_Buy_Mode-Purchase_Track-00D2D3?style=for-the-badge)](./information/buy-mode.md)
+- Diagnostics: ./information/diagnostics.md
+- Job State: ./information/jobstate.md
+- Scheduling: ./information/schedule.md
+- Auto Update: ./information/update.md
+- NTFY: ./information/ntfy.md
+- Discord Webhook Reports: ./information/conclusionwebhook.md
+- Proxy Setup: ./information/proxy.md
+- Buy Mode details: ./information/buy-mode.md
 
 ---
 
