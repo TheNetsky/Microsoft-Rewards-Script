@@ -26,6 +26,8 @@ export class Login {
     private passkeyHandled: boolean = false
     // Optional TOTP secret for current login attempt (Base32)
     private currentTotpSecret?: string
+    // Compromised monitoring interval
+    private compromisedInterval?: NodeJS.Timeout
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
@@ -88,8 +90,18 @@ export class Login {
             await this.bot.utils.wait(2000)
             await this.bot.browser.utils.reloadBadPage(page)
             await this.bot.utils.wait(2000)
+            // Try to detect masked recovery email prompt and compare with configured recoveryEmail
+            try {
+                await this.detectAndHandleRecoveryMismatch(page, email)
+            } catch {/* non-fatal */}
             await this.enterPassword(page, password)
             await this.bot.utils.wait(2000)
+
+            // If sign-in is blocked we stop here (leave page as-is for manual recovery)
+            if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'sign-in-blocked') {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Sign-in blocked detected; skipping remaining login steps.', 'warn')
+                return
+            }
 
             // Check if account is locked
             await this.checkAccountLocked(page)
@@ -172,6 +184,29 @@ export class Login {
             // Wait for password field
             const passwordField = await page.waitForSelector(passwordInputSelector, { state: 'visible', timeout: 5000 }).catch(() => null)
             if (!passwordField) {
+                // Detect explicit sign-in failure page
+                const titleEl = await page.waitForSelector('[data-testid="title"]', { timeout: 1500 }).catch(() => null)
+                const titleText = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
+                if (/we can't sign you in|we can’t sign you in/i.test(titleText)) {
+                    const email = this.bot.currentAccountEmail || 'account'
+                    const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
+                        const incident = {
+                            kind: 'We can\'t sign you in (blocked)',
+                            account: email,
+                            details: ['Microsoft presented a sign-in blocked page during login.'],
+                            next: ['Automation paused and global standby engaged.', 'Complete required challenges, then review the docs.'],
+                            docsUrl
+                        }
+                        await this.sendIncidentAlert(incident, 'warn')
+                    // Mark compromised mode to stop farming but allow manual intervention
+                    this.bot.compromisedModeActive = true
+                    this.bot.compromisedReason = 'sign-in-blocked'
+                    this.startCompromisedInterval()
+                    // Engage global standby so we do not proceed to next accounts
+                    await this.bot.engageGlobalStandby('sign-in-blocked', this.bot.currentAccountEmail)
+                    // Open docs tab
+                        try { await this.openDocsTab(page, incident.docsUrl!) } catch { /* ignore */ }
+                }
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field not found, possibly 2FA required', 'warn')
                 await this.handle2FA(page)
                 return
@@ -189,6 +224,37 @@ export class Login {
             if (nextButton) {
                 await nextButton.click()
                 await this.bot.utils.wait(2000)
+                // Detect incorrect password error, and if we already had a recovery mismatch, escalate as suspected hijack
+                try {
+                    let bad = false
+                    const errNode = await page.locator('xpath=//span[contains(normalize-space(.), "That password is incorrect")]').first()
+                    if (await errNode.isVisible().catch(() => false)) {
+                        bad = true
+                    } else {
+                        const html = await page.content().catch(() => '')
+                        bad = /That password is incorrect for your Microsoft account\./i.test(html)
+                    }
+                    if (bad && this.bot.compromisedModeActive && this.bot.compromisedReason === 'recovery-mismatch') {
+                        const email = this.bot.currentAccountEmail || 'account'
+                        const docsUrl = this.getDocsUrl('recovery-email-mismatch')
+                        const block = this.buildIncidentBlock({
+                            kind: 'Recovery mismatch + incorrect password',
+                            account: email,
+                            details: [
+                                'Recovery email mismatch already detected.',
+                                'Now Microsoft reports the password is incorrect.'
+                            ],
+                            next: [
+                                'This strongly indicates a possible hijack. Do NOT proceed.',
+                                'Secure the account immediately and rotate credentials. See docs.'
+                            ],
+                            docsUrl
+                        })
+                        await this.raiseCriticalAlert(block + '\nSecurity check by @Light')
+                        try { await this.bot.engageGlobalStandby('suspected-hijack', email) } catch { /* ignore */ }
+                        try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
+                    }
+                } catch { /* ignore */ }
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Password entered successfully')
             } else {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Next button not found after password entry', 'warn')
@@ -369,6 +435,31 @@ export class Login {
         // eslint-disable-next-line no-constant-condition
         while (true) {
             await this.dismissLoginMessages(page)
+            // Detect explicit error title and exit early in compromised mode
+            try {
+                const titleEl = await page.waitForSelector('[data-testid="title"]', { timeout: 500 }).catch(() => null)
+                const titleText = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
+                if (/we can't sign you in|we can’t sign you in/i.test(titleText)) {
+                    if (!this.bot.compromisedModeActive) {
+                        this.bot.compromisedModeActive = true
+                        this.bot.compromisedReason = 'sign-in-blocked'
+                        const email = this.bot.currentAccountEmail || 'account'
+                        const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
+                        const block = this.buildIncidentBlock({
+                            kind: 'We can\'t sign you in (blocked)',
+                            account: email,
+                            details: ['Microsoft presented a sign-in blocked page during login.'],
+                            next: ['Automation paused and global standby engaged.', 'Complete required challenges, then review the docs.'],
+                            docsUrl
+                        })
+                        await this.raiseSecurityAlert(`${block}\nSecurity check by @Light`)
+                        this.startCompromisedInterval()
+                        try { await this.bot.engageGlobalStandby('sign-in-blocked', this.bot.currentAccountEmail) } catch { /* ignore */ }
+                        try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
+                    }
+                    return
+                }
+            } catch { /* ignore */ }
             const currentURL = new URL(page.url())
             if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
                 break
@@ -573,5 +664,188 @@ export class Login {
         if (isLocked) {
             throw this.bot.log(this.bot.isMobile, 'CHECK-LOCKED', 'This account has been locked! Remove the account from "accounts.json" and restart!', 'error')
         }
+    }
+
+    // --- Security helpers ---
+    private extractMaskedEmailFromDom(html: string): string | null {
+        // Look for pattern like "We'll send a code to ko*****@sfr.fr"
+        const m = html.match(/We'll send a code to\s+([^<\s]+)\.\s+To verify/i)
+        if (m && m[1]) return m[1].trim()
+        // Generic fallback: find first token like xx***@domain.tld
+        const m2 = html.match(/\b([a-zA-Z]{1,3})\*+@([a-zA-Z0-9.-]+\.[A-Za-z]{2,})\b/)
+        if (m2) return `${m2[1]}*****@${m2[2]}`
+        return null
+    }
+
+    private parseMasked(masked: string): { firstTwo: string; domain: string } | null {
+    const mm = masked.match(/^([a-zA-Z]{2})\*+@([a-zA-Z0-9.-]+)$/)
+    if (!mm || !mm[1] || !mm[2]) return null
+    return { firstTwo: mm[1]!.toLowerCase(), domain: mm[2]!.toLowerCase() }
+    }
+
+    private expectedFromEmail(email: string): { firstTwo: string; domain: string } | null {
+        const parts = email.split('@')
+        if (parts.length !== 2) return null
+        const local = parts[0]!.toLowerCase()
+        const domain = parts[1]!.toLowerCase()
+        if (local.length < 2) return null
+        return { firstTwo: local.slice(0, 2), domain }
+    }
+
+    private async detectAndHandleRecoveryMismatch(page: Page, accountEmail: string) {
+        // Pull expected recovery from bot, set by index.ts at account start
+        const expectedRecovery: string | undefined = this.bot.currentAccountRecoveryEmail
+
+        if (!expectedRecovery || typeof expectedRecovery !== 'string' || !/@/.test(expectedRecovery)) return
+
+        // Try to locate the masked email snippet in the DOM
+        let masked: string | null = null
+        try {
+            // Prefer DOM lookup: the masked email is inside a nested span under the phrase container
+            const container = page.locator('xpath=//span[contains(normalize-space(.), "We\'ll send a code to")]')
+            if (await container.first().isVisible().catch(() => false)) {
+                const inner = container.locator('span').first()
+                const t = await inner.textContent().catch(() => null)
+                if (t && /\*+@/.test(t)) masked = t.trim()
+            }
+        } catch { /* ignore */ }
+        try {
+            const html = await page.content()
+            masked = this.extractMaskedEmailFromDom(html)
+        } catch { /* ignore */ }
+        if (!masked) return
+
+        const parsedMasked = this.parseMasked(masked)
+        const parsedExpected = this.expectedFromEmail(expectedRecovery)
+        if (!parsedMasked || !parsedExpected) return
+
+        const ok = parsedMasked.firstTwo === parsedExpected.firstTwo && parsedMasked.domain === parsedExpected.domain
+        if (!ok) {
+            const docsUrl = this.getDocsUrl('recovery-email-mismatch')
+            const block = this.buildIncidentBlock({
+                kind: 'Recovery email mismatch',
+                account: accountEmail,
+                details: [
+                    `Masked: ${masked}`,
+                    `Expected: ${parsedExpected.firstTwo}*****@${parsedExpected.domain}`
+                ],
+                next: [
+                    'Automation paused for this account and global standby engaged.',
+                    'Review the docs and secure your account; update accounts.json if you changed the recovery email.'
+                ],
+                docsUrl
+            })
+            this.raiseSecurityAlert(`${block}\nSecurity check by @Light`)
+            // Mark compromised so tasks stop after login
+            this.bot.compromisedModeActive = true
+            this.bot.compromisedReason = 'recovery-mismatch'
+            this.bot.compromisedEmail = accountEmail
+            // Start periodic terminal reminders every 5 minutes
+            this.startCompromisedInterval()
+            // Engage global standby to avoid processing other accounts until resolved
+            await this.bot.engageGlobalStandby('recovery-mismatch', accountEmail)
+            // Open docs tab to the relevant section
+            try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
+        }
+    }
+
+    private startCompromisedInterval() {
+        if (this.compromisedInterval) return
+        this.compromisedInterval = setInterval(() => {
+            this.bot.log(this.bot.isMobile, 'SECURITY', 'Account security issue persists. Please review immediately. Security check by @Light', 'warn', 'yellow')
+        }, 5 * 60 * 1000)
+    }
+
+    public clearCompromisedInterval() {
+        if (this.compromisedInterval) {
+            clearInterval(this.compromisedInterval)
+            this.compromisedInterval = undefined
+        }
+    }
+
+    private async raiseSecurityAlert(message: string) {
+        try {
+            this.bot.log(this.bot.isMobile, 'SECURITY', message, 'error', 'red')
+            const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
+            // Mention everyone for high visibility
+            const content = `@everyone ${message}`
+            await ConclusionWebhook(this.bot.config, content, {
+                embeds: [
+                    {
+                        title: '🔐 Security alert',
+                        description: message,
+                        color: 0xFFAA00
+                    }
+                ]
+            })
+        } catch {/* ignore */}
+    }
+
+    // Build a single multi-line incident block for terminal/webhook readability
+    private buildIncidentBlock(input: { kind: string; account: string; details?: string[]; next?: string[]; docsUrl?: string }): string {
+        const lines: string[] = []
+        lines.push('==================== SECURITY INCIDENT ====================')
+        lines.push(`Type   : ${input.kind}`)
+        lines.push(`Account: ${input.account}`)
+        if (input.details && input.details.length) {
+            lines.push('Details:')
+            for (const d of input.details) lines.push(`  - ${d}`)
+        }
+        if (input.next && input.next.length) {
+            lines.push('Next steps:')
+            for (const n of input.next) lines.push(`  - ${n}`)
+        }
+        if (input.docsUrl) lines.push(`Docs   : ${input.docsUrl}`)
+        lines.push('===========================================================')
+        return lines.join('\n')
+    }
+
+    // Compute docs URL to GitHub with anchors; configurable via DOCS_BASE_URL env
+    private getDocsUrl(anchor: 'recovery-email-mismatch' | 'we-cant-sign-you-in'): string {
+        const rel = 'information/security.md'
+        const map: Record<string, string> = {
+            'recovery-email-mismatch': '#recovery-email-mismatch',
+            'we-cant-sign-you-in': '#we-cant-sign-you-in-blocked'
+        }
+        const hash = map[anchor] || ''
+        const defaultBase = 'https://github.com/TheNetsky/Microsoft-Rewards-Script'
+        const rawBase = (process.env.DOCS_BASE_URL && process.env.DOCS_BASE_URL.trim()) || defaultBase
+        const base = rawBase.replace(/\/$/, '')
+        if (/github\.com\//i.test(base)) {
+            // Ensure we have a blob path; default to main branch
+            if (!/\/blob\//.test(base)) {
+                return `${base}/blob/main/${rel}${hash}`
+            }
+            return `${base}/${rel}${hash}`
+        }
+        // Fallback combine
+        return `${base}/${rel}${hash}`
+    }
+
+    // Critical alert with red embed for high-severity signals
+    private async raiseCriticalAlert(message: string) {
+        try {
+            this.bot.log(this.bot.isMobile, 'SECURITY', message, 'error', 'red')
+            const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
+            const content = `@everyone ${message}`
+            await ConclusionWebhook(this.bot.config, content, {
+                embeds: [
+                    {
+                        title: '🚨 Possible hijack detected',
+                        description: message,
+                        color: 0xFF0000
+                    }
+                ]
+            })
+        } catch { /* ignore */ }
+    }
+
+    // Open docs in a new tab in the same browser context
+    private async openDocsTab(page: Page, url: string) {
+        try {
+            const ctx = page.context()
+            const tab = await ctx.newPage()
+            await tab.goto(url)
+        } catch { /* ignore */ }
     }
 }

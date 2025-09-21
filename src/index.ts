@@ -38,6 +38,10 @@ export class MicrosoftRewardsBot {
     public isMobile: boolean
     public homePage!: Page
     public currentAccountEmail?: string
+    public currentAccountRecoveryEmail?: string
+    public compromisedModeActive: boolean = false
+    public compromisedReason?: string
+    public compromisedEmail?: string
 
     private pointsCanCollect: number = 0
     private pointsInitial: number = 0
@@ -57,6 +61,7 @@ export class MicrosoftRewardsBot {
     private runId: string = Math.random().toString(36).slice(2)
     private diagCount: number = 0
     private bannedTriggered: { email: string; reason: string } | null = null
+    private globalStandby: { active: boolean; reason?: string } = { active: false }
 
     //@ts-expect-error Will be initialized later
     public axios: Axios
@@ -408,11 +413,20 @@ export class MicrosoftRewardsBot {
 
     private async runTasks(accounts: Account[]) {
         for (const account of accounts) {
+            // If a global standby is active due to security/banned, stop processing further accounts
+            if (this.globalStandby.active) {
+                log('main','SECURITY',`Global standby active (${this.globalStandby.reason || 'security-issue'}). Not proceeding to next accounts until resolved.`, 'warn', 'yellow')
+                break
+            }
             // Optional global stop after first ban
             if (this.config?.humanization?.stopOnBan === true && this.bannedTriggered) {
                 log('main','TASK',`Stopping remaining accounts due to ban on ${this.bannedTriggered.email}: ${this.bannedTriggered.reason}`,'warn')
                 break
             }
+            // Reset compromised state per account
+            this.compromisedModeActive = false
+            this.compromisedReason = undefined
+            this.compromisedEmail = undefined
             // If humanization allowed windows are configured, wait until within a window
             try {
                 const windows: string[] | undefined = this.config?.humanization?.allowedWindows
@@ -425,6 +439,7 @@ export class MicrosoftRewardsBot {
                 }
             } catch {/* ignore */}
             this.currentAccountEmail = account.email
+            this.currentAccountRecoveryEmail = account.recoveryEmail
             log('main', 'MAIN-WORKER', `Started tasks for account ${account.email}`)
 
             const accountStart = Date.now()
@@ -495,8 +510,8 @@ export class MicrosoftRewardsBot {
                     desktopCollected = desktopResult.collectedPoints
                 }
 
-                // If banned detected, skip mobile to save time
-                if (!banned.status) {
+                // If banned or compromised detected, skip mobile to save time
+                if (!banned.status && !this.compromisedModeActive) {
                     this.isMobile = true
                     const mobileResult = await this.Mobile(account).catch(e => {
                         const msg = e instanceof Error ? e.message : String(e)
@@ -513,7 +528,8 @@ export class MicrosoftRewardsBot {
                         mobileCollected = mobileResult.collectedPoints
                     }
                 } else {
-                    log(true, 'TASK', `Skipping mobile flow for ${account.email} due to banned status`, 'warn')
+                    const why = banned.status ? 'banned status' : 'compromised status'
+                    log(true, 'TASK', `Skipping mobile flow for ${account.email} due to ${why}`, 'warn')
                 }
             }
 
@@ -533,19 +549,31 @@ export class MicrosoftRewardsBot {
                 banned
             })
 
-            if (banned.status && this.config?.humanization?.stopOnBan === true) {
+            if (banned.status) {
                 this.bannedTriggered = { email: account.email, reason: banned.reason }
+                // Enter global standby: do not proceed to next accounts
+                this.globalStandby = { active: true, reason: `banned:${banned.reason}` }
+                await this.sendGlobalSecurityStandbyAlert(account.email, `Ban detected: ${banned.reason || 'unknown'}`)
             }
 
             await log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
 
-        await log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
+    await log(this.isMobile, 'MAIN-PRIMARY', 'Completed tasks for ALL accounts', 'log', 'green')
         // Extra diagnostic summary when verbose
         if (process.env.DEBUG_REWARDS_VERBOSE === '1') {
             for (const summary of this.accountSummaries) {
                 log('main','SUMMARY-DEBUG',`Account ${summary.email} collected D:${summary.desktopCollected} M:${summary.mobileCollected} TOTAL:${summary.totalCollected} ERRORS:${summary.errors.length ? summary.errors.join(';') : 'none'}`)
             }
+        }
+        // If any account is flagged compromised, do NOT exit; keep the process alive so the browser stays open
+        if (this.compromisedModeActive || this.globalStandby.active) {
+            log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done. Security check by @Light','warn','yellow')
+            // Periodic heartbeat
+            setInterval(() => {
+                log('main','SECURITY','Still in standby: session(s) held open for manual recovery / review...','warn','yellow')
+            }, 5 * 60 * 1000)
+            return
         }
         // If in worker mode (clusters>1) send summaries to primary
         if (this.config.clusters > 1 && !cluster.isPrimary) {
@@ -627,8 +655,29 @@ export class MicrosoftRewardsBot {
 
         log(this.isMobile, 'MAIN', 'Starting browser')
 
-        // Login into MS Rewards, then go to rewards homepage
+        // Login into MS Rewards, then optionally stop if compromised
     await this.login.login(this.homePage, account.email, account.password, account.totp)
+
+        if (this.compromisedModeActive) {
+            // User wants the page to remain open for manual recovery. Do not proceed to tasks.
+            const reason = this.compromisedReason || 'security-issue'
+            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving the browser open and skipping all activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
+            try {
+                const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+                await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Logged in successfully; leaving browser open. Security check by @Light`, {
+                    embeds: [
+                        {
+                            title: '🔐 Security alert (post-login)',
+                            description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving browser open; skipping tasks`,
+                            color: 0xFFAA00
+                        }
+                    ]
+                })
+            } catch {/* ignore */}
+            // Save session for convenience, but do not close the browser
+            try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
+            return { initialPoints: 0, collectedPoints: 0 }
+        }
 
         await this.browser.func.goHome(this.homePage)
 
@@ -704,8 +753,26 @@ export class MicrosoftRewardsBot {
 
         log(this.isMobile, 'MAIN', 'Starting browser')
 
-        // Login into MS Rewards, then go to rewards homepage
+        // Login into MS Rewards, then respect compromised mode
     await this.login.login(this.homePage, account.email, account.password, account.totp)
+        if (this.compromisedModeActive) {
+            const reason = this.compromisedReason || 'security-issue'
+            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
+            try {
+                const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+                await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Mobile flow halted; leaving browser open. Security check by @Light`, {
+                    embeds: [
+                        {
+                            title: '🔐 Security alert (mobile)',
+                            description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving mobile browser open; skipping tasks`,
+                            color: 0xFFAA00
+                        }
+                    ]
+                })
+            } catch {/* ignore */}
+            try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
+            return { initialPoints: 0, collectedPoints: 0 }
+        }
         this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email)
 
         await this.browser.func.goHome(this.homePage)
@@ -1032,6 +1099,43 @@ export class MicrosoftRewardsBot {
             child.on('close', () => resolve())
             child.on('error', () => resolve())
         })
+    }
+
+    /** Public entry-point to engage global security standby from other modules (idempotent). */
+    public async engageGlobalStandby(reason: string, email?: string): Promise<void> {
+        try {
+            if (this.globalStandby.active) return
+            this.globalStandby = { active: true, reason }
+            const who = email || this.currentAccountEmail || 'unknown'
+            await this.sendGlobalSecurityStandbyAlert(who, reason)
+        } catch {/* ignore */}
+    }
+
+    /** Send a strong alert to all channels and mention @everyone when entering global security standby. */
+    private async sendGlobalSecurityStandbyAlert(email: string, reason: string): Promise<void> {
+        try {
+            const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+            const title = '🚨 Global security standby engaged'
+            const desc = [
+                `Account: ${email}`,
+                `Reason: ${reason}`,
+                'Action: Pausing all further accounts. We will not proceed until this is resolved.',
+                'Security check by @Light'
+            ].join('\n')
+            // Mention everyone in content for Discord visibility
+            const content = '@everyone ' + title
+            await ConclusionWebhook(this.config, content, {
+                embeds: [
+                    {
+                        title,
+                        description: desc,
+                        color: 0xFF0000
+                    }
+                ]
+            })
+        } catch (e) {
+            log('main','ALERT',`Failed to send standby alert: ${e instanceof Error ? e.message : e}`,'warn')
+        }
     }
 }
 

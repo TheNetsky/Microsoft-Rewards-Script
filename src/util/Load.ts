@@ -212,7 +212,11 @@ export function loadAccounts(): Account[] {
             raw = fs.readFileSync(accountDir, 'utf-8')
         }
 
-        const parsed = JSON.parse(raw)
+        // Support comments in accounts file (same as config)
+        const cleaned = stripJsonComments(raw)
+        const parsedUnknown = JSON.parse(cleaned)
+        // Accept either a root array or an object with an `accounts` array, ignore `_note`
+        const parsed = Array.isArray(parsedUnknown) ? parsedUnknown : (parsedUnknown && typeof parsedUnknown === 'object' && Array.isArray((parsedUnknown as { accounts?: unknown }).accounts) ? (parsedUnknown as { accounts: unknown[] }).accounts : null)
         if (!Array.isArray(parsed)) throw new Error('accounts must be an array')
         // minimal shape validation
         for (const a of parsed) {
