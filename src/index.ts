@@ -62,6 +62,9 @@ export class MicrosoftRewardsBot {
     private diagCount: number = 0
     private bannedTriggered: { email: string; reason: string } | null = null
     private globalStandby: { active: boolean; reason?: string } = { active: false }
+    // Scheduler heartbeat integration
+    private heartbeatFile?: string
+    private heartbeatTimer?: NodeJS.Timeout
 
     //@ts-expect-error Will be initialized later
     public axios: Axios
@@ -106,6 +109,20 @@ export class MicrosoftRewardsBot {
     async run() {
         this.printBanner()
         log('main', 'MAIN', `Bot started with ${this.config.clusters} clusters`)
+
+        // If scheduler provided a heartbeat file, update it periodically to signal liveness
+        const hbFile = process.env.SCHEDULER_HEARTBEAT_FILE
+        if (hbFile) {
+            try {
+                const dir = path.dirname(hbFile)
+                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+                fs.writeFileSync(hbFile, String(Date.now()))
+                this.heartbeatFile = hbFile
+                this.heartbeatTimer = setInterval(() => {
+                    try { fs.writeFileSync(hbFile, String(Date.now())) } catch { /* ignore */ }
+                }, 60_000)
+            } catch { /* ignore */ }
+        }
 
         // If buy mode is enabled, run single-account interactive session without automation
         if (this.buyMode.enabled) {
@@ -583,6 +600,9 @@ export class MicrosoftRewardsBot {
         } else {
             // Single process mode -> build and send conclusion directly
             await this.sendConclusion(this.accountSummaries)
+            // Cleanup heartbeat timer/file at end of run
+            if (this.heartbeatTimer) { try { clearInterval(this.heartbeatTimer) } catch { /* ignore */ } }
+            if (this.heartbeatFile) { try { if (fs.existsSync(this.heartbeatFile)) fs.unlinkSync(this.heartbeatFile) } catch { /* ignore */ } }
             // After conclusion, run optional auto-update
             await this.runAutoUpdate().catch(() => {/* ignore update errors */})
         }

@@ -1,5 +1,6 @@
 import { DateTime, IANAZone } from 'luxon'
 import { spawn } from 'child_process'
+import fs from 'fs'
 import path from 'path'
 import { MicrosoftRewardsBot } from './index'
 import { loadConfig } from './util/Load'
@@ -57,28 +58,24 @@ async function runOnePass(): Promise<void> {
  * with a watchdog timeout to kill stuck runs.
  */
 async function runOnePassWithWatchdog(): Promise<void> {
-  // How long to allow a pass to run before we consider it stuck
-  // Default: 180 minutes (3 hours)
-  const timeoutMin = Number(process.env.SCHEDULER_PASS_TIMEOUT_MINUTES || 180)
-  const timeoutMs = Math.max(10_000, timeoutMin * 60_000)
+  // Heartbeat-aware watchdog configuration
+  // If a child is actively updating its heartbeat file, we allow it to run beyond the legacy timeout.
+  // Defaults are generous to allow first-day passes to finish searches with delays.
+  const staleHeartbeatMin = Number(
+    process.env.SCHEDULER_STALE_HEARTBEAT_MINUTES || process.env.SCHEDULER_PASS_TIMEOUT_MINUTES || 30
+  )
+  const graceMin = Number(process.env.SCHEDULER_HEARTBEAT_GRACE_MINUTES || 15)
+  const hardcapMin = Number(process.env.SCHEDULER_PASS_HARDCAP_MINUTES || 480) // 8 hours
+  const checkEveryMs = 60_000 // check once per minute
 
   // Fork per pass: safer because we can terminate a stuck child without killing the scheduler
   const forkPerPass = String(process.env.SCHEDULER_FORK_PER_PASS || 'true').toLowerCase() !== 'false'
 
   if (!forkPerPass) {
     // In-process fallback (cannot forcefully stop if truly stuck)
-    await log('main', 'SCHEDULER', `Starting pass in-process with timeout ${timeoutMin}m (cannot force-kill if stuck)`)
-    await Promise.race([
-      runOnePass(),
-      new Promise<void>((_, reject) => setTimeout(() => reject(new Error('pass-timeout')), timeoutMs))
-    ]).catch(async (e) => {
-      const msg = e instanceof Error ? e.message : String(e)
-      if (msg === 'pass-timeout') {
-        await log('main', 'SCHEDULER', `Pass exceeded timeout of ${timeoutMin} minutes (in-process)`, 'warn')
-      } else {
-        await log('main', 'SCHEDULER', `Pass failed: ${msg}`, 'error')
-      }
-    })
+    await log('main', 'SCHEDULER', `Starting pass in-process (grace ${graceMin}m • stale ${staleHeartbeatMin}m • hardcap ${hardcapMin}m). Cannot force-kill if stuck.`)
+    // No true watchdog possible in-process; just run
+    await runOnePass()
     return
   }
 
@@ -86,9 +83,16 @@ async function runOnePassWithWatchdog(): Promise<void> {
   const indexJs = path.join(__dirname, 'index.js')
   await log('main', 'SCHEDULER', `Spawning child for pass: ${process.execPath} ${indexJs}`)
 
+  // Prepare heartbeat file path and pass to child
+  const cfg = loadConfig() as Config
+  const baseDir = path.join(process.cwd(), cfg.sessionPath || 'sessions')
+  const hbFile = path.join(baseDir, `heartbeat_${Date.now()}.lock`)
+  try { fs.mkdirSync(baseDir, { recursive: true }) } catch { /* ignore */ }
+
   await new Promise<void>((resolve) => {
-    const child = spawn(process.execPath, [indexJs], { stdio: 'inherit' })
+    const child = spawn(process.execPath, [indexJs], { stdio: 'inherit', env: { ...process.env, SCHEDULER_HEARTBEAT_FILE: hbFile } })
     let finished = false
+    const startedAt = Date.now()
 
     const killChild = async (signal: NodeJS.Signals) => {
       try {
@@ -97,17 +101,42 @@ async function runOnePassWithWatchdog(): Promise<void> {
       } catch { /* ignore */ }
     }
 
-    const timer = setTimeout(() => {
+    const timer = setInterval(() => {
       if (finished) return
-      log('main', 'SCHEDULER', `Pass exceeded timeout of ${timeoutMin} minutes; attempting to terminate...`, 'warn')
-      // Try graceful then forceful kill
-      void killChild('SIGTERM')
-      setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
-    }, timeoutMs)
+      const now = Date.now()
+      const runtimeMin = Math.floor((now - startedAt) / 60000)
+      // Hard cap: always terminate if exceeded
+      if (runtimeMin >= hardcapMin) {
+        log('main', 'SCHEDULER', `Pass exceeded hard cap of ${hardcapMin} minutes; terminating...`, 'warn')
+        void killChild('SIGTERM')
+        setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
+        return
+      }
+      // Before grace, don't judge
+      if (runtimeMin < graceMin) return
+      // Check heartbeat freshness
+      try {
+        const st = fs.statSync(hbFile)
+        const mtimeMs = st.mtimeMs
+        const ageMin = Math.floor((now - mtimeMs) / 60000)
+        if (ageMin >= staleHeartbeatMin) {
+          log('main', 'SCHEDULER', `Heartbeat stale for ${ageMin}m (>=${staleHeartbeatMin}m). Terminating child...`, 'warn')
+          void killChild('SIGTERM')
+          setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
+        }
+      } catch {
+        // If file missing after grace, consider stale
+  log('main', 'SCHEDULER', 'Heartbeat file missing after grace. Terminating child...', 'warn')
+        void killChild('SIGTERM')
+        setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
+      }
+    }, checkEveryMs)
 
     child.on('exit', async (code, signal) => {
       finished = true
-      clearTimeout(timer)
+      clearInterval(timer)
+      // Cleanup heartbeat file
+      try { if (fs.existsSync(hbFile)) fs.unlinkSync(hbFile) } catch { /* ignore */ }
       if (signal) {
         await log('main', 'SCHEDULER', `Child exited due to signal: ${signal}`, 'warn')
       } else if (code && code !== 0) {
@@ -120,7 +149,8 @@ async function runOnePassWithWatchdog(): Promise<void> {
 
     child.on('error', async (err) => {
       finished = true
-      clearTimeout(timer)
+      clearInterval(timer)
+      try { if (fs.existsSync(hbFile)) fs.unlinkSync(hbFile) } catch { /* ignore */ }
       await log('main', 'SCHEDULER', `Failed to spawn child: ${err instanceof Error ? err.message : String(err)}`, 'error')
       resolve()
     })
