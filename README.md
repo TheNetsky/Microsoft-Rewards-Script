@@ -444,14 +444,14 @@ npm start -- --debug
 
 Need to go deeper? Start here:
 
-- Diagnostics: ./information/diagnostics.md
-- Job State: ./information/jobstate.md
-- Scheduling: ./information/schedule.md
-- Auto Update: ./information/update.md
-- NTFY: ./information/ntfy.md
-- Discord Webhook Reports: ./information/conclusionwebhook.md
-- Proxy Setup: ./information/proxy.md
-- Buy Mode details: ./information/buy-mode.md
+- [Diagnostics](./information/diagnostics.md)
+- [Job State](./information/jobstate.md)
+- [Scheduling](./information/schedule.md)
+- [Auto Update](./information/update.md)
+- [NTFY](./information/ntfy.md)
+- [Discord Webhook Reports](./information/conclusionwebhook.md)
+- [Proxy Setup](./information/proxy.md)
+- [Buy Mode details](./information/buy-mode.md)
 
 ---
 

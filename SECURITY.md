@@ -8,7 +8,6 @@ Hi there! 👋 Thanks for caring about security and privacy — we do too. This 
 - Your credentials stay on your machine (or in your container volumes). 🔒
 - Sessions/cookies are stored locally to reduce re-login friction. 🍪
 - Use at your own risk. Microsoft may take action on accounts that use automation.
-- Please report vulnerabilities privately first. We’ll respond promptly. 🤝
 
 ## What this project does (and doesn’t)
 
