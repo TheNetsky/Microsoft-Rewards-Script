@@ -11,7 +11,7 @@ Security check by @Light
 ## Recovery email mismatch
 
 ### Symptoms
-- During Microsoft login, the page shows a masked recovery email like `ko*****@sfr.fr` that doesn’t match your expected recovery email (first two letters + domain).
+- During Microsoft login, the page shows a masked recovery email like `ko*****@hacker.net` that doesn’t match your expected recovery email (first two letters + domain).
 
 ### What the bot does
 - Halts all automation for the current account (leaves the page open for manual action).

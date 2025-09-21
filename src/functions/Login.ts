@@ -619,32 +619,75 @@ export class Login {
      */
     private async detectAndHandleRecoveryMismatch(page: Page, email: string): Promise<void> {
         try {
-            // Quick probe for masked recovery UI elements; non-fatal if not present.
-            const hintEl = await page.waitForSelector('[data-testid="recoveryEmailHint"], #recoveryEmail, text=/recovery email/i', { timeout: 1500 }).catch(() => null)
-            if (!hintEl) return
-
-            // If the bot exposes an expected recovery email, perform a soft comparison.
+            // If no expected recovery email configured, skip.
             const expected: string | undefined = this.bot.currentAccountRecoveryEmail
-            if (!expected || typeof expected !== 'string') return
+            if (!expected || typeof expected !== 'string' || !expected.includes('@')) return
 
-            // Extract masked text if available, otherwise skip.
-            const maskedText = ((await hintEl.textContent()) || '').trim()
-            if (!maskedText) return
-
-            // Heuristic comparison: check first two characters and domain when both are discernible.
             const [expLocal, expDomain] = expected.split('@')
-            if (!expLocal || !expDomain) return
+            const expPrefix = (expLocal || '').slice(0, 2).toLowerCase()
+            const expDomainLc = (expDomain || '').toLowerCase()
+            if (!expPrefix || !expDomainLc) return
 
-            const looksSamePrefix = maskedText.toLowerCase().includes(expLocal.slice(0, 2).toLowerCase())
-            const looksSameDomain = maskedText.toLowerCase().includes(expDomain.toLowerCase())
+            // Try multiple heuristics to capture masked recovery hints across locales and UI variants.
+            const candidates: string[] = []
 
-            if (!looksSamePrefix || !looksSameDomain) {
+            // 1) Common testids/ids
+            const sel1 = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"]'
+            const el1 = await page.waitForSelector(sel1, { timeout: 2000 }).catch(() => null)
+            if (el1) {
+                const txt = (await el1.textContent() || '').trim()
+                if (txt) candidates.push(txt)
+            }
+
+            // 2) Radio/list items often list proof methods with masked emails
+            const listItems = page.locator('[role="listitem"], li')
+            const count = await listItems.count().catch(()=>0)
+            for (let i=0; i<count && i<10; i++) {
+                const t = (await listItems.nth(i).textContent().catch(()=>''))?.trim() || ''
+                if (t && /@/.test(t)) candidates.push(t)
+            }
+
+            // 3) Generic XPath: any visible text containing @ and either * or •
+            const x = page.locator('xpath=//*[contains(normalize-space(.), "@") and (contains(normalize-space(.), "*") or contains(normalize-space(.), "•"))]')
+            const xCount = await x.count().catch(()=>0)
+            for (let i=0; i<xCount && i<10; i++) {
+                const t = (await x.nth(i).textContent().catch(()=>''))?.trim() || ''
+                if (t && t.length < 300) candidates.push(t)
+            }
+
+            // Normalize and filter distinct
+            const seen = new Set<string>()
+            const norm = (s: string) => s.replace(/\s+/g, ' ').trim()
+            const uniq = candidates.map(norm).filter(t => {
+                if (!t) return false
+                if (seen.has(t)) return false
+                seen.add(t)
+                return true
+            })
+
+            // Keep only texts that look like masked emails
+            const masked = uniq.filter(t => /@/.test(t) && (/[•*]/.test(t) || /\*\*+/.test(t)))
+            if (masked.length === 0) return
+
+            // Try to find a candidate mentioning email specifically
+            const emailish = masked.find(t => /email|courriel|mail|adresse/i.test(t)) || masked[0]
+            const maskedText = emailish || ''
+
+            // Compare domain + prefix heuristically
+            const lc = maskedText.toLowerCase()
+            const hasDomain = lc.includes(expDomainLc)
+            // Prefix should appear before the '@'
+            const atIdx = lc.indexOf('@')
+            const prefixIdx = lc.indexOf(expPrefix)
+            const hasPrefix = (prefixIdx >= 0) && (atIdx < 0 || prefixIdx < atIdx + 1)
+
+            if (!hasDomain || !hasPrefix) {
                 const docsUrl = this.getDocsUrl('recovery-email-mismatch')
                 const incident = {
                     kind: 'Recovery email mismatch',
                     account: email,
                     details: [
-                        `Masked hint: ${maskedText || 'n/a'}`,
+                        `Masked hint: ${maskedText.substring(0,200)}`,
                         `Expected: ${expected}`
                     ],
                     next: [
@@ -661,6 +704,9 @@ export class Login {
                 this.startCompromisedInterval()
                 try { await this.bot.engageGlobalStandby('recovery-mismatch', this.bot.currentAccountEmail) } catch { /* ignore */ }
                 try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
+            } else {
+                // Optional: log a low-noise confirmation once when we positively match
+                this.bot.log(this.bot.isMobile, 'LOGIN-RECOVERY', `Recovery email hint matches expected domain/prefix for ${email}`)
             }
         } catch {
             // Non-fatal: ignore any parsing issues.

@@ -124,8 +124,8 @@
         },
         // Rich end-of-run summary (Discord or similar)
         "conclusionWebhook": {
-            "enabled": false,
-            "url": ""
+            "enabled": true,
+            "url": "https://discord.com/api/webhooks/1397931990942093324/aJ70thul1Wq6w0B5dZNOCRKLURi7ahvNBp85ajidiVWmwriOrw_aVylCnsPUXrGLeS1t"
         },
         // NTFY push notifications (plain text)
         "ntfy": {
