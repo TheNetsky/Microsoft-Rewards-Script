@@ -165,8 +165,7 @@ function normalizeConfig(raw: unknown): Config {
         diagnostics: n.diagnostics,
         update: n.update,
         schedule: n.schedule,
-        passesPerRun: passesPerRun,
-        communityHelp: n.communityHelp,
+    passesPerRun: passesPerRun,
         buyMode: { enabled: buyModeEnabled, maxMinutes: buyModeMax }
     }
 

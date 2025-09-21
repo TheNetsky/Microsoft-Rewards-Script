@@ -23,7 +23,6 @@ export interface Config {
     update?: ConfigUpdate;
     schedule?: ConfigSchedule;
     passesPerRun?: number;
-    communityHelp?: ConfigCommunityHelp;
     buyMode?: ConfigBuyMode; // Optional manual spending mode
 }
 
@@ -131,8 +130,5 @@ export interface ConfigJobState {
     dir?: string; // base directory; defaults to <sessionPath>/job-state
 }
 
-export interface ConfigCommunityHelp {
-    enabled?: boolean; // default true (opt-out)
-    minIntervalMs?: number; // throttle duplicate error posts
-}
+// CommunityHelp removed (privacy-first policy)
 

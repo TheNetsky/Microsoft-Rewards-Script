@@ -144,11 +144,7 @@
         "retentionDays": 7
     },
     
-    "communityHelp": {
-        // Opt-in telemetry/help (if present). Throttles duplicate error posts.
-        "enabled": true,
-        "minIntervalMs": 10000
-    },
+    
     
     "jobState": {
         // Checkpoint to avoid duplicate work across restarts
