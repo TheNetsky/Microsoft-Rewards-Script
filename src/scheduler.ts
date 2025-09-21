@@ -6,11 +6,44 @@ import { loadConfig } from './util/Load'
 import { log } from './util/Logger'
 import type { Config } from './interface/Config'
 
-function parseTargetToday(now: Date, timeHHmm: string, tz: string) {
-  const [hh, mm] = timeHHmm.split(':').map((v) => parseInt(v, 10))
-  const zone = IANAZone.isValidZone(tz) ? tz : 'UTC'
-  const dtn = DateTime.fromJSDate(now, { zone })
-  return dtn.set({ hour: hh, minute: mm, second: 0, millisecond: 0 })
+function resolveTimeParts(schedule: Config['schedule'] | undefined): { tz: string; hour: number; minute: number } {
+  const tz = (schedule?.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
+  // Determine source string
+  let src = ''
+  if (typeof schedule?.useAmPm === 'boolean') {
+    if (schedule.useAmPm) src = (schedule.time12 || schedule.time || '').trim()
+    else src = (schedule.time24 || schedule.time || '').trim()
+  } else {
+    // Back-compat: prefer time if present; else time24 or time12
+    src = (schedule?.time || schedule?.time24 || schedule?.time12 || '').trim()
+  }
+  // Try to parse 24h first: HH:mm
+  const m24 = src.match(/^\s*(\d{1,2}):(\d{2})\s*$/i)
+  if (m24) {
+    const hh = Math.max(0, Math.min(23, parseInt(m24[1]!, 10)))
+    const mm = Math.max(0, Math.min(59, parseInt(m24[2]!, 10)))
+    return { tz, hour: hh, minute: mm }
+  }
+  // Parse 12h with AM/PM: h:mm AM or h AM
+  const m12 = src.match(/^\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)\s*$/i)
+  if (m12) {
+    let hh = parseInt(m12[1]!, 10)
+    const mm = m12[2] ? parseInt(m12[2]!, 10) : 0
+    const ampm = m12[3]!.toUpperCase()
+    if (hh === 12) hh = 0
+    if (ampm === 'PM') hh += 12
+    hh = Math.max(0, Math.min(23, hh))
+    const m = Math.max(0, Math.min(59, mm))
+    return { tz, hour: hh, minute: m }
+  }
+  // Fallback: default 09:00
+  return { tz, hour: 9, minute: 0 }
+}
+
+function parseTargetToday(now: Date, schedule: Config['schedule'] | undefined) {
+  const { tz, hour, minute } = resolveTimeParts(schedule)
+  const dtn = DateTime.fromJSDate(now, { zone: tz })
+  return dtn.set({ hour, minute, second: 0, millisecond: 0 })
 }
 
 async function runOnePass(): Promise<void> {
@@ -162,8 +195,7 @@ async function main() {
     process.exit(0)
   }
 
-  const tz = schedule.timeZone || 'America/New_York'
-  const time = schedule.time || '09:00'
+  const tz = (schedule.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
   const runImmediate = schedule.runImmediatelyOnStart !== false
 
   // Optional initial jitter before the first run (to vary start time)
@@ -182,7 +214,7 @@ async function main() {
         await new Promise((r) => setTimeout(r, jitterSec * 1000))
       }
     }
-    const nowDT = DateTime.local().setZone(tz)
+  const nowDT = DateTime.local().setZone(tz)
     await chooseVacationRange(nowDT)
     await refreshOffDays(nowDT)
   const todayIso = nowDT.toFormat('yyyy-LL-dd')
@@ -199,7 +231,7 @@ async function main() {
 
   for (;;) {
     const now = new Date()
-    const targetToday = parseTargetToday(now, time, tz)
+  const targetToday = parseTargetToday(now, schedule)
     let next = targetToday
     const nowDT = DateTime.fromJSDate(now, { zone: targetToday.zone })
 

@@ -169,11 +169,16 @@
     },
     
     "schedule": {
-        // Built-in scheduler (no cron needed in container). Uses local time zone setting below.
+        // Built-in scheduler (no cron needed in container). Uses the IANA time zone below.
         "enabled": false,
-        // Daily time to start a pass (24h format)
-        "time": "09:00",
-        // IANA timezone, e.g. "Europe/Paris"
+        // Choose YOUR preferred time format:
+        // - US style with AM/PM → set useAmPm: true and edit time12 (e.g., "9:00 AM")
+        // - 24-hour style      → set useAmPm: false and edit time24 (e.g., "09:00")
+        // Back-compat: if both time12/time24 are empty, the legacy "time" (HH:mm) will be used if present.
+        "useAmPm": false,
+        "time12": "9:00 AM",
+        "time24": "09:00",
+        // IANA timezone for scheduling (set to your region), e.g. "Europe/Paris" or "America/New_York"
         "timeZone": "America/New_York",
         // If true, run one pass immediately when the process starts
         "runImmediatelyOnStart": true

@@ -83,8 +83,12 @@ export interface ConfigBuyMode {
 
 export interface ConfigSchedule {
     enabled?: boolean;
-    time?: string; // "HH:mm"
+    time?: string; // Back-compat: accepts "HH:mm" or "h:mm AM/PM"
+    // New optional explicit times
+    time12?: string; // e.g., "9:00 AM"
+    time24?: string; // e.g., "09:00"
     timeZone?: string; // IANA TZ e.g., "America/New_York"
+    useAmPm?: boolean; // If true, prefer time12 + AM/PM style; if false, prefer time24. If undefined, back-compat behavior.
     runImmediatelyOnStart?: boolean; // if true, run once immediately when process starts
 }
 
