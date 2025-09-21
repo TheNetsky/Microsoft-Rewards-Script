@@ -74,7 +74,13 @@ export class MicrosoftRewardsBot {
         this.humanizer = new Humanizer(this.utils, this.config.humanization)
         this.activeWorkers = this.config.clusters
         this.mobileRetryAttempts = 0
-        // CLI: detect buy mode flag and target email
+        // Base buy mode from config
+        const cfgAny = this.config as unknown as { buyMode?: { enabled?: boolean } }
+        if (cfgAny.buyMode?.enabled === true) {
+            this.buyMode.enabled = true
+        }
+
+        // CLI: detect buy mode flag and target email (overrides config)
         const idx = process.argv.indexOf('-buy')
         if (idx >= 0) {
             const target = process.argv[idx + 1]

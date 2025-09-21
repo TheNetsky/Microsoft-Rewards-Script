@@ -185,9 +185,6 @@ services:
     build: .
     environment:
       - TZ=America/New_York              # 🌍 Your timezone
-      # Built-in scheduler randomization (optional)
-      #- SCHEDULER_INITIAL_JITTER_MINUTES_MIN=5
-      #- SCHEDULER_INITIAL_JITTER_MINUTES_MAX=20
       #- SCHEDULER_DAILY_JITTER_MINUTES_MIN=2
       #- SCHEDULER_DAILY_JITTER_MINUTES_MAX=10
       # Watchdog timeout (minutes)
@@ -227,14 +224,12 @@ docker logs -f microsoft-rewards
 
 By default, the Docker image now runs the built‑in scheduler (no cron in the container). Configure time and timezone in `src/config.json` under `schedule`, and use these optional envs for randomization/robustesse:
 - `TZ` — container timezone, e.g., `Europe/Paris`
-- `SCHEDULER_INITIAL_JITTER_MINUTES_MIN` / `SCHEDULER_INITIAL_JITTER_MINUTES_MAX`
 - `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX`
 - `SCHEDULER_PASS_TIMEOUT_MINUTES`
 
-Alternative (external cron): you can still drive the script with cron outside the container or with the provided `src/run_daily.sh` on bare‑metal. See the next section.
+Alternative (external cron): you can still drive the script with your host's scheduler (cron, Windows Task Scheduler) by invoking the scheduler entry directly.
 
-Tip: If you switch to the built‑in scheduler, you can also enable start‑time variation and a watchdog timeout via env vars:
-- `SCHEDULER_INITIAL_JITTER_MINUTES_MIN` / `SCHEDULER_INITIAL_JITTER_MINUTES_MAX` — random delay before the very first run inside the scheduler process (e.g., 5/20)
+Tip: With the built‑in scheduler you can enable a watchdog timeout via env vars:
 - `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX` — extra random delay added to each daily scheduled time
 - `SCHEDULER_PASS_TIMEOUT_MINUTES` — kill a stuck pass after N minutes (default 180)
 - `SCHEDULER_FORK_PER_PASS` — if `false`, runs passes in‑process (can’t be force‑killed)
@@ -243,17 +238,16 @@ Tip: If you switch to the built‑in scheduler, you can also enable start‑time
 
 ## 🖥️ Bare‑Metal (without Docker)
 
-You can reuse `src/run_daily.sh` directly with your system’s cron:
+Use the built‑in scheduler directly and your OS scheduler if desired:
 
 1. Build once:
   - `npm install && npm run build`
-2. Create a crontab entry, e.g.:
-  - `0 7 * * * TZ=Europe/Paris PROJECT_DIR=/path/to/project /bin/bash /path/to/project/src/run_daily.sh >> /var/log/mrs.log 2>&1`
-
-Notes:
-- Set `PROJECT_DIR` to your project root (Docker defaults to `/usr/src/microsoft-rewards-script`).
-- Optional envs: `MIN_SLEEP_MINUTES`, `MAX_SLEEP_MINUTES`, `STUCK_PROCESS_TIMEOUT_HOURS`.
-- The lock file prevents overlap if a run is still in progress when cron fires again.
+2. Run now (one pass or scheduled loop):
+  - Single run: `npm start`
+  - Scheduler: `npm run start:schedule`
+3. Optional host scheduling:
+  - Linux/macOS cron example: `0 7 * * * TZ=Europe/Paris /usr/bin/node /path/to/repo/dist/scheduler.js >> /var/log/mrs.log 2>&1`
+  - Windows Task Scheduler: run `node` with arguments `C:\path\to\repo\dist\scheduler.js`
 
 For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. external cron), see: [information/schedule.md](./information/schedule.md)
 
@@ -307,6 +301,21 @@ For an in‑depth guide (built‑in scheduler with `passesPerRun` vs. external c
   }
 }
 ```
+
+### Buy Mode toggle via config
+
+You can enable/disable Buy Mode without removing the block in your config. In `src/config.json`:
+
+```jsonc
+{
+  "buyMode": {
+    "enabled": false,   // set to true to force Buy Mode without CLI
+    "maxMinutes": 45
+  }
+}
+```
+
+CLI still works and overrides config: `npm start -- -buy email@domain.com`.
 
 ### Two‑Factor (TOTP) support
 

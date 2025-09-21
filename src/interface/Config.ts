@@ -24,6 +24,7 @@ export interface Config {
     schedule?: ConfigSchedule;
     passesPerRun?: number;
     communityHelp?: ConfigCommunityHelp;
+    buyMode?: ConfigBuyMode; // Optional manual spending mode
 }
 
 export interface ConfigSaveFingerprint {
@@ -73,6 +74,11 @@ export interface ConfigUpdate {
     git?: boolean; // if true, run git pull + npm ci + npm run build after completion
     docker?: boolean; // if true, run docker update routine (compose pull/up) after completion
     scriptPath?: string; // optional custom path to update script relative to repo root
+}
+
+export interface ConfigBuyMode {
+    enabled?: boolean; // if true, force buy mode session
+    maxMinutes?: number; // session duration cap
 }
 
 export interface ConfigSchedule {

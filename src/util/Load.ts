@@ -10,8 +10,9 @@ import { Config, ConfigSaveFingerprint } from '../interface/Config'
 let configCache: Config
 
 // Normalize both legacy (flat) and new (nested) config schemas into the flat Config interface
-function normalizeConfig(raw: any): Config {
-    const n = raw || {}
+function normalizeConfig(raw: unknown): Config {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const n: any = (raw as any) || {}
 
     // Browser / execution
     const headless = n.browser?.headless ?? n.headless ?? false
@@ -47,6 +48,8 @@ function normalizeConfig(raw: any): Config {
         doReadToEarn: true,
         bundleDailySetWithSearch: false
     }
+    // Ensure missing flag gets a default
+    if (typeof workers.bundleDailySetWithSearch !== 'boolean') workers.bundleDailySetWithSearch = false
 
     // Logging
     const logging = n.logging ?? {}
@@ -58,6 +61,11 @@ function normalizeConfig(raw: any): Config {
     const webhook = notifications.webhook ?? n.webhook ?? { enabled: false, url: '' }
     const conclusionWebhook = notifications.conclusionWebhook ?? n.conclusionWebhook ?? { enabled: false, url: '' }
     const ntfy = notifications.ntfy ?? n.ntfy ?? { enabled: false, url: '', topic: '', authToken: '' }
+
+    // Buy Mode
+    const buyMode = n.buyMode ?? {}
+    const buyModeEnabled = typeof buyMode.enabled === 'boolean' ? buyMode.enabled : false
+    const buyModeMax = typeof buyMode.maxMinutes === 'number' ? buyMode.maxMinutes : 45
 
     // Fingerprinting
     const saveFingerprint = (n.fingerprinting?.saveFingerprint ?? n.saveFingerprint) ?? { mobile: false, desktop: false }
@@ -87,7 +95,8 @@ function normalizeConfig(raw: any): Config {
         update: n.update,
         schedule: n.schedule,
         passesPerRun: passesPerRun,
-        communityHelp: n.communityHelp
+        communityHelp: n.communityHelp,
+        buyMode: { enabled: buyModeEnabled, maxMinutes: buyModeMax }
     }
 
     return cfg

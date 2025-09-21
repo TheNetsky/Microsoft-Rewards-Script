@@ -1,7 +1,7 @@
 ###############################################################################
 # Stage 1: Builder (compile TypeScript)
 ###############################################################################
-FROM node:18-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /usr/src/microsoft-rewards-script
 
@@ -11,7 +11,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package manifests
-COPY package*.json ./
+COPY package*.json tsconfig.json ./
 
 # Conditional install: npm ci if lockfile exists, else npm install
 RUN if [ -f package-lock.json ]; then \

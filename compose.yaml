@@ -13,9 +13,6 @@ services:
     environment:
       TZ: "America/Toronto" # Set your timezone for proper scheduling
       NODE_ENV: "production"
-      # Built-in scheduler jitter (optional):
-      #SCHEDULER_INITIAL_JITTER_MINUTES_MIN: "5"
-      #SCHEDULER_INITIAL_JITTER_MINUTES_MAX: "20"
       #SCHEDULER_DAILY_JITTER_MINUTES_MIN: "2"
       #SCHEDULER_DAILY_JITTER_MINUTES_MAX: "10"
       # Watchdog timeout per pass (minutes, default 180)
