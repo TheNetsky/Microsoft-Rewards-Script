@@ -727,9 +727,35 @@ export class Login {
         if (incident.details && incident.details.length) lines.push(`Details: ${incident.details.join(' | ')}`)
         if (incident.next && incident.next.length) lines.push(`Next: ${incident.next.join(' -> ')}`)
         if (incident.docsUrl) lines.push(`Docs: ${incident.docsUrl}`)
-    const level: 'warn' | 'error' = severity === 'critical' ? 'error' : 'warn'
-    this.bot.log(this.bot.isMobile, 'SECURITY', lines.join(' | '), level)
-        // If a richer webhook system exists on the bot, optionally call it here in the future.
+        const level: 'warn' | 'error' = severity === 'critical' ? 'error' : 'warn'
+        this.bot.log(this.bot.isMobile, 'SECURITY', lines.join(' | '), level)
+
+        // Send a structured embed to webhooks for visibility (aligns with docs)
+        try {
+            const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
+            const color = severity === 'critical' ? 0xFF0000 : 0xFFAA00
+            const fields = [] as { name: string; value: string; inline?: boolean }[]
+            fields.push({ name: 'Account', value: incident.account })
+            if (incident.details && incident.details.length) {
+                fields.push({ name: 'Details', value: incident.details.join('\n') })
+            }
+            if (incident.next && incident.next.length) {
+                fields.push({ name: 'Next steps', value: incident.next.join('\n') })
+            }
+            if (incident.docsUrl) {
+                fields.push({ name: 'Docs', value: incident.docsUrl })
+            }
+            await ConclusionWebhook(this.bot.config, '', {
+                embeds: [
+                    {
+                        title: `🔐 ${incident.kind}`,
+                        description: 'Security check by @Light',
+                        color,
+                        fields
+                    }
+                ]
+            })
+        } catch { /* ignore webhook failures */ }
     }
 
     /** Builds a docs URL for security incidents. */
@@ -758,10 +784,11 @@ export class Login {
     /** Periodically reminds the operator that the session is in compromised/standby mode. */
     private startCompromisedInterval() {
         if (this.compromisedInterval) clearInterval(this.compromisedInterval)
+        // Repeat reminder every 5 minutes (as documented)
         this.compromisedInterval = setInterval(() => {
             try {
-                this.bot.log(this.bot.isMobile, 'SECURITY', 'Account in security standby. Review incident and docs before proceeding.', 'warn')
+                this.bot.log(this.bot.isMobile, 'SECURITY', 'Account in security standby. Review incident and docs before proceeding. Security check by @Light', 'warn')
             } catch { /* ignore */ }
-        }, 30000)
+        }, 5 * 60 * 1000)
     }
 }
