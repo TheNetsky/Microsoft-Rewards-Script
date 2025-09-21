@@ -130,6 +130,8 @@ function normalizeConfig(raw: unknown): Config {
     // Humanization defaults (single on/off)
     if (!n.humanization) n.humanization = {}
     if (typeof n.humanization.enabled !== 'boolean') n.humanization.enabled = true
+    if (typeof n.humanization.stopOnBan !== 'boolean') n.humanization.stopOnBan = false
+    if (typeof n.humanization.immediateBanAlert !== 'boolean') n.humanization.immediateBanAlert = true
     if (typeof n.humanization.randomOffDaysPerWeek !== 'number') {
         n.humanization.randomOffDaysPerWeek = 1
     }
@@ -139,6 +141,17 @@ function normalizeConfig(raw: unknown): Config {
     }
     if (typeof n.humanization.gestureScrollProb !== 'number') {
         n.humanization.gestureScrollProb = n.humanization.enabled === false ? 0 : 0.25
+    }
+
+    // Vacation mode (monthly contiguous off-days)
+    if (!n.vacation) n.vacation = {}
+    if (typeof n.vacation.enabled !== 'boolean') n.vacation.enabled = false
+    const vMin = Number(n.vacation.minDays)
+    const vMax = Number(n.vacation.maxDays)
+    n.vacation.minDays = isFinite(vMin) && vMin > 0 ? Math.floor(vMin) : 3
+    n.vacation.maxDays = isFinite(vMax) && vMax > 0 ? Math.floor(vMax) : 5
+    if (n.vacation.maxDays < n.vacation.minDays) {
+        const t = n.vacation.minDays; n.vacation.minDays = n.vacation.maxDays; n.vacation.maxDays = t
     }
 
     const cfg: Config = {
@@ -166,6 +179,7 @@ function normalizeConfig(raw: unknown): Config {
         update: n.update,
         schedule: n.schedule,
     passesPerRun: passesPerRun,
+        vacation: n.vacation,
         buyMode: { enabled: buyModeEnabled, maxMinutes: buyModeMax }
     }
 

@@ -42,7 +42,21 @@ class AxiosClient {
             return bypassInstance.request(config)
         }
 
-        return this.instance.request(config)
+        try {
+            return await this.instance.request(config)
+        } catch (err: unknown) {
+            // If proxied request fails with common proxy/network errors, retry once without proxy
+            const e = err as { code?: string; cause?: { code?: string }; message?: string } | undefined
+            const code = e?.code || e?.cause?.code
+            const isNetErr = code === 'ECONNREFUSED' || code === 'ETIMEDOUT' || code === 'ECONNRESET' || code === 'ENOTFOUND'
+            const msg = String(e?.message || '')
+            const looksLikeProxyIssue = /proxy|tunnel|socks|agent/i.test(msg)
+            if (!bypassProxy && (isNetErr || looksLikeProxyIssue)) {
+                const bypassInstance = axios.create()
+                return bypassInstance.request(config)
+            }
+            throw err
+        }
     }
 }
 

@@ -24,6 +24,7 @@ export interface Config {
     schedule?: ConfigSchedule;
     passesPerRun?: number;
     buyMode?: ConfigBuyMode; // Optional manual spending mode
+    vacation?: ConfigVacation; // Optional monthly contiguous off-days
 }
 
 export interface ConfigSaveFingerprint {
@@ -87,6 +88,12 @@ export interface ConfigSchedule {
     runImmediatelyOnStart?: boolean; // if true, run once immediately when process starts
 }
 
+export interface ConfigVacation {
+    enabled?: boolean; // default false
+    minDays?: number; // default 3
+    maxDays?: number; // default 5
+}
+
 export interface ConfigWorkers {
     doDailySet: boolean;
     doMorePromotions: boolean;
@@ -102,6 +109,10 @@ export interface ConfigWorkers {
 export interface ConfigHumanization {
     // Master toggle for Human Mode. When false, humanization is minimized.
     enabled?: boolean;
+    // If true, stop processing remaining accounts after a ban is detected
+    stopOnBan?: boolean;
+    // If true, send an immediate webhook/NTFY alert when a ban is detected
+    immediateBanAlert?: boolean;
     // Additional random waits between actions
     actionDelay?: { min: number | string; max: number | string };
     // Probability [0..1] to perform micro mouse moves per step

@@ -114,6 +114,9 @@ async function main() {
   const offPerWeek = Math.max(0, Math.min(7, Number(cfg.humanization?.randomOffDaysPerWeek ?? 1)))
   let offDays: number[] = [] // 1..7 ISO weekday
   let offWeek: number | null = null
+  type VacRange = { start: string; end: string } | null
+  let vacMonth: string | null = null // 'yyyy-LL'
+  let vacRange: VacRange = null // ISO dates 'yyyy-LL-dd'
 
   const refreshOffDays = async (now: { weekNumber: number }) => {
     if (offPerWeek <= 0) { offDays = []; offWeek = null; return }
@@ -130,6 +133,27 @@ async function main() {
     offDays = chosen.sort((a,b)=>a-b)
     offWeek = week
     await log('main','SCHEDULER',`Selected random off-days this week (ISO): ${offDays.join(', ')}`,'warn')
+  }
+
+  const chooseVacationRange = async (now: typeof DateTime.prototype) => {
+    // Only when enabled
+    if (!cfg.vacation?.enabled) { vacRange = null; vacMonth = null; return }
+    const monthKey = now.toFormat('yyyy-LL')
+    if (vacMonth === monthKey && vacRange) return
+    // Determine month days and choose contiguous block
+    const monthStart = now.startOf('month')
+    const monthEnd = now.endOf('month')
+    const totalDays = monthEnd.day
+    const minD = Math.max(1, Math.min(28, Number(cfg.vacation.minDays ?? 3)))
+    const maxD = Math.max(minD, Math.min(31, Number(cfg.vacation.maxDays ?? 5)))
+    const span = (minD === maxD) ? minD : (minD + Math.floor(Math.random() * (maxD - minD + 1)))
+    const latestStart = Math.max(1, totalDays - span + 1)
+    const startDay = 1 + Math.floor(Math.random() * latestStart)
+    const start = monthStart.set({ day: startDay })
+    const end = start.plus({ days: span - 1 })
+    vacMonth = monthKey
+    vacRange = { start: start.toFormat('yyyy-LL-dd'), end: end.toFormat('yyyy-LL-dd') }
+    await log('main','SCHEDULER',`Selected vacation block this month: ${vacRange.start} → ${vacRange.end} (${span} day(s))`,'warn')
   }
 
   if (!schedule.enabled) {
@@ -159,8 +183,14 @@ async function main() {
       }
     }
     const nowDT = DateTime.local().setZone(tz)
+    await chooseVacationRange(nowDT)
     await refreshOffDays(nowDT)
-    if (offDays.includes(nowDT.weekday)) {
+  const todayIso = nowDT.toFormat('yyyy-LL-dd')
+  const vr = vacRange as { start: string; end: string } | null
+  const isVacationToday = !!(vr && todayIso >= vr.start && todayIso <= vr.end)
+    if (isVacationToday) {
+      await log('main','SCHEDULER',`Skipping immediate run: vacation day (${todayIso})`,'warn')
+    } else if (offDays.includes(nowDT.weekday)) {
       await log('main','SCHEDULER',`Skipping immediate run: off-day (weekday ${nowDT.weekday})`,'warn')
     } else {
       await runPasses(passes)
@@ -203,8 +233,16 @@ async function main() {
 
     await new Promise((resolve) => setTimeout(resolve, ms))
 
-    const nowRun = DateTime.local().setZone(tz)
+  const nowRun = DateTime.local().setZone(tz)
+    await chooseVacationRange(nowRun)
     await refreshOffDays(nowRun)
+  const todayIso2 = nowRun.toFormat('yyyy-LL-dd')
+  const vr2 = vacRange as { start: string; end: string } | null
+  const isVacation = !!(vr2 && todayIso2 >= vr2.start && todayIso2 <= vr2.end)
+    if (isVacation) {
+      await log('main','SCHEDULER',`Skipping scheduled run: vacation day (${todayIso2})`,'warn')
+      continue
+    }
     if (offDays.includes(nowRun.weekday)) {
       await log('main','SCHEDULER',`Skipping scheduled run: off-day (weekday ${nowRun.weekday})`,'warn')
       continue

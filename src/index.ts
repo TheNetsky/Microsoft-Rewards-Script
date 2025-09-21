@@ -56,6 +56,7 @@ export class MicrosoftRewardsBot {
     private accountSummaries: AccountSummary[] = []
     private runId: string = Math.random().toString(36).slice(2)
     private diagCount: number = 0
+    private bannedTriggered: { email: string; reason: string } | null = null
 
     //@ts-expect-error Will be initialized later
     public axios: Axios
@@ -371,6 +372,11 @@ export class MicrosoftRewardsBot {
 
     private async runTasks(accounts: Account[]) {
         for (const account of accounts) {
+            // Optional global stop after first ban
+            if (this.config?.humanization?.stopOnBan === true && this.bannedTriggered) {
+                log('main','TASK',`Stopping remaining accounts due to ban on ${this.bannedTriggered.email}: ${this.bannedTriggered.reason}`,'warn')
+                break
+            }
             // If humanization allowed windows are configured, wait until within a window
             try {
                 const windows: string[] | undefined = this.config?.humanization?.allowedWindows
@@ -411,14 +417,20 @@ export class MicrosoftRewardsBot {
                     const msg = e instanceof Error ? e.message : String(e)
                     log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
                     const bd = detectBanReason(e)
-                    if (bd.status) { banned.status = true; banned.reason = bd.reason.substring(0,200) }
+                    if (bd.status) {
+                        banned.status = true; banned.reason = bd.reason.substring(0,200)
+                        void this.handleImmediateBanAlert(account.email, banned.reason)
+                    }
                     errors.push(formatFullErr('desktop', e)); return null
                 })
                 const mobilePromise = mobileInstance.Mobile(account).catch(e => {
                     const msg = e instanceof Error ? e.message : String(e)
                     log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
                     const bd = detectBanReason(e)
-                    if (bd.status) { banned.status = true; banned.reason = bd.reason.substring(0,200) }
+                    if (bd.status) {
+                        banned.status = true; banned.reason = bd.reason.substring(0,200)
+                        void this.handleImmediateBanAlert(account.email, banned.reason)
+                    }
                     errors.push(formatFullErr('mobile', e)); return null
                 })
                 const [desktopResult, mobileResult] = await Promise.all([desktopPromise, mobilePromise])
@@ -436,7 +448,10 @@ export class MicrosoftRewardsBot {
                     const msg = e instanceof Error ? e.message : String(e)
                     log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
                     const bd = detectBanReason(e)
-                    if (bd.status) { banned.status = true; banned.reason = bd.reason.substring(0,200) }
+                    if (bd.status) {
+                        banned.status = true; banned.reason = bd.reason.substring(0,200)
+                        void this.handleImmediateBanAlert(account.email, banned.reason)
+                    }
                     errors.push(formatFullErr('desktop', e)); return null
                 })
                 if (desktopResult) {
@@ -451,7 +466,10 @@ export class MicrosoftRewardsBot {
                         const msg = e instanceof Error ? e.message : String(e)
                         log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
                         const bd = detectBanReason(e)
-                        if (bd.status) { banned.status = true; banned.reason = bd.reason.substring(0,200) }
+                        if (bd.status) {
+                            banned.status = true; banned.reason = bd.reason.substring(0,200)
+                            void this.handleImmediateBanAlert(account.email, banned.reason)
+                        }
                         errors.push(formatFullErr('mobile', e)); return null
                     })
                     if (mobileResult) {
@@ -479,6 +497,10 @@ export class MicrosoftRewardsBot {
                 banned
             })
 
+            if (banned.status && this.config?.humanization?.stopOnBan === true) {
+                this.bannedTriggered = { email: account.email, reason: banned.reason }
+            }
+
             await log('main', 'MAIN-WORKER', `Completed tasks for account ${account.email}`, 'log', 'green')
         }
 
@@ -501,6 +523,28 @@ export class MicrosoftRewardsBot {
             await this.runAutoUpdate().catch(() => {/* ignore update errors */})
         }
         process.exit()
+    }
+
+    /** Send immediate ban alert if configured. */
+    private async handleImmediateBanAlert(email: string, reason: string): Promise<void> {
+        try {
+            const h = this.config?.humanization
+            if (!h || h.immediateBanAlert === false) return
+            const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+            const title = '🚫 Ban detected'
+            const desc = [`Account: ${email}`, `Reason: ${reason || 'detected by heuristics'}`].join('\n')
+            await ConclusionWebhook(this.config, `${title}\n${desc}`, {
+                embeds: [
+                    {
+                        title,
+                        description: desc,
+                        color: 0xFF0000
+                    }
+                ]
+            })
+        } catch (e) {
+            log('main','ALERT',`Failed to send ban alert: ${e instanceof Error ? e.message : e}`,'warn')
+        }
     }
 
     /** Compute milliseconds to wait until within one of the allowed windows (HH:mm-HH:mm). Returns 0 if already inside. */
