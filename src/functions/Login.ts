@@ -255,7 +255,7 @@ export class Login {
             const element = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { state: 'visible', timeout: 2000 })
             return await element.textContent()
         } catch {
-            if (this.bot.config.parallel) {s
+            if (this.bot.config.parallel) {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Script running in parallel, can only send 1 2FA request per account at a time!', 'log', 'yellow')
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Trying again in 60 seconds! Please wait...', 'log', 'yellow')
 
@@ -608,5 +608,114 @@ export class Login {
         if (isLocked) {
             throw this.bot.log(this.bot.isMobile, 'CHECK-LOCKED', 'This account has been locked! Remove the account from "accounts.json" and restart!', 'error')
         }
+    }
+
+    // --- Helpers added to satisfy references and provide incident handling ---
+
+    /**
+     * Detects a masked recovery email prompt and optionally compares it to an expected recovery email.
+     * If a mismatch is suspected, logs a warning and marks the session as compromised in a soft way.
+     * This is intentionally lightweight to avoid false-positives.
+     */
+    private async detectAndHandleRecoveryMismatch(page: Page, email: string): Promise<void> {
+        try {
+            // Quick probe for masked recovery UI elements; non-fatal if not present.
+            const hintEl = await page.waitForSelector('[data-testid="recoveryEmailHint"], #recoveryEmail, text=/recovery email/i', { timeout: 1500 }).catch(() => null)
+            if (!hintEl) return
+
+            // If the bot exposes an expected recovery email, perform a soft comparison.
+            const expected: string | undefined = this.bot.currentAccountRecoveryEmail
+            if (!expected || typeof expected !== 'string') return
+
+            // Extract masked text if available, otherwise skip.
+            const maskedText = ((await hintEl.textContent()) || '').trim()
+            if (!maskedText) return
+
+            // Heuristic comparison: check first two characters and domain when both are discernible.
+            const [expLocal, expDomain] = expected.split('@')
+            if (!expLocal || !expDomain) return
+
+            const looksSamePrefix = maskedText.toLowerCase().includes(expLocal.slice(0, 2).toLowerCase())
+            const looksSameDomain = maskedText.toLowerCase().includes(expDomain.toLowerCase())
+
+            if (!looksSamePrefix || !looksSameDomain) {
+                const docsUrl = this.getDocsUrl('recovery-email-mismatch')
+                const incident = {
+                    kind: 'Recovery email mismatch',
+                    account: email,
+                    details: [
+                        `Masked hint: ${maskedText || 'n/a'}`,
+                        `Expected: ${expected}`
+                    ],
+                    next: [
+                        'Proceed with caution. Automation will pause after login to let you review the account.',
+                        'Verify the recovery email and update your configuration if needed.'
+                    ],
+                    docsUrl
+                }
+                await this.sendIncidentAlert(incident, 'warn')
+
+                // Enter a compromised/standby mode to avoid continuing with other accounts.
+                this.bot.compromisedModeActive = true
+                this.bot.compromisedReason = 'recovery-mismatch'
+                this.startCompromisedInterval()
+                try { await this.bot.engageGlobalStandby('recovery-mismatch', this.bot.currentAccountEmail) } catch { /* ignore */ }
+                try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
+            }
+        } catch {
+            // Non-fatal: ignore any parsing issues.
+        }
+    }
+
+    /**
+     * Sends a unified incident alert. Minimal implementation falling back to console logs.
+     * Severity may be 'warn' or 'critical'.
+     */
+    private async sendIncidentAlert(
+        incident: { kind: string; account: string; details?: string[]; next?: string[]; docsUrl?: string },
+        severity: 'warn' | 'critical' = 'warn'
+    ): Promise<void> {
+        const lines: string[] = []
+        lines.push(`[Incident] ${incident.kind}`)
+        lines.push(`Account: ${incident.account}`)
+        if (incident.details && incident.details.length) lines.push(`Details: ${incident.details.join(' | ')}`)
+        if (incident.next && incident.next.length) lines.push(`Next: ${incident.next.join(' -> ')}`)
+        if (incident.docsUrl) lines.push(`Docs: ${incident.docsUrl}`)
+    const level: 'warn' | 'error' = severity === 'critical' ? 'error' : 'warn'
+    this.bot.log(this.bot.isMobile, 'SECURITY', lines.join(' | '), level)
+        // If a richer webhook system exists on the bot, optionally call it here in the future.
+    }
+
+    /** Builds a docs URL for security incidents. */
+    private getDocsUrl(anchor?: string): string {
+        const base = process.env.DOCS_BASE?.trim() || 'https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/blob/V2/information/security.md'
+        if (!anchor) return base
+        const map: Record<string, string> = {
+            'recovery-email-mismatch': '#recovery-email-mismatch',
+            'we-cant-sign-you-in': '#we-cant-sign-you-in-blocked'
+        }
+        const suffix = map[anchor] || ''
+        return suffix ? `${base}${suffix}` : base
+    }
+
+    /** Opens the given docs URL in a new tab (best-effort). */
+    private async openDocsTab(page: Page, url: string): Promise<void> {
+        try {
+            const ctx = page.context()
+            const tab = await ctx.newPage()
+            await tab.goto(url)
+        } catch {
+            // ignore
+        }
+    }
+
+    /** Periodically reminds the operator that the session is in compromised/standby mode. */
+    private startCompromisedInterval() {
+        if (this.compromisedInterval) clearInterval(this.compromisedInterval)
+        this.compromisedInterval = setInterval(() => {
+            try {
+                this.bot.log(this.bot.isMobile, 'SECURITY', 'Account in security standby. Review incident and docs before proceeding.', 'warn')
+            } catch { /* ignore */ }
+        }, 30000)
     }
 }
