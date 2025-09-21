@@ -59,6 +59,11 @@
     "humanization": {
         // Global Human Mode switch. true=adds subtle micro-gestures & pauses. false=classic behavior.
         "enabled": true,
+        // If true, as soon as a ban is detected on any account, stop processing remaining accounts
+        // (ban detection is based on centralized heuristics and error signals)
+        "stopOnBan": true,
+        // If true, immediately send an alert (webhook/NTFY) when a ban is detected
+        "immediateBanAlert": true,
         // Extra random pause between actions (ms or time string e.g., "300ms", "1s")
         "actionDelay": { 
             "min": 150, 
@@ -71,6 +76,16 @@
         // Optional local-time windows for execution (e.g., ["08:30-11:00", "19:00-22:00"]).
         // If provided, runs will wait until inside a window before starting.
         "allowedWindows": []
+    },
+
+    // Optional monthly "vacation" block: skip a contiguous range of days to look more human.
+    // This is independent of weekly random off-days. When enabled, each month a random
+    // block between minDays and maxDays is selected (e.g., 3–5 days) and all runs within
+    // that date range are skipped. The chosen block is logged at the start of the month.
+    "vacation": {
+        "enabled": false,
+        "minDays": 3,
+        "maxDays": 5
     },
     
     "retryPolicy": {

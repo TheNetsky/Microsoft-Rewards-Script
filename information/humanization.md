@@ -26,6 +26,8 @@ Edit `src/config.json`:
 
 Fields:
 - enabled: master on/off switch.
+- stopOnBan: when true, stop remaining accounts after a ban is detected during a run.
+- immediateBanAlert: when true, send an immediate webhook/NTFY alert upon detection of a ban.
 - actionDelay: extra random pause used between actions (ms or time string like "300ms" or "1s").
 - gestureMoveProb: probability (0..1) to perform a tiny mouse move during a step.
 - gestureScrollProb: probability (0..1) to perform a tiny scroll.

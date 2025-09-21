@@ -27,6 +27,9 @@ Add to your `src/config.json`:
 | `timeZone` | IANA timezone identifier | `"UTC"` | `"Europe/Paris"` |
 | `runImmediatelyOnStart` | Execute once on process startup | `true` | `false` |
 | `passesPerRun` | Number of complete runs per execution | `1` | `3` |
+| `vacation.enabled` | Skip a monthly contiguous off-block | `false` | `true` |
+| `vacation.minDays` | Minimum days in the off-block | `3` | `4` |
+| `vacation.maxDays` | Maximum days in the off-block | `5` | `6` |
 
 ## How It Works
 
@@ -45,6 +48,22 @@ When `runImmediatelyOnStart` is `false`:
 - No immediate execution regardless of start time
 
 ### Multiple Passes
+### Vacation Mode (Monthly off-block)
+
+- When `vacation.enabled` is `true`, the scheduler selects one contiguous block of days per calendar month.
+- The block length is randomly chosen between `minDays` and `maxDays` (inclusive). Defaults: 3–5 days.
+- All runs that fall on any day within this block are skipped. The chosen range is logged as: `Selected vacation block this month: yyyy-LL-dd → yyyy-LL-dd`.
+- This is independent from weekly random off-days. Both may apply.
+
+Example configuration:
+
+```jsonc
+{
+  "schedule": { "enabled": true, "time": "09:00", "timeZone": "Europe/Paris" },
+  "vacation": { "enabled": true, "minDays": 3, "maxDays": 5 }
+}
+```
+
 - `passesPerRun` controls how many complete cycles to execute
 - Each pass processes all accounts through all configured tasks
 - Useful for maximum point collection
