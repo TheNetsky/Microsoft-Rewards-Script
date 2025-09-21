@@ -124,8 +124,7 @@
         },
         // Rich end-of-run summary (Discord or similar)
         "conclusionWebhook": {
-            "enabled": true,
-            // Provide your own webhook URL here or via environment variable OVERRIDE_CONCLUSION_WEBHOOK
+            "enabled": false,
             "url": ""
         },
         // NTFY push notifications (plain text)
