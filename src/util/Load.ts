@@ -70,6 +70,11 @@ function normalizeConfig(raw: unknown): Config {
     // Fingerprinting
     const saveFingerprint = (n.fingerprinting?.saveFingerprint ?? n.saveFingerprint) ?? { mobile: false, desktop: false }
 
+    // Humanization defaults
+    if (n.humanization && typeof n.humanization.randomOffDaysPerWeek !== 'number') {
+        n.humanization.randomOffDaysPerWeek = 1
+    }
+
     const cfg: Config = {
         baseURL: n.baseURL ?? 'https://rewards.bing.com',
         sessionPath: n.sessionPath ?? 'sessions',
@@ -82,7 +87,7 @@ function normalizeConfig(raw: unknown): Config {
         searchOnBingLocalQueries: !!useLocalQueries,
         globalTimeout,
         searchSettings,
-        humanization: n.humanization,
+    humanization: n.humanization,
         retryPolicy: n.retryPolicy,
         jobState: n.jobState,
         logExcludeFunc,

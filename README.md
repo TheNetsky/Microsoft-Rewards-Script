@@ -235,6 +235,8 @@ Tip: With the built‑in scheduler you can enable a watchdog timeout via env var
 - `SCHEDULER_PASS_TIMEOUT_MINUTES` — kill a stuck pass after N minutes (default 180)
 - `SCHEDULER_FORK_PER_PASS` — if `false`, runs passes in‑process (can’t be force‑killed)
 
+Humanization tip: by default, the scheduler skips a small number of random off‑days per week to look more human (configurable via `humanization.randomOffDaysPerWeek`). Set it to `0` to disable.
+
 ---
 
 ## 🛒 Buy Mode

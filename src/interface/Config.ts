@@ -110,6 +110,8 @@ export interface ConfigHumanization {
     // Allowed execution windows (local time). Each item is "HH:mm-HH:mm".
     // If provided, runs outside these windows will be delayed until the next allowed window.
     allowedWindows?: string[];
+    // Randomly skip N days per week to look more human (0-7). Default 1.
+    randomOffDaysPerWeek?: number;
 }
 
 // Retry/backoff policy

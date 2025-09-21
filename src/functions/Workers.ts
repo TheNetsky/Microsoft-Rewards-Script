@@ -5,6 +5,7 @@ import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../int
 import { MicrosoftRewardsBot } from '../index'
 import JobState from '../util/JobState'
 import Retry from '../util/Retry'
+import { AdaptiveThrottler } from '../util/AdaptiveThrottler'
 
 export class Workers {
     public bot: MicrosoftRewardsBot
@@ -149,6 +150,7 @@ export class Workers {
         const activityInitial = activityPage.url() // Homepage for Daily/More and Index for promotions
 
     const retry = new Retry(this.bot.config.retryPolicy)
+    const throttle = new AdaptiveThrottler()
     for (const activity of activities) {
             try {
                 // Reselect the worker page
@@ -162,7 +164,10 @@ export class Workers {
                 }
 
                 await this.bot.browser.utils.humanizePage(activityPage)
-                await this.bot.utils.waitRandom(800, 1400)
+                {
+                    const m = throttle.getDelayMultiplier()
+                    await this.bot.utils.waitRandom(Math.floor(800*m), Math.floor(1400*m))
+                }
 
                 if (activityPage.url() !== activityInitial) {
                     await activityPage.goto(activityInitial)
@@ -186,7 +191,10 @@ export class Workers {
                 await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
                 // Small human-like jitter before executing
                 await this.bot.browser.utils.humanizePage(activityPage)
-                await this.bot.utils.waitRandom(1200, 2600)
+                {
+                    const m = throttle.getDelayMultiplier()
+                    await this.bot.utils.waitRandom(Math.floor(1200*m), Math.floor(2600*m))
+                }
 
                 // Log the detected type using the same heuristics as before
                 const typeLabel = this.bot.activities.getTypeLabel(activity)
@@ -203,8 +211,10 @@ export class Workers {
                     await retry.run(async () => {
                         try {
                             await runWithTimeout(this.bot.activities.run(activityPage, activity))
+                            throttle.record(true)
                         } catch (e) {
                             await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_timeout_${activity.title || activity.offerId}`)
+                            throttle.record(false)
                             throw e
                         }
                     }, () => true)
@@ -214,11 +224,15 @@ export class Workers {
 
                 // Cooldown with jitter
                 await this.bot.browser.utils.humanizePage(activityPage)
-                await this.bot.utils.waitRandom(1200, 2600)
+                {
+                    const m = throttle.getDelayMultiplier()
+                    await this.bot.utils.waitRandom(Math.floor(1200*m), Math.floor(2600*m))
+                }
 
             } catch (error) {
                 await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_error_${activity.title || activity.offerId}`)
                 this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
+                throttle.record(false)
             }
 
         }

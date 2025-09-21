@@ -111,6 +111,26 @@ async function main() {
   const cfg = loadConfig() as Config & { schedule?: { enabled?: boolean; time?: string; timeZone?: string; runImmediatelyOnStart?: boolean } }
   const schedule = cfg.schedule || { enabled: false }
   const passes = typeof cfg.passesPerRun === 'number' ? cfg.passesPerRun : 1
+  const offPerWeek = Math.max(0, Math.min(7, Number(cfg.humanization?.randomOffDaysPerWeek ?? 1)))
+  let offDays: number[] = [] // 1..7 ISO weekday
+  let offWeek: number | null = null
+
+  const refreshOffDays = async (now: { weekNumber: number }) => {
+    if (offPerWeek <= 0) { offDays = []; offWeek = null; return }
+    const week = now.weekNumber
+    if (offWeek === week && offDays.length) return
+    // choose distinct weekdays [1..7]
+    const pool = [1,2,3,4,5,6,7]
+    const chosen: number[] = []
+    for (let i=0;i<Math.min(offPerWeek,7);i++) {
+      const idx = Math.floor(Math.random()*pool.length)
+      chosen.push(pool[idx]!)
+      pool.splice(idx,1)
+    }
+    offDays = chosen.sort((a,b)=>a-b)
+    offWeek = week
+    await log('main','SCHEDULER',`Selected random off-days this week (ISO): ${offDays.join(', ')}`,'warn')
+  }
 
   if (!schedule.enabled) {
     await log('main', 'SCHEDULER', 'Schedule disabled; running once then exit')
@@ -138,7 +158,13 @@ async function main() {
         await new Promise((r) => setTimeout(r, jitterSec * 1000))
       }
     }
-    await runPasses(passes)
+    const nowDT = DateTime.local().setZone(tz)
+    await refreshOffDays(nowDT)
+    if (offDays.includes(nowDT.weekday)) {
+      await log('main','SCHEDULER',`Skipping immediate run: off-day (weekday ${nowDT.weekday})`,'warn')
+    } else {
+      await runPasses(passes)
+    }
   }
 
   for (;;) {
@@ -151,7 +177,7 @@ async function main() {
       next = targetToday.plus({ days: 1 })
     }
 
-    let ms = Math.max(0, next.toMillis() - nowDT.toMillis())
+  let ms = Math.max(0, next.toMillis() - nowDT.toMillis())
 
     // Optional daily jitter to further randomize the exact start time each day
     const dailyJitterMin = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MIN || process.env.SCHEDULER_DAILY_JITTER_MIN || 0)
@@ -177,6 +203,12 @@ async function main() {
 
     await new Promise((resolve) => setTimeout(resolve, ms))
 
+    const nowRun = DateTime.local().setZone(tz)
+    await refreshOffDays(nowRun)
+    if (offDays.includes(nowRun.weekday)) {
+      await log('main','SCHEDULER',`Skipping scheduled run: off-day (weekday ${nowRun.weekday})`,'warn')
+      continue
+    }
     await runPasses(passes)
   }
 }
