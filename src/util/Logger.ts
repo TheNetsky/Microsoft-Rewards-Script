@@ -1,6 +1,5 @@
 import chalk from 'chalk'
 
-import { Webhook } from './Webhook'
 import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 
@@ -15,8 +14,6 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     
     const logExcludeFunc = Array.isArray(loggingConfigAny.excludeFunc) ? loggingConfigAny.excludeFunc : 
                           Array.isArray(loggingConfigAny.logExcludeFunc) ? loggingConfigAny.logExcludeFunc : []
-    const webhookLogExcludeFunc = Array.isArray(loggingConfigAny.webhookExcludeFunc) ? loggingConfigAny.webhookExcludeFunc : 
-                                 Array.isArray(loggingConfigAny.webhookLogExcludeFunc) ? loggingConfigAny.webhookLogExcludeFunc : []
 
     if (Array.isArray(logExcludeFunc) && logExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
         return
@@ -25,16 +22,8 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const currentTime = new Date().toLocaleString()
     const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP'
     
-    // Clean string for the Webhook (no chalk, structured)
+    // Clean string for notifications (no chalk, structured)
     const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
-
-    // Send the clean string to the Webhook (fire-and-forget)
-    try {
-        if (!Array.isArray(webhookLogExcludeFunc) || !webhookLogExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
-            // Intentionally not awaited to keep logger synchronous
-            Promise.resolve(Webhook(configData, cleanStr)).catch(() => { /* ignore webhook errors */ })
-        }
-    } catch { /* ignore */ }
 
     // Define conditions for sending to NTFY 
     const ntfyConditions = {

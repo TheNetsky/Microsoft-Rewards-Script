@@ -23,12 +23,15 @@ interface ConclusionPayload {
  * as a separate, optional channel.
  */
 export async function ConclusionWebhook(config: Config, content: string, payload?: ConclusionPayload) {
-    // Prefer the dedicated conclusionWebhook, else fall back to general webhook
+    // Send to both webhooks when available
     const hasConclusion = !!(config.conclusionWebhook?.enabled && config.conclusionWebhook.url)
     const hasWebhook = !!(config.webhook?.enabled && config.webhook.url)
 
-    const body: ConclusionPayload = payload?.embeds ? { embeds: payload.embeds } : { content }
+    const body: ConclusionPayload = {}
+    if (payload?.embeds) body.embeds = payload.embeds
+    if (content && content.trim()) body.content = content
 
+    // Post to conclusion webhook if configured
     if (hasConclusion) {
         try {
             await axios.post(config.conclusionWebhook!.url, body, {
@@ -38,46 +41,41 @@ export async function ConclusionWebhook(config: Config, content: string, payload
         } catch (err) {
             console.error('Failed to send conclusion summary to conclusionWebhook:', err)
         }
-    } else if (hasWebhook) {
-        // Fallback to primary webhook if conclusion webhook not configured
+    }
+    // Also post to primary webhook if configured
+    if (hasWebhook) {
         try {
             await axios.post(config.webhook!.url, body, {
                 headers: { 'Content-Type': 'application/json' }
             })
-            console.log('Conclusion summary sent to webhook (fallback).')
+            console.log('Conclusion summary sent to webhook.')
         } catch (err) {
-            console.error('Failed to send conclusion summary to webhook (fallback):', err)
+            console.error('Failed to send conclusion summary to webhook:', err)
         }
     }
 
     // NTFY: mirror a plain text summary (optional)
     if (config.ntfy?.enabled && config.ntfy.url && config.ntfy.topic) {
         let message = content || ''
-
-                if (!message && payload?.embeds && payload.embeds.length > 0) {
-                    const e: DiscordEmbed = payload.embeds[0]!
-                    const title = e.title ? `${e.title}\n` : ''
-                    const desc = e.description ? `${e.description}\n` : ''
-                    const totals = e.fields && e.fields[0]?.value ? `\n${e.fields[0].value}\n` : ''
-                    message = `${title}${desc}${totals}`.trim()
-                }
-
-        if (!message) {
-                    message = 'Microsoft Rewards run complete.'
+        if (!message && payload?.embeds && payload.embeds.length > 0) {
+            const e: DiscordEmbed = payload.embeds[0]!
+            const title = e.title ? `${e.title}\n` : ''
+            const desc = e.description ? `${e.description}\n` : ''
+            const totals = e.fields && e.fields[0]?.value ? `\n${e.fields[0].value}\n` : ''
+            message = `${title}${desc}${totals}`.trim()
         }
-
+        if (!message) message = 'Microsoft Rewards run complete.'
         // Choose NTFY level based on embed color (yellow = warn)
-            let embedColor: number | undefined = undefined
-            if (payload?.embeds && payload.embeds.length > 0) {
-                embedColor = payload.embeds[0]!.color
-            }
+        let embedColor: number | undefined
+        if (payload?.embeds && payload.embeds.length > 0) {
+            embedColor = payload.embeds[0]!.color
+        }
         const ntfyType = embedColor === 0xFFAA00 ? 'warn' : 'log'
-
         try {
             await Ntfy(message, ntfyType)
-                    console.log('Conclusion summary sent to NTFY.')
+            console.log('Conclusion summary sent to NTFY.')
         } catch (err) {
-                    console.error('Failed to send conclusion summary to NTFY:', err)
+            console.error('Failed to send conclusion summary to NTFY:', err)
         }
     }
 }
