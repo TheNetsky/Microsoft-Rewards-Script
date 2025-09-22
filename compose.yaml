@@ -11,7 +11,7 @@ services:
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
 
     environment:
-      TZ: "America/Toronto" # Set your timezone for proper scheduling
+      TZ: "America/Toronto" # Set your timezone for proper scheduling (used by image and scheduler)
       NODE_ENV: "production"
       #SCHEDULER_DAILY_JITTER_MINUTES_MIN: "2"
       #SCHEDULER_DAILY_JITTER_MINUTES_MAX: "10"
@@ -20,13 +20,9 @@ services:
       # Run pass in child process (default true). Set to "false" to disable for debugging.
       #SCHEDULER_FORK_PER_PASS: "true"
 
-    # Optional resource limits for the container
-    mem_limit: 4g
-    cpus: 2
-
     # Security hardening
     security_opt:
       - no-new-privileges:true
 
-    # Use the built-in scheduler by default
+    # Use the built-in scheduler by default; override with `command:` for one-shot runs
     command: ["npm", "run", "start:schedule"]

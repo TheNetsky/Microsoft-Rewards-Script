@@ -15,9 +15,9 @@ COPY package*.json tsconfig.json ./
 
 # Conditional install: npm ci if lockfile exists, else npm install
 RUN if [ -f package-lock.json ]; then \
-      npm ci; \
+      npm ci --ignore-scripts; \
     else \
-      npm install; \
+      npm install --ignore-scripts; \
     fi
 
 # Copy source code
