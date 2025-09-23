@@ -13,6 +13,8 @@ services:
     environment:
       TZ: "America/Toronto" # Set your timezone for proper scheduling (used by image and scheduler)
       NODE_ENV: "production"
+      # Force headless when running in Docker (uses Chromium Headless Shell only)
+      FORCE_HEADLESS: "1"
       #SCHEDULER_DAILY_JITTER_MINUTES_MIN: "2"
       #SCHEDULER_DAILY_JITTER_MINUTES_MAX: "10"
       # Watchdog timeout per pass (minutes, default 180)

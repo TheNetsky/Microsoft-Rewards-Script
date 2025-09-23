@@ -38,7 +38,9 @@ class Browser {
         // Support both legacy and new config structures (wider scope for later usage)
         const cfgAny = this.bot.config as unknown as Record<string, unknown>
         try {
-            const headlessValue = (cfgAny['headless'] as boolean | undefined) ?? (cfgAny['browser'] && (cfgAny['browser'] as Record<string, unknown>)['headless'] as boolean | undefined) ?? false
+            // FORCE_HEADLESS env takes precedence (used in Docker with headless shell only)
+            const envForceHeadless = process.env.FORCE_HEADLESS === '1'
+            const headlessValue = envForceHeadless ? true : ((cfgAny['headless'] as boolean | undefined) ?? (cfgAny['browser'] && (cfgAny['browser'] as Record<string, unknown>)['headless'] as boolean | undefined) ?? false)
             const headless: boolean = Boolean(headlessValue)
 
             browser = await playwright.chromium.launch({

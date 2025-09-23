@@ -1,9 +1,0 @@
-[
-  {
-    "email": "user@example.com",
-    "password": "REDACTED",
-    "recoveryEmail": "ab@example.com",
-    "proxy": "",
-    "totp": ""
-  }
-]

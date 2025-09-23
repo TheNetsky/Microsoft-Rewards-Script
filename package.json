@@ -8,7 +8,7 @@
   },
   "scripts": {
     "clean": "rimraf dist",
-    "pre-build": "npm i && npm run clean && npx playwright install chromium",
+    "pre-build": "npm i && npm run clean && node -e \"process.exit(process.env.SKIP_PLAYWRIGHT_INSTALL?0:1)\" || npx playwright install chromium",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "start": "node --enable-source-maps ./dist/index.js",
