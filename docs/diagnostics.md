@@ -1,0 +1,1 @@
+Moved from information/diagnostics.md. See project wiki or future content.

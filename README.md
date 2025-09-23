@@ -46,7 +46,7 @@
 <img src="https://github.com/mgrimace.png" width="80" style="border-radius: 50%;" /><br />
 <strong><a href="https://github.com/mgrimace">Mgrimace</a></strong> 🔥<br />
 <em>Active Developer</em><br />
-<sub>Regular updates & <a href="./information/ntfy.md">NTFY mode</a></sub>
+<sub>Regular updates & <a href="./docs/ntfy.md">NTFY mode</a></sub>
 </td>
 <td width="33%" align="center">
 <img src="https://github.com/LightZirconite.png" width="80" style="border-radius: 50%;" /><br />
@@ -338,15 +338,15 @@ Tip: Accounts set to passwordless (Microsoft Authenticator with number match) al
 
 <div align="center">
 
-**🎓 Need More Power?** Check out our [comprehensive guides](./information/):
+**🎓 Need More Power?** Check out our [comprehensive guides](./docs/):
 
-[![Diagnostics](https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge)](./information/diagnostics.md)
-[![Humanization](https://img.shields.io/badge/🧠_Humanization-Human_Mode-2ecc71?style=for-the-badge)](./information/humanization.md)
-[![Scheduling](https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-4ECDC4?style=for-the-badge)](./information/schedule.md)
-[![Notifications](https://img.shields.io/badge/📱_NTFY-Push_Alerts-9B59B6?style=for-the-badge)](./information/ntfy.md)
-[![Webhooks](https://img.shields.io/badge/🎯_Discord-Live_Updates-7289DA?style=for-the-badge)](./information/conclusionwebhook.md)
-[![Proxy](https://img.shields.io/badge/🌐_Proxy-Network_Setup-FF9F43?style=for-the-badge)](./information/proxy.md)
-[![Buy Mode](https://img.shields.io/badge/💳_Buy_Mode-Purchase_Tracking-00D2D3?style=for-the-badge)](./information/buy-mode.md)
+[![Diagnostics](https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge)](./docs/diagnostics.md)
+[![Humanization](https://img.shields.io/badge/🧠_Humanization-Human_Mode-2ecc71?style=for-the-badge)](./docs/humanization.md)
+[![Scheduling](https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-4ECDC4?style=for-the-badge)](./docs/schedule.md)
+[![Notifications](https://img.shields.io/badge/📱_NTFY-Push_Alerts-9B59B6?style=for-the-badge)](./docs/ntfy.md)
+[![Webhooks](https://img.shields.io/badge/🎯_Discord-Live_Updates-7289DA?style=for-the-badge)](./docs/conclusionwebhook.md)
+[![Proxy](https://img.shields.io/badge/🌐_Proxy-Network_Setup-FF9F43?style=for-the-badge)](./docs/proxy.md)
+[![Buy Mode](https://img.shields.io/badge/💳_Buy_Mode-Purchase_Tracking-00D2D3?style=for-the-badge)](./docs/buy-mode.md)
 
 </div>
 
@@ -447,15 +447,15 @@ npm start -- --debug
 
 Need to go deeper? Start here:
 
-- [Diagnostics](./information/diagnostics.md)
-- [Humanization](./information/humanization.md)
-- [Job State](./information/jobstate.md)
-- [Scheduling](./information/schedule.md)
-- [Auto Update](./information/update.md)
-- [NTFY](./information/ntfy.md)
-- [Discord Webhook Reports](./information/conclusionwebhook.md)
-- [Proxy Setup](./information/proxy.md)
-- [Buy Mode details](./information/buy-mode.md)
+- [Diagnostics](./docs/diagnostics.md)
+- [Humanization](./docs/humanization.md)
+- [Job State](./docs/jobstate.md)
+- [Scheduling](./docs/schedule.md)
+- [Auto Update](./docs/update.md)
+- [NTFY](./docs/ntfy.md)
+- [Discord Webhook Reports](./docs/conclusionwebhook.md)
+- [Proxy Setup](./docs/proxy.md)
+- [Buy Mode details](./docs/buy-mode.md)
 
 ---
 

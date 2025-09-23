@@ -1,0 +1,1 @@
+Moved from information/proxy.md. See project wiki or future content.

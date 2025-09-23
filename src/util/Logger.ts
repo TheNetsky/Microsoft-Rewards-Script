@@ -2,6 +2,7 @@ import chalk from 'chalk'
 
 import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
+import axios from 'axios'
 
 // Synchronous logger that returns an Error when type === 'error' so callers can `throw log(...)` safely.
 export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): Error | void {
@@ -23,7 +24,14 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP'
     
     // Clean string for notifications (no chalk, structured)
-    const cleanStr = `[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`
+    type LiveCfg = { enabled?: boolean; redactEmails?: boolean }
+    type LoggingCfg = { excludeFunc?: string[]; webhookExcludeFunc?: string[]; live?: LiveCfg; redactEmails?: boolean }
+    const loggingCfg: LoggingCfg = (configAny.logging || {}) as LoggingCfg
+    const shouldRedact = !!(loggingCfg.live?.redactEmails || loggingCfg.redactEmails)
+    const redact = (s: string) => shouldRedact ? s.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig, (m) => {
+        const [u, d] = m.split('@'); return `${(u||'').slice(0,2)}***@${d||''}`
+    }) : s
+    const cleanStr = redact(`[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`)
 
     // Define conditions for sending to NTFY 
     const ntfyConditions = {
@@ -58,7 +66,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
         typeColor(`${typeIndicator} ${type.toUpperCase()}`),
         platformColor(`[${platformText}]`),
         chalk.bold(`[${title}]`),
-        message
+        redact(message)
     ].join(' ')
 
     const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null
@@ -83,4 +91,21 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
         // CommunityReporter disabled per project policy
         return new Error(cleanStr)
     }
+
+    // Optional: send live logs to webhook if configured
+    try {
+    const liveCfg: LiveCfg = loggingCfg.live || {}
+    const webhookCfg = (configData as unknown as { webhook?: { enabled?: boolean; url?: string } }).webhook || {}
+    const liveEnabled = !!liveCfg.enabled && !!webhookCfg.enabled && typeof webhookCfg.url === 'string' && !!webhookCfg.url
+        if (liveEnabled) {
+            // Exclude buckets also for live webhook
+            const exclude = Array.isArray(loggingCfg.webhookExcludeFunc) ? loggingCfg.webhookExcludeFunc : []
+            if (!exclude.some((x: string) => String(x).toLowerCase() === String(title).toLowerCase())) {
+                const payload = { content: cleanStr }
+                if (webhookCfg.url) {
+                    axios.post(webhookCfg.url as string, payload, { headers: { 'Content-Type': 'application/json' } }).catch(()=>{})
+                }
+            }
+        }
+    } catch { /* ignore live log errors */ }
 }

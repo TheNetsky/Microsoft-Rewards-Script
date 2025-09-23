@@ -1,0 +1,1 @@
+Moved from information/buy-mode.md. See project wiki or future content.

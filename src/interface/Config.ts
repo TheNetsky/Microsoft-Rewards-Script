@@ -145,5 +145,11 @@ export interface ConfigJobState {
     dir?: string; // base directory; defaults to <sessionPath>/job-state
 }
 
+// Live logging configuration
+export interface ConfigLoggingLive {
+    enabled?: boolean; // master switch for live webhook logs
+    redactEmails?: boolean; // if true, redact emails in outbound logs
+}
+
 // CommunityHelp removed (privacy-first policy)
 

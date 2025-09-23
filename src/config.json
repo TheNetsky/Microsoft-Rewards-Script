@@ -147,7 +147,12 @@
             "SEARCH-CLOSE-TABS",
             "LOGIN-NO-PROMPT",
             "FLOW"
-        ]
+        ],
+        // Live webhook logs and redaction
+        "live": {
+            "enabled": false,
+            "redactEmails": true
+        }
     },
     
     "diagnostics": {
@@ -181,7 +186,7 @@
         // IANA timezone for scheduling (set to your region), e.g. "Europe/Paris" or "America/New_York"
         "timeZone": "America/New_York",
         // If true, run one pass immediately when the process starts
-        "runImmediatelyOnStart": true
+        "runImmediatelyOnStart": false
     },
     
     "update": {

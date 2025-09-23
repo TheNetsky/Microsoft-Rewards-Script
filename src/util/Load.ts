@@ -208,8 +208,18 @@ export function loadAccounts(): Account[] {
             }
             raw = fs.readFileSync(full, 'utf-8')
         } else {
-            const accountDir = path.join(__dirname, '../', file)
-            raw = fs.readFileSync(accountDir, 'utf-8')
+            // Try multiple locations to support both root mounts and dist mounts
+            const candidates = [
+                path.join(__dirname, '../', file),              // typical: dist/../accounts.json (project root)
+                path.join(__dirname, file),                     // fallback: dist/accounts.json
+                path.join(process.cwd(), file)                   // cwd override (e.g., when running ts-node)
+            ]
+            let chosen: string | null = null
+            for (const p of candidates) {
+                try { if (fs.existsSync(p)) { chosen = p; break } } catch { /* ignore */ }
+            }
+            if (!chosen) throw new Error(`accounts file not found in: ${candidates.join(' | ')}`)
+            raw = fs.readFileSync(chosen, 'utf-8')
         }
 
         // Support comments in accounts file (same as config)
@@ -236,8 +246,18 @@ export function loadConfig(): Config {
             return configCache
         }
 
-        const configDir = path.join(__dirname, '../', 'config.json')
-        const config = fs.readFileSync(configDir, 'utf-8')
+        // Resolve config.json from common locations
+        const candidates = [
+            path.join(__dirname, '../', 'config.json'),     // typical: dist/../config.json (project root)
+            path.join(__dirname, 'config.json'),             // fallback: dist/config.json
+            path.join(process.cwd(), 'config.json')          // cwd when running ts-node
+        ]
+        let cfgPath: string | null = null
+        for (const p of candidates) {
+            try { if (fs.existsSync(p)) { cfgPath = p; break } } catch { /* ignore */ }
+        }
+        if (!cfgPath) throw new Error(`config.json not found in: ${candidates.join(' | ')}`)
+        const config = fs.readFileSync(cfgPath, 'utf-8')
         const text = config.replace(/^\uFEFF/, '')
         const raw = JSON.parse(stripJsonComments(text))
         const normalized = normalizeConfig(raw)

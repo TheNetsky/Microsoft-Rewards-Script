@@ -760,7 +760,7 @@ export class Login {
 
     /** Builds a docs URL for security incidents. */
     private getDocsUrl(anchor?: string): string {
-        const base = process.env.DOCS_BASE?.trim() || 'https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/blob/V2/information/security.md'
+    const base = process.env.DOCS_BASE?.trim() || 'https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/blob/V2/docs/security.md'
         if (!anchor) return base
         const map: Record<string, string> = {
             'recovery-email-mismatch': '#recovery-email-mismatch',

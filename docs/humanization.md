@@ -1,0 +1,1 @@
+Moved from information/humanization.md. See project wiki or future content.

@@ -1,0 +1,1 @@
+Moved from information/jobstate.md. See project wiki or future content.

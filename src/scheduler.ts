@@ -226,7 +226,9 @@ async function main() {
   }
 
   const tz = (schedule.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
-  const runImmediate = schedule.runImmediatelyOnStart !== false
+  // Default to false to avoid unexpected immediate runs
+  const runImmediate = schedule.runImmediatelyOnStart === true
+  let running = false
 
   // Optional initial jitter before the first run (to vary start time)
   const initJitterMin = Number(process.env.SCHEDULER_INITIAL_JITTER_MINUTES_MIN || process.env.SCHEDULER_INITIAL_JITTER_MIN || 0)
@@ -234,7 +236,8 @@ async function main() {
   const initialJitterBounds: [number, number] = [isFinite(initJitterMin) ? initJitterMin : 0, isFinite(initJitterMax) ? initJitterMax : 0]
   const applyInitialJitter = (initialJitterBounds[0] > 0 || initialJitterBounds[1] > 0)
 
-  if (runImmediate) {
+  if (runImmediate && !running) {
+    running = true
     if (applyInitialJitter) {
   const min = Math.max(0, Math.min(initialJitterBounds[0], initialJitterBounds[1]))
   const max = Math.max(0, Math.max(initialJitterBounds[0], initialJitterBounds[1]))
@@ -257,6 +260,7 @@ async function main() {
     } else {
       await runPasses(passes)
     }
+    running = false
   }
 
   for (;;) {
@@ -309,7 +313,13 @@ async function main() {
       await log('main','SCHEDULER',`Skipping scheduled run: off-day (weekday ${nowRun.weekday})`,'warn')
       continue
     }
-    await runPasses(passes)
+    if (!running) {
+      running = true
+      await runPasses(passes)
+      running = false
+    } else {
+      await log('main','SCHEDULER','Skipped scheduled trigger because a pass is already running','warn')
+    }
   }
 }
 
