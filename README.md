@@ -173,168 +173,33 @@ docker compose up -d
 
 ## 🐳 **Docker: Deploy Like a Pro**
 
-<div align="center">
+Deploy the bot in a slim headless container (Chromium Headless Shell). See the full guide with compose, volumes, env vars and tips:
 
-### **Container Magic in 60 Seconds** 🎪
-
-</div>
-
-```yaml
-# docker-compose.yml (uses built-in scheduler by default)
-services:
-  microsoft-rewards:
-    build: .
-    environment:
-      - TZ=America/New_York              # 🌍 Your timezone
-      #- SCHEDULER_DAILY_JITTER_MINUTES_MIN=2
-      #- SCHEDULER_DAILY_JITTER_MINUTES_MAX=10
-      # Watchdog timeout (minutes)
-      #- SCHEDULER_PASS_TIMEOUT_MINUTES=180
-      # Accounts/config mounting options
-      - ACCOUNTS_FILE=/data/accounts.json
-    volumes:
-      - ./accounts.json:/data/accounts.json:ro
-      # Recommended: mount compiled config in dist or configure ACCOUNTS_JSON
-      # - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
-    restart: unless-stopped
-```
-
-```bash
-# 🚀 Launch your automation fleet
-docker compose up -d
-
-# 📊 Monitor the magic happening
-docker logs -f microsoft-rewards
-```
-
-<div align="center">
-
-**🎯 Pro Configuration Options**
-
-| Method | Setup | Perfect For |
-|--------|-------|-------------|
-| **📁 File Mount** | `ACCOUNTS_FILE=/data/accounts.json` | 🏢 Production environments |
-| **🌍 Environment** | `ACCOUNTS_JSON='[{"email":"..."}]'` | 🔄 CI/CD pipelines |
-| **📦 Built-in** | Include in Docker image | 🧪 Testing & development |
-
-</div>
+→ Read: ./docs/docker.md
 
 ---
 
 ## ⏰ Scheduling Options
 
-By default, the Docker image now runs the built‑in scheduler (no cron in the container). Configure time and timezone in `src/config.json` under `schedule`, and use these optional envs for randomization/robustesse:
-- `TZ` — container timezone, e.g., `Europe/Paris`
-- `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX`
-- `SCHEDULER_PASS_TIMEOUT_MINUTES`
+Built‑in scheduler (no cron in container). Configure time window, timezone and jitter.
 
-Alternative (external cron): you can still drive the script with your host's scheduler (cron, Windows Task Scheduler) by invoking the scheduler entry directly.
-
-Tip: With the built‑in scheduler you can enable a watchdog timeout via env vars:
-- `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX` — extra random delay added to each daily scheduled time
-- `SCHEDULER_PASS_TIMEOUT_MINUTES` — kill a stuck pass after N minutes (default 180)
-- `SCHEDULER_FORK_PER_PASS` — if `false`, runs passes in‑process (can’t be force‑killed)
-
-Humanization tip: by default, the scheduler skips a small number of random off‑days per week to look more human (configurable via `humanization.randomOffDaysPerWeek`). Set it to `0` to disable.
+→ Read: ./docs/schedule.md
 
 ---
 
 ## 🛒 Buy Mode
 
-- What: manual redeem/purchase mode. The bot logs in and opens two tabs: one monitor tab that auto‑refreshes your points, and one free tab for your actions.
-- Enable:
-  - CLI: `npm start -- -buy your@email`
-  - Config: set `buyMode.enabled: true` (optional `buyMode.maxMinutes`)
-- Safety: the monitor tab only reads dashboard data; it doesn’t click or redeem.
-- Duration: default 45 minutes; adjustable via `buyMode.maxMinutes`.
-- Notifications: a short summary is sent if webhooks/NTFY are enabled; spend events are reflected in the session total.
-- Exit: close the browser or wait until the session ends.
+Manual redeem mode with live points monitor. Enable via CLI or config.
+
+→ Read: ./docs/buy-mode.md
 
 ---
 
-## ⚙️ **Configuration Made Simple**
+## ⚙️ Configuration
 
-<div align="center">
+Configure behavior in `src/config.json`. For accounts (including TOTP 2FA), use `src/accounts.json`.
 
-### **The Brain of Your Operation** 🧠
-
-</div>
-
-```jsonc
-// src/config.json - Your control center
-{
-  "headless": true,                    // 👻 Invisible browser mode
-  "parallel": true,                    // ⚡ Simultaneous tasks
-  "clusters": 1,                       // 🔢 Concurrent accounts
-  "runOnZeroPoints": false,           // 🛑 Skip when no points available
-  
-  // 🎯 Task Selection Arsenal
-  "workers": {
-    "doDailySet": true,               // 📅 Daily challenges
-    "doMorePromotions": true,         // 🎁 Special offers
-    "doPunchCards": true,             // 🃏 Multi-day cards
-    "doDesktopSearch": true,          // 🖥️ Desktop searches
-    "doMobileSearch": true,           // 📱 Mobile searches
-    "doDailyCheckIn": true,           // ✅ Daily check-ins
-    "doReadToEarn": true              // 📚 Article reading
-  },
-  
-  // 🔍 Smart Search Behavior
-  "searchSettings": {
-    "useGeoLocaleQueries": false,     // 🌍 Location-based queries
-    "scrollRandomResults": true,      // 📜 Natural scrolling
-    "clickRandomResults": true,       // 👆 Realistic clicking
-    "searchDelay": "3-5 minutes",     // ⏰ Human-like delays
-    "retryMobileSearchAmount": 2      // 🔄 Mobile retry attempts
-  },
-  
-  // 🔔 Notification Setup
-  "webhook": {
-    "enabled": false,                 // 📢 Discord live updates
-    "url": null                       // 🔗 Your Discord webhook URL
-  },
-  "ntfy": {
-    "enabled": false,                 // 📱 Push notifications
-    "url": null,                      // 🌐 NTFY server URL
-    "topic": "rewards"                // 📝 Notification topic
-  }
-}
-```
-
-### Buy Mode toggle via config
-
-You can enable/disable Buy Mode without removing the block in your config. In `src/config.json`:
-
-```jsonc
-{
-  "buyMode": {
-    "enabled": false,   // set to true to force Buy Mode without CLI
-    "maxMinutes": 45
-  }
-}
-```
-
-CLI still works and overrides config: `npm start -- -buy email@domain.com`.
-
-### Two‑Factor (TOTP) support
-
-- You can add a Base32 TOTP secret per account in `src/accounts.json`:
-
-```json
-[
-  {
-    "email": "email_1",
-    "password": "password_1",
-    "totp": "",  
-    "proxy": { "proxyAxios": true, "url": "", "port": 0, "username": "", "password": "" }
-  }
-]
-```
-
-- When Microsoft asks for a code (input `name="otc"`), the bot generates and submits it automatically.
-- If `totp` is not set, the bot falls back to manual prompt in the terminal.
-
-Tip: Accounts set to passwordless (Microsoft Authenticator with number match) also work very well.
+→ Read: ./docs/getting-started.md and ./docs/accounts.md
 
 <div align="center">
 
@@ -413,38 +278,11 @@ This project is for educational purposes only. Use at your own risk. Microsoft m
 
 ---
 
-## 🛠️ **Quick Troubleshooting**
+## 🛠️ Troubleshooting
 
-<details>
-<summary><strong>🔧 Common Issues & Fixes</strong></summary>
+Common issues and diagnostics, including screenshots/HTML capture and retention.
 
-**Browser not closing properly:**
-```bash
-# Windows
-npm run kill-chrome-win
-
-# Linux/macOS  
-pkill -f chrome
-```
-
-**Login failures:**
-- Enable 2FA on Microsoft accounts  
-- Check proxy configuration in `src/config.json`
-- Review error logs in `reports/` directory
-
-**Missing points:**
-- Verify account credentials are correct
-- Check if activities are available in your region
-- Enable diagnostics: `"diagnostics.enabled": true` in config
-
-**Debug mode:**
-```bash
-npm start -- --debug
-```
-
-- `LOGIN_MAX_WAIT_MS` — Max time the login flow will wait for the portal to load before failing with guidance. Default: 180000 (3 min). Increase if your login routinely takes longer.
-
-</details>
+→ Read: ./docs/diagnostics.md
 
 ---
 
