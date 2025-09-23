@@ -1,20 +1,35 @@
-# NTFY Push Notifications
+# 📱 NTFY Push Notifications
 
-NTFY integration provides real-time push notifications to your devices for script events and errors.
+<div align="center">
 
-## What is NTFY?
+**🔔 Real-time push notifications to your devices**  
+*Stay informed wherever you are*
 
-NTFY is a simple HTTP-based pub-sub notification service that sends push notifications to your phone, desktop, or web browser. It's open source, self-hostable, and has excellent integration with homelab services.
+</div>
 
-**Official Links:**
-- **Website**: https://ntfy.sh
-- **Documentation**: https://docs.ntfy.sh
-- **GitHub**: https://github.com/binwiederhier/ntfy
+---
 
-## Configuration
+## 🎯 What is NTFY?
 
-Add to your `src/config.json`:
+NTFY is a **simple HTTP-based pub-sub notification service** that sends push notifications to your phone, desktop, or web browser. Perfect for real-time alerts about script events and errors.
 
+### **Key Features**
+- 📱 **Mobile & Desktop** — Push to any device
+- 🆓 **Free & Open Source** — No vendor lock-in
+- 🏠 **Self-hostable** — Complete privacy control
+- ⚡ **Real-time delivery** — Instant notifications
+- 🔒 **Authentication support** — Secure topics
+
+### **Official Links**
+- **Website** — [ntfy.sh](https://ntfy.sh)
+- **Documentation** — [docs.ntfy.sh](https://docs.ntfy.sh)
+- **GitHub** — [binwiederhier/ntfy](https://github.com/binwiederhier/ntfy)
+
+---
+
+## ⚙️ Configuration
+
+### **Basic Setup**
 ```json
 {
   "notifications": {
@@ -26,9 +41,9 @@ Add to your `src/config.json`:
     }
   }
 }
-```
+``` 
 
-## Options
+### **Configuration Options**
 
 | Setting | Description | Example |
 |---------|-------------|---------|
@@ -37,83 +52,34 @@ Add to your `src/config.json`:
 | `topic` | Notification topic name | `"rewards-script"` |
 | `authToken` | Authentication token (optional) | `"tk_abc123..."` |
 
-## Authentication Token
+---
 
-### When You Need It
-Authentication tokens are **optional** and only required if:
-- You've set a username/password on your topic
-- You're using a private NTFY server with authentication
-- You want to prevent others from sending to your topic
+## 🚀 Setup Options
 
-### How to Get a Token
-
-**Method 1: Command Line**
-```bash
-ntfy token
-```
-
-**Method 2: Web Interface**
-1. Visit your NTFY server (e.g., https://ntfy.sh)
-2. Go to Account section
-3. Generate new access token
-
-**Method 3: API**
-```bash
-curl -X POST -d '{"label":"rewards-script"}' \
-  -H "Authorization: Bearer YOUR_LOGIN_TOKEN" \
-  https://ntfy.sh/v1/account/tokens
-```
-
-### Token Format
-- Tokens start with `tk_` (e.g., `tk_abc123def456...`)
-- Use Bearer authentication format
-- Tokens are permanent until revoked
-
-### Configuration with Token
+### **Option 1: Public Service (Easiest)**
 ```json
 {
   "notifications": {
     "ntfy": {
       "enabled": true,
       "url": "https://ntfy.sh",
-      "topic": "my-private-topic",
-      "authToken": "tk_abc123def456ghi789jkl012"
-    }
-  }
-}
-```
-
-## Setup Options
-
-### Option 1: Public NTFY Service
-**Easiest setup - no installation required**
-
-```json
-{
-  "notifications": {
-    "ntfy": {
-      "enabled": true,
-      "url": "https://ntfy.sh",
-      "topic": "your-unique-topic-name",
-      "authToken": ""
+      "topic": "your-unique-topic-name"
     }
   }
 }
 ```
 
 **Pros:**
-- No server setup required
-- Always available
-- Free to use
+- ✅ No server setup required
+- ✅ Always available  
+- ✅ Free to use
 
 **Cons:**
-- Public server (less privacy)
-- Rate limits apply
-- Dependent on external service
+- ❌ Public server (less privacy)
+- ❌ Rate limits apply
+- ❌ Dependent on external service
 
-### Option 2: Self-Hosted NTFY
-**More control and privacy**
-
+### **Option 2: Self-Hosted (Recommended)**
 ```json
 {
   "notifications": {
@@ -127,9 +93,9 @@ curl -X POST -d '{"label":"rewards-script"}' \
 }
 ```
 
-**Setup:**
-```bash
-# Docker Compose
+**Self-Hosted Setup:**
+```yaml
+# docker-compose.yml
 version: '3.8'
 services:
   ntfy:
@@ -142,50 +108,84 @@ services:
     command: serve
 ```
 
-## Receiving Notifications
+---
 
-### Mobile Apps
-- **Android**: [NTFY app on Google Play](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
-- **iOS**: [NTFY app on App Store](https://apps.apple.com/app/ntfy/id1625396347)
-- **F-Droid**: Available for Android
+## 🔒 Authentication
 
-### Desktop
-- **Web Interface**: Visit your NTFY server URL
-- **Desktop Apps**: Available for Linux, macOS, Windows
-- **Browser Extension**: Chrome/Firefox extensions available
+### **When You Need Auth**
+Authentication tokens are **optional** but required for:
+- 🔐 **Private topics** with username/password
+- 🏠 **Private NTFY servers** with authentication
+- 🛡️ **Preventing spam** on your topic
 
-### Setup Steps
-1. Install NTFY app on your device
-2. Add subscription to your topic
-3. Enter server URL (if self-hosted)
-4. Test with a manual message
+### **Getting an Auth Token**
 
-## Notification Types
+#### **Method 1: Command Line**
+```bash
+ntfy token
+```
 
-### Error Notifications
-**Priority**: Max (🚨)
-**Trigger**: Script errors and failures
+#### **Method 2: Web Interface**
+1. Visit your NTFY server (e.g., `https://ntfy.sh`)
+2. Go to **Account** section
+3. Generate **new access token**
+
+#### **Method 3: API**
+```bash
+curl -X POST -d '{"label":"rewards-script"}' \
+  -H "Authorization: Bearer YOUR_LOGIN_TOKEN" \
+  https://ntfy.sh/v1/account/tokens
+```
+
+### **Token Format**
+- Tokens start with `tk_` (e.g., `tk_abc123def456...`)
+- Use Bearer authentication format
+- Tokens are permanent until revoked
+
+---
+
+## 📲 Receiving Notifications
+
+### **Mobile Apps**
+- **Android** — [NTFY on Google Play](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
+- **iOS** — [NTFY on App Store](https://apps.apple.com/app/ntfy/id1625396347)
+- **F-Droid** — Available for Android
+
+### **Desktop Options**
+- **Web Interface** — Visit your NTFY server URL
+- **Desktop Apps** — Available for Linux, macOS, Windows
+- **Browser Extension** — Chrome/Firefox extensions
+
+### **Setup Steps**
+1. **Install** NTFY app on your device
+2. **Add subscription** to your topic name
+3. **Enter server URL** (if self-hosted)
+4. **Test** with a manual message
+
+---
+
+## 🔔 Notification Types
+
+### **Error Notifications**
+**Priority:** Max 🚨 | **Trigger:** Script errors and failures
 ```
 [ERROR] DESKTOP [LOGIN] Failed to login: Invalid credentials
 ```
 
-### Warning Notifications  
-**Priority**: High (⚠️)
-**Trigger**: Important warnings
+### **Warning Notifications**
+**Priority:** High ⚠️ | **Trigger:** Important warnings  
 ```
 [WARN] MOBILE [SEARCH] Didn't gain expected points from search
 ```
 
-### Info Notifications
-**Priority**: Default (🏆)
-**Trigger**: Important milestones
+### **Info Notifications**
+**Priority:** Default 🏆 | **Trigger:** Important milestones
 ```
 [INFO] MAIN [TASK] Started tasks for account user@email.com
 ```
 
-### Buy Mode Notifications
-**Priority**: High (💳)
-**Trigger**: Point spending detected
+### **Buy Mode Notifications**
+**Priority:** High 💳 | **Trigger:** Point spending detected
 ```
 💳 Spend detected (Buy Mode)
 Account: user@email.com
@@ -194,15 +194,7 @@ Current: 12,500 points
 Session spent: 1,200 points
 ```
 
-## Message Formatting
-
-### Standard Messages
-- Timestamp and process ID included
-- Platform indicator (DESKTOP/MOBILE/MAIN)
-- Activity type and details
-- Clean formatting without color codes
-
-### Conclusion Summary
+### **Conclusion Summary**
 **End-of-run summary with rich formatting:**
 ```
 🎯 Microsoft Rewards Summary
@@ -212,13 +204,12 @@ Average Duration: 8m 32s
 Cumulative Runtime: 25m 36s
 ```
 
-## Integration with Other Notifications
+---
 
-### NTFY + Discord Webhooks
-**Complementary setup for comprehensive monitoring:**
-- **Discord**: Rich embeds with detailed information
-- **NTFY**: Immediate mobile/desktop alerts
-- **Both**: Comprehensive coverage
+## 🤝 Integration with Discord
+
+### **Complementary Setup**
+Use **both** NTFY and Discord for comprehensive monitoring:
 
 ```json
 {
@@ -240,32 +231,35 @@ Cumulative Runtime: 25m 36s
 }
 ```
 
-## Advanced Configuration
+### **Coverage Comparison**
 
-### Custom Topic Names
+| Feature | NTFY | Discord |
+|---------|------|---------|
+| **Mobile push** | ✅ Instant | ❌ App required |
+| **Rich formatting** | ❌ Text only | ✅ Embeds + colors |
+| **Desktop alerts** | ✅ Native | ✅ App notifications |
+| **Offline delivery** | ✅ Queued | ❌ Real-time only |
+| **Self-hosted** | ✅ Easy | ❌ Complex |
+
+---
+
+## 🎛️ Advanced Configuration
+
+### **Custom Topic Names**
 Use descriptive, unique topic names:
-```
-rewards-production-server1
-msn-rewards-home-pc
-rewards-dev-testing
-```
-
-### Multiple Topics
-Different notifications to different topics:
 ```json
 {
-  "notifications": {
-    "ntfy": {
-      "enabled": true,
-      "url": "https://ntfy.sh",
-      "topic": "rewards-errors",
-      "authToken": "tk_errors_token"
-    }
-  }
+  "topic": "rewards-production-server1"
+}
+{
+  "topic": "msn-rewards-home-pc"  
+}
+{
+  "topic": "rewards-dev-testing"
 }
 ```
 
-### Server-Specific Configuration
+### **Environment-Specific**
 ```json
 {
   "notifications": {
@@ -279,29 +273,11 @@ Different notifications to different topics:
 }
 ```
 
-## Troubleshooting
+---
 
-### Common Issues
+## 🧪 Testing & Debugging
 
-**No notifications received:**
-- Check topic name spelling
-- Verify NTFY app subscription
-- Test with manual curl command
-- Check network connectivity
-
-**Authentication failures:**
-- Verify authToken format (starts with `tk_`)
-- Check token hasn't been revoked
-- Ensure topic requires authentication
-
-**Wrong server URL:**
-- Verify server is accessible
-- Check HTTPS vs HTTP
-- Test server in browser
-
-### Testing NTFY
-
-**Manual test message:**
+### **Manual Test Message**
 ```bash
 # Public server (no auth)
 curl -d "Test message from rewards script" https://ntfy.sh/your-topic
@@ -312,13 +288,12 @@ curl -H "Authorization: Bearer tk_your_token" \
      https://ntfy.sh/your-topic
 ```
 
-**Test from script:**
-```bash
-# Enable debug logging
-DEBUG_REWARDS_VERBOSE=1 npm start
+### **Script Debug Mode**
+```powershell
+$env:DEBUG_REWARDS_VERBOSE=1; npm start
 ```
 
-### Debug Commands
+### **Server Health Check**
 ```bash
 # Check NTFY server status
 curl -s https://ntfy.sh/v1/health
@@ -326,54 +301,107 @@ curl -s https://ntfy.sh/v1/health
 # List your topics (with auth)
 curl -H "Authorization: Bearer tk_your_token" \
      https://ntfy.sh/v1/account/topics
-
-# Test server connectivity
-ping ntfy.sh
 ```
 
-## Best Practices
+---
 
-### Security
-- Use unique, non-guessable topic names
-- Enable authentication for sensitive notifications
-- Use self-hosted server for maximum privacy
-- Regularly rotate authentication tokens
+## 🛠️ Troubleshooting
 
-### Performance
-- NTFY adds minimal overhead to script execution
-- Notifications are fire-and-forget (non-blocking)
-- Failed notifications don't affect script operation
+| Problem | Solution |
+|---------|----------|
+| **No notifications** | Check topic spelling; verify app subscription |
+| **Auth failures** | Verify token format (`tk_`); check token validity |
+| **Wrong server** | Test server URL in browser; check HTTPS/HTTP |
+| **Rate limits** | Switch to self-hosted; reduce notification frequency |
 
-### Organization
-- Use consistent topic naming schemes
-- Separate topics for different environments
-- Document topic purposes for team use
+### **Common Fixes**
+- ✅ **Topic name** — Must match exactly between config and app
+- ✅ **Server URL** — Include `https://` and check accessibility
+- ✅ **Token format** — Must start with `tk_` for authentication
+- ✅ **Network** — Verify firewall/proxy settings
 
-## Homelab Integration
+---
 
-NTFY is officially included in:
+## 🏠 Homelab Integration
+
+### **Official Support**
+NTFY is included in:
 - **Debian Trixie** (testing)
 - **Ubuntu** (latest versions)
 
-Popular homelab integrations:
-- **Sonarr/Radarr**: Download completion notifications
-- **Prometheus**: Alert manager integration
-- **Home Assistant**: Automation notifications
-- **Portainer**: Container status alerts
+### **Popular Integrations**
+- **Sonarr/Radarr** — Download completion notifications
+- **Prometheus** — Alert manager integration  
+- **Home Assistant** — Automation notifications
+- **Portainer** — Container status alerts
 
-## Privacy Considerations
+### **Docker Stack Example**
+```yaml
+version: '3.8'
+services:
+  ntfy:
+    image: binwiederhier/ntfy
+    container_name: ntfy
+    ports:
+      - "80:80"
+    volumes:
+      - ./ntfy-data:/var/lib/ntfy
+    environment:
+      - NTFY_BASE_URL=https://ntfy.yourdomain.com
+    command: serve
+    
+  rewards:
+    build: .
+    depends_on:
+      - ntfy
+    environment:
+      - NTFY_URL=http://ntfy:80
+```
 
-### Public Server (ntfy.sh)
-- Messages pass through public infrastructure
-- Topic names are visible in logs
-- Consider for non-sensitive notifications only
+---
 
-### Self-Hosted Server
-- Complete control over data
-- Private network deployment possible
-- Recommended for sensitive information
+## 🔒 Privacy & Security
 
-### Data Retention
-- Messages are not permanently stored
-- Delivery attempts are retried for short periods
-- No long-term message history
+### **Public Server (ntfy.sh)**
+- ⚠️ Messages pass through public infrastructure
+- ⚠️ Topic names visible in logs
+- ✅ Suitable for non-sensitive notifications
+
+### **Self-Hosted Server**
+- ✅ Complete control over data
+- ✅ Private network deployment possible
+- ✅ Recommended for sensitive information
+
+### **Best Practices**
+- 🔐 Use **unique, non-guessable** topic names
+- 🔑 Enable **authentication** for sensitive notifications
+- 🏠 Use **self-hosted server** for maximum privacy
+- 🔄 **Regularly rotate** authentication tokens
+
+### **Data Retention**
+- 📨 Messages are **not permanently stored**
+- ⏱️ Delivery attempts **retried** for short periods
+- 🗑️ **No long-term** message history
+
+---
+
+## ⚡ Performance Impact
+
+### **Script Performance**
+- ✅ **Minimal overhead** — Fire-and-forget notifications
+- ✅ **Non-blocking** — Failed notifications don't affect script
+- ✅ **Asynchronous** — No execution delays
+
+### **Network Usage**
+- 📊 **Low bandwidth** — Text-only messages
+- ⚡ **HTTP POST** — Simple, efficient protocol
+- 🔄 **Retry logic** — Automatic failure recovery
+
+---
+
+## 🔗 Related Guides
+
+- **[Discord Webhooks](./conclusionwebhook.md)** — Rich notification embeds
+- **[Getting Started](./getting-started.md)** — Initial setup and configuration
+- **[Buy Mode](./buy-mode.md)** — Manual purchasing notifications
+- **[Security](./security.md)** — Privacy and data protection

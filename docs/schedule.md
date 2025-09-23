@@ -1,11 +1,31 @@
-# Scheduling Configuration
+# ⏰ Scheduler & Automation
 
-Built-in scheduler for automated script execution at specified times without external cron jobs.
+<div align="center">
 
-## Configuration
+**🚀 Built-in scheduler for automated daily execution**  
+*Set it and forget it*
 
-Add to your `src/config.json`:
+</div>
 
+---
+
+## 🎯 What is the Scheduler?
+
+The built-in scheduler provides **automated script execution** at specified times without requiring external cron jobs or task schedulers.
+
+### **Key Features**
+- 📅 **Daily automation** — Run at the same time every day
+- 🌍 **Timezone aware** — Handles DST automatically
+- 🔄 **Multiple passes** — Execute script multiple times per run
+- 🏖️ **Vacation mode** — Skip random days monthly
+- 🎲 **Jitter support** — Randomize execution times
+- ⚡ **Immediate start** — Option to run on startup
+
+---
+
+## ⚙️ Configuration
+
+### **Basic Setup**
 ```json
 {
   "schedule": {
@@ -18,59 +38,334 @@ Add to your `src/config.json`:
 }
 ```
 
-## Options
-
-| Setting | Description | Default | Example |
-|---------|-------------|---------|---------|
-| `enabled` | Enable built-in scheduler | `false` | `true` |
-| `time` | Daily execution time (24-hour format) | `"09:00"` | `"14:30"` |
-| `timeZone` | IANA timezone identifier | `"UTC"` | `"Europe/Paris"` |
-| `runImmediatelyOnStart` | Execute once on process startup | `true` | `false` |
-| `passesPerRun` | Number of complete runs per execution | `1` | `3` |
-| `vacation.enabled` | Skip a monthly contiguous off-block | `false` | `true` |
-| `vacation.minDays` | Minimum days in the off-block | `3` | `4` |
-| `vacation.maxDays` | Maximum days in the off-block | `5` | `6` |
-
-## How It Works
-
-### Daily Scheduling
-- Executes at the same time every day
-- Timezone-aware scheduling
-- Automatic adjustment for daylight saving time
-
-### Startup Behavior
-When `runImmediatelyOnStart` is `true`:
-- **Started before scheduled time**: Runs immediately, then waits for next scheduled time
-- **Started after scheduled time**: Runs immediately, then waits for next day's scheduled time
-
-When `runImmediatelyOnStart` is `false`:
-- Always waits for the next scheduled time
-- No immediate execution regardless of start time
-
-### Multiple Passes
-### Vacation Mode (Monthly off-block)
-
-- When `vacation.enabled` is `true`, the scheduler selects one contiguous block of days per calendar month.
-- The block length is randomly chosen between `minDays` and `maxDays` (inclusive). Defaults: 3–5 days.
-- All runs that fall on any day within this block are skipped. The chosen range is logged as: `Selected vacation block this month: yyyy-LL-dd → yyyy-LL-dd`.
-- This is independent from weekly random off-days. Both may apply.
-
-Example configuration:
-
-```jsonc
+### **Advanced Setup with Vacation Mode**
+```json
 {
-  "schedule": { "enabled": true, "time": "09:00", "timeZone": "Europe/Paris" },
-  "vacation": { "enabled": true, "minDays": 3, "maxDays": 5 }
+  "schedule": {
+    "enabled": true,
+    "time": "10:00",
+    "timeZone": "Europe/Paris",
+    "runImmediatelyOnStart": false
+  },
+  "passesPerRun": 3,
+  "vacation": {
+    "enabled": true,
+    "minDays": 3,
+    "maxDays": 5
+  }
 }
 ```
 
-- `passesPerRun` controls how many complete cycles to execute
-- Each pass processes all accounts through all configured tasks
-- Useful for maximum point collection
+### **Configuration Options**
 
-Note:
-- `passesPerRun` s'applique au scheduler intégré (via `npm run start:schedule` ou `ts-schedule`).
-- Si vous utilisez l'intégration Docker + cron externe, le nombre d'exécutions est contrôlé par `CRON_SCHEDULE`. Vous pouvez toujours utiliser le scheduler intégré à l'intérieur d'un conteneur en lançant `start:schedule` plutôt que `npm start` si vous préférez `passesPerRun`.
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `false` | Enable built-in scheduler |
+| `time` | `"09:00"` | Daily execution time (24-hour format) |
+| `timeZone` | `"UTC"` | IANA timezone identifier |
+| `runImmediatelyOnStart` | `true` | Execute once on process startup |
+| `passesPerRun` | `1` | Number of complete runs per execution |
+| `vacation.enabled` | `false` | Skip random monthly off-block |
+| `vacation.minDays` | `3` | Minimum vacation days |
+| `vacation.maxDays` | `5` | Maximum vacation days |
+
+---
+
+## 🚀 How It Works
+
+### **Daily Scheduling**
+1. **Calculate next run** — Timezone-aware scheduling
+2. **Wait until time** — Minimal resource usage
+3. **Execute passes** — Run script specified number of times
+4. **Schedule next day** — Automatic DST adjustment
+
+### **Startup Behavior**
+
+#### **Immediate Start Enabled (`true`)**
+- **Before scheduled time** → Run immediately + wait for next scheduled time
+- **After scheduled time** → Run immediately + wait for tomorrow's time
+
+#### **Immediate Start Disabled (`false`)**
+- **Any time** → Always wait for next scheduled time
+
+### **Multiple Passes**
+- Each pass processes **all accounts** through **all tasks**
+- Useful for **maximum point collection**
+- Higher passes = **more points** but **increased detection risk**
+
+---
+
+## 🏖️ Vacation Mode
+
+### **Monthly Off-Blocks**
+Vacation mode randomly selects a **contiguous block of days** each month to skip execution.
+
+### **Configuration**
+```json
+{
+  "vacation": {
+    "enabled": true,
+    "minDays": 3,
+    "maxDays": 5
+  }
+}
+```
+
+### **How It Works**
+- **Random selection** — Different days each month
+- **Contiguous block** — Skip consecutive days, not scattered
+- **Independent** — Works with weekly random off-days
+- **Logged** — Shows selected vacation period
+
+### **Example Output**
+```
+[SCHEDULE] Selected vacation block this month: 2025-01-15 → 2025-01-18
+[SCHEDULE] Skipping run - vacation mode (3 days remaining)
+```
+
+---
+
+## 🌍 Supported Timezones
+
+### **North America**
+- `America/New_York` — Eastern Time
+- `America/Chicago` — Central Time  
+- `America/Denver` — Mountain Time
+- `America/Los_Angeles` — Pacific Time
+- `America/Phoenix` — Arizona (no DST)
+
+### **Europe**
+- `Europe/London` — GMT/BST
+- `Europe/Paris` — CET/CEST
+- `Europe/Berlin` — CET/CEST
+- `Europe/Rome` — CET/CEST
+- `Europe/Moscow` — MSK
+
+### **Asia Pacific**
+- `Asia/Tokyo` — JST
+- `Asia/Shanghai` — CST
+- `Asia/Kolkata` — IST
+- `Australia/Sydney` — AEST/AEDT
+- `Pacific/Auckland` — NZST/NZDT
+
+---
+
+## 🎲 Randomization & Watchdog
+
+### **Environment Variables**
+```powershell
+# Add random delay before first run (5-20 minutes)
+$env:SCHEDULER_INITIAL_JITTER_MINUTES_MIN=5
+$env:SCHEDULER_INITIAL_JITTER_MINUTES_MAX=20
+
+# Add daily jitter to scheduled time (2-10 minutes)
+$env:SCHEDULER_DAILY_JITTER_MINUTES_MIN=2
+$env:SCHEDULER_DAILY_JITTER_MINUTES_MAX=10
+
+# Kill stuck passes after N minutes
+$env:SCHEDULER_PASS_TIMEOUT_MINUTES=180
+
+# Run each pass in separate process (recommended)
+$env:SCHEDULER_FORK_PER_PASS=true
+```
+
+### **Benefits**
+- **Avoid patterns** — Prevents exact-time repetition
+- **Protection** — Kills stuck processes
+- **Isolation** — Process separation for stability
+
+---
+
+## 🖥️ Running the Scheduler
+
+### **Development Mode**
+```powershell
+npm run ts-schedule
+```
+
+### **Production Mode**
+```powershell
+npm run build
+npm run start:schedule
+```
+
+### **Background Execution**
+```powershell
+# Windows Background (PowerShell)
+Start-Process -NoNewWindow -FilePath "npm" -ArgumentList "run", "start:schedule"
+
+# Alternative: Windows Task Scheduler (recommended)
+# Create scheduled task via GUI or schtasks command
+```
+
+---
+
+## 📊 Usage Examples
+
+### **Basic Daily Automation**
+```json
+{
+  "schedule": {
+    "enabled": true,
+    "time": "08:00",
+    "timeZone": "America/New_York"
+  }
+}
+```
+⏰ **Perfect for morning routine** — Catch daily resets
+
+### **Multiple Daily Passes**
+```json
+{
+  "schedule": {
+    "enabled": true,
+    "time": "10:00",
+    "timeZone": "Europe/London",
+    "runImmediatelyOnStart": false
+  },
+  "passesPerRun": 3
+}
+```
+🔄 **Maximum points** with higher detection risk
+
+### **Conservative with Vacation**
+```json
+{
+  "schedule": {
+    "enabled": true,
+    "time": "20:00",
+    "timeZone": "America/Los_Angeles"
+  },
+  "passesPerRun": 1,
+  "vacation": {
+    "enabled": true,
+    "minDays": 4,
+    "maxDays": 6
+  }
+}
+```
+🏖️ **Natural patterns** with monthly breaks
+
+---
+
+## 🐳 Docker Integration
+
+### **Built-in Scheduler (Recommended)**
+```yaml
+services:
+  microsoft-rewards-script:
+    build: .
+    environment:
+      TZ: Europe/Paris
+    command: ["npm", "run", "start:schedule"]
+```
+- Uses `passesPerRun` from config
+- Single long-running process
+- No external cron needed
+
+### **External Cron (Project Default)**
+```yaml
+services:
+  microsoft-rewards-script:
+    build: .
+    environment:
+      CRON_SCHEDULE: "0 7,16,20 * * *"
+      RUN_ON_START: "true"
+```
+- Uses `run_daily.sh` with random delays
+- Multiple cron executions
+- Lockfile prevents overlaps
+
+---
+
+## 📋 Logging Output
+
+### **Scheduler Initialization**
+```
+[SCHEDULE] Scheduler initialized for daily 09:00 America/New_York
+[SCHEDULE] Next run scheduled for 2025-01-21 09:00:00 EST
+```
+
+### **Daily Execution**
+```
+[SCHEDULE] Starting scheduled run (pass 1 of 2)
+[SCHEDULE] Completed scheduled run in 12m 34s
+[SCHEDULE] Next run scheduled for 2025-01-22 09:00:00 EST
+```
+
+### **Time Calculations**
+```
+[SCHEDULE] Current time: 2025-01-20 15:30:00 EDT
+[SCHEDULE] Target time: 2025-01-21 09:00:00 EDT  
+[SCHEDULE] Waiting 17h 30m until next run
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| **Scheduler not running** | Check `enabled: true`; verify timezone format |
+| **Wrong execution time** | Verify system clock; check DST effects |
+| **Memory growth** | Restart process weekly; monitor logs |
+| **Missed executions** | Check system sleep/hibernation; verify process |
+
+### **Debug Commands**
+```powershell
+# Test timezone calculation
+node -e "console.log(new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}))"
+
+# Verify config syntax
+node -e "console.log(JSON.parse((Get-Content 'src/config.json' | Out-String)))"
+
+# Check running processes
+Get-Process | Where-Object {$_.ProcessName -eq "node"}
+```
+
+---
+
+## ⚡ Performance & Best Practices
+
+### **Optimal Timing**
+- **🌅 Morning (7-10 AM)** — Catch daily resets
+- **🌆 Evening (7-10 PM)** — Complete remaining tasks  
+- **❌ Avoid peak hours** — Reduce detection during high traffic
+
+### **Pass Recommendations**
+- **1 pass** — Safest, good for most users
+- **2-3 passes** — Balance of points vs. risk
+- **4+ passes** — Higher risk, development only
+
+### **Monitoring**
+- ✅ Check logs regularly for errors
+- ✅ Monitor point collection trends  
+- ✅ Verify scheduler status weekly
+
+---
+
+## 🔗 Alternative Solutions
+
+### **Windows Task Scheduler**
+```powershell
+# Create scheduled task
+schtasks /create /tn "MS-Rewards" /tr "npm start" /sc daily /st 09:00 /sd 01/01/2025
+```
+
+### **PowerShell Scheduled Job**
+```powershell
+# Register scheduled job
+Register-ScheduledJob -Name "MSRewards" -ScriptBlock {cd "C:\path\to\project"; npm start} -Trigger (New-JobTrigger -Daily -At 9am)
+```
+
+---
+
+## 🔗 Related Guides
+
+- **[Getting Started](./getting-started.md)** — Initial setup and configuration
+- **[Humanization](./humanization.md)** — Natural behavior patterns
+- **[Docker](./docker.md)** — Container deployment
+- **[Job State](./jobstate.md)** — Execution state management
 
 ## Usage Examples
 

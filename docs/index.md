@@ -77,3 +77,19 @@ Welcome to the Microsoft Rewards Script V2 documentation. Start here to set up y
   - [Buy Mode](./buy-mode.md)
 
 If you are new, read Getting Started first, then Accounts & TOTP.
+
+---
+
+## 🚀 Quick Start Path
+
+**New users should follow this sequence:**
+
+1. **[Getting Started](./getting-started.md)** — Install and basic configuration
+2. **[Accounts & 2FA](./accounts.md)** — Add your Microsoft accounts  
+3. **[Docker](./docker.md)** OR **[Scheduler](./schedule.md)** — Choose deployment method
+4. **[NTFY](./ntfy.md)** OR **[Discord Webhooks](./conclusionwebhook.md)** — Set up notifications
+
+**Advanced users may also need:**
+- **[Proxy](./proxy.md)** — For privacy and geographic routing
+- **[Security](./security.md)** — Account protection and incident response
+- **[Humanization](./humanization.md)** — Natural behavior simulation

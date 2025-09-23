@@ -83,3 +83,12 @@ Security tips:
 - “accounts file not found”: ensure the file exists, or set `ACCOUNTS_FILE` to the correct path.
 - 2FA prompt not filled: verify `totp` is a valid Base32 secret; time on the host/container should be correct.
 - Locked account: the bot will log and skip; resolve manually then re‑enable.
+
+---
+
+## 🔗 Related Guides
+
+- **[Getting Started](./getting-started.md)** — Initial setup and configuration
+- **[Docker](./docker.md)** — Container deployment with accounts
+- **[Security](./security.md)** — Account protection and incident response
+- **[NTFY Notifications](./ntfy.md)** — Get alerts for login issues

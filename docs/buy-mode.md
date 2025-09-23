@@ -1,54 +1,150 @@
-# Buy Mode Documentation
+# 💳 Buy Mode
 
-## Overview
+<div align="center">
 
-Buy Mode is a specialized operation mode that allows you to manually redeem or purchase rewards while the script passively monitors your point balance in the background.
+**🛒 Manual redemption with live point monitoring**  
+*Track your spending while maintaining full control*
 
-## How to Use
+</div>
 
+---
+
+## 🎯 What is Buy Mode?
+
+Buy Mode allows you to **manually redeem rewards** while the script **passively monitors** your point balance. Perfect for safe redemptions without automation interference.
+
+### **Key Features**
+- 👀 **Passive monitoring** — No clicks or automation
+- 🔄 **Real-time tracking** — Instant spending alerts  
+- 📱 **Live notifications** — Discord/NTFY integration
+- ⏱️ **Configurable duration** — Set your own time limit
+- 📊 **Session summary** — Complete spending report
+
+---
+
+## 🚀 How to Use
+
+### **Command Options**
 ```bash
 # Monitor specific account
 npm start -- -buy your@email.com
 
-# Monitor first account in accounts.json
+# Monitor first account in accounts.json  
 npm start -- -buy
+
+# Alternative: Enable in config (see below)
 ```
 
-## What Happens
+### **What Happens Next**
+1. **🖥️ Dual Tab System Opens**
+   - **Monitor Tab** — Background monitoring (auto-refresh)
+   - **User Tab** — Your control for redemptions/browsing
 
-### 1. Dual Tab System
-- **Monitor Tab**: Background tab that auto-refreshes every ~10 seconds to track points
-- **User Tab**: Your main browsing tab for manual actions (redemptions, purchases, browsing)
+2. **📊 Passive Point Tracking**
+   - Reads balance every ~10 seconds
+   - Detects spending when points decrease
+   - Zero interference with your browsing
 
-### 2. Passive Monitoring
-- Script reads your point balance without clicking or interfering
-- Detects when points decrease (indicating a purchase/redemption)
-- No automation runs - you have complete control
+3. **🔔 Real-time Alerts**
+   - Instant notifications when spending detected
+   - Shows amount spent + current balance
+   - Tracks cumulative session spending
 
-### 3. Real-time Notifications
-- Instant alerts via Discord/NTFY when spending is detected
-- Shows amount spent and current balance
-- Tracks cumulative spending for the session
+---
 
-### 4. Session Summary
-- Final report with initial points, final points, and total spent
-- Negative `totalCollected` value indicates spending
-- Standard conclusion webhook format
+## ⚙️ Configuration
 
-## Configuration
-
-Add to your `src/config.json`:
-
+### **Set Duration in Config**
+Add to `src/config.json`:
 ```json
 {
   "buyMode": {
+    "enabled": false,
     "maxMinutes": 45
   }
 }
 ```
 
-- `maxMinutes`: How long to monitor (default: 45 minutes)
-- Monitoring stops automatically after this duration
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `false` | Force buy mode without CLI flag |
+| `maxMinutes` | `45` | Auto-stop after N minutes |
+
+### **Enable Notifications**
+Buy mode works with existing notification settings:
+```json
+{
+  "conclusionWebhook": {
+    "enabled": true,
+    "url": "https://discord.com/api/webhooks/YOUR_URL"
+  },
+  "ntfy": {
+    "enabled": true,
+    "url": "https://ntfy.sh",
+    "topic": "rewards"
+  }
+}
+```
+
+---
+
+## 🖥️ Terminal Output
+
+### **Startup**
+```
+ ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗
+ ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝
+ ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝ 
+ ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝  
+ ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║   
+ ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝   
+                                                   
+            Manual Purchase Mode • Passive Monitoring
+
+[BUY-MODE] Opening dual-tab system for safe redemptions...
+[BUY-MODE] Monitor tab: Background point tracking
+[BUY-MODE] User tab: Your control for purchases/browsing
+```
+
+### **Live Monitoring**
+```
+[BUY-MODE] Current balance: 15,000 points
+[BUY-MODE] 🛒 Spending detected: -500 points (new balance: 14,500)
+[BUY-MODE] Session total spent: 500 points
+```
+
+---
+
+## 📋 Use Cases
+
+| Scenario | Benefit |
+|----------|---------|
+| **🎁 Gift Card Redemption** | Track exact point cost while redeeming safely |
+| **🛍️ Microsoft Store Purchases** | Monitor spending across multiple items |
+| **✅ Account Verification** | Ensure point changes match expected activity |
+| **📊 Spending Analysis** | Real-time tracking of reward usage patterns |
+| **🔒 Safe Browsing** | Use Microsoft Rewards normally with monitoring |
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| **Monitor tab closes** | Script auto-reopens in background |
+| **No spending alerts** | Check webhook/NTFY config; verify notifications enabled |
+| **Session too short** | Increase `maxMinutes` in config |
+| **Login failures** | Verify account credentials in `accounts.json` |
+| **Points not updating** | Check internet connection; try refresh |
+
+---
+
+## 🔗 Related Guides
+
+- **[Getting Started](./getting-started.md)** — Initial setup and configuration
+- **[Accounts & 2FA](./accounts.md)** — Microsoft account setup
+- **[NTFY Notifications](./ntfy.md)** — Mobile push alerts
+- **[Discord Webhooks](./conclusionwebhook.md)** — Server notifications
 
 ## Terminal Output
 

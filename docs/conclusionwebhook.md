@@ -1,21 +1,31 @@
-# Conclusion Webhook
+# 📊 Discord Conclusion Webhook
 
-The conclusion webhook sends a comprehensive summary notification at the end of each script execution, providing a complete overview of the session's results across all accounts.
+<div align="center">
 
-## What is the Conclusion Webhook?
+**🎯 Comprehensive session summaries via Discord**  
+*Complete execution reports delivered instantly*
 
-The conclusion webhook is a Discord webhook integration that sends a detailed summary message after all accounts have completed their Microsoft Rewards tasks. It provides:
+</div>
 
-- **Session Overview**: Total accounts processed, success/failure counts
-- **Points Summary**: Starting points, earned points, final totals
-- **Performance Metrics**: Execution times, efficiency statistics
-- **Error Reporting**: Issues encountered during execution
-- **Buy Mode Detection**: Point spending alerts and tracking
+---
 
-## Configuration
+## 🎯 What is the Conclusion Webhook?
 
-Add to your `src/config.json`:
+The conclusion webhook sends a **detailed summary notification** at the end of each script execution via Discord, providing a complete overview of the session's results across all accounts.
 
+### **Key Features**
+- 📊 **Session overview** — Total accounts processed, success/failure counts
+- 💎 **Points summary** — Starting points, earned points, final totals
+- ⏱️ **Performance metrics** — Execution times, efficiency statistics
+- ❌ **Error reporting** — Issues encountered during execution
+- 💳 **Buy mode detection** — Point spending alerts and tracking
+- 🎨 **Rich embeds** — Color-coded, well-formatted Discord messages
+
+---
+
+## ⚙️ Configuration
+
+### **Basic Setup**
 ```json
 {
   "notifications": {
@@ -27,30 +37,31 @@ Add to your `src/config.json`:
 }
 ```
 
-## Options
+### **Configuration Options**
 
 | Setting | Description | Example |
 |---------|-------------|---------|
 | `enabled` | Enable conclusion webhook | `true` |
 | `url` | Discord webhook URL | Full webhook URL from Discord |
 
-## Discord Webhook Setup
+---
 
-### Step 1: Create Webhook in Discord
+## 🚀 Discord Setup
 
+### **Step 1: Create Webhook**
 1. **Open Discord** and go to your server
-2. **Right-click** on the channel where you want notifications
+2. **Right-click** on the channel for notifications
 3. **Select "Edit Channel"**
 4. **Go to "Integrations" tab**
 5. **Click "Create Webhook"**
-6. **Configure webhook**:
-   - Name: "MSN Rewards Summary"
-   - Avatar: Upload rewards icon (optional)
-   - Channel: Select appropriate channel
-7. **Copy webhook URL**
 
-### Step 2: Configure in Script
+### **Step 2: Configure Webhook**
+- **Name** — "MS Rewards Summary"
+- **Avatar** — Upload rewards icon (optional)
+- **Channel** — Select appropriate channel
+- **Copy webhook URL**
 
+### **Step 3: Add to Config**
 ```json
 {
   "notifications": {
@@ -62,47 +73,44 @@ Add to your `src/config.json`:
 }
 ```
 
-### Step 3: Test Configuration
+---
 
-Run the script with conclusion webhook enabled to verify the setup works correctly.
+## 📋 Message Format
 
-## Message Format
+### **Rich Embed Summary**
 
-### Rich Embed Summary
+#### **Header Section**
+```
+🎯 Microsoft Rewards Summary
+⏰ Completed at 2025-01-20 14:30:15
+📈 Total Runtime: 25m 36s
+```
 
-The conclusion webhook sends a rich Discord embed with:
-
-**Header Section:**
-- 🎯 Microsoft Rewards Summary title
-- Timestamp of completion
-- Total execution time
-
-**Account Statistics:**
+#### **Account Statistics**
 ```
 📊 Accounts: 3 • 0 with issues
 ```
 
-**Points Overview:**
+#### **Points Overview**
 ```
 💎 Points: 15,230 → 16,890 (+1,660)
 ```
 
-**Performance Metrics:**
+#### **Performance Metrics**
 ```
 ⏱️ Average Duration: 8m 32s
 📈 Cumulative Runtime: 25m 36s
 ```
 
-**Buy Mode Detection (if applicable):**
+#### **Buy Mode Detection** (if applicable)
 ```
 💳 Buy Mode Activity Detected
 Total Spent: 1,200 points across 2 accounts
 ```
 
-### Detailed Account Breakdown
+### **Account Breakdown**
 
-For each account processed:
-
+#### **Successful Account**
 ```
 👤 user@example.com
 Points: 5,420 → 6,140 (+720)
@@ -110,7 +118,7 @@ Duration: 7m 23s
 Status: ✅ Completed successfully
 ```
 
-With errors:
+#### **Failed Account**
 ```
 👤 problem@example.com  
 Points: 3,210 → 3,210 (+0)
@@ -118,115 +126,19 @@ Duration: 2m 15s
 Status: ❌ Failed - Login timeout
 ```
 
-### Buy Mode Alerts
-
-When point spending is detected:
-
+#### **Buy Mode Account**
 ```
-💳 Buy Mode Activity
-Account: spender@example.com
+💳 spender@example.com
 Session Spent: 500 points
-Total Available: 12,500 points
-Activities: Search completed, Quiz skipped
+Available: 12,500 points
+Status: 💳 Purchase activity detected
 ```
 
-## Error Handling
+---
 
-### Network Failures
-- Webhook failures don't stop script execution
-- Failed webhooks are logged to console
-- Retries are not performed (fire-and-forget)
+## 📊 Message Examples
 
-### Invalid Webhook URLs
-- Malformed URLs are caught and logged
-- Script continues normal execution
-- Error is reported in logs
-
-### Discord Rate Limits
-- Single webhook per session prevents rate limiting
-- Large payloads are automatically truncated
-- Delivery is typically instantaneous
-
-## Advanced Configuration
-
-### Multiple Webhooks
-
-Different webhooks for different purposes:
-
-```json
-{
-  "notifications": {
-    "webhook": {
-      "enabled": true,
-      "url": "https://discord.com/api/webhooks/.../errors-channel"
-    },
-    "conclusionWebhook": {
-      "enabled": true,
-      "url": "https://discord.com/api/webhooks/.../summary-channel"
-    }
-  }
-}
-```
-
-### Channel Organization
-
-**Recommended Discord channel structure:**
-- `#rewards-errors`: Real-time error notifications (webhook)
-- `#rewards-summary`: End-of-run summaries (conclusionWebhook)
-- `#rewards-logs`: Detailed text logs (manual uploads)
-
-### Webhook Security
-
-**Best Practices:**
-- Use dedicated Discord server for notifications
-- Limit webhook permissions to specific channels
-- Regenerate webhook URLs if compromised
-- Don't share webhook URLs publicly
-
-## Integration with Other Notifications
-
-### Webhook vs Conclusion Webhook
-
-| Feature | Webhook | Conclusion Webhook |
-|---------|---------|-------------------|
-| **Timing** | Real-time during execution | End of session only |
-| **Content** | Errors, warnings, progress | Comprehensive summary |
-| **Frequency** | Multiple per session | One per session |
-| **Purpose** | Immediate alerts | Session overview |
-
-### Combined Setup
-
-**Recommended configuration for comprehensive monitoring:**
-
-```json
-{
-  "notifications": {
-    "webhook": {
-      "enabled": true,
-      "url": "https://discord.com/api/webhooks/.../real-time"
-    },
-    "conclusionWebhook": {
-      "enabled": true,
-      "url": "https://discord.com/api/webhooks/.../summary"
-    },
-    "ntfy": {
-      "enabled": true,
-      "url": "https://ntfy.sh",
-      "topic": "rewards-mobile"
-    }
-  }
-}
-```
-
-**Benefits:**
-- **Real-time webhook**: Immediate error alerts
-- **Conclusion webhook**: Comprehensive session summary
-- **NTFY**: Mobile notifications for critical issues
-
-## Message Examples
-
-### Successful Session
-
+### **Successful Session**
 ```discord
 🎯 Microsoft Rewards Summary
 
@@ -251,8 +163,7 @@ Duration: 8m 32s
 Status: ✅ Completed successfully
 ```
 
-### Session with Issues
-
+### **Session with Issues**
 ```discord
 🎯 Microsoft Rewards Summary
 
@@ -277,8 +188,7 @@ Duration: 9m 07s
 Status: ⚠️ Partially completed - Quiz failed
 ```
 
-### Buy Mode Detection
-
+### **Buy Mode Detection**
 ```discord
 🎯 Microsoft Rewards Summary
 
@@ -299,29 +209,104 @@ Duration: 8m 45s
 Status: ✅ Completed successfully
 ```
 
-## Troubleshooting
+---
 
-### Common Issues
+## 🤝 Integration with Other Notifications
 
-**No summary received:**
-- Check webhook URL is correct
-- Verify Discord channel permissions
-- Check script completed successfully
-- Review console logs for errors
+### **Webhook vs Conclusion Webhook**
 
-**Malformed messages:**
-- Webhook URL might be invalid
-- Discord server might be unavailable
-- Check webhook hasn't been deleted
+| Feature | Real-time Webhook | Conclusion Webhook |
+|---------|------------------|-------------------|
+| **Timing** | During execution | End of session only |
+| **Content** | Errors, warnings, progress | Comprehensive summary |
+| **Frequency** | Multiple per session | One per session |
+| **Purpose** | Immediate alerts | Session overview |
 
-**Missing information:**
-- Ensure all accounts completed processing
-- Check for script errors during execution
-- Verify conclusion webhook is enabled
+### **Recommended Combined Setup**
+```json
+{
+  "notifications": {
+    "webhook": {
+      "enabled": true,
+      "url": "https://discord.com/api/webhooks/.../real-time"
+    },
+    "conclusionWebhook": {
+      "enabled": true,
+      "url": "https://discord.com/api/webhooks/.../summary"
+    },
+    "ntfy": {
+      "enabled": true,
+      "url": "https://ntfy.sh",
+      "topic": "rewards-mobile"
+    }
+  }
+}
+```
 
-### Testing
+### **Benefits of Combined Setup**
+- ⚡ **Real-time webhook** — Immediate error alerts
+- 📊 **Conclusion webhook** — Comprehensive session summary  
+- 📱 **NTFY** — Mobile notifications for critical issues
 
-**Manual webhook test:**
+---
+
+## 🎛️ Advanced Configuration
+
+### **Multiple Webhooks**
+```json
+{
+  "notifications": {
+    "webhook": {
+      "enabled": true,
+      "url": "https://discord.com/api/webhooks/.../errors-channel"
+    },
+    "conclusionWebhook": {
+      "enabled": true,
+      "url": "https://discord.com/api/webhooks/.../summary-channel"
+    }
+  }
+}
+```
+
+### **Channel Organization**
+
+#### **Recommended Discord Structure**
+- **#rewards-errors** — Real-time error notifications (webhook)
+- **#rewards-summary** — End-of-run summaries (conclusionWebhook)
+- **#rewards-logs** — Detailed text logs (manual uploads)
+
+#### **Channel Settings**
+- **Notification settings** — Configure per your preference
+- **Webhook permissions** — Limit to specific channels
+- **Message history** — Enable for tracking trends
+
+---
+
+## 🔒 Security & Privacy
+
+### **Webhook Security Best Practices**
+- 🔐 Use **dedicated Discord server** for notifications
+- 🎯 **Limit permissions** to specific channels only
+- 🔄 **Regenerate URLs** if compromised
+- 🚫 **Don't share** webhook URLs publicly
+
+### **Data Transmission**
+- ✅ **Summary statistics** only
+- ✅ **Points and email** addresses
+- ❌ **No passwords** or sensitive tokens
+- ❌ **No personal information** beyond emails
+
+### **Data Retention**
+- 💾 **Discord stores** messages per server settings
+- 🗑️ **No local storage** by the script
+- ✂️ **Manual deletion** possible anytime
+- 📝 **Webhook logs** may be retained by Discord
+
+---
+
+## 🧪 Testing & Debugging
+
+### **Manual Webhook Test**
 ```bash
 curl -X POST \
   -H "Content-Type: application/json" \
@@ -329,81 +314,76 @@ curl -X POST \
   "YOUR_WEBHOOK_URL_HERE"
 ```
 
-**Script debug mode:**
-```bash
-DEBUG_REWARDS_VERBOSE=1 npm start
+### **Script Debug Mode**
+```powershell
+$env:DEBUG_REWARDS_VERBOSE=1; npm start
 ```
 
-### Debug Information
-
-Check console output for:
+### **Success Indicators**
 ```
 [INFO] Sending conclusion webhook...
 [INFO] Conclusion webhook sent successfully
 ```
 
-Or error messages:
+### **Error Messages**
 ```
 [ERROR] Failed to send conclusion webhook: Invalid webhook URL
 ```
 
-## Performance Impact
+---
 
-### Minimal Overhead
-- Single HTTP request at script end
-- Non-blocking operation
-- Payload size typically < 2KB
-- Delivery time < 1 second
+## 🛠️ Troubleshooting
 
-### Resource Usage
-- No impact on account processing
-- Minimal memory footprint
-- No disk storage required
-- Network bandwidth negligible
+| Problem | Solution |
+|---------|----------|
+| **No summary received** | Check webhook URL; verify Discord permissions |
+| **Malformed messages** | Validate webhook URL; check Discord server status |
+| **Missing information** | Ensure script completed; check for execution errors |
+| **Rate limited** | Single webhook per session prevents this |
 
-## Customization Options
+### **Common Fixes**
+- ✅ **Webhook URL** — Must be complete Discord webhook URL
+- ✅ **Channel permissions** — Webhook must have send permissions
+- ✅ **Server availability** — Discord server must be accessible
+- ✅ **Script completion** — Summary only sent after full execution
 
-### Message Content
+---
 
-The conclusion webhook automatically includes:
-- Account processing results
-- Points gained/lost per account
-- Error summaries and warnings
-- Buy mode activity detection
-- Performance timing metrics
+## ⚡ Performance Impact
 
-### Embed Formatting
+### **Resource Usage**
+- 📨 **Single HTTP request** at script end
+- ⚡ **Non-blocking operation** — No execution delays
+- 💾 **Payload size** — Typically < 2KB
+- 🌐 **Delivery time** — Usually < 1 second
 
-Messages use Discord's rich embed format with:
-- Color-coded status indicators
-- Emoji icons for visual clarity
-- Structured field layout
-- Timestamp and duration info
+### **Benefits**
+- ✅ **No impact** on account processing
+- ✅ **Minimal memory** footprint
+- ✅ **No disk storage** required
+- ✅ **Negligible bandwidth** usage
 
-### Channel Integration
+---
 
-Works with Discord features:
-- Thread notifications
-- Role mentions (configure in webhook)
-- Message reactions and responses
-- Search and archive functionality
+## 🎨 Customization
 
-## Privacy and Security
+### **Embed Features**
+- 🎨 **Color-coded** status indicators
+- 🎭 **Emoji icons** for visual clarity
+- 📊 **Structured fields** for easy reading
+- ⏰ **Timestamps** and duration info
 
-### Data Transmission
-- Only summary statistics sent
-- No sensitive account information
-- No passwords or tokens transmitted
-- Points and email addresses only
+### **Discord Integration**
+- 💬 **Thread notifications** support
+- 👥 **Role mentions** (configure in webhook)
+- 🔍 **Searchable messages** for history
+- 📂 **Archive functionality** for records
 
-### Webhook Security
-- Discord webhook URLs contain authentication
-- No additional authentication required
-- URLs should be kept private
-- Can be regenerated if compromised
+---
 
-### Data Retention
-- Discord stores messages per server settings
-- No data stored by the script
-- Messages can be deleted manually
-- Webhook logs may be retained by Discord
+## 🔗 Related Guides
+
+- **[NTFY Notifications](./ntfy.md)** — Mobile push notifications
+- **[Getting Started](./getting-started.md)** — Initial setup and configuration
+- **[Buy Mode](./buy-mode.md)** — Manual purchasing with monitoring
+- **[Security](./security.md)** — Privacy and data protection

@@ -74,3 +74,12 @@ This dramatically reduces image size vs. installing all Playwright browsers.
 - If you see 2FA prompts, add your TOTP Base32 secret to `accounts.json` so the bot can auto‑fill codes.
 - Use a persistent `sessions` volume to avoid re‑logging every run.
 - For proxies per account, fill the `proxy` block in your `accounts.json` (see [Proxy](./proxy.md)).
+
+---
+
+## 🔗 Related Guides
+
+- **[Getting Started](./getting-started.md)** — Initial setup before containerization
+- **[Accounts & 2FA](./accounts.md)** — Configure accounts for Docker
+- **[Scheduler](./schedule.md)** — Alternative to Docker cron automation
+- **[Proxy Configuration](./proxy.md)** — Network routing in containers

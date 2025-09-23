@@ -125,3 +125,12 @@ Once running, explore these guides:
 
 **Found a bug?** [Report it here](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)  
 **Need support?** [Join our Discord](https://discord.gg/KRBFxxsU)
+
+---
+
+## 🔗 Related Guides
+
+- **[Accounts & 2FA](./accounts.md)** — Add Microsoft accounts with TOTP
+- **[Docker](./docker.md)** — Deploy with containers  
+- **[Scheduler](./schedule.md)** — Automate daily execution
+- **[Discord Webhooks](./conclusionwebhook.md)** — Get run summaries

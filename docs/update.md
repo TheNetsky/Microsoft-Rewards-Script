@@ -1,11 +1,30 @@
-# Auto-Update Configuration
+# 🔄 Auto-Update System
 
-Automatic update system that runs after script completion to keep your installation current.
+<div align="center">
 
-## Configuration
+**🚀 Automatic updates to keep your installation current**  
+*Set it and forget it*
 
-Add to your `src/config.json`:
+</div>
 
+---
+
+## 🎯 What is Auto-Update?
+
+The automatic update system runs **after script completion** to keep your installation current with the latest features, bug fixes, and security patches.
+
+### **Key Features**
+- 🔄 **Automatic updates** — Runs after each script completion
+- 🛡️ **Safe by design** — Fast-forward only Git updates
+- 🐳 **Docker support** — Container image updates
+- 🛠️ **Custom scripts** — Extensible update process
+- 🔒 **Error resilient** — Failed updates don't break main script
+
+---
+
+## ⚙️ Configuration
+
+### **Basic Setup**
 ```json
 {
   "update": {
@@ -16,7 +35,7 @@ Add to your `src/config.json`:
 }
 ```
 
-## Options
+### **Configuration Options**
 
 | Setting | Description | Default |
 |---------|-------------|---------|
@@ -24,23 +43,25 @@ Add to your `src/config.json`:
 | `docker` | Enable Docker container updates | `false` |
 | `scriptPath` | Path to custom update script | `"setup/update/update.mjs"` |
 
-## Update Methods
+---
 
-### Git Updates (`git: true`)
+## 🚀 Update Methods
 
-**What it does:**
-- Fetches latest changes from remote repository
-- Performs fast-forward only pulls (safe updates)
-- Reinstalls dependencies (`npm ci`)
-- Rebuilds the project (`npm run build`)
+### **Git Updates (`git: true`)**
 
-**Requirements:**
-- Git installed and available in PATH
-- Repository is a Git clone (not downloaded ZIP)
-- No uncommitted local changes
-- Internet connectivity
+#### **What It Does**
+- 📥 **Fetches latest changes** from remote repository
+- ⚡ **Fast-forward only pulls** (safe updates)
+- 📦 **Reinstalls dependencies** (`npm ci`)
+- 🔨 **Rebuilds the project** (`npm run build`)
 
-**Process:**
+#### **Requirements**
+- ✅ Git installed and available in PATH
+- ✅ Repository is a Git clone (not downloaded ZIP)
+- ✅ No uncommitted local changes
+- ✅ Internet connectivity
+
+#### **Process**
 ```bash
 git fetch --all --prune
 git pull --ff-only
@@ -48,37 +69,39 @@ npm ci
 npm run build
 ```
 
-### Docker Updates (`docker: true`)
+### **Docker Updates (`docker: true`)**
 
-**What it does:**
-- Pulls latest container images
-- Restarts services with new images
-- Preserves mounted volumes and configurations
+#### **What It Does**
+- 📥 **Pulls latest container images**
+- 🔄 **Restarts services** with new images
+- 💾 **Preserves configurations** and mounted volumes
 
-**Requirements:**
-- Docker and Docker Compose installed
-- `docker-compose.yml` file present
-- Proper container registry access
+#### **Requirements**
+- ✅ Docker and Docker Compose installed
+- ✅ `docker-compose.yml` file present
+- ✅ Proper container registry access
 
-**Process:**
+#### **Process**
 ```bash
 docker compose pull
 docker compose up -d
 ```
 
-## Custom Update Scripts
+---
 
-### Default Script Location
-- Path: `setup/update/update.mjs`
-- Written in ES modules format
-- Accepts command line arguments
+## 🛠️ Custom Update Scripts
 
-### Script Arguments
-- `--git`: Enable Git update process
-- `--docker`: Enable Docker update process
+### **Default Script**
+- **Path** — `setup/update/update.mjs`
+- **Format** — ES modules
+- **Arguments** — Command line flags
+
+### **Script Arguments**
+- `--git` — Enable Git update process
+- `--docker` — Enable Docker update process
 - Both flags can be combined
 
-### Custom Script Example
+### **Custom Script Example**
 ```javascript
 // custom-update.mjs
 import { execSync } from 'child_process'
@@ -86,51 +109,59 @@ import { execSync } from 'child_process'
 const args = process.argv.slice(2)
 
 if (args.includes('--git')) {
-  console.log('Running custom Git update...')
+  console.log('🔄 Running custom Git update...')
   execSync('git pull && npm install', { stdio: 'inherit' })
 }
 
 if (args.includes('--docker')) {
-  console.log('Running custom Docker update...')
+  console.log('🐳 Running custom Docker update...')
   execSync('docker-compose pull && docker-compose up -d', { stdio: 'inherit' })
 }
 ```
 
-## Execution Timing
+---
 
-### When Updates Run
-- **After normal script completion**: All accounts processed successfully
-- **After error completion**: Script finished with errors but completed
-- **Not after interruption**: Script killed or crashed mid-execution
+## ⏰ Execution Timing
 
-### Update Order
-1. Main script execution completes
-2. Conclusion webhook sent (if enabled)
-3. Update process begins
-4. Git updates (if enabled)
-5. Docker updates (if enabled)
-6. Process exits
+### **When Updates Run**
+| Scenario | Update Runs |
+|----------|-------------|
+| **Normal completion** | ✅ All accounts processed successfully |
+| **Error completion** | ✅ Script finished with errors but completed |
+| **Interruption** | ❌ Script killed or crashed mid-execution |
 
-## Safety Features
+### **Update Sequence**
+1. **🏁 Main script completion** — All accounts processed
+2. **📊 Conclusion webhook** sent (if enabled)
+3. **🚀 Update process begins**
+4. **📥 Git updates** (if enabled)
+5. **🐳 Docker updates** (if enabled)
+6. **🔚 Process exits**
 
-### Git Safety
-- **Fast-forward only**: Prevents overwriting local changes
-- **Dependency verification**: Ensures `npm ci` succeeds
-- **Build validation**: Confirms TypeScript compilation works
+---
 
-### Error Handling
-- **Update failures don't break main script**
-- **Silent failures**: Errors logged but don't crash process
-- **Rollback protection**: Failed updates don't affect current installation
+## 🛡️ Safety Features
 
-### Concurrent Execution
-- **Single update process**: Multiple script instances don't conflict
-- **Lock-free**: No file locking or process synchronization needed
-- **Independent per instance**: Each script copy updates independently
+### **Git Safety**
+- ⚡ **Fast-forward only** — Prevents overwriting local changes
+- 📦 **Dependency verification** — Ensures `npm ci` succeeds
+- 🔨 **Build validation** — Confirms TypeScript compilation works
 
-## Monitoring Updates
+### **Error Handling**
+- ✅ **Update failures** don't break main script
+- 🔇 **Silent failures** — Errors logged but don't crash process
+- 🔄 **Rollback protection** — Failed updates don't affect current installation
 
-### Log Output
+### **Concurrent Execution**
+- 🔒 **Single update process** — Multiple instances don't conflict
+- 🚫 **Lock-free design** — No file locking needed
+- 🎯 **Independent updates** — Each script copy updates separately
+
+---
+
+## 📊 Monitoring Updates
+
+### **Log Output**
 ```
 [UPDATE] Starting post-run update process
 [UPDATE] Git update enabled, Docker update disabled
@@ -141,8 +172,8 @@ if (args.includes('--docker')) {
 [UPDATE] Update completed successfully
 ```
 
-### Update Verification
-```bash
+### **Update Verification**
+```powershell
 # Check if updates are pending
 git status
 
@@ -153,86 +184,123 @@ git log --oneline -5
 npm run build
 ```
 
-## Use Cases
+---
 
-### Development Environment
-- Keep local installation synchronized with repository
-- Automatic dependency updates
-- Seamless integration of bug fixes and features
+## 📋 Use Cases
 
-### Production Deployment
-- Automated security patches
-- Feature updates without manual intervention
-- Consistent update process across multiple servers
+### **Development Environment**
+| Benefit | Description |
+|---------|-------------|
+| **Synchronized** | Keep local installation current with repository |
+| **Automated** | Automatic dependency updates |
+| **Seamless** | Integration of bug fixes and features |
 
-### Docker Environments
-- Container image updates
-- Security patches in base images
-- Automated service restarts
+### **Production Deployment**
+| Benefit | Description |
+|---------|-------------|
+| **Security** | Automated security patches |
+| **Features** | Updates without manual intervention |
+| **Consistent** | Same update process across servers |
 
-## Best Practices
+### **Docker Environments**
+| Benefit | Description |
+|---------|-------------|
+| **Images** | Container image updates |
+| **Security** | Patches in base images |
+| **Automated** | Service restarts |
 
-### Git Configuration
-- **Clean working directory**: Commit or stash local changes
-- **Stable branch**: Use `main` or `stable` branch for auto-updates
-- **Regular commits**: Keep repository history clean
-- **Backup important data**: Sessions and accounts before updates
+---
 
-### Docker Configuration
-- **Image tagging**: Use specific tags, not `latest` for production
-- **Volume persistence**: Ensure data volumes are properly mounted
-- **Service dependencies**: Configure proper service startup order
-- **Resource limits**: Set appropriate memory and CPU limits
+## 📋 Best Practices
 
-### Monitoring
-- **Check logs regularly**: Monitor update success/failure
-- **Test after updates**: Verify script functionality
-- **Backup before major updates**: Preserve working configurations
-- **Version tracking**: Keep record of successful versions
+### **Git Configuration**
+- 🧹 **Clean working directory** — Commit or stash local changes
+- 🌿 **Stable branch** — Use `main` or `stable` for auto-updates
+- 📝 **Regular commits** — Keep repository history clean
+- 💾 **Backup data** — Sessions and accounts before updates
 
-## Troubleshooting
+### **Docker Configuration**
+- 🏷️ **Image tagging** — Use specific tags, not `latest` for production
+- 💾 **Volume persistence** — Ensure data volumes are mounted
+- 🔗 **Service dependencies** — Configure proper startup order
+- 🎯 **Resource limits** — Set appropriate memory and CPU limits
 
-### Common Git Issues
+### **Monitoring**
+- 📝 **Check logs regularly** — Monitor update success/failure
+- 🧪 **Test after updates** — Verify script functionality
+- 💾 **Backup configurations** — Preserve working setups
+- 📊 **Version tracking** — Record successful versions
 
-**"Not a git repository"**
-- Solution: Clone repository instead of downloading ZIP
-- Alternative: Disable git updates
+---
 
-**"Local changes would be overwritten"**
-- Solution: Commit or stash local changes
-- Alternative: Reset to remote state (`git reset --hard origin/main`)
+## 🛠️ Troubleshooting
 
-**"Fast-forward not possible"**
-- Solution: Repository has diverged from upstream
-- Fix: Reset to remote state or merge manually
+### **Git Issues**
 
-### Common Docker Issues
+| Error | Solution |
+|-------|----------|
+| **"Not a git repository"** | Clone repository instead of downloading ZIP |
+| **"Local changes would be overwritten"** | Commit or stash local changes |
+| **"Fast-forward not possible"** | Repository diverged - reset to remote state |
 
-**"Docker not found"**
-- Solution: Install Docker and Docker Compose
-- Alternative: Disable docker updates
+#### **Git Reset Command**
+```powershell
+# Reset to remote state (⚠️ loses local changes)
+git fetch origin
+git reset --hard origin/main
+```
 
-**"Permission denied"**
-- Solution: Add user to docker group
-- Alternative: Run with sudo (not recommended)
+### **Docker Issues**
 
-**"No such file 'docker-compose.yml'"**
-- Solution: Create docker-compose.yml file
-- Alternative: Use custom script path
+| Error | Solution |
+|-------|----------|
+| **"Docker not found"** | Install Docker and Docker Compose |
+| **"Permission denied"** | Add user to docker group |
+| **"No docker-compose.yml"** | Create compose file or use custom script |
 
-### Network Issues
+#### **Docker Permission Fix**
+```powershell
+# Windows: Ensure Docker Desktop is running
+# Linux: Add user to docker group
+sudo usermod -aG docker $USER
+```
 
-**"Could not resolve host"**
-- Solution: Check internet connectivity
-- Temporary: Updates will retry on next run
+### **Network Issues**
 
-**"Connection timeout"**
-- Solution: Check firewall and proxy settings
-- Alternative: Use VPN or different network
+| Error | Solution |
+|-------|----------|
+| **"Could not resolve host"** | Check internet connectivity |
+| **"Connection timeout"** | Check firewall and proxy settings |
 
-## Disabling Updates
+---
 
-### Complete Disable
+## 🔧 Manual Updates
+
+### **Git Manual Update**
+```powershell
+git fetch --all --prune
+git pull --ff-only
+npm ci
+npm run build
+```
+
+### **Docker Manual Update**  
+```powershell
+docker compose pull
+docker compose up -d
+```
+
+### **Dependencies Only**
+```powershell
+npm ci
+npm run build
+```
+
+---
+
+## ⚙️ Update Configuration
+
+### **Complete Disable**
 ```json
 {
   "update": {
@@ -242,7 +310,7 @@ npm run build
 }
 ```
 
-### Selective Disable
+### **Selective Enable**
 ```json
 {
   "update": {
@@ -252,41 +320,76 @@ npm run build
 }
 ```
 
-## Manual Updates
-
-### Git Manual Update
-```bash
-git fetch --all --prune
-git pull --ff-only
-npm ci
-npm run build
+### **Custom Script Path**
+```json
+{
+  "update": {
+    "git": true,
+    "docker": false,
+    "scriptPath": "my-custom-update.mjs"
+  }
+}
 ```
 
-### Docker Manual Update
-```bash
-docker compose pull
-docker compose up -d
+---
+
+## 🔒 Security Considerations
+
+### **Git Security**
+- ✅ **Trusted remote** — Updates pull from configured remote only
+- ⚡ **Fast-forward only** — Prevents malicious rewrites
+- 📦 **NPM registry** — Dependencies from official registry
+
+### **Docker Security**
+- 🏷️ **Verified images** — Container images from configured registries
+- ✍️ **Image signatures** — Verify when possible
+- 🔍 **Security scanning** — Regular scanning of base images
+
+### **Script Execution**
+- 👤 **Same permissions** — Update scripts run with same privileges
+- 🚫 **No escalation** — No privilege escalation during updates
+- 🔍 **Review scripts** — Custom scripts should be security reviewed
+
+---
+
+## 🎯 Environment Examples
+
+### **Development**
+```json
+{
+  "update": {
+    "git": true,
+    "docker": false
+  }
+}
 ```
 
-### Dependency Only
-```bash
-npm ci
-npm run build
+### **Production**
+```json
+{
+  "update": {
+    "git": false,
+    "docker": true
+  }
+}
 ```
 
-## Security Considerations
+### **Hybrid**
+```json
+{
+  "update": {
+    "git": true,
+    "docker": true,
+    "scriptPath": "setup/update/production-update.mjs"
+  }
+}
+```
 
-### Git Security
-- Updates pull from configured remote (verify it's trusted)
-- Fast-forward only prevents malicious rewrites
-- Dependencies installed from npm registry
+---
 
-### Docker Security
-- Container images pulled from configured registries
-- Verify image signatures when possible
-- Regular security scanning of base images
+## 🔗 Related Guides
 
-### Script Execution
-- Update scripts run with same permissions as main script
-- No privilege escalation during updates
-- Custom scripts should be reviewed for security
+- **[Getting Started](./getting-started.md)** — Initial setup and configuration
+- **[Docker](./docker.md)** — Container deployment and management
+- **[Scheduler](./schedule.md)** — Automated timing and execution  
+- **[Security](./security.md)** — Privacy and data protection
