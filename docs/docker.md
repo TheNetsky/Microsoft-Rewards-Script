@@ -1,4 +1,34 @@
-# Docker Guide
+# 🐳 Docker Guide
+
+<div align="center">
+
+**⚡ Lightweight containerized deployment**  
+*Automated Microsoft Rewards with minimal Docker footprint*
+
+</div>
+
+---
+
+## 🚀 Quick Start
+
+### **Prerequisites**
+- ✅ `src/accounts.json` configured with your Microsoft accounts
+- ✅ `src/config.json` exists (uses defaults if not customized)
+- ✅ Docker & Docker Compose installed
+
+### **Launch**
+```bash
+# Build and start the container
+docker compose up -d
+
+# Monitor the automation
+docker logs -f microsoft-rewards-script
+
+# Stop when needed
+docker compose down
+```
+
+**That's it!** The container runs the built-in scheduler automatically.uide
 
 This project ships with a Docker setup tailored for headless runs. It uses Playwright’s Chromium Headless Shell to keep the image small.
 

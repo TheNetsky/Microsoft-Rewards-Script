@@ -1,14 +1,28 @@
-# Accounts & TOTP (2FA)
+# 👤 Accounts & TOTP (2FA)
 
-The bot needs Microsoft accounts to log in and complete daily activities. This page explains how to structure `accounts.json`, enable 2FA (TOTP), and choose proxy options.
+<div align="center">
 
-## File Location
-- Default: `src/accounts.json`
-- Alternatives:
-  - Set `ACCOUNTS_FILE` to an absolute or relative path
-  - Or set `ACCOUNTS_JSON` to a JSON string (useful for CI/CD)
+**🔐 Secure Microsoft account setup with 2FA support**  
+*Everything you need to configure authentication*
 
-The loader tries in this order: `ACCOUNTS_JSON` → `ACCOUNTS_FILE` → common file locations in the project root.
+</div>
+
+---
+
+## 📍 File Location & Options
+
+The bot needs Microsoft account credentials to log in and complete activities. Here's how to provide them:
+
+### **Default Location**
+```
+src/accounts.json
+```
+
+### **Environment Overrides** (Docker/CI)
+- **`ACCOUNTS_FILE`** — Path to accounts file (e.g., `/data/accounts.json`)
+- **`ACCOUNTS_JSON`** — Inline JSON string (useful for CI/CD)
+
+The loader tries: `ACCOUNTS_JSON` → `ACCOUNTS_FILE` → default locations in project root.
 
 ## Schema
 Each account has at least `email` and `password`.
