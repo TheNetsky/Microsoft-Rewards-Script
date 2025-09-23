@@ -340,9 +340,14 @@ Tip: Accounts set to passwordless (Microsoft Authenticator with number match) al
 
 **🎓 Need More Power?** Check out our [comprehensive guides](./docs/):
 
+[Start here → Documentation Index](./docs/index.md)
+
 [![Diagnostics](https://img.shields.io/badge/📊_Diagnostics-Error_Capture-FF6B6B?style=for-the-badge)](./docs/diagnostics.md)
 [![Humanization](https://img.shields.io/badge/🧠_Humanization-Human_Mode-2ecc71?style=for-the-badge)](./docs/humanization.md)
 [![Scheduling](https://img.shields.io/badge/⏰_Scheduling-Automated_Runs-4ECDC4?style=for-the-badge)](./docs/schedule.md)
+[![Getting Started](https://img.shields.io/badge/🚀_Getting_Started-Setup-3498DB?style=for-the-badge)](./docs/getting-started.md)
+[![Accounts & TOTP](https://img.shields.io/badge/👤_Accounts_%26_TOTP-2FA-9B59B6?style=for-the-badge)](./docs/accounts.md)
+[![Docker](https://img.shields.io/badge/🐳_Docker-Guide-2E86C1?style=for-the-badge)](./docs/docker.md)
 [![Notifications](https://img.shields.io/badge/📱_NTFY-Push_Alerts-9B59B6?style=for-the-badge)](./docs/ntfy.md)
 [![Webhooks](https://img.shields.io/badge/🎯_Discord-Live_Updates-7289DA?style=for-the-badge)](./docs/conclusionwebhook.md)
 [![Proxy](https://img.shields.io/badge/🌐_Proxy-Network_Setup-FF9F43?style=for-the-badge)](./docs/proxy.md)
