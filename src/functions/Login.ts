@@ -145,6 +145,12 @@ export class Login {
     await this.bot.browser.utils.reloadBadPage(page)
     await this.bot.utils.wait(500)
     await this.tryRecoveryMismatchCheck(page, email)
+    if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'recovery-mismatch') {
+      this.bot.log(this.bot.isMobile,'LOGIN','Recovery mismatch detected – stopping before password entry','warn')
+      return
+    }
+    // Try switching to password if a locale link is present (FR/EN)
+    await this.switchToPasswordLink(page)
     await this.inputPasswordOr2FA(page, password)
     if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'sign-in-blocked') {
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Blocked sign-in detected — halting.', 'warn')
@@ -398,32 +404,65 @@ export class Login {
   }
 
   private async tryRecoveryMismatchCheck(page: Page, email: string) { try { await this.detectAndHandleRecoveryMismatch(page, email) } catch {/* ignore */} }
-
   private async detectAndHandleRecoveryMismatch(page: Page, email: string) {
-    // Reuse previous improved implementation (slightly trimmed) to avoid regression
     try {
-      const recoveryEmail = this.bot.currentAccountRecoveryEmail
+      const recoveryEmail: string | undefined = this.bot.currentAccountRecoveryEmail
       if (!recoveryEmail || !/@/.test(recoveryEmail)) return
-      const parseRef = (v: string) => { const [l,d] = v.split('@'); return { prefix2:(l||'').slice(0,2).toLowerCase(), domain:(d||'').toLowerCase() } }
-      const refs = [parseRef(recoveryEmail), parseRef(email)].filter(r=>r.domain && r.prefix2)
-      const html = await page.content().catch(()=> '')
-      if (!html) return
-      const maskedRegex = /[A-Za-z0-9]{1,4}[*•]{2,}[A-Za-z0-9*•._-]*@[A-Za-z0-9.-]+/g
-      const found = new Set<string>()
-      let m: RegExpExecArray | null
-      while ((m = maskedRegex.exec(html)) !== null) found.add(m[0])
-      if (found.size === 0) return
-      const sample = Array.from(found)[0]!
-      const lc = sample.toLowerCase()
-      const ok = refs.some(r => lc.includes(r.domain) && lc.indexOf(r.prefix2) >= 0)
-      if (!ok) {
+      const accountEmail = email
+      const parseRef = (val: string) => { const [l,d] = val.split('@'); return { local: l||'', domain:(d||'').toLowerCase(), prefix2:(l||'').slice(0,2).toLowerCase() } }
+      const refs = [parseRef(recoveryEmail), parseRef(accountEmail)].filter(r=>r.domain && r.prefix2)
+      if (refs.length === 0) return
+
+      const candidates: string[] = []
+      // Direct selectors (Microsoft variants + French spans)
+      const sel = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"], span:has(span.fui-Text)'
+      const el = await page.waitForSelector(sel, { timeout: 1500 }).catch(()=>null)
+      if (el) { const t = (await el.textContent()||'').trim(); if (t) candidates.push(t) }
+
+      // List items
+      const li = page.locator('[role="listitem"], li')
+      const liCount = await li.count().catch(()=>0)
+      for (let i=0;i<liCount && i<12;i++) { const t = (await li.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && /@/.test(t)) candidates.push(t) }
+
+      // XPath generic masked patterns
+      const xp = page.locator('xpath=//*[contains(normalize-space(.), "@") and (contains(normalize-space(.), "*") or contains(normalize-space(.), "•"))]')
+      const xpCount = await xp.count().catch(()=>0)
+      for (let i=0;i<xpCount && i<12;i++) { const t = (await xp.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && t.length<300) candidates.push(t) }
+
+      // Normalize
+      const seen = new Set<string>()
+      const norm = (s:string)=>s.replace(/\s+/g,' ').trim()
+  const uniq = candidates.map(norm).filter(t=>t && !seen.has(t) && seen.add(t))
+      // Masked filter
+      let masked = uniq.filter(t=>/@/.test(t) && /[*•]/.test(t))
+
+      if (masked.length === 0) {
+        // Fallback full HTML scan
+        try {
+          const html = await page.content()
+          const generic = /[A-Za-z0-9]{1,4}[*•]{2,}[A-Za-z0-9*•._-]*@[A-Za-z0-9.-]+/g
+          const frPhrase = /Nous\s+enverrons\s+un\s+code\s+à\s+([^<@]*[A-Za-z0-9]{1,4}[*•]{2,}[A-Za-z0-9*•._-]*@[A-Za-z0-9.-]+)[^.]{0,120}?Pour\s+vérifier/gi
+          const found = new Set<string>()
+          let m: RegExpExecArray | null
+          while ((m = generic.exec(html)) !== null) found.add(m[0])
+          while ((m = frPhrase.exec(html)) !== null) { const raw = m[1]?.replace(/<[^>]+>/g,'').trim(); if (raw) found.add(raw) }
+          if (found.size > 0) masked = Array.from(found)
+        } catch {/* ignore */}
+      }
+      if (masked.length === 0) return
+
+      // Prefer one mentioning email/adresse
+      const preferred = masked.find(t=>/email|courriel|adresse|mail/i.test(t)) || masked[0]!
+      const lc = preferred.toLowerCase()
+      const matchRef = refs.find(r=> lc.includes(r.domain) && lc.indexOf(r.prefix2) >= 0 && lc.indexOf(r.prefix2) <= 6)
+      if (!matchRef) {
         const docsUrl = this.getDocsUrl('recovery-email-mismatch')
         const incident: SecurityIncident = {
-          kind: 'Recovery email mismatch',
-            account: email,
-            details: [`Masked: ${sample}`, `Expected: ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(', ')}`],
-            next: ['Review account manually', 'Confirm recovery email settings'],
-            docsUrl
+          kind:'Recovery email mismatch',
+          account: email,
+          details:[`Masked: ${preferred}`, `Expected: ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(', ')}`],
+          next:['Do NOT continue. Review account manually.', 'Update or secure recovery email.'],
+          docsUrl
         }
         await this.sendIncidentAlert(incident,'warn')
         this.bot.compromisedModeActive = true
@@ -432,9 +471,20 @@ export class Login {
         await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(()=>{})
         await this.saveIncidentArtifacts(page,'recovery-mismatch').catch(()=>{})
       } else {
-        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Masked recovery accepted: ${sample}`)
+        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Masked recovery accepted: ${preferred} (matched ${matchRef.prefix2}**@${matchRef.domain})`)
       }
-    } catch {/* non fatal */}
+    } catch {/* non-fatal */}
+  }
+
+  private async switchToPasswordLink(page: Page) {
+    try {
+      const link = await page.locator('xpath=//span[@role="button" and (contains(translate(normalize-space(.),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"use your password") or contains(translate(normalize-space(.),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"utilisez votre mot de passe"))]').first()
+      if (await link.isVisible().catch(()=>false)) {
+        await link.click().catch(()=>{})
+        await this.bot.utils.wait(800)
+        this.bot.log(this.bot.isMobile,'LOGIN','Clicked "Use your password" link')
+      }
+    } catch {/* ignore */}
   }
 
   // --------------- Incident Helpers ---------------
