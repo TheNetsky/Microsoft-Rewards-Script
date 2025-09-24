@@ -1,4 +1,6 @@
 import type { Page } from 'playwright'
+import fs from 'fs'
+import path from 'path'
 import readline from 'readline'
 import * as crypto from 'crypto'
 import { AxiosRequestConfig } from 'axios'
@@ -9,11 +11,7 @@ import { generateTOTP } from '../util/Totp'
 
 import { OAuth } from '../interface/OAuth'
 
-
-const rl = readline.createInterface({
-    input: process.stdin as NodeJS.ReadStream,
-    output: process.stdout as NodeJS.WriteStream
-})
+// NOTE: Readline is created on-demand inside authSMSVerification to avoid stale/closed interface reuse.
 
 export class Login {
     private bot: MicrosoftRewardsBot
@@ -183,31 +181,13 @@ export class Login {
 
             // Wait for password field
             const passwordField = await page.waitForSelector(passwordInputSelector, { state: 'visible', timeout: 5000 }).catch(() => null)
+            // Always attempt to detect sign-in blocked (even if password field is present on some variants)
+            const blocked = await this.detectSignInBlocked(page)
+            if (blocked) {
+                return
+            }
             if (!passwordField) {
-                // Detect explicit sign-in failure page
-                const titleEl = await page.waitForSelector('[data-testid="title"]', { timeout: 1500 }).catch(() => null)
-                const titleText = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
-                if (/we can't sign you in|we can’t sign you in/i.test(titleText)) {
-                    const email = this.bot.currentAccountEmail || 'account'
-                    const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
-                        const incident = {
-                            kind: 'We can\'t sign you in (blocked)',
-                            account: email,
-                            details: ['Microsoft presented a sign-in blocked page during login.'],
-                            next: ['Automation paused and global standby engaged.', 'Complete required challenges, then review the docs.'],
-                            docsUrl
-                        }
-                        await this.sendIncidentAlert(incident, 'warn')
-                    // Mark compromised mode to stop farming but allow manual intervention
-                    this.bot.compromisedModeActive = true
-                    this.bot.compromisedReason = 'sign-in-blocked'
-                    this.startCompromisedInterval()
-                    // Engage global standby so we do not proceed to next accounts
-                    await this.bot.engageGlobalStandby('sign-in-blocked', this.bot.currentAccountEmail)
-                    // Open docs tab
-                        try { await this.openDocsTab(page, incident.docsUrl!) } catch { /* ignore */ }
-                }
-                this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field not found, possibly 2FA required', 'warn')
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field not found, possibly 2FA required (or blocked)', 'warn')
                 await this.handle2FA(page)
                 return
             }
@@ -318,9 +298,14 @@ export class Login {
 
         this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code required. Waiting for user input...')
 
+        // Local readline instance (avoids global singleton side-effects)
+        const rlLocal = readline.createInterface({
+            input: process.stdin as NodeJS.ReadStream,
+            output: process.stdout as NodeJS.WriteStream
+        })
         const code = await new Promise<string>((resolve) => {
-            rl.question('Enter 2FA code:\n', (input: string) => {
-                rl.close()
+            rlLocal.question('Enter 2FA code:\n', (input: string) => {
+                rlLocal.close()
                 resolve(input)
             })
         })
@@ -610,6 +595,69 @@ export class Login {
         }
     }
 
+    /** Detects Microsoft "We can't sign you in" / too many attempts blocks (with or without password field). */
+    private async detectSignInBlocked(page: Page): Promise<boolean> {
+        try {
+            if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'sign-in-blocked') return true
+            // Gather potential heading/title nodes
+            const selectors = [
+                '[data-testid="title"]',
+                'h1',
+                'div[role="heading"]',
+                'div.text-title'
+            ]
+            let text = ''
+            for (const sel of selectors) {
+                const el = await page.waitForSelector(sel, { timeout: 800 }).catch(()=>null)
+                if (el) {
+                    const t = (await el.textContent() || '').trim()
+                    if (t.length > 0 && t.length < 400) {
+                        text += ' \n ' + t
+                    }
+                }
+            }
+            const lower = text.toLowerCase()
+            const patterns: { re: RegExp; label: string }[] = [
+                { re: /we can['’`]?t sign you in/, label: 'cant-sign-in' },
+                { re: /incorrect account or password too many times/, label: 'too-many-incorrect' },
+                { re: /used an incorrect account or password too many times/, label: 'too-many-incorrect-variant' },
+                { re: /sign-in has been blocked/, label: 'sign-in-blocked-phrase' },
+                { re: /your account has been locked/, label: 'account-locked' },
+                { re: /your account or password is incorrect too many times/, label: 'incorrect-too-many-times' }
+            ]
+            let matched: string | null = null
+            for (const p of patterns) { if (p.re.test(lower)) { matched = p.label; break } }
+            const hit = !!matched
+            const SECURITY_DEBUG = process.env.SECURITY_DEBUG === '1'
+            if (SECURITY_DEBUG) {
+                this.bot.log(this.bot.isMobile, 'SECURITY-DEBUG', `Sign-in blocked probe matched=${matched||'none'} raw="${text.replace(/\s+/g,' ').slice(0,300)}"`)
+            }
+            if (!hit) return false
+            const email = this.bot.currentAccountEmail || 'account'
+            const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
+            const incident = {
+                kind: 'We can\'t sign you in (blocked)',
+                account: email,
+                details: [
+                    'Microsoft presented a sign-in blocked page (too many incorrect attempts).',
+                    matched ? `Pattern: ${matched}` : 'Pattern: unknown'
+                ],
+                next: ['Automation paused (standby). Solve challenges manually, then resume.', 'See docs for recovery steps.'],
+                docsUrl
+            }
+            await this.sendIncidentAlert(incident, 'warn')
+            this.bot.compromisedModeActive = true
+            this.bot.compromisedReason = 'sign-in-blocked'
+            this.startCompromisedInterval()
+            await this.bot.engageGlobalStandby('sign-in-blocked', this.bot.currentAccountEmail).catch(()=>{})
+            try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
+            await this.saveIncidentArtifacts(page, 'sign-in-blocked').catch(()=>{})
+            return true
+        } catch {
+            return false
+        }
+    }
+
     // --- Helpers added to satisfy references and provide incident handling ---
 
     /**
@@ -631,8 +679,8 @@ export class Login {
             // Try multiple heuristics to capture masked recovery hints across locales and UI variants.
             const candidates: string[] = []
 
-            // 1) Common testids/ids
-            const sel1 = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"]'
+            // 1) Common testids/ids + generic spans containing French prompt fragments (locale support)
+            const sel1 = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"], span:has(span.fui-Text)'
             const el1 = await page.waitForSelector(sel1, { timeout: 2000 }).catch(() => null)
             if (el1) {
                 const txt = (await el1.textContent() || '').trim()
@@ -666,7 +714,28 @@ export class Login {
             })
 
             // Keep only texts that look like masked emails
-            const masked = uniq.filter(t => /@/.test(t) && (/[•*]/.test(t) || /\*\*+/.test(t)))
+            let masked = uniq.filter(t => /@/.test(t) && (/[•*]/.test(t) || /\*\*+/.test(t)))
+
+            // Fallback: regex scan of full HTML if none found (covers deeply nested spans like French UI sample)
+            if (masked.length === 0) {
+                try {
+                    const html = await page.content()
+                    const regex = /[A-Za-z0-9]{1,4}\*{2,}[A-Za-z0-9._-]*@[A-Za-z0-9.-]+/g
+                    const found = new Set<string>()
+                    let m: RegExpExecArray | null
+                    while ((m = regex.exec(html)) !== null) {
+                        found.add(m[0])
+                    }
+                    if (found.size > 0) {
+                        masked = Array.from(found)
+                    }
+                } catch { /* ignore */ }
+            }
+
+            const RECOVERY_DEBUG = process.env.RECOVERY_DEBUG === '1'
+            if (RECOVERY_DEBUG) {
+                this.bot.log(this.bot.isMobile, 'RECOVERY-DEBUG', `candidates=${candidates.length} uniq=${uniq.length} masked=${masked.length}`)
+            }
             if (masked.length === 0) return
 
             // Try to find a candidate mentioning email specifically
@@ -697,6 +766,7 @@ export class Login {
                     docsUrl
                 }
                 await this.sendIncidentAlert(incident, 'warn')
+                await this.saveIncidentArtifacts(page, 'recovery-mismatch').catch(()=>{})
 
                 // Enter a compromised/standby mode to avoid continuing with other accounts.
                 this.bot.compromisedModeActive = true
@@ -705,8 +775,8 @@ export class Login {
                 try { await this.bot.engageGlobalStandby('recovery-mismatch', this.bot.currentAccountEmail) } catch { /* ignore */ }
                 try { await this.openDocsTab(page, docsUrl) } catch { /* ignore */ }
             } else {
-                // Optional: log a low-noise confirmation once when we positively match
-                this.bot.log(this.bot.isMobile, 'LOGIN-RECOVERY', `Recovery email hint matches expected domain/prefix for ${email}`)
+                // Optional: always log the masked email when debug enabled or first time
+                this.bot.log(this.bot.isMobile, 'LOGIN-RECOVERY', `Masked recovery email accepted: ${maskedText} (expected prefix+domain match)`)
             }
         } catch {
             // Non-fatal: ignore any parsing issues.
@@ -783,12 +853,31 @@ export class Login {
 
     /** Periodically reminds the operator that the session is in compromised/standby mode. */
     private startCompromisedInterval() {
-        if (this.compromisedInterval) clearInterval(this.compromisedInterval)
+    if (this.compromisedInterval) clearInterval(this.compromisedInterval)
         // Repeat reminder every 5 minutes (as documented)
         this.compromisedInterval = setInterval(() => {
             try {
                 this.bot.log(this.bot.isMobile, 'SECURITY', 'Account in security standby. Review incident and docs before proceeding. Security check by @Light', 'warn')
             } catch { /* ignore */ }
         }, 5 * 60 * 1000)
+    }
+
+    /** Save screenshot + minimal HTML snapshot for a security incident (best-effort). */
+    private async saveIncidentArtifacts(page: Page, slug: string): Promise<void> {
+        try {
+            const baseDir = path.join(process.cwd(), 'diagnostics', 'security-incidents')
+            await fs.promises.mkdir(baseDir, { recursive: true })
+            const ts = new Date().toISOString().replace(/[:.]/g, '-')
+            const dir = path.join(baseDir, `${ts}-${slug}`)
+            await fs.promises.mkdir(dir, { recursive: true })
+            // Screenshot
+            try { await page.screenshot({ path: path.join(dir, 'page.png'), fullPage: false }) } catch { /* ignore */ }
+            // HTML snippet
+            try {
+                const html = await page.content()
+                await fs.promises.writeFile(path.join(dir, 'page.html'), html)
+            } catch { /* ignore */ }
+            this.bot.log(this.bot.isMobile, 'SECURITY', `Saved incident artifacts: ${dir}`)
+        } catch { /* ignore */ }
     }
 }
