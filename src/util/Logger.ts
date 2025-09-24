@@ -94,17 +94,17 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     // Optional: send live logs to webhook if configured
     try {
-    const liveCfg: LiveCfg = loggingCfg.live || {}
-    const webhookCfg = (configData as unknown as { webhook?: { enabled?: boolean; url?: string } }).webhook || {}
-    const liveEnabled = !!liveCfg.enabled && !!webhookCfg.enabled && typeof webhookCfg.url === 'string' && !!webhookCfg.url
+        const liveCfg: LiveCfg = loggingCfg.live || {}
+        // Support dedicated live webhook override via config.logging.liveWebhookUrl (optional, backward compatible)
+        const liveWebhookUrl = (loggingCfg as unknown as { liveWebhookUrl?: string }).liveWebhookUrl
+        const webhookCfg = (configData as unknown as { webhook?: { enabled?: boolean; url?: string } }).webhook || {}
+        const targetUrl = liveWebhookUrl || webhookCfg.url
+        const liveEnabled = !!liveCfg.enabled && !!webhookCfg.enabled && typeof targetUrl === 'string' && !!targetUrl
         if (liveEnabled) {
-            // Exclude buckets also for live webhook
             const exclude = Array.isArray(loggingCfg.webhookExcludeFunc) ? loggingCfg.webhookExcludeFunc : []
             if (!exclude.some((x: string) => String(x).toLowerCase() === String(title).toLowerCase())) {
                 const payload = { content: cleanStr }
-                if (webhookCfg.url) {
-                    axios.post(webhookCfg.url as string, payload, { headers: { 'Content-Type': 'application/json' } }).catch(()=>{})
-                }
+                axios.post(targetUrl as string, payload, { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }).catch(()=>{})
             }
         }
     } catch { /* ignore live log errors */ }

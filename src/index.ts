@@ -571,7 +571,19 @@ export class MicrosoftRewardsBot {
             const accountEnd = Date.now()
             const durationMs = accountEnd - accountStart
             const totalCollected = desktopCollected + mobileCollected
-            const initialTotal = (desktopInitial || 0) + (mobileInitial || 0)
+            // Correct initial points (previous version double counted desktop+mobile baselines)
+            // Strategy: pick the lowest non-zero baseline (desktopInitial or mobileInitial) as true start.
+            // Sequential flow: desktopInitial < mobileInitial after gain -> min = original baseline.
+            // Parallel flow: both baselines equal -> min is fine.
+            const baselines: number[] = []
+            if (desktopInitial) baselines.push(desktopInitial)
+            if (mobileInitial) baselines.push(mobileInitial)
+            let initialTotal = 0
+            if (baselines.length === 1) initialTotal = baselines[0]!
+            else if (baselines.length === 2) initialTotal = Math.min(baselines[0]!, baselines[1]!)
+            // Fallback if both missing
+            if (initialTotal === 0 && (desktopInitial || mobileInitial)) initialTotal = desktopInitial || mobileInitial || 0
+            const endTotal = initialTotal + totalCollected
             this.accountSummaries.push({
                 email: account.email,
                 durationMs,
@@ -579,7 +591,7 @@ export class MicrosoftRewardsBot {
                 mobileCollected,
                 totalCollected,
                 initialTotal,
-                endTotal: initialTotal + totalCollected,
+                endTotal,
                 errors,
                 banned
             })

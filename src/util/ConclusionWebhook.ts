@@ -26,32 +26,35 @@ export async function ConclusionWebhook(config: Config, content: string, payload
     // Send to both webhooks when available
     const hasConclusion = !!(config.conclusionWebhook?.enabled && config.conclusionWebhook.url)
     const hasWebhook = !!(config.webhook?.enabled && config.webhook.url)
+    const sameTarget = hasConclusion && hasWebhook && config.conclusionWebhook!.url === config.webhook!.url
 
     const body: ConclusionPayload = {}
     if (payload?.embeds) body.embeds = payload.embeds
     if (content && content.trim()) body.content = content
 
     // Post to conclusion webhook if configured
-    if (hasConclusion) {
-        try {
-            await axios.post(config.conclusionWebhook!.url, body, {
-                headers: { 'Content-Type': 'application/json' }
-            })
-            console.log('Conclusion summary sent to conclusionWebhook.')
-        } catch (err) {
-            console.error('Failed to send conclusion summary to conclusionWebhook:', err)
+    const postWithRetry = async (url: string, label: string) => {
+        const max = 2
+        let lastErr: unknown = null
+        for (let attempt = 1; attempt <= max; attempt++) {
+            try {
+                await axios.post(url, body, { headers: { 'Content-Type': 'application/json' }, timeout: 15000 })
+                console.log(`[Webhook:${label}] summary sent (attempt ${attempt}).`)
+                return
+            } catch (e) {
+                lastErr = e
+                if (attempt === max) break
+                await new Promise(r => setTimeout(r, 1000 * attempt))
+            }
         }
+        console.error(`[Webhook:${label}] failed after ${max} attempts:`, lastErr)
     }
-    // Also post to primary webhook if configured
-    if (hasWebhook) {
-        try {
-            await axios.post(config.webhook!.url, body, {
-                headers: { 'Content-Type': 'application/json' }
-            })
-            console.log('Conclusion summary sent to webhook.')
-        } catch (err) {
-            console.error('Failed to send conclusion summary to webhook:', err)
-        }
+
+    if (hasConclusion) {
+        await postWithRetry(config.conclusionWebhook!.url, sameTarget ? 'conclusion+primary' : 'conclusion')
+    }
+    if (hasWebhook && !sameTarget) {
+        await postWithRetry(config.webhook!.url, 'primary')
     }
 
     // NTFY: mirror a plain text summary (optional)
