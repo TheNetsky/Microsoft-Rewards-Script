@@ -403,6 +403,24 @@ export class MicrosoftRewardsBot {
 
             log('main', 'MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
 
+            // Optional: restart crashed worker (basic heuristic) if crashRecovery allows
+            try {
+                const cr = this.config.crashRecovery
+                if (cr?.restartFailedWorker && code !== 0) {
+                    const attempts = (worker as unknown as { _restartAttempts?: number })._restartAttempts || 0
+                    if (attempts < (cr.restartFailedWorkerAttempts ?? 1)) {
+                        (worker as unknown as { _restartAttempts?: number })._restartAttempts = attempts + 1
+                        log('main','CRASH-RECOVERY',`Respawning worker (attempt ${attempts + 1})`, 'warn','yellow')
+                        const newW = cluster.fork()
+                        // NOTE: account chunk re-assignment simplistic: unused; real mapping improvement todo
+                        newW.on('message', (msg: unknown) => {
+                            const m = msg as { type?: string; data?: AccountSummary[] }
+                            if (m && m.type === 'summary' && Array.isArray(m.data)) this.accountSummaries.push(...m.data)
+                        })
+                    }
+                }
+            } catch { /* ignore */ }
+
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
                 // All workers done -> send conclusion (if enabled), run optional auto-update, then exit
@@ -1196,12 +1214,51 @@ async function main() {
     // (previously: init + global hooks for uncaughtException/unhandledRejection)
     const rewardsBot = new MicrosoftRewardsBot(false)
 
-    try {
-        await rewardsBot.initialize()
-        await rewardsBot.run()
-    } catch (error) {
-        log(false, 'MAIN-ERROR', `Error running desktop bot: ${error}`, 'error')
+    const crashState = { restarts: 0 }
+    const config = rewardsBot.config
+
+    const attachHandlers = () => {
+        process.on('unhandledRejection', (reason) => {
+            log('main','FATAL','UnhandledRejection: ' + (reason instanceof Error ? reason.message : String(reason)), 'error')
+            gracefulExit(1)
+        })
+        process.on('uncaughtException', (err) => {
+            log('main','FATAL','UncaughtException: ' + err.message, 'error')
+            gracefulExit(1)
+        })
+        process.on('SIGTERM', () => gracefulExit(0))
+        process.on('SIGINT', () => gracefulExit(0))
     }
+
+    const gracefulExit = (code: number) => {
+        try { rewardsBot['heartbeatTimer'] && clearInterval(rewardsBot['heartbeatTimer']) } catch { /* ignore */ }
+        if (config?.crashRecovery?.autoRestart && code !== 0) {
+            const max = config.crashRecovery.maxRestarts ?? 2
+            if (crashState.restarts < max) {
+                const backoff = (config.crashRecovery.backoffBaseMs ?? 2000) * (crashState.restarts + 1)
+                log('main','CRASH-RECOVERY',`Scheduling restart in ${backoff}ms (attempt ${crashState.restarts + 1}/${max})`, 'warn','yellow')
+                setTimeout(() => {
+                    crashState.restarts++
+                    bootstrap()
+                }, backoff)
+                return
+            }
+        }
+        process.exit(code)
+    }
+
+    const bootstrap = async () => {
+        try {
+            await rewardsBot.initialize()
+            await rewardsBot.run()
+        } catch (e) {
+            log('main','MAIN-ERROR','Fatal during run: ' + (e instanceof Error ? e.message : e),'error')
+            gracefulExit(1)
+        }
+    }
+
+    attachHandlers()
+    await bootstrap()
 }
 
 // Start the bots

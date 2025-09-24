@@ -91,7 +91,9 @@ function normalizeConfig(raw: unknown): Config {
         searchDelay: {
             min: delaySrc.min ?? '3min',
             max: delaySrc.max ?? '5min'
-        }
+        },
+        localFallbackCount: Number(searchSettingsSrc.localFallbackCount ?? 25),
+        extraFallbackRetries: Number(searchSettingsSrc.extraFallbackRetries ?? 1)
     }
 
     // Workers
@@ -180,7 +182,8 @@ function normalizeConfig(raw: unknown): Config {
         schedule: n.schedule,
     passesPerRun: passesPerRun,
         vacation: n.vacation,
-        buyMode: { enabled: buyModeEnabled, maxMinutes: buyModeMax }
+        buyMode: { enabled: buyModeEnabled, maxMinutes: buyModeMax },
+        crashRecovery: n.crashRecovery || {}
     }
 
     return cfg

@@ -12,52 +12,57 @@ export default class BrowserUtil {
     }
 
     async tryDismissAllMessages(page: Page): Promise<void> {
-        const buttons = [
+        const attempts = 3
+        const buttonGroups: { selector: string; label: string; isXPath?: boolean }[] = [
             { selector: '#acceptButton', label: 'AcceptButton' },
-            { selector: '.ext-secondary.ext-button', label: '"Skip for now" Button' },
-            { selector: '#iLandingViewAction', label: 'iLandingViewAction' },
-            { selector: '#iShowSkip', label: 'iShowSkip' },
-            { selector: '#iNext', label: 'iNext' },
-            { selector: '#iLooksGood', label: 'iLooksGood' },
-            { selector: '#idSIButton9', label: 'idSIButton9' },
-            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' },
-            { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
-            { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
-            { selector: '//div[@id="cookieConsentContainer"]//button[contains(text(), "Accept")]', label: 'Accept Cookie Consent Container', isXPath: true },
-            { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
-            { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
+            { selector: '.optanon-allow-all, .optanon-alert-box-button', label: 'OneTrust Accept' },
+            { selector: '.ext-secondary.ext-button', label: 'Skip For Now' },
+            { selector: '#iLandingViewAction', label: 'Landing Continue' },
+            { selector: '#iShowSkip', label: 'Show Skip' },
+            { selector: '#iNext', label: 'Next' },
+            { selector: '#iLooksGood', label: 'LooksGood' },
+            { selector: '#idSIButton9', label: 'PrimaryLoginButton' },
+            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Generic' },
+            { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Cancel' },
+            { selector: '.maybe-later, button[data-automation-id*="maybeLater" i]', label: 'Maybe Later' },
+            { selector: '#bnp_btn_reject', label: 'Bing Cookie Reject' },
+            { selector: '#bnp_btn_accept', label: 'Bing Cookie Accept' },
+            { selector: '#bnp_close_link', label: 'Bing Cookie Close' },
+            { selector: '#reward_pivot_earn', label: 'Rewards Pivot Earn' },
+            { selector: '//div[@id="cookieConsentContainer"]//button[contains(text(), "Accept")]', label: 'Legacy Cookie Accept', isXPath: true }
         ]
-
-        for (const button of buttons) {
+        for (let round = 0; round < attempts; round++) {
+            let dismissedThisRound = 0
+            for (const btn of buttonGroups) {
+                try {
+                    const loc = btn.isXPath ? page.locator(`xpath=${btn.selector}`) : page.locator(btn.selector)
+                    if (await loc.first().isVisible({ timeout: 200 }).catch(()=>false)) {
+                        await loc.first().click({ timeout: 500 }).catch(()=>{})
+                        dismissedThisRound++
+                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${btn.label}`)
+                        await page.waitForTimeout(150)
+                    }
+                } catch { /* ignore */ }
+            }
+            // Special case: blocking overlay with inside buttons
             try {
-                const element = button.isXPath ? page.locator(`xpath=${button.selector}`) : page.locator(button.selector)
-                await element.first().click({ timeout: 500 })
-                await page.waitForTimeout(500)
-
-                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${button.label}`)
-
-            } catch (error) {
-                // Silent fail
-            }
-        }
-
-        // Handle blocking Bing privacy overlay intercepting clicks (#bnp_overlay_wrapper)
-        try {
-            const overlay = await page.locator('#bnp_overlay_wrapper').first()
-            if (await overlay.isVisible({ timeout: 500 }).catch(()=>false)) {
-                // Try common dismiss buttons inside overlay
-                const rejectBtn = await page.locator('#bnp_btn_reject, button[aria-label*="Reject" i]').first()
-                const acceptBtn = await page.locator('#bnp_btn_accept').first()
-                if (await rejectBtn.isVisible().catch(()=>false)) {
-                    await rejectBtn.click({ timeout: 500 }).catch(()=>{})
-                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Bing Overlay Reject')
-                } else if (await acceptBtn.isVisible().catch(()=>false)) {
-                    await acceptBtn.click({ timeout: 500 }).catch(()=>{})
-                    this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Bing Overlay Accept (fallback)')
+                const overlay = page.locator('#bnp_overlay_wrapper')
+                if (await overlay.isVisible({ timeout: 200 }).catch(()=>false)) {
+                    const reject = overlay.locator('#bnp_btn_reject, button[aria-label*="Reject" i]')
+                    const accept = overlay.locator('#bnp_btn_accept')
+                    if (await reject.first().isVisible().catch(()=>false)) {
+                        await reject.first().click({ timeout: 500 }).catch(()=>{})
+                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Reject')
+                        dismissedThisRound++
+                    } else if (await accept.first().isVisible().catch(()=>false)) {
+                        await accept.first().click({ timeout: 500 }).catch(()=>{})
+                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Accept')
+                        dismissedThisRound++
+                    }
                 }
-                await page.waitForTimeout(300)
-            }
-        } catch { /* ignore */ }
+            } catch { /* ignore */ }
+            if (dismissedThisRound === 0) break // nothing new dismissed -> stop early
+        }
     }
 
     async getLatestTab(page: Page): Promise<Page> {

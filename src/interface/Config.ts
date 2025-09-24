@@ -25,6 +25,7 @@ export interface Config {
     passesPerRun?: number;
     buyMode?: ConfigBuyMode; // Optional manual spending mode
     vacation?: ConfigVacation; // Optional monthly contiguous off-days
+    crashRecovery?: ConfigCrashRecovery; // Automatic restart / graceful shutdown
 }
 
 export interface ConfigSaveFingerprint {
@@ -38,6 +39,8 @@ export interface ConfigSearchSettings {
     clickRandomResults: boolean;
     searchDelay: ConfigSearchDelay;
     retryMobileSearchAmount: number;
+    localFallbackCount?: number; // Number of local fallback queries to sample when trends fail
+    extraFallbackRetries?: number; // Additional mini-retry loops with fallback terms
 }
 
 export interface ConfigSearchDelay {
@@ -96,6 +99,14 @@ export interface ConfigVacation {
     enabled?: boolean; // default false
     minDays?: number; // default 3
     maxDays?: number; // default 5
+}
+
+export interface ConfigCrashRecovery {
+    autoRestart?: boolean; // Restart the root process after fatal crash
+    maxRestarts?: number; // Max restart attempts (default 2)
+    backoffBaseMs?: number; // Base backoff before restart (default 2000)
+    restartFailedWorker?: boolean; // (future) attempt to respawn crashed worker
+    restartFailedWorkerAttempts?: number; // attempts per worker (default 1)
 }
 
 export interface ConfigWorkers {
