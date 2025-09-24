@@ -96,7 +96,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     try {
         const liveCfg: LiveCfg = loggingCfg.live || {}
         // Support dedicated live webhook override via config.logging.liveWebhookUrl (optional, backward compatible)
-        const liveWebhookUrl = (loggingCfg as unknown as { liveWebhookUrl?: string }).liveWebhookUrl
+    const liveWebhookUrl = (loggingCfg as unknown as { liveWebhookUrl?: string; live?: { url?: string } }).liveWebhookUrl || ((loggingCfg as unknown as { live?: { url?: string } }).live?.url)
         const webhookCfg = (configData as unknown as { webhook?: { enabled?: boolean; url?: string } }).webhook || {}
         const targetUrl = liveWebhookUrl || webhookCfg.url
         const liveEnabled = !!liveCfg.enabled && !!webhookCfg.enabled && typeof targetUrl === 'string' && !!targetUrl
