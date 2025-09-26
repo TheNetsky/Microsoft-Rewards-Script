@@ -33,12 +33,32 @@ export class Search extends Workers {
             return
         }
 
-        // Generate search queries
-        let googleSearchQueries = await this.getGoogleTrends(this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US')
-        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
+        // Generate search queries (primary: Google Trends)
+        const geo = this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US'
+        let googleSearchQueries = await this.getGoogleTrends(geo)
 
-        // Deduplicate the search terms
-        googleSearchQueries = [...new Set(googleSearchQueries)]
+        // Fallback: if trends failed or insufficient, sample from local queries file
+        if (!googleSearchQueries.length || googleSearchQueries.length < 10) {
+            this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Primary trends source insufficient, falling back to local queries.json', 'warn')
+            try {
+                const local = await import('../queries.json')
+                // Flatten & sample
+                const sampleSize = Math.max(5, Math.min(this.bot.config.searchSettings.localFallbackCount || 25, local.default.length))
+                const sampled = this.bot.utils.shuffleArray(local.default).slice(0, sampleSize)
+                googleSearchQueries = sampled.map((x: { title: string; queries: string[] }) => ({ topic: x.queries[0] || x.title, related: x.queries.slice(1) }))
+            } catch (e) {
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Failed loading local queries fallback: ' + (e instanceof Error ? e.message : e), 'error')
+            }
+        }
+
+        googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
+        // Deduplicate topics
+        const seen = new Set<string>()
+        googleSearchQueries = googleSearchQueries.filter(q => {
+            if (seen.has(q.topic.toLowerCase())) return false
+            seen.add(q.topic.toLowerCase())
+            return true
+        })
 
         // Go to bing
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
@@ -47,7 +67,7 @@ export class Search extends Workers {
 
         await this.bot.browser.utils.tryDismissAllMessages(page)
 
-        let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it doesn't continue after 5 more searches with alternative queries, abort search
+    let stagnation = 0 // consecutive searches without point progress
 
         const queries: string[] = []
         // Mobile search doesn't seem to like related queries?
@@ -63,28 +83,26 @@ export class Search extends Workers {
             const newMissingPoints = this.calculatePoints(searchCounters)
 
             // If the new point amount is the same as before
-            if (newMissingPoints == missingPoints) {
-                maxLoop++ // Add to max loop
-            } else { // There has been a change in points
-                maxLoop = 0 // Reset the loop
+            if (newMissingPoints === missingPoints) {
+                stagnation++
+            } else {
+                stagnation = 0
             }
 
             missingPoints = newMissingPoints
 
-            if (missingPoints === 0) {
-                break
-            }
+            if (missingPoints === 0) break
 
             // Only for mobile searches
-            if (maxLoop > 5 && this.bot.isMobile) {
+            if (stagnation > 5 && this.bot.isMobile) {
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Search didn\'t gain point for 5 iterations, likely bad User-Agent', 'warn')
                 break
             }
 
             // If we didn't gain points for 10 iterations, assume it's stuck
-            if (maxLoop > 10) {
+            if (stagnation > 10) {
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', 'Search didn\'t gain point for 10 iterations aborting searches', 'warn')
-                maxLoop = 0 // Reset to 0 so we can retry with related searches below
+                stagnation = 0 // allow fallback loop below
                 break
             }
         }
@@ -99,8 +117,11 @@ export class Search extends Workers {
             this.bot.log(this.bot.isMobile, 'SEARCH-BING', `Search completed but we're missing ${missingPoints} points, generating extra searches`)
 
             let i = 0
-            while (missingPoints > 0) {
+            let fallbackRounds = 0
+            const extraRetries = this.bot.config.searchSettings.extraFallbackRetries || 1
+            while (missingPoints > 0 && fallbackRounds <= extraRetries) {
                 const query = googleSearchQueries[i++] as GoogleSearch
+                if (!query) break
 
                 // Get related search terms to the Google search queries
                 const relatedTerms = await this.getRelatedTerms(query?.topic)
@@ -113,10 +134,10 @@ export class Search extends Workers {
                         const newMissingPoints = this.calculatePoints(searchCounters)
 
                         // If the new point amount is the same as before
-                        if (newMissingPoints == missingPoints) {
-                            maxLoop++ // Add to max loop
-                        } else { // There has been a change in points
-                            maxLoop = 0 // Reset the loop
+                        if (newMissingPoints === missingPoints) {
+                            stagnation++
+                        } else {
+                            stagnation = 0
                         }
 
                         missingPoints = newMissingPoints
@@ -127,11 +148,12 @@ export class Search extends Workers {
                         }
 
                         // Try 5 more times, then we tried a total of 15 times, fair to say it's stuck
-                        if (maxLoop > 5) {
+                        if (stagnation > 5) {
                             this.bot.log(this.bot.isMobile, 'SEARCH-BING-EXTRA', 'Search didn\'t gain point for 5 iterations aborting searches', 'warn')
                             return
                         }
                     }
+                fallbackRounds++
                 }
             }
         }
@@ -156,20 +178,38 @@ export class Search extends Workers {
                 await this.bot.utils.wait(500)
 
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
-                await searchPage.click(searchBar) // Focus on the textarea
-                await this.bot.utils.wait(500)
-                await searchPage.keyboard.down(platformControlKey)
-                await searchPage.keyboard.press('A')
-                await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up(platformControlKey)
-                await searchPage.keyboard.type(query)
-                await searchPage.keyboard.press('Enter')
+                // Prefer attached over visible to avoid strict visibility waits when overlays exist
+                const box = searchPage.locator(searchBar)
+                await box.waitFor({ state: 'attached', timeout: 15000 })
+
+                // Try dismissing overlays before interacting
+                await this.bot.browser.utils.tryDismissAllMessages(searchPage)
+                await this.bot.utils.wait(200)
+
+                let navigatedDirectly = false
+                try {
+                    // Try focusing and filling instead of clicking (more reliable on mobile)
+                    await box.focus({ timeout: 2000 }).catch(() => { /* ignore focus errors */ })
+                    await box.fill('')
+                    await this.bot.utils.wait(200)
+                    await searchPage.keyboard.down(platformControlKey)
+                    await searchPage.keyboard.press('A')
+                    await searchPage.keyboard.press('Backspace')
+                    await searchPage.keyboard.up(platformControlKey)
+                    await box.type(query, { delay: 20 })
+                    await searchPage.keyboard.press('Enter')
+                } catch (typeErr) {
+                    // As a robust fallback, navigate directly to the search results URL
+                    const q = encodeURIComponent(query)
+                    const url = `https://www.bing.com/search?q=${q}`
+                    await searchPage.goto(url)
+                    navigatedDirectly = true
+                }
 
                 await this.bot.utils.wait(3000)
 
-                // Bing.com in Chrome opens a new tab when searching
-                const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
+                // Bing.com in Chrome opens a new tab when searching via Enter; if we navigated directly, stay on current tab
+                const resultPage = navigatedDirectly ? searchPage : await this.bot.browser.utils.getLatestTab(searchPage)
                 this.searchPageURL = new URL(resultPage.url()).href // Set the results page
 
                 await this.bot.browser.utils.reloadBadPage(resultPage)
@@ -185,7 +225,10 @@ export class Search extends Workers {
                 }
 
                 // Delay between searches
-                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
+                const minDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min)
+                const maxDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max)
+                const adaptivePad = Math.min(4000, Math.max(0, Math.floor(Math.random() * 800)))
+                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(minDelay, maxDelay)) + adaptivePad)
 
                 return await this.bot.browser.func.getSearchPoints()
 

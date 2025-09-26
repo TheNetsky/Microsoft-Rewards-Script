@@ -1,191 +1,238 @@
-# Microsoft-Rewards-Script
-Automated Microsoft Rewards script built with TypeScript, Cheerio and Playwright.
+<div align="center">
 
-Under development, however mainly for personal use!
+# 🎯 Microsoft Rewards Script V2
 
----
+```
+ ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
+ ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
+ ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
+ ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
+ ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
+ ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+```
 
-## 🚀 Quick Setup (Recommended)
+**🤖 Intelligent automation meets Microsoft Rewards**  
+*Earn points effortlessly while you sleep*
+[Legacy-1.5.3](https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/tree/Legacy-1.5.3)
 
-**The easiest way to get started - just download and run!**
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
 
-1. **Download or clone** the source code
-2. **Run the setup script:**
-   
-   **Windows:** Double-click `setup/setup.bat` or run it from command line
-   
-   **Linux/macOS/WSL:** `bash setup/setup.sh` 
-   
-   **Alternative (any platform):** `npm run setup`
+<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
+  <img alt="Contributors" src="https://img.shields.io/github/contributors/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&label=Contributors&color=FF6B6B&labelColor=4ECDC4" />
+</a>
+<img alt="Stars" src="https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=FFD93D&labelColor=6BCF7F" />
+<img alt="Version" src="https://img.shields.io/badge/Version-2.0-9B59B6?style=for-the-badge&labelColor=3498DB" />
 
-3. **Follow the prompts:** The setup script will automatically:
-   - Rename `accounts.example.json` to `accounts.json` 
-   - Ask you to enter your Microsoft account credentials
-   - Remind you to review configuration options in `config.json`
-   - Install all dependencies (`npm install`)
-   - Build the project (`npm run build`)
-   - Optionally start the script immediately
-
-**That's it!** The setup script handles everything for you.
-
----
-
-## ⚙️ Advanced Setup Options
-
-### Nix Users
-1. Get [Nix](https://nixos.org/)
-2. Run `./run.sh`
-3. Done!
-
-### Manual Setup (Troubleshooting)
-If the automatic setup script doesn't work for your environment:
-
-1. Manually rename `src/accounts.example.json` to `src/accounts.json`
-2. Add your Microsoft account details to `accounts.json`
-3. Customize `src/config.json` to your preferences
-4. Install dependencies: `npm install`
-5. Build the project: `npm run build`
-6. Start the script: `npm run start`---
-
-## 🐳 Docker Setup (Experimental)
-
-For automated scheduling and containerized deployment.
-
-### Before Starting
-- Remove `/node_modules` and `/dist` folders if you previously built locally
-- Remove old Docker volumes if upgrading from version 1.4 or earlier
-- Old `accounts.json` files can be reused
-
-### Quick Docker Setup
-1. **Download source code** and configure `accounts.json`
-2. **Edit `config.json`** - ensure `"headless": true`
-3. **Customize `compose.yaml`:**
-   - Set your timezone (`TZ` variable)
-   - Configure schedule (`CRON_SCHEDULE`) - use [crontab.guru](https://crontab.guru) for help
-   - Optional: Set `RUN_ON_START=true` for immediate execution
-4. **Start container:** `docker compose up -d`
-5. **Monitor logs:** `docker logs microsoft-rewards-script`
-
-**Note:** The container adds 5–50 minutes random delay to scheduled runs for more natural behavior.
+</div>
 
 ---
 
-## 📋 Usage Notes
+<div align="center">
 
-- **Browser Instances:** If you stop the script without closing browser windows (headless=false), use Task Manager or `npm run kill-chrome-win` to clean up
-- **Automation Scheduling:** Run at least twice daily, set `"runOnZeroPoints": false` to skip when no points available
-- **Multiple Accounts:** The script supports clustering - configure `clusters` in `config.json`
+## 🚀 **Big Update Alert — V2 is here!**
 
---- 
-## ⚙️ Configuration Reference
+<table>
+<tr>
+<td width="33%" align="center">
+<img src="https://github.com/TheNetsky.png" width="80" style="border-radius: 50%;" /><br />
+<strong><a href="https://github.com/TheNetsky/">TheNetsky</a></strong> 🙌<br />
+<em>Foundation Architect</em><br />
+<sub>Building the massive foundation</sub>
+</td>
+<td width="33%" align="center">
+<img src="https://github.com/mgrimace.png" width="80" style="border-radius: 50%;" /><br />
+<strong><a href="https://github.com/mgrimace">Mgrimace</a></strong> 🔥<br />
+<em>Active Developer</em><br />
+<sub>Regular updates & <a href="./docs/ntfy.md">NTFY mode</a></sub>
+</td>
+<td width="33%" align="center">
+<img src="https://github.com/LightZirconite.png" width="80" style="border-radius: 50%;" /><br />
+<strong><a href="https://github.com/LightZirconite">Light</a></strong> ✨<br />
+<em>V2 Mastermind</em><br />
+<sub>Massive feature overhaul</sub>
+</td>
+</tr>
+</table>
 
-Customize behavior by editing `src/config.json`:
+**💡 Welcome to V2 — There are honestly so many changes that even I can't list them all!**  
+*Trust me, you've got a **massive upgrade** in front of you. Enjoy the ride!* 🎢
 
-### Core Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `baseURL` | Microsoft Rewards page URL | `https://rewards.bing.com` |
-| `sessionPath` | Session/fingerprint storage location | `sessions` |
-| `headless` | Run browser in background | `false` (visible) |
-| `parallel` | Run mobile/desktop tasks simultaneously | `true` |
-| `runOnZeroPoints` | Continue when no points available | `false` |
-| `clusters` | Number of concurrent account instances | `1` |
-
-### Fingerprint Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `saveFingerprint.mobile` | Reuse mobile browser fingerprint | `false` |
-| `saveFingerprint.desktop` | Reuse desktop browser fingerprint | `false` |
-
-### Task Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `workers.doDailySet` | Complete daily set activities | `true` |
-| `workers.doMorePromotions` | Complete promotional offers | `true` |
-| `workers.doPunchCards` | Complete punchcard activities | `true` |
-| `workers.doDesktopSearch` | Perform desktop searches | `true` |
-| `workers.doMobileSearch` | Perform mobile searches | `true` |
-| `workers.doDailyCheckIn` | Complete daily check-in | `true` |
-| `workers.doReadToEarn` | Complete read-to-earn activities | `true` |
-
-### Search Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `searchOnBingLocalQueries` | Use local queries vs. fetched | `false` |
-| `searchSettings.useGeoLocaleQueries` | Generate location-based queries | `false` |
-| `searchSettings.scrollRandomResults` | Randomly scroll search results | `true` |
-| `searchSettings.clickRandomResults` | Click random result links | `true` |
-| `searchSettings.searchDelay` | Delay between searches (min/max) | `3-5 minutes` |
-| `searchSettings.retryMobileSearchAmount` | Mobile search retry attempts | `2` |
-
-### Advanced Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `globalTimeout` | Action timeout duration | `30s` |
-| `logExcludeFunc` | Functions to exclude from logs | `SEARCH-CLOSE-TABS` |
-| `webhookLogExcludeFunc` | Functions to exclude from webhooks | `SEARCH-CLOSE-TABS` |
-| `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
-| `proxy.proxyBingTerms` | Proxy Bing Terms requests | `true` |
-
-### Webhook Settings
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `webhook.enabled` | Enable Discord notifications | `false` |
-| `webhook.url` | Discord webhook URL | `null` |
-| `conclusionWebhook.enabled` | Enable summary-only webhook | `false` |
-| `conclusionWebhook.url` | Summary webhook URL | `null` |
+</div>
 
 ---
 
-## ✨ Features
+## 🎯 **What Does This Script Do?**
 
-**Account Management:**
-- ✅ Multi-Account Support
-- ✅ Session Storage & Persistence
-- ✅ 2FA Support
-- ✅ Passwordless Login Support
+<div align="center">
 
-**Automation & Control:**
-- ✅ Headless Browser Operation
-- ✅ Clustering Support (Multiple accounts simultaneously)
-- ✅ Configurable Task Selection
-- ✅ Proxy Support
-- ✅ Automatic Scheduling (Docker)
+**Automatically earn Microsoft Rewards points by completing daily tasks:**
+- 🔍 **Daily Searches** — Desktop & Mobile Bing searches  
+- 📅 **Daily Set** — Complete daily quizzes and activities  
+- 🎁 **Promotions** — Bonus point opportunities  
+- 🃏 **Punch Cards** — Multi-day reward challenges  
+- ✅ **Daily Check-in** — Simple daily login rewards  
+- 📚 **Read to Earn** — News article reading points  
 
-**Search & Activities:**
-- ✅ Desktop & Mobile Searches
-- ✅ Microsoft Edge Search Simulation
-- ✅ Geo-Located Search Queries
-- ✅ Emulated Scrolling & Link Clicking
-- ✅ Daily Set Completion
-- ✅ Promotional Activities
-- ✅ Punchcard Completion
-- ✅ Daily Check-in
-- ✅ Read to Earn Activities
+*All done automatically while you sleep! 💤*
 
-**Quiz & Interactive Content:**
-- ✅ Quiz Solving (10 & 30-40 point variants)
-- ✅ This Or That Quiz (Random answers)
-- ✅ ABC Quiz Solving
-- ✅ Poll Completion
-- ✅ Click Rewards
-
-**Notifications & Monitoring:**
-- ✅ Discord Webhook Integration
-- ✅ Dedicated Summary Webhook
-- ✅ Comprehensive Logging
-- ✅ Docker Support with Monitoring
+</div>
 
 ---
+
+## ⚡ Quick Start
+
+```bash
+# 🪟 Windows — One command setup
+setup/setup.bat
+
+# 🐧 Linux/macOS/WSL  
+bash setup/setup.sh
+
+# 🌍 Any platform
+npm run setup
+```
+
+**That's it!** The setup wizard configures accounts, installs dependencies, builds the project, and starts earning points.
+
+<details>
+<summary><strong>📖 Manual Setup</strong></summary>
+
+```bash
+# 1️⃣ Configure your Microsoft accounts
+cp src/accounts.example.json src/accounts.json
+# Edit accounts.json with your credentials
+
+# 2️⃣ Install & Build
+npm install && npm run build
+
+# 3️⃣ Run once or start scheduler
+npm start                    # Single run
+npm run start:schedule       # Automated daily runs
+```
+
+</details>
+
+---
+
+## 📑 Documentation
+
+| Topic | Description |
+|-------|-------------|
+| **[🚀 Getting Started](./docs/getting-started.md)** | Complete setup guide from zero to running |
+| **[👤 Accounts & 2FA](./docs/accounts.md)** | Microsoft account setup + TOTP authentication |
+| **[🐳 Docker](./docs/docker.md)** | Containerized deployment with slim headless image |
+| **[⏰ Scheduling](./docs/schedule.md)** | Automated daily runs with built-in scheduler |
+| **[🛠️ Diagnostics](./docs/diagnostics.md)** | Troubleshooting, error capture, and logs |
+| **[⚙️ Configuration](./docs/config.md)** | Full config.json reference |
+
+**[📚 Full Documentation Index →](./docs/index.md)**
+
+## 🎮 Commands
+
+```bash
+# 🚀 Run the automation once
+npm start
+
+# � Start automated daily scheduler  
+npm run start:schedule
+
+# 💳 Manual points redemption mode
+npm start -- -buy your@email.com
+
+# � Deploy with Docker
+docker compose up -d
+
+# � Development mode
+npm run dev
+```
+
+---
+
+## ✨ Key Features
+
+<div align="center">
+
+| Feature | Description |
+|---------|-------------|
+| **🔐 Multi-Account** | Support multiple Microsoft accounts with 2FA |
+| **🤖 Human-like** | Natural delays, scrolling, clicking patterns |
+| **📱 Cross-Platform** | Desktop + Mobile search automation |
+| **🎯 Smart Activities** | Quizzes, polls, daily sets, punch cards |
+| **🔔 Notifications** | Discord webhooks + NTFY push alerts |
+| **🐳 Docker Ready** | Slim headless container deployment |
+| **🛡️ Resilient** | Session persistence, job state recovery |
+| **🕸️ Proxy Support** | Per-account proxy configuration |
+
+</div>
+
+---
+
+## 🚀 Advanced Features
+
+**[💳 Buy Mode](./docs/buy-mode.md)** — Manual redemption with live points monitoring  
+**[🧠 Humanization](./docs/humanization.md)** — Advanced anti-detection patterns  
+**[📊 Diagnostics](./docs/diagnostics.md)** — Error capture with screenshots/HTML  
+**[🔗 Webhooks](./docs/conclusionwebhook.md)** — Rich Discord notifications  
+**[📱 NTFY](./docs/ntfy.md)** — Push notifications to your phone
+
+---
+
+## 📚 Documentation & Support
+
+<div align="center">
+
+**📖 [Complete Documentation Index](./docs/index.md)**
+
+</div>
+
+### Essential Guides
+- **[Getting Started](./docs/getting-started.md)** — Zero to running in minutes
+- **[Accounts Setup](./docs/accounts.md)** — Microsoft accounts + 2FA configuration  
+- **[Docker Guide](./docs/docker.md)** — Container deployment
+- **[Scheduling](./docs/schedule.md)** — Automated daily runs
+- **[Troubleshooting](./docs/diagnostics.md)** — Fix common issues
+
+### Advanced Topics
+- **[Humanization](./docs/humanization.md)** — Anti-detection features
+- **[Notifications](./docs/ntfy.md)** — Push alerts & Discord webhooks
+- **[Proxy Setup](./docs/proxy.md)** — Network configuration
+- **[Buy Mode](./docs/buy-mode.md)** — Manual redemption tracking
+
+---
+
+## 🤝 Community
+
+<div align="center">
+
+[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/KRBFxxsU)
+[![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
+
+**Found a bug?** [Report an issue](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)  
+**Have suggestions?** [Start a discussion](https://github.com/TheNetsky/Microsoft-Rewards-Script/discussions)
+
+</div>
+
+---
+
+<div align="center">
 
 ## ⚠️ Disclaimer
 
-**Use at your own risk!** Your Microsoft Rewards account may be suspended or banned when using automation scripts.
+This project is for educational purposes only. Use at your own risk. Microsoft may suspend accounts that use automation tools. The authors are not responsible for any account actions taken by Microsoft.
 
-This script is provided for educational purposes. The authors are not responsible for any account actions taken by Microsoft.
+**🎯 Contributors**
+
+<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
+<img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" alt="Contributors" />
+</a>
+
+*Made with ❤️ by the community • Happy automating! 🎉*
+
+</div>
 
 ---
 
-## 🤝 Contributing
-
-This project is primarily for personal use but contributions are welcome. Please ensure any changes maintain compatibility with the existing configuration system.
+<img width="1536" height="1024" alt="msn-rw" src="https://github.com/user-attachments/assets/4e396ab3-5292-4948-9778-7b385d751e4d" />

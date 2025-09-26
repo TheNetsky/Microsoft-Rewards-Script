@@ -20,11 +20,20 @@ export class SearchOnBing extends Workers {
             const query = await this.getSearchQuery(activity.title)
 
             const searchBar = '#sb_form_q'
-            await page.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
-            await this.safeClick(page, searchBar)
-            await this.bot.utils.wait(500)
-            await page.keyboard.type(query)
-            await page.keyboard.press('Enter')
+            const box = page.locator(searchBar)
+            await box.waitFor({ state: 'attached', timeout: 15000 })
+            await this.bot.browser.utils.tryDismissAllMessages(page)
+            await this.bot.utils.wait(200)
+            try {
+                await box.focus({ timeout: 2000 }).catch(() => { /* ignore */ })
+                await box.fill('')
+                await this.bot.utils.wait(200)
+                await page.keyboard.type(query, { delay: 20 })
+                await page.keyboard.press('Enter')
+            } catch {
+                const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`
+                await page.goto(url)
+            }
             await this.bot.utils.wait(3000)
 
             await page.close()
@@ -33,22 +42,6 @@ export class SearchOnBing extends Workers {
         } catch (error) {
             await page.close()
             this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'An error occurred:' + error, 'error')
-        }
-    }
-
-    private async safeClick(page: Page, selector: string) {
-        try {
-            await page.click(selector, { timeout: 5000 })
-        } catch (e: any) {
-            const msg = (e?.message || '')
-            if (/Timeout.*click/i.test(msg) || /intercepts pointer events/i.test(msg)) {
-                // Try to dismiss overlays then retry once
-                await this.bot.browser.utils.tryDismissAllMessages(page)
-                await this.bot.utils.wait(500)
-                await page.click(selector, { timeout: 5000 })
-            } else {
-                throw e
-            }
         }
     }
 

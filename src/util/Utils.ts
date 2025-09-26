@@ -8,6 +8,11 @@ export default class Util {
         })
     }
 
+    async waitRandom(minMs: number, maxMs: number): Promise<void> {
+        const delta = this.randomNumber(minMs, maxMs)
+        return this.wait(delta)
+    }
+
     getFormattedDate(ms = Date.now()): string {
         const today = new Date(ms)
         const month = String(today.getMonth() + 1).padStart(2, '0')  // January is 0

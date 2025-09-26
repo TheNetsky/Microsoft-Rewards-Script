@@ -3,19 +3,30 @@ import { Page } from 'rebrowser-playwright'
 import { DashboardData, MorePromotion, PromotionalItem, PunchCard } from '../interface/DashboardData'
 
 import { MicrosoftRewardsBot } from '../index'
+import JobState from '../util/JobState'
+import Retry from '../util/Retry'
+import { AdaptiveThrottler } from '../util/AdaptiveThrottler'
 
 export class Workers {
     public bot: MicrosoftRewardsBot
+    private jobState: JobState
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
+        this.jobState = new JobState(this.bot.config)
     }
 
     // Daily Set
     async doDailySet(page: Page, data: DashboardData) {
         const todayData = data.dailySetPromotions[this.bot.utils.getFormattedDate()]
 
-        const activitiesUncompleted = todayData?.filter(x => !x.complete && x.pointProgressMax > 0) ?? []
+        const today = this.bot.utils.getFormattedDate()
+        const activitiesUncompleted = (todayData?.filter(x => !x.complete && x.pointProgressMax > 0) ?? [])
+            .filter(x => {
+                if (this.bot.config.jobState?.enabled === false) return true
+                const email = this.bot.currentAccountEmail || 'unknown'
+                return !this.jobState.isDone(email, today, x.offerId)
+            })
 
         if (!activitiesUncompleted.length) {
             this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All Daily Set" items have already been completed')
@@ -27,12 +38,30 @@ export class Workers {
 
         await this.solveActivities(page, activitiesUncompleted)
 
+        // Mark as done to prevent duplicate work if checkpoints enabled
+        if (this.bot.config.jobState?.enabled !== false) {
+            const email = this.bot.currentAccountEmail || 'unknown'
+            for (const a of activitiesUncompleted) {
+                this.jobState.markDone(email, today, a.offerId)
+            }
+        }
+
         page = await this.bot.browser.utils.getLatestTab(page)
 
         // Always return to the homepage if not already
         await this.bot.browser.func.goHome(page)
 
         this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All "Daily Set" items have been completed')
+
+        // Optional: immediately run desktop search bundle
+        if (!this.bot.isMobile && this.bot.config.workers.bundleDailySetWithSearch && this.bot.config.workers.doDesktopSearch) {
+            try {
+                await this.bot.utils.waitRandom(1200, 2600)
+                await this.bot.activities.doSearch(page, data)
+            } catch (e) {
+                this.bot.log(this.bot.isMobile, 'DAILY-SET', `Post-DailySet search failed: ${e instanceof Error ? e.message : e}`, 'warn')
+            }
+        }
     }
 
     // Punch Card
@@ -120,7 +149,9 @@ export class Workers {
     private async solveActivities(activityPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
         const activityInitial = activityPage.url() // Homepage for Daily/More and Index for promotions
 
-        for (const activity of activities) {
+    const retry = new Retry(this.bot.config.retryPolicy)
+    const throttle = new AdaptiveThrottler()
+    for (const activity of activities) {
             try {
                 // Reselect the worker page
                 activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
@@ -132,7 +163,11 @@ export class Workers {
                     activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
                 }
 
-                await this.bot.utils.wait(1000)
+                await this.bot.browser.utils.humanizePage(activityPage)
+                {
+                    const m = throttle.getDelayMultiplier()
+                    await this.bot.utils.waitRandom(Math.floor(800*m), Math.floor(1400*m))
+                }
 
                 if (activityPage.url() !== activityInitial) {
                     await activityPage.goto(activityInitial)
@@ -154,74 +189,50 @@ export class Workers {
                 if it didn't then it gave enough time for the page to load.
                 */
                 await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
-                await this.bot.utils.wait(2000)
-
-                switch (activity.promotionType) {
-                    // Quiz (Poll, Quiz or ABC)
-                    case 'quiz':
-                        switch (activity.pointProgressMax) {
-                            // Poll or ABC (Usually 10 points)
-                            case 10:
-                                // Normal poll
-                                if (activity.destinationUrl.toLowerCase().includes('pollscenarioid')) {
-                                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "Poll" title: "${activity.title}"`)
-                                    await activityPage.click(selector)
-                                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                    await this.bot.activities.doPoll(activityPage)
-                                } else { // ABC
-                                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "ABC" title: "${activity.title}"`)
-                                    await activityPage.click(selector)
-                                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                    await this.bot.activities.doABC(activityPage)
-                                }
-                                break
-
-                            // This Or That Quiz (Usually 50 points)
-                            case 50:
-                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "ThisOrThat" title: "${activity.title}"`)
-                                await activityPage.click(selector)
-                                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                await this.bot.activities.doThisOrThat(activityPage)
-                                break
-
-                            // Quizzes are usually 30-40 points
-                            default:
-                                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "Quiz" title: "${activity.title}"`)
-                                await activityPage.click(selector)
-                                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                                await this.bot.activities.doQuiz(activityPage)
-                                break
-                        }
-                        break
-
-                    // UrlReward (Visit)
-                    case 'urlreward':
-                        // Search on Bing are subtypes of "urlreward"
-                        if (activity.name.toLowerCase().includes('exploreonbing')) {
-                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "SearchOnBing" title: "${activity.title}"`)
-                            await activityPage.click(selector)
-                            activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                            await this.bot.activities.doSearchOnBing(activityPage, activity)
-
-                        } else {
-                            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "UrlReward" title: "${activity.title}"`)
-                            await activityPage.click(selector)
-                            activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                            await this.bot.activities.doUrlReward(activityPage)
-                        }
-                        break
-
-                    // Unsupported types
-                    default:
-                        this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
-                        break
+                // Small human-like jitter before executing
+                await this.bot.browser.utils.humanizePage(activityPage)
+                {
+                    const m = throttle.getDelayMultiplier()
+                    await this.bot.utils.waitRandom(Math.floor(1200*m), Math.floor(2600*m))
                 }
 
-                // Cooldown
-                await this.bot.utils.wait(2000)
+                // Log the detected type using the same heuristics as before
+                const typeLabel = this.bot.activities.getTypeLabel(activity)
+                if (typeLabel !== 'Unsupported') {
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "${typeLabel}" title: "${activity.title}"`)
+                    await activityPage.click(selector)
+                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                    // Watchdog: abort if the activity hangs too long
+                    const timeoutMs = this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? '30s') * 2
+                    const runWithTimeout = (p: Promise<void>) => Promise.race([
+                        p,
+                        new Promise<void>((_, rej) => setTimeout(() => rej(new Error('activity-timeout')), timeoutMs))
+                    ])
+                    await retry.run(async () => {
+                        try {
+                            await runWithTimeout(this.bot.activities.run(activityPage, activity))
+                            throttle.record(true)
+                        } catch (e) {
+                            await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_timeout_${activity.title || activity.offerId}`)
+                            throttle.record(false)
+                            throw e
+                        }
+                    }, () => true)
+                } else {
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
+                }
+
+                // Cooldown with jitter
+                await this.bot.browser.utils.humanizePage(activityPage)
+                {
+                    const m = throttle.getDelayMultiplier()
+                    await this.bot.utils.waitRandom(Math.floor(1200*m), Math.floor(2600*m))
+                }
 
             } catch (error) {
+                await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_error_${activity.title || activity.offerId}`)
                 this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
+                throttle.record(false)
             }
 
         }

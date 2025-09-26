@@ -1,7 +1,7 @@
 ###############################################################################
 # Stage 1: Builder (compile TypeScript)
 ###############################################################################
-FROM node:18-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /usr/src/microsoft-rewards-script
 
@@ -11,13 +11,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package manifests
-COPY package*.json ./
+COPY package*.json tsconfig.json ./
 
 # Conditional install: npm ci if lockfile exists, else npm install
 RUN if [ -f package-lock.json ]; then \
-      npm ci; \
+      npm ci --ignore-scripts; \
     else \
-      npm install; \
+      npm install --ignore-scripts; \
     fi
 
 # Copy source code
@@ -29,18 +29,16 @@ RUN npm run build
 ###############################################################################
 # Stage 2: Runtime (Playwright image)
 ###############################################################################
-FROM mcr.microsoft.com/playwright:v1.52.0-jammy
+FROM node:22-slim AS runtime
 
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install cron, gettext-base (for envsubst), tzdata noninteractively
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-         cron gettext-base tzdata \
-    && rm -rf /var/lib/apt/lists/*
-
-# Ensure Playwright uses preinstalled browsers
+ENV NODE_ENV=production
+ENV TZ=UTC
+# Use shared location for Playwright browsers so both 'playwright' and 'rebrowser-playwright' can find them
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Force headless in container to be compatible with Chromium Headless Shell
+ENV FORCE_HEADLESS=1
 
 # Copy package files first for better caching
 COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
@@ -52,17 +50,14 @@ RUN if [ -f package-lock.json ]; then \
       npm install --production --ignore-scripts; \
     fi
 
+# Install only Chromium Headless Shell and its OS deps (smaller than full browser set)
+# This will install required apt packages internally; we clean up afterwards to keep the image slim.
+RUN npx playwright install --with-deps --only-shell \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin || true
+
 # Copy built application
 COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 
-# Copy runtime scripts with proper permissions from the start
-COPY --chmod=755 src/run_daily.sh ./src/run_daily.sh
-COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
-COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
-
-# Default TZ (overridden by user via environment)
-ENV TZ=UTC
-
-# Entrypoint handles TZ, initial run toggle, cron templating & launch
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
+# Default command runs the built-in scheduler; can be overridden by docker-compose
+CMD ["npm", "run", "start:schedule"]

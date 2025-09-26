@@ -40,10 +40,17 @@ export default class BrowserFunc {
                 await this.bot.utils.wait(3000)
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
-                // Check if account is suspended
-                const isSuspended = await page.waitForSelector('#suspendedAccountHeader', { state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
-                if (isSuspended) {
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'This account is suspended!', 'error')
+                // Check if account is suspended (multiple heuristics)
+                const suspendedByHeader = await page.waitForSelector('#suspendedAccountHeader', { state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)
+                let suspendedByText = false
+                if (!suspendedByHeader) {
+                    try {
+                        const text = (await page.textContent('body')) || ''
+                        suspendedByText = /account has been suspended|suspended due to unusual activity/i.test(text)
+                    } catch { /* ignore */ }
+                }
+                if (suspendedByHeader || suspendedByText) {
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'This account appears suspended!', 'error')
                     throw new Error('Account has been suspended!')
                 }
 
@@ -82,21 +89,22 @@ export default class BrowserFunc {
      * Fetch user dashboard data
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
-    async getDashboardData(): Promise<DashboardData> {
+    async getDashboardData(page?: Page): Promise<DashboardData> {
+        const target = page ?? this.bot.homePage
         const dashboardURL = new URL(this.bot.config.baseURL)
-        const currentURL = new URL(this.bot.homePage.url())
+        const currentURL = new URL(target.url())
 
         try {
             // Should never happen since tasks are opened in a new tab!
             if (currentURL.hostname !== dashboardURL.hostname) {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
-                await this.goHome(this.bot.homePage)
+                await this.goHome(target)
             }
-            let lastError: any = null
+                let lastError: unknown = null
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     // Reload the page to get new data
-                    await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
+                    await target.reload({ waitUntil: 'domcontentloaded' })
                     lastError = null
                     break
                 } catch (re) {
@@ -108,7 +116,7 @@ export default class BrowserFunc {
                         if (attempt === 1) {
                             this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Page appears closed; trying one navigation fallback', 'warn')
                             try {
-                                await this.goHome(this.bot.homePage)
+                                await this.goHome(target)
                             } catch {/* ignore */}
                         } else {
                             break
@@ -119,7 +127,7 @@ export default class BrowserFunc {
                 }
             }
 
-            const scriptContent = await this.bot.homePage.evaluate(() => {
+            const scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
 
@@ -131,7 +139,7 @@ export default class BrowserFunc {
             }
 
             // Extract the dashboard object from the script content
-            const dashboardData = await this.bot.homePage.evaluate((scriptContent: string) => {
+            const dashboardData = await target.evaluate((scriptContent: string) => {
                 // Extract the dashboard object using regex
                 const regex = /var dashboard = (\{.*?\});/s
                 const match = regex.exec(scriptContent)
@@ -232,8 +240,12 @@ export default class BrowserFunc {
             ]
 
             const data = await this.getDashboardData()
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
+            // Guard against missing profile/attributes and undefined settings
+            let geoLocale = data?.userProfile?.attributes?.country || 'US'
+            const useGeo = !!(this.bot?.config?.searchSettings?.useGeoLocaleQueries)
+            geoLocale = (useGeo && typeof geoLocale === 'string' && geoLocale.length === 2)
+                ? geoLocale.toLowerCase()
+                : 'us'
 
             const userDataRequest: AxiosRequestConfig = {
                 url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
@@ -295,9 +307,10 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const scriptContent = $('script').filter((index: number, element: any) => {
-                return $(element).text().includes('_w.rewardsQuizRenderInfo')
-            }).text()
+            const scriptContent = $('script')
+                .toArray()
+                .map(el => $(el).text())
+                .find(t => t.includes('_w.rewardsQuizRenderInfo')) || ''
 
             if (scriptContent) {
                 const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
@@ -355,7 +368,10 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const element = $('.offer-cta').toArray().find((x: any) => x.attribs.href?.includes(activity.offerId))
+                const element = $('.offer-cta').toArray().find((x: unknown) => {
+                    const el = x as { attribs?: { href?: string } }
+                    return !!el.attribs?.href?.includes(activity.offerId)
+                })
             if (element) {
                 selector = `a[href*="${element.attribs.href}"]`
             }

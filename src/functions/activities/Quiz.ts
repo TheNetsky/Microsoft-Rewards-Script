@@ -30,7 +30,7 @@ export class Quiz extends Workers {
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
                         const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 })
-                        const answerAttribute = await answerSelector?.evaluate((el: any) => el.getAttribute('iscorrectoption'))
+                        const answerAttribute = await answerSelector?.evaluate((el: Element) => el.getAttribute('iscorrectoption'))
 
                         if (answerAttribute && answerAttribute.toLowerCase() === 'true') {
                             answers.push(`#rqAnswerOption${i}`)
@@ -60,7 +60,7 @@ export class Quiz extends Workers {
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
 
                         const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 })
-                        const dataOption = await answerSelector?.evaluate((el: any) => el.getAttribute('data-option'))
+                        const dataOption = await answerSelector?.evaluate((el: Element) => el.getAttribute('data-option'))
 
                         if (dataOption === correctOption) {
                             // Click the answer on page
@@ -84,6 +84,7 @@ export class Quiz extends Workers {
 
             this.bot.log(this.bot.isMobile, 'QUIZ', 'Completed the quiz successfully')
         } catch (error) {
+            await this.bot.browser.utils.captureDiagnostics(page, 'quiz_error')
             await page.close()
             this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred:' + error, 'error')
         }
