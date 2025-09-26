@@ -131,6 +131,15 @@ export class Login {
                 this.bot.log(this.bot.isMobile, 'LOGIN', 'Next button not found after email entry', 'warn')
             }
 
+            const usePasswordButton = await page.waitForSelector('span[role="button"]:has-text("Use your password")', { timeout: 2000 }).catch(() => null)
+            if (usePasswordButton) {
+                await usePasswordButton.click()
+                await this.bot.utils.wait(2000)
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'Use your password')
+            } else {
+                this.bot.log(this.bot.isMobile, 'LOGIN', 'no get Use your password button', 'warn')
+            }
+            
         } catch (error) {
             this.bot.log(this.bot.isMobile, 'LOGIN', `Email entry failed: ${error}`, 'error')
         }
