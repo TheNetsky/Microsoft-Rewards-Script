@@ -1,4 +1,14 @@
 # Microsoft-Rewards-Script
+
+> **⚠️ NOTICE: New Version Available!**  
+> **Version 2 is now available with improved features and stability.**  
+> 
+> **Get the latest version:** [TheNetsky/Microsoft-Rewards-Script at v2](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v2)  
+> 
+> **To clone v2:** `git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git`
+> 
+> ---
+
 Automated Microsoft Rewards script built with TypeScript, Cheerio and Playwright.
 
 Under development, however mainly for personal use!
