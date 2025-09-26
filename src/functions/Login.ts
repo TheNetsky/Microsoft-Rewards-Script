@@ -455,15 +455,37 @@ export class Login {
 
       // Prefer one mentioning email/adresse
       const preferred = masked.find(t=>/email|courriel|adresse|mail/i.test(t)) || masked[0]!
-      // Extract the masked email portion strictly: two visible chars then mask then @domain
-      const strictMatch = /([a-zA-Z0-9]{2})[a-zA-Z0-9*•._-]*@[a-zA-Z0-9.-]+/.exec(preferred)
-      const extracted = strictMatch ? strictMatch[0] : preferred
+      // Extract the masked email: Microsoft sometimes shows only first 1 char (k*****@domain) or 2 chars (ko*****@domain).
+      // We ONLY compare (1 or 2) leading visible alphanumeric chars + full domain (case-insensitive).
+      // This avoids false positives when the displayed mask hides the 2nd char.
+      const maskRegex = /([a-zA-Z0-9]{1,2})[a-zA-Z0-9*•._-]*@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+      const m = maskRegex.exec(preferred)
+      // Fallback: try to salvage with looser pattern if first regex fails
+      const loose = !m ? /([a-zA-Z0-9])[*•][a-zA-Z0-9*•._-]*@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/.exec(preferred) : null
+      const use = m || loose
+      const extracted = use ? use[0] : preferred
       const extractedLower = extracted.toLowerCase()
-      // Derive candidate prefix + domain from extracted
-      const parts = extractedLower.split('@')
-      const candDomain = parts[1] || ''
-      const candPrefix2 = (parts[0] || '').slice(0,2)
-      const matchRef = refs.find(r => r.domain === candDomain && r.prefix2 === candPrefix2)
+  let observedPrefix = ((use && use[1]) ? use[1] : '').toLowerCase()
+  let observedDomain = ((use && use[2]) ? use[2] : '').toLowerCase()
+      if (!observedDomain && extractedLower.includes('@')) {
+        const parts = extractedLower.split('@')
+        observedDomain = parts[1] || ''
+      }
+      if (!observedPrefix && extractedLower.includes('@')) {
+        const parts = extractedLower.split('@')
+        observedPrefix = (parts[0] || '').replace(/[^a-z0-9]/gi,'').slice(0,2)
+      }
+
+      // Determine if any reference (recoveryEmail or accountEmail) matches observed mask logic
+      const matchRef = refs.find(r => {
+        if (r.domain !== observedDomain) return false
+        // If only one char visible, only enforce first char; if two, enforce both.
+        if (observedPrefix.length === 1) {
+          return r.prefix2.startsWith(observedPrefix)
+        }
+        return r.prefix2 === observedPrefix
+      })
+
       if (!matchRef) {
         const docsUrl = this.getDocsUrl('recovery-email-mismatch')
         const incident: SecurityIncident = {
@@ -472,7 +494,7 @@ export class Login {
           details:[
             `MaskedShown: ${preferred}`,
             `Extracted: ${extracted}`,
-            `Observed => ${candPrefix2}**@${candDomain}`,
+            `Observed => ${observedPrefix || '??'}**@${observedDomain || '??'}`,
             `Expected => ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(' OR ')}`
           ],
           next:[
@@ -490,7 +512,8 @@ export class Login {
         await this.saveIncidentArtifacts(page,'recovery-mismatch').catch(()=>{})
         await this.openDocsTab(page, docsUrl).catch(()=>{})
       } else {
-        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Recovery OK (strict): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
+        const mode = observedPrefix.length === 1 ? 'lenient' : 'strict'
+        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Recovery OK (${mode}): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
       }
     } catch {/* non-fatal */}
   }
