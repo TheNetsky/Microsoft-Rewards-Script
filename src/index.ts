@@ -186,6 +186,7 @@ export class MicrosoftRewardsBot {
                         `Session spent: ${cumulativeSpent} points`
                     ].join('\n')
                     await ConclusionWebhook(this.config, '', {
+                        context: 'spend',
                         embeds: [
                             {
                                 title,
@@ -717,15 +718,16 @@ export class MicrosoftRewardsBot {
             log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving the browser open and skipping all activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Logged in successfully; leaving browser open. Security check by @Light`, {
-                    embeds: [
-                        {
-                            title: '🔐 Security alert (post-login)',
-                            description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving browser open; skipping tasks`,
-                            color: 0xFFAA00
-                        }
-                    ]
-                })
+                    await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Logged in successfully; leaving browser open. Security check by @Light`, {
+                        context: 'compromised',
+                        embeds: [
+                            {
+                                title: '🔐 Security alert (post-login)',
+                                description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving browser open; skipping tasks`,
+                                color: 0xFFAA00
+                            }
+                        ]
+                    })
             } catch {/* ignore */}
             // Save session for convenience, but do not close the browser
             try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
@@ -819,15 +821,16 @@ export class MicrosoftRewardsBot {
             log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Mobile flow halted; leaving browser open. Security check by @Light`, {
-                    embeds: [
-                        {
-                            title: '🔐 Security alert (mobile)',
-                            description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving mobile browser open; skipping tasks`,
-                            color: 0xFFAA00
-                        }
-                    ]
-                })
+                    await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Mobile flow halted; leaving browser open. Security check by @Light`, {
+                        context: 'compromised',
+                        embeds: [
+                            {
+                                title: '🔐 Security alert (mobile)',
+                                description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving mobile browser open; skipping tasks`,
+                                color: 0xFFAA00
+                            }
+                        ]
+                    })
             } catch {/* ignore */}
             try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
             return { initialPoints: 0, collectedPoints: 0 }

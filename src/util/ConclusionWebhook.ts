@@ -2,6 +2,26 @@ import axios from 'axios'
 import { Config } from '../interface/Config'
 import { Ntfy } from './Ntfy'
 
+// Light obfuscation of the avatar URL (base64). Prevents casual editing in config.
+const AVATAR_B64 = 'aHR0cHM6Ly9tZWRpYS5kaXNjb3JkYXBwLm5ldC9hdHRhY2htZW50cy8xNDIxMTYzOTUyOTcyMzY5OTMxLzE0MjExNjQxNDU5OTQyNDAxMTAvbXNuLnBuZz93aWR0aD01MTImZWlnaHQ9NTEy'
+function getAvatarUrl(): string {
+    try { return Buffer.from(AVATAR_B64, 'base64').toString('utf-8') } catch { return '' }
+}
+
+type WebhookContext = 'summary' | 'ban' | 'security' | 'compromised' | 'spend' | 'error' | 'default'
+
+function pickUsername(ctx: WebhookContext, fallbackColor?: number): string {
+    switch (ctx) {
+        case 'summary': return 'Summary'
+        case 'ban': return 'Ban'
+        case 'security': return 'Security'
+        case 'compromised': return 'Pirate'
+        case 'spend': return 'Spend'
+        case 'error': return 'Error'
+        default: return fallbackColor === 0xFF0000 ? 'Error' : 'Rewards'
+    }
+}
+
 interface DiscordField { name: string; value: string; inline?: boolean }
 interface DiscordEmbed {
     title?: string
@@ -13,6 +33,7 @@ interface DiscordEmbed {
 interface ConclusionPayload {
     content?: string
     embeds?: DiscordEmbed[]
+    context?: WebhookContext
 }
 
 /**
@@ -28,9 +49,13 @@ export async function ConclusionWebhook(config: Config, content: string, payload
     const hasWebhook = !!(config.webhook?.enabled && config.webhook.url)
     const sameTarget = hasConclusion && hasWebhook && config.conclusionWebhook!.url === config.webhook!.url
 
-    const body: ConclusionPayload = {}
+    const body: ConclusionPayload & { username?: string; avatar_url?: string } = {}
     if (payload?.embeds) body.embeds = payload.embeds
     if (content && content.trim()) body.content = content
+    const firstColor = payload?.embeds && payload.embeds[0]?.color
+    const ctx: WebhookContext = payload?.context || (firstColor === 0xFF0000 ? 'error' : 'default')
+    body.username = pickUsername(ctx, firstColor)
+    body.avatar_url = getAvatarUrl()
 
     // Post to conclusion webhook if configured
     const postWithRetry = async (url: string, label: string) => {
