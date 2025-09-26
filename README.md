@@ -126,6 +126,7 @@ npm run start:schedule       # Automated daily runs
 | **[🐳 Docker](./docs/docker.md)** | Containerized deployment with slim headless image |
 | **[⏰ Scheduling](./docs/schedule.md)** | Automated daily runs with built-in scheduler |
 | **[🛠️ Diagnostics](./docs/diagnostics.md)** | Troubleshooting, error capture, and logs |
+| **[⚙️ Configuration](./docs/config.md)** | Full config.json reference |
 
 **[📚 Full Documentation Index →](./docs/index.md)**
 

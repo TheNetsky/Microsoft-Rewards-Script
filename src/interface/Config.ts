@@ -15,6 +15,7 @@ export interface Config {
     jobState?: ConfigJobState; // Persistence of per-activity checkpoints
     logExcludeFunc: string[];
     webhookLogExcludeFunc: string[];
+    logging?: ConfigLogging; // Preserve original logging object (for live webhook settings)
     proxy: ConfigProxy;
     webhook: ConfigWebhook;
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
@@ -160,6 +161,16 @@ export interface ConfigJobState {
 export interface ConfigLoggingLive {
     enabled?: boolean; // master switch for live webhook logs
     redactEmails?: boolean; // if true, redact emails in outbound logs
+}
+
+export interface ConfigLogging {
+    excludeFunc?: string[];
+    webhookExcludeFunc?: string[];
+    live?: ConfigLoggingLive;
+    liveWebhookUrl?: string; // legacy/dedicated live webhook override
+    redactEmails?: boolean; // legacy top-level redaction flag
+    // Optional nested live.url support (already handled dynamically in Logger)
+    [key: string]: unknown; // forward compatibility
 }
 
 // CommunityHelp removed (privacy-first policy)

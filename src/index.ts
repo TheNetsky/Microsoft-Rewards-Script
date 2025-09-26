@@ -382,14 +382,17 @@ export class MicrosoftRewardsBot {
     private runMaster() {
         log('main', 'MAIN-PRIMARY', 'Primary process started')
 
-        const accountChunks = this.utils.chunkArray(this.accounts, this.config.clusters)
+        const totalAccounts = this.accounts.length
+        // If user over-specified clusters (e.g. 10 clusters but only 2 accounts), don't spawn useless idle workers.
+        const workerCount = Math.min(this.config.clusters, totalAccounts || 1)
+        const accountChunks = this.utils.chunkArray(this.accounts, workerCount)
+        // Reset activeWorkers to actual spawn count (constructor used raw clusters)
+        this.activeWorkers = workerCount
 
-        for (let i = 0; i < accountChunks.length; i++) {
+        for (let i = 0; i < workerCount; i++) {
             const worker = cluster.fork()
-            const chunk = accountChunks[i]
-            const msg = { chunk: chunk as Account[] }
-            ;(worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.(msg)
-            // Collect summaries from workers
+            const chunk = accountChunks[i] || []
+            ;(worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.({ chunk })
             worker.on('message', (msg: unknown) => {
                 const m = msg as { type?: string; data?: AccountSummary[] }
                 if (m && m.type === 'summary' && Array.isArray(m.data)) {
@@ -747,6 +750,12 @@ export class MicrosoftRewardsBot {
 
         log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today`)
 
+        if (this.pointsCanCollect === 0) {
+            // Extra diagnostic breakdown so users know WHY it's zero
+            log(this.isMobile, 'MAIN-POINTS', `Breakdown (desktop): dailySet=${browserEnarablePoints.dailySetPoints} search=${browserEnarablePoints.desktopSearchPoints} promotions=${browserEnarablePoints.morePromotionsPoints}`)
+            log(this.isMobile, 'MAIN-POINTS', 'All desktop earnable buckets are zero. This usually means: tasks already completed today OR the daily reset has not happened yet for your time zone. If you still want to force run activities set execution.runOnZeroPoints=true in config.', 'log', 'yellow')
+        }
+
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
             log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
@@ -836,6 +845,11 @@ export class MicrosoftRewardsBot {
         this.pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints
 
         log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today (Browser: ${browserEnarablePoints.mobileSearchPoints} points, App: ${appEarnablePoints.totalEarnablePoints} points)`)
+
+        if (this.pointsCanCollect === 0) {
+            log(this.isMobile, 'MAIN-POINTS', `Breakdown (mobile): browserSearch=${browserEnarablePoints.mobileSearchPoints} appTotal=${appEarnablePoints.totalEarnablePoints}`)
+            log(this.isMobile, 'MAIN-POINTS', 'All mobile earnable buckets are zero. Causes: mobile searches already maxed, daily set finished, or daily rollover not reached yet. You can force execution by setting execution.runOnZeroPoints=true.', 'log', 'yellow')
+        }
 
         // If runOnZeroPoints is false and 0 points to earn, don't continue
         if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {

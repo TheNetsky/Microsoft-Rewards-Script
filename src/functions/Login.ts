@@ -399,6 +399,8 @@ export class Login {
       this.startCompromisedInterval()
       await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(()=>{})
       await this.saveIncidentArtifacts(page,'sign-in-blocked').catch(()=>{})
+      // Open security docs for immediate guidance (best-effort)
+      await this.openDocsTab(page, docsUrl).catch(()=>{})
       return true
     } catch { return false }
   }
@@ -453,25 +455,42 @@ export class Login {
 
       // Prefer one mentioning email/adresse
       const preferred = masked.find(t=>/email|courriel|adresse|mail/i.test(t)) || masked[0]!
-      const lc = preferred.toLowerCase()
-      const matchRef = refs.find(r=> lc.includes(r.domain) && lc.indexOf(r.prefix2) >= 0 && lc.indexOf(r.prefix2) <= 6)
+      // Extract the masked email portion strictly: two visible chars then mask then @domain
+      const strictMatch = /([a-zA-Z0-9]{2})[a-zA-Z0-9*•._-]*@[a-zA-Z0-9.-]+/.exec(preferred)
+      const extracted = strictMatch ? strictMatch[0] : preferred
+      const extractedLower = extracted.toLowerCase()
+      // Derive candidate prefix + domain from extracted
+      const parts = extractedLower.split('@')
+      const candDomain = parts[1] || ''
+      const candPrefix2 = (parts[0] || '').slice(0,2)
+      const matchRef = refs.find(r => r.domain === candDomain && r.prefix2 === candPrefix2)
       if (!matchRef) {
         const docsUrl = this.getDocsUrl('recovery-email-mismatch')
         const incident: SecurityIncident = {
           kind:'Recovery email mismatch',
           account: email,
-          details:[`Masked: ${preferred}`, `Expected: ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(', ')}`],
-          next:['Do NOT continue. Review account manually.', 'Update or secure recovery email.'],
+          details:[
+            `MaskedShown: ${preferred}`,
+            `Extracted: ${extracted}`,
+            `Observed => ${candPrefix2}**@${candDomain}`,
+            `Expected => ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(' OR ')}`
+          ],
+          next:[
+            'Automation halted globally (standby engaged).',
+            'Verify account security & recovery email in Microsoft settings.',
+            'Update accounts.json if the change was legitimate before restart.'
+          ],
           docsUrl
         }
-        await this.sendIncidentAlert(incident,'warn')
+        await this.sendIncidentAlert(incident,'critical')
         this.bot.compromisedModeActive = true
         this.bot.compromisedReason = 'recovery-mismatch'
         this.startCompromisedInterval()
         await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(()=>{})
         await this.saveIncidentArtifacts(page,'recovery-mismatch').catch(()=>{})
+        await this.openDocsTab(page, docsUrl).catch(()=>{})
       } else {
-        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Masked recovery accepted: ${preferred} (matched ${matchRef.prefix2}**@${matchRef.domain})`)
+        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Recovery OK (strict): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
       }
     } catch {/* non-fatal */}
   }
@@ -532,6 +551,14 @@ export class Login {
       try { await page.screenshot({ path: path.join(dir,'page.png'), fullPage:false }) } catch {/* ignore */}
       try { const html = await page.content(); await fs.promises.writeFile(path.join(dir,'page.html'), html) } catch {/* ignore */}
       this.bot.log(this.bot.isMobile,'SECURITY',`Saved incident artifacts: ${dir}`)
+    } catch {/* ignore */}
+  }
+
+  private async openDocsTab(page: Page, url: string) {
+    try {
+      const ctx = page.context()
+      const tab = await ctx.newPage()
+      await tab.goto(url, { waitUntil: 'domcontentloaded' })
     } catch {/* ignore */}
   }
 

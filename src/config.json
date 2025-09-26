@@ -137,7 +137,8 @@
     },
     
     "logging": {
-        // Filter out noisy log buckets locally and on webhook
+        // Logging controls (see docs/config.md). Remove redactEmails or set false to show full emails.
+        // Filter out noisy log buckets locally and for any webhook summaries
         "excludeFunc": [
             "SEARCH-CLOSE-TABS",
             "LOGIN-NO-PROMPT",
@@ -148,11 +149,8 @@
             "LOGIN-NO-PROMPT",
             "FLOW"
         ],
-        // Live webhook logs and redaction
-        "live": {
-            "enabled": false,
-            "redactEmails": true
-        }
+        // Email redaction toggle (previously logging.live.redactEmails)
+        "redactEmails": true
     },
     
     "diagnostics": {

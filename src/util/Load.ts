@@ -8,6 +8,7 @@ import { Account } from '../interface/Account'
 import { Config, ConfigSaveFingerprint } from '../interface/Config'
 
 let configCache: Config
+let configSourcePath = ''
 
 // Basic JSON comment stripper (supports // line and /* block */ comments while preserving strings)
 function stripJsonComments(input: string): string {
@@ -173,7 +174,8 @@ function normalizeConfig(raw: unknown): Config {
         jobState: n.jobState,
         logExcludeFunc,
         webhookLogExcludeFunc,
-        proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
+    logging, // retain full logging object for live webhook usage
+    proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
         webhook,
         conclusionWebhook,
         ntfy,
@@ -213,9 +215,11 @@ export function loadAccounts(): Account[] {
         } else {
             // Try multiple locations to support both root mounts and dist mounts
             const candidates = [
-                path.join(__dirname, '../', file),              // typical: dist/../accounts.json (project root)
-                path.join(__dirname, file),                     // fallback: dist/accounts.json
-                path.join(process.cwd(), file)                   // cwd override (e.g., when running ts-node)
+                path.join(__dirname, '../', file),               // root/accounts.json (preferred)
+                path.join(__dirname, '../src', file),            // fallback: file kept inside src/
+                path.join(process.cwd(), file),                  // cwd override
+                path.join(process.cwd(), 'src', file),           // cwd/src/accounts.json
+                path.join(__dirname, file)                       // dist/accounts.json (legacy)
             ]
             let chosen: string | null = null
             for (const p of candidates) {
@@ -243,6 +247,8 @@ export function loadAccounts(): Account[] {
     }
 }
 
+export function getConfigPath(): string { return configSourcePath }
+
 export function loadConfig(): Config {
     try {
         if (configCache) {
@@ -251,11 +257,13 @@ export function loadConfig(): Config {
 
         // Resolve config.json from common locations
         const candidates = [
-            path.join(__dirname, '../', 'config.json'),     // typical: dist/../config.json (project root)
-            path.join(__dirname, 'config.json'),             // fallback: dist/config.json
-            path.join(process.cwd(), 'config.json')          // cwd when running ts-node
+            path.join(__dirname, '../', 'config.json'),          // root/config.json when compiled (expected primary)
+            path.join(__dirname, '../src', 'config.json'),       // fallback: running compiled dist but file still in src/
+            path.join(process.cwd(), 'config.json'),             // cwd root
+            path.join(process.cwd(), 'src', 'config.json'),      // running from repo root but config left in src/
+            path.join(__dirname, 'config.json')                  // last resort: dist/util/config.json
         ]
-        let cfgPath: string | null = null
+    let cfgPath: string | null = null
         for (const p of candidates) {
             try { if (fs.existsSync(p)) { cfgPath = p; break } } catch { /* ignore */ }
         }
@@ -263,10 +271,11 @@ export function loadConfig(): Config {
         const config = fs.readFileSync(cfgPath, 'utf-8')
         const text = config.replace(/^\uFEFF/, '')
         const raw = JSON.parse(stripJsonComments(text))
-        const normalized = normalizeConfig(raw)
-        configCache = normalized // Set as cache
+    const normalized = normalizeConfig(raw)
+    configCache = normalized // Set as cache
+    configSourcePath = cfgPath
 
-        return normalized
+    return normalized
     } catch (error) {
         throw new Error(error as string)
     }
