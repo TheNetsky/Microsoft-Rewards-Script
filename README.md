@@ -11,7 +11,7 @@
 
 Automated Microsoft Rewards script built with TypeScript, Cheerio and Playwright.
 
-Under development, however mainly for personal use!
+It may still have issues. Please feel free to help us [Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues).!
 
 ---
 
