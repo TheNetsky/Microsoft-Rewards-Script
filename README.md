@@ -199,3 +199,6 @@ This script is provided for educational purposes. The authors are not responsibl
 ## 🤝 Contributing
 
 This project is primarily for personal use but contributions are welcome. Please ensure any changes maintain compatibility with the existing configuration system.
+
+[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/KRBFxxsU)
+[![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
