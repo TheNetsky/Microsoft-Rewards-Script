@@ -1291,8 +1291,10 @@ async function main() {
 }
 
 // Start the bots
-main().catch(error => {
-    log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
-    // CommunityReporter disabled
-    process.exit(1)
-})
+if (require.main === module) {
+    main().catch(error => {
+        log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
+        // CommunityReporter disabled
+        process.exit(1)
+    })
+}
