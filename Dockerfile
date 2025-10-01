@@ -1,63 +1,80 @@
 ###############################################################################
-# Stage 1: Builder (compile TypeScript)
+# Stage 1: Builder
 ###############################################################################
 FROM node:22-slim AS builder
 
 WORKDIR /usr/src/microsoft-rewards-script
 
-# Install minimal tooling if needed
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+ENV PLAYWRIGHT_BROWSERS_PATH=0
 
-# Copy package manifests
-COPY package*.json tsconfig.json ./
+# Copy package files
+COPY package.json package-lock.json tsconfig.json ./
 
-# Conditional install: npm ci if lockfile exists, else npm install
-RUN if [ -f package-lock.json ]; then \
-      npm ci --ignore-scripts; \
-    else \
-      npm install --ignore-scripts; \
-    fi
+# Install all dependencies required to build the script
+RUN npm ci --ignore-scripts
 
-# Copy source code
+# Copy source and build
 COPY . .
-
-# Build TypeScript
 RUN npm run build
 
+# Remove build dependencies, and reinstall only runtime dependencies
+RUN rm -rf node_modules \
+    && npm ci --omit=dev --ignore-scripts \
+    && npm cache clean --force
+
+# Install Chromium Headless Shell, and cleanup
+RUN npx playwright install --with-deps --only-shell chromium \
+    && rm -rf /root/.cache /tmp/* /var/tmp/*
+
 ###############################################################################
-# Stage 2: Runtime (Playwright image)
+# Stage 2: Runtime
 ###############################################################################
 FROM node:22-slim AS runtime
 
 WORKDIR /usr/src/microsoft-rewards-script
 
-ENV NODE_ENV=production
-ENV TZ=UTC
-# Use shared location for Playwright browsers so both 'playwright' and 'rebrowser-playwright' can find them
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-# Force headless in container to be compatible with Chromium Headless Shell
-ENV FORCE_HEADLESS=1
+# Set production environment variables
+ENV NODE_ENV=production \
+    TZ=UTC \
+    PLAYWRIGHT_BROWSERS_PATH=0 \
+    FORCE_HEADLESS=1
 
-# Copy package files first for better caching
-COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
+# Install minimal system libraries required for Chromium headless to run
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libglib2.0-0 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libasound2 \
+    libflac12 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libdrm2 \
+    libgbm1 \
+    libdav1d6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxss1 \
+    libxtst6 \
+    libdouble-conversion3 \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
-# Install only production dependencies, with fallback
-RUN if [ -f package-lock.json ]; then \
-      npm ci --omit=dev --ignore-scripts; \
-    else \
-      npm install --production --ignore-scripts; \
-    fi
-
-# Install only Chromium Headless Shell and its OS deps (smaller than full browser set)
-# This will install required apt packages internally; we clean up afterwards to keep the image slim.
-RUN npx playwright install --with-deps --only-shell \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin || true
-
-# Copy built application
+# Copy compiled application and dependencies from builder stage
 COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
+COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
+COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
-# Default command runs the built-in scheduler; can be overridden by docker-compose
+# Run the scheduled rewards script
 CMD ["npm", "run", "start:schedule"]
