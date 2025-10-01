@@ -2,7 +2,6 @@ sessions/
 dist/
 node_modules/
 .github/
-package-lock.json
 accounts.json
 notes
 accounts.dev.json
