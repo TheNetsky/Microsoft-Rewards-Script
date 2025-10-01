@@ -1,7 +1,14 @@
-# Microsoft-Rewards-Script
-Automated Microsoft Rewards script built with TypeScript, Cheerio and Playwright.
+### ⚡ Microsoft Rewards Script v2 – Beta Release
 
-Under development, however mainly for personal use!
+The new **v2 version is currently in Beta Testing**.
+This means the script is available to try, but you may encounter bugs or unexpected issues.
+
+We strongly encourage you to **report any problems** you experience. Your feedback is extremely valuable and will help us improve the script for a stable release.
+
+👉 You can share issues, suggestions, or get help directly on our **Discord server**:
+**[Join here](https://discord.gg/h6Z69ZPPCz)**
+
+Thank you for helping us test and improve this project!
 
 ---
 
@@ -189,3 +196,6 @@ This script is provided for educational purposes. The authors are not responsibl
 ## 🤝 Contributing
 
 This project is primarily for personal use but contributions are welcome. Please ensure any changes maintain compatibility with the existing configuration system.
+
+[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/h6Z69ZPPCz)
+[![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
