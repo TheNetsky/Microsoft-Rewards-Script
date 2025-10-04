@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 
+import { Webhook } from './Webhook'
 import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 
@@ -31,7 +32,13 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     }) : s
     const cleanStr = redact(`[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`)
 
-    // Define conditions for sending to NTFY 
+    // Send ALL logs to Webhook (except excluded ones)
+    const webhookExcludeFunc = loggingCfg.webhookExcludeFunc || []
+    if (!webhookExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
+        Webhook(configData, cleanStr)
+    }
+
+    // Define conditions for sending to NTFY (only specific messages)
     const ntfyConditions = {
         log: [
             message.toLowerCase().includes('started tasks for account'),
