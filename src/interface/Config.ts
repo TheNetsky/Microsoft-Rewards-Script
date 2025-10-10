@@ -96,6 +96,7 @@ export interface ConfigSchedule {
     timeZone?: string; // IANA TZ e.g., "America/New_York"
     useAmPm?: boolean; // If true, prefer time12 + AM/PM style; if false, prefer time24. If undefined, back-compat behavior.
     runImmediatelyOnStart?: boolean; // if true, run once immediately when process starts
+    cron?: string | string[]; // Optional cron expression(s) (standard 5-field or 6-field) for advanced scheduling
 }
 
 export interface ConfigVacation {

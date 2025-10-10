@@ -68,6 +68,28 @@ The built-in scheduler provides **automated script execution** at specified time
 | `vacation.enabled` | `false` | Skip random monthly off-block |
 | `vacation.minDays` | `3` | Minimum vacation days |
 | `vacation.maxDays` | `5` | Maximum vacation days |
+| `cron` | `undefined` | Optional cron expression (string or array) for advanced scheduling |
+
+### **Cron Expressions (Advanced)**
+
+You can now drive the scheduler with classic cron syntax instead of a single daily time. Provide either a string or an array in `schedule.cron`.
+
+```json
+{
+  "schedule": {
+    "enabled": true,
+    "cron": [
+      "0 7 * * *",      // every day at 07:00
+      "30 19 * * 1-5"    // weekdays at 19:30
+    ],
+    "timeZone": "Europe/Paris"
+  }
+}
+```
+
+- Supports 5-field and 6-field cron expressions (`second minute hour day month weekday`).
+- When `cron` is set, the legacy `time`, `time12`, `time24`, and daily jitter env vars are ignored.
+- The scheduler still honors vacation mode, weekly random off-days, run-on-start, and watchdog features.
 
 ---
 
