@@ -40,7 +40,14 @@ class Browser {
         try {
             // FORCE_HEADLESS env takes precedence (used in Docker with headless shell only)
             const envForceHeadless = process.env.FORCE_HEADLESS === '1'
-            const headlessValue = envForceHeadless ? true : ((cfgAny['headless'] as boolean | undefined) ?? (cfgAny['browser'] && (cfgAny['browser'] as Record<string, unknown>)['headless'] as boolean | undefined) ?? false)
+            let headlessValue = envForceHeadless ? true : ((cfgAny['headless'] as boolean | undefined) ?? (cfgAny['browser'] && (cfgAny['browser'] as Record<string, unknown>)['headless'] as boolean | undefined) ?? false)
+            if (this.bot.isBuyModeEnabled() && !envForceHeadless) {
+                if (headlessValue !== false) {
+                    const target = this.bot.getBuyModeTarget()
+                    this.bot.log(this.bot.isMobile, 'BROWSER', `Buy mode detected${target ? ` for ${target}` : ''}; forcing headless=false so captchas and manual flows remain interactive.`, 'warn')
+                }
+                headlessValue = false
+            }
             const headless: boolean = Boolean(headlessValue)
 
             const engineName = 'chromium' // current hard-coded engine

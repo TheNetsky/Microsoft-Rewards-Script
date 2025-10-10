@@ -13,6 +13,8 @@
 
 Buy Mode allows you to **manually redeem rewards** while the script **passively monitors** your point balance. Perfect for safe redemptions without automation interference.
 
+> ℹ️ Buy Mode automatically launches the browser in a visible window (headless=false) so you can interact with captchas and checkout flows. Use `FORCE_HEADLESS=1` only if you understand the limitations.
+
 ### **Key Features**
 - 👀 **Passive monitoring** — No clicks or automation
 - 🔄 **Real-time tracking** — Instant spending alerts  
