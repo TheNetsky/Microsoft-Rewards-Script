@@ -57,7 +57,7 @@ Human Mode adds **subtle human-like behavior** to make your automation look and 
 | `gestureMoveProb` | `0.4` | Probability (0-1) for tiny mouse moves |
 | `gestureScrollProb` | `0.2` | Probability (0-1) for minor scrolls |
 | `allowedWindows` | `[]` | Time windows for script execution |
-| `randomOffDaysPerWeek` | `1` | Skip N random days per week |
+| `randomOffDaysPerWeek` | `1` | Skip N random days per week. Set to `0` to disable (scheduler logs reference this setting explicitly). |
 
 ---
 

@@ -248,7 +248,8 @@ async function main() {
     }
     offDays = chosen.sort((a,b)=>a-b)
     offWeek = week
-    await log('main','SCHEDULER',`Selected random off-days this week (ISO): ${offDays.join(', ')}`,'warn')
+  const msg = offDays.length ? offDays.join(', ') : 'none'
+  await log('main','SCHEDULER',`Weekly humanization off-day sample (ISO weekday): ${msg} | adjust via config.humanization.randomOffDaysPerWeek`,'warn')
   }
 
   const chooseVacationRange = async (now: typeof DateTime.prototype) => {
@@ -310,7 +311,7 @@ async function main() {
     if (isVacationToday) {
       await log('main','SCHEDULER',`Skipping immediate run: vacation day (${todayIso})`,'warn')
     } else if (offDays.includes(nowDT.weekday)) {
-      await log('main','SCHEDULER',`Skipping immediate run: off-day (weekday ${nowDT.weekday})`,'warn')
+  await log('main','SCHEDULER',`Skipping immediate run: humanization off-day (ISO weekday ${nowDT.weekday}). Set humanization.randomOffDaysPerWeek=0 to disable.`,'warn')
     } else {
       await runPasses(passes)
     }
@@ -358,7 +359,7 @@ async function main() {
       continue
     }
     if (offDays.includes(nowRun.weekday)) {
-      await log('main','SCHEDULER',`Skipping scheduled run: off-day (weekday ${nowRun.weekday})`,'warn')
+      await log('main','SCHEDULER',`Skipping scheduled run: humanization off-day (ISO weekday ${nowRun.weekday}). Set humanization.randomOffDaysPerWeek=0 to disable.`,'warn')
       continue
     }
     if (!running) {

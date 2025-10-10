@@ -19,6 +19,7 @@ The built-in scheduler provides **automated script execution** at specified time
 - 🔄 **Multiple passes** — Execute script multiple times per run
 - 🏖️ **Vacation mode** — Skip random days monthly
 - 🎲 **Jitter support** — Randomize execution times
+- 📅 **Humanization off-days** — Weekly random skips (disable via `humanization.randomOffDaysPerWeek`)
 - ⚡ **Immediate start** — Option to run on startup
 
 ---
