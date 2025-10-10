@@ -10,6 +10,8 @@ We strongly encourage you to **report any problems** you experience. Your feedba
 
 Thank you for helping us test and improve this project!
 
+`git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git`
+
 ---
 
 ## 🚀 Quick Setup (Recommended)
