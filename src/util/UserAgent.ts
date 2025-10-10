@@ -29,6 +29,7 @@ export async function getUserAgent(isMobile: boolean) {
     const platformVersion = `${isMobile ? Math.floor(Math.random() * 5) + 9 : Math.floor(Math.random() * 15) + 1}.0.0`
 
     const uaMetadata = {
+        mobile: isMobile,
         isMobile,
         platform: isMobile ? 'Android' : 'Windows',
         fullVersionList: [
@@ -44,7 +45,8 @@ export async function getUserAgent(isMobile: boolean) {
         platformVersion,
         architecture: isMobile ? '' : 'x86',
         bitness: isMobile ? '' : '64',
-        model: ''
+        model: '',
+        uaFullVersion: app['chrome_version']
     }
 
     return { userAgent: uaTemplate, userAgentMetadata: uaMetadata }
