@@ -122,7 +122,7 @@ Manages notification channels (Discord webhooks, NTFY, etc.).
 Primary webhook (can be used for summary or generic messages).
 | Key | Default | Description |
 |-----|---------|-------------|
-| enabled | false | Allow sending webhook-based notifications. |
+| enabled | false | Allow sending webhook-based notifications and live log streaming. |
 | url | "" | Webhook endpoint. |
 
 ### notifications.conclusionWebhook
@@ -148,6 +148,7 @@ Lightweight push notifications.
 | excludeFunc | string[] | Log buckets suppressed in console + any webhook usage. |
 | webhookExcludeFunc | string[] | Buckets suppressed specifically for webhook output. |
 | redactEmails | boolean | If true, email addresses are partially masked in logs. |
+| liveWebhookUrl | string | Optional override URL for live log streaming (falls back to `notifications.webhook.url`). |
 
 _Removed fields_: `live.enabled`, `live.url`, `live.redactEmails` — replaced by `redactEmails` only.
 
