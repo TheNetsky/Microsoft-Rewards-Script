@@ -1,7 +1,7 @@
 // Clean refactored Login implementation
 // Public API preserved: login(), getMobileAccessToken()
 
-import type { Page } from 'playwright'
+import type { Page, Locator } from 'playwright'
 import * as crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
@@ -203,6 +203,14 @@ export class Login {
   // --------------- 2FA Handling ---------------
   private async handle2FA(page: Page) {
     try {
+      if (this.currentTotpSecret) {
+        const totpSelector = await this.ensureTotpInput(page)
+        if (totpSelector) {
+          await this.submitTotpCode(page, totpSelector)
+          return
+        }
+      }
+
       const number = await this.fetchAuthenticatorNumber(page)
       if (number) { await this.approveAuthenticator(page, number); return }
       await this.handleSMSOrTotp(page)
@@ -255,16 +263,16 @@ export class Login {
   }
 
   private async handleSMSOrTotp(page: Page) {
-    // TOTP auto entry
-    try {
-      if (this.currentTotpSecret) {
-        const code = generateTOTP(this.currentTotpSecret.trim())
-        await page.fill('input[name="otc"]', code)
-        await page.keyboard.press('Enter')
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP automatically')
-        return
-      }
-    } catch {/* ignore */}
+    // TOTP auto entry (second chance if ensureTotpInput needed longer)
+    if (this.currentTotpSecret) {
+      try {
+        const totpSelector = await this.ensureTotpInput(page)
+        if (totpSelector) {
+          await this.submitTotpCode(page, totpSelector)
+          return
+        }
+      } catch {/* ignore */}
+    }
 
     // Manual prompt
     this.bot.log(this.bot.isMobile, 'LOGIN', 'Waiting for user 2FA code (SMS / Email / App fallback)')
@@ -273,6 +281,138 @@ export class Login {
     await page.fill('input[name="otc"]', code)
     await page.keyboard.press('Enter')
     this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code submitted')
+  }
+
+  private async ensureTotpInput(page: Page): Promise<string | null> {
+    const selector = await this.findFirstVisibleSelector(page, this.totpInputSelectors())
+    if (selector) return selector
+
+    const attempts = 4
+    for (let i = 0; i < attempts; i++) {
+      let acted = false
+
+      // Step 1: expose alternative verification options if hidden
+      if (!acted) {
+        acted = await this.clickFirstVisibleSelector(page, this.totpAltOptionSelectors())
+        if (acted) await this.bot.utils.wait(900)
+      }
+
+      // Step 2: choose authenticator code option if available
+      if (!acted) {
+        acted = await this.clickFirstVisibleSelector(page, this.totpChallengeSelectors())
+        if (acted) await this.bot.utils.wait(900)
+      }
+
+      const ready = await this.findFirstVisibleSelector(page, this.totpInputSelectors())
+      if (ready) return ready
+
+      if (!acted) break
+    }
+
+    return null
+  }
+
+  private async submitTotpCode(page: Page, selector: string) {
+    try {
+      const code = generateTOTP(this.currentTotpSecret!.trim())
+      const input = page.locator(selector).first()
+      if (!await input.isVisible().catch(()=>false)) {
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'TOTP input unexpectedly hidden', 'warn')
+        return
+      }
+      await input.fill('')
+      await input.fill(code)
+      const submitSelectors = [
+        '#idSubmit_SAOTCC_Continue',
+        '#idSubmit_SAOTCC_OTC',
+        'button[type="submit"]:has-text("Verify")',
+        'button[type="submit"]:has-text("Continuer")',
+        'button:has-text("Verify")',
+        'button:has-text("Continuer")',
+        'button:has-text("Submit")'
+      ]
+      const submit = await this.findFirstVisibleLocator(page, submitSelectors)
+      if (submit) {
+        await submit.click().catch(()=>{})
+      } else {
+        await page.keyboard.press('Enter').catch(()=>{})
+      }
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP automatically')
+    } catch (error) {
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Failed to submit TOTP automatically: ' + error, 'warn')
+    }
+  }
+
+  private totpInputSelectors(): string[] {
+    return [
+      'input[name="otc"]',
+      '#idTxtBx_SAOTCC_OTC',
+      '#idTxtBx_SAOTCS_OTC',
+      'input[data-testid="otcInput"]',
+      'input[autocomplete="one-time-code"]',
+      'input[type="tel"][name="otc"]'
+    ]
+  }
+
+  private totpAltOptionSelectors(): string[] {
+    return [
+      '#idA_SAOTCS_ProofPickerChange',
+      '#idA_SAOTCC_AlternateLogin',
+      'a:has-text("Use a different verification option")',
+      'a:has-text("Sign in another way")',
+      'a:has-text("I can\'t use my Microsoft Authenticator app right now")',
+      'button:has-text("Use a different verification option")',
+      'button:has-text("Sign in another way")'
+    ]
+  }
+
+  private totpChallengeSelectors(): string[] {
+    return [
+      '[data-value="PhoneAppOTP"]',
+      '[data-value="OneTimeCode"]',
+      'button:has-text("Use a verification code")',
+      'button:has-text("Enter code manually")',
+      'button:has-text("Enter a code from your authenticator app")',
+      'button:has-text("Use code from your authentication app")',
+      'button:has-text("Utiliser un code de vérification")',
+      'button:has-text("Utiliser un code de verification")',
+      'button:has-text("Entrer un code depuis votre application")',
+      'button:has-text("Entrez un code depuis votre application")',
+      'button:has-text("Entrez un code")',
+      'div[role="button"]:has-text("Use a verification code")',
+      'div[role="button"]:has-text("Enter a code")'
+    ]
+  }
+
+  private async findFirstVisibleSelector(page: Page, selectors: string[]): Promise<string | null> {
+    for (const sel of selectors) {
+      const loc = page.locator(sel).first()
+      if (await loc.isVisible().catch(() => false)) {
+        return sel
+      }
+    }
+    return null
+  }
+
+  private async clickFirstVisibleSelector(page: Page, selectors: string[]): Promise<boolean> {
+    for (const sel of selectors) {
+      const loc = page.locator(sel).first()
+      if (await loc.isVisible().catch(() => false)) {
+        await loc.click().catch(()=>{})
+        return true
+      }
+    }
+    return false
+  }
+
+  private async findFirstVisibleLocator(page: Page, selectors: string[]): Promise<Locator | null> {
+    for (const sel of selectors) {
+      const loc = page.locator(sel).first()
+      if (await loc.isVisible().catch(() => false)) {
+        return loc
+      }
+    }
+    return null
   }
 
   // --------------- Verification / State ---------------
