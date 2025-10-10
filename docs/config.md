@@ -2,6 +2,8 @@
 
 This page documents every field in `config.json`. You can keep the file lean by deleting blocks you do not use – missing values fall back to defaults. Comments (`// ...`) are supported in the JSON thanks to a custom parser.
 
+Looking for ready-to-use presets? Check `docs/config-presets/` for curated examples such as `balanced.jsonc` (full automation with humanization) and `minimal.jsonc` (lean runs with quick scheduling).
+
 > NOTE: Previous versions had `logging.live` (live streaming webhook); it was removed and replaced by a simple `logging.redactEmails` flag.
 
 ---
