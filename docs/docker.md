@@ -9,79 +9,82 @@
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start Checklist
 
-### **Prerequisites**
-- ✅ `src/accounts.json` configured with your Microsoft accounts
-- ✅ `src/config.jsonc` exists (uses defaults if not customized)
-- ✅ Docker & Docker Compose installed
+1. `src/accounts.json` populated with your Microsoft credentials
+2. `src/config.jsonc` present (defaults are fine; comments stay intact)
+3. Docker + Docker Compose installed locally (Desktop app or CLI)
 
-### **Launch**
 ```bash
-# Build and start the container
+# Build and start the container (scheduler runs automatically)
 docker compose up -d
 
-# Monitor the automation
+# Stream logs from the running container
 docker logs -f microsoft-rewards-script
 
-# Stop when needed
+# Stop the stack when you are done
 docker compose down
 ```
 
-**That's it!** The container runs the built-in scheduler automatically.uide
+The compose file uses the same Playwright build as local runs but forces headless mode inside the container via `FORCE_HEADLESS=1`, matching the bundled image.
 
-This project ships with a Docker setup tailored for headless runs. It uses Playwright’s Chromium Headless Shell to keep the image small.
+---
 
-## Quick Start
-- Ensure you have `src/accounts.json` and `src/config.jsonc` in the repo
-- Build and start:
-  - `docker compose up -d`
-- Follow logs:
-  - `docker logs -f microsoft-rewards-script`
+## 📦 What the Compose File Mounts
 
-## Volumes & Files
-The compose file mounts:
-- `./src/accounts.json` → `/usr/src/microsoft-rewards-script/accounts.json` (read‑only)
-- `./src/config.jsonc` → `/usr/src/microsoft-rewards-script/config.json` (read‑only)
-- `./sessions` → `/usr/src/microsoft-rewards-script/sessions` (persist login sessions)
+| Host path | Container path | Purpose |
+|-----------|----------------|---------|
+| `./src/accounts.json` | `/usr/src/microsoft-rewards-script/accounts.json` | Read-only account credentials |
+| `./src/config.jsonc` | `/usr/src/microsoft-rewards-script/config.json` | Read-only runtime configuration |
+| `./sessions` | `/usr/src/microsoft-rewards-script/sessions` | Persisted cookies & fingerprints |
 
-You can also use env overrides supported by the app loader:
-- `ACCOUNTS_FILE=/path/to/accounts.json`
-- `ACCOUNTS_JSON='[ {"email":"...","password":"..."} ]'`
+Prefer environment variables? The loader accepts the same overrides as local runs:
 
-## Environment
-Useful variables:
-- `TZ` — container time zone (e.g., `Europe/Paris`)
-- `NODE_ENV=production`
-- `FORCE_HEADLESS=1` — ensures headless mode inside the container
-- Scheduler knobs (optional):
+```bash
+ACCOUNTS_FILE=/custom/accounts.json
+ACCOUNTS_JSON='[{"email":"name@example.com","password":"hunter2"}]'
+```
+
+---
+
+## 🌍 Useful Environment Variables
+
+- `TZ` — set container timezone (`Europe/Paris`, `America/New_York`, etc.)
+- `NODE_ENV=production` — default; keeps builds lean
+- `FORCE_HEADLESS=1` — required in Docker (Chromium Headless Shell only)
+- Scheduler tuning (optional):
   - `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX`
   - `SCHEDULER_PASS_TIMEOUT_MINUTES`
   - `SCHEDULER_FORK_PER_PASS`
 
-## Headless Browsers
-The Docker image installs only Chromium Headless Shell via:
-- `npx playwright install --with-deps --only-shell`
+---
 
-This dramatically reduces image size vs. installing all Playwright browsers.
+## 🧠 Browser Footprint
 
-> ℹ️ While Playwright can launch Microsoft Edge on desktop, it currently lacks an official slim headless build. Shipping Edge inside the container would nearly double the image size and break headless stability, so we continue to run Chromium with an Edge fingerprint.
+The Docker image installs Chromium Headless Shell via `npx playwright install --with-deps --only-shell`. This keeps the image compact while retaining Chromium’s Edge-compatible user agent. Installing full Edge or all browsers roughly doubles the footprint and adds instability, so we ship only the shell.
 
-## One‑shot vs. Scheduler
-- Default command runs the built‑in scheduler: `npm run start:schedule`
-- For one‑shot run, override the command:
-  - `docker run --rm ... node ./dist/index.js`
+---
 
-## Tips
-- If you see 2FA prompts, add your TOTP Base32 secret to `accounts.json` so the bot can auto‑fill codes.
-- Use a persistent `sessions` volume to avoid re‑logging every run.
-- For proxies per account, fill the `proxy` block in your `accounts.json` (see [Proxy](./proxy.md)).
+## 🔁 Alternate Commands
+
+- **Default:** `npm run start:schedule` (inside container) — keeps the scheduler alive
+- **Single pass:** `docker compose run --rm app node ./dist/index.js`
+- **Custom script:** Override `command:` in `compose.yaml` to suit your workflow
+
+---
+
+## 💡 Tips
+
+- Add TOTP secrets to `accounts.json` so the bot can respond to MFA prompts automatically
+- Keep the `sessions` volume; deleting it forces fresh logins and can trigger security reviews
+- Mixing proxies? Configure per-account proxies in `accounts.json` (see [Proxy Setup](./proxy.md))
+- Want notifications? Layer [NTFY](./ntfy.md) or [Discord Webhooks](./conclusionwebhook.md) on top once the container is stable
 
 ---
 
 ## 🔗 Related Guides
 
-- **[Getting Started](./getting-started.md)** — Initial setup before containerization
-- **[Accounts & 2FA](./accounts.md)** — Configure accounts for Docker
-- **[Scheduler](./schedule.md)** — Alternative to Docker cron automation
-- **[Proxy Configuration](./proxy.md)** — Network routing in containers
+- **[Getting Started](./getting-started.md)** — Prep work before switching to containers
+- **[Accounts & 2FA](./accounts.md)** — Ensure every account can pass MFA headlessly
+- **[Scheduler](./schedule.md)** — If you prefer a host-side cron instead of Docker
+- **[Diagnostics](./diagnostics.md)** — Capture logs and debug a failing container
