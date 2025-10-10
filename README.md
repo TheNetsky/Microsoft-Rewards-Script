@@ -1,190 +1,377 @@
-<div align="center"># Microsoft Rewards Script V2<div align="center">
+# Microsoft Rewards Script V2<div align="center"># Microsoft Rewards Script V2<div align="center">
 
 
 
-# 🎯 Microsoft Rewards Script V2
+Automate Microsoft Rewards activities with intelligent browser automation, human-like behavior patterns, and comprehensive diagnostics.
 
 
 
-**The most advanced automation toolkit for Microsoft Rewards**Automate daily Microsoft Rewards activities with Playwright-driven browsers, a resilient scheduler, and full observability. This repository hosts the actively maintained V2 rewrite.# 🎯 Microsoft Rewards Script V2
+---# 🎯 Microsoft Rewards Script V2
 
 
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+## What It Does
+
+
+
+Automatically completes daily Microsoft Rewards tasks:**The most advanced automation toolkit for Microsoft Rewards**Automate daily Microsoft Rewards activities with Playwright-driven browsers, a resilient scheduler, and full observability. This repository hosts the actively maintained V2 rewrite.# 🎯 Microsoft Rewards Script V2
+
+
+
+- Desktop and mobile Bing searches
+
+- Daily sets (quizzes, polls, activities)
+
+- Promotional offers and punch cards[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+- Daily check-ins and read-to-earn articles
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 
+Supports multiple accounts with 2FA, proxies, and smart scheduling.
+
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)---```
+
+---
 
 [![Playwright](https://img.shields.io/badge/Playwright-Powered-2EAD33?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev/)
 
+## Quick Start
+
  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
 
-[📚 Documentation](./docs/index.md) • [🐳 Docker Guide](./docs/docker.md) • [💬 Discord](https://discord.gg/KRBFxxsU) • [🐛 Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
+### Windows
 
-## Highlights ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
-
-</div>
-
- ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
-
----
-
-- Coverage for desktop and mobile searches, daily sets, quizzes, punch cards, and promo activities ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
-
-## ✨ What Makes V2 Special
-
-- Multi-account orchestration with optional per-account proxies and Time-based One-Time Password (TOTP) support ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
-
-<table>
-
-<tr>- Humanization layer for realistic input timing, scrolling, and idle pauses ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
-
-<td width="50%">
-
-- JSONC configuration (`src/config.jsonc`) with documented defaults and inline guidance```
-
-### 🎯 **Complete Automation**
-
-✅ Desktop & Mobile Bing searches  - Scheduler and Docker workflows that run the same logic paths as local executions
-
-✅ Daily sets, quizzes, and polls  
-
-✅ Promotional activities & punch cards  - Notification hooks for Discord webhooks and NTFY push, plus rich diagnostics when runs fail**🤖 Intelligent automation meets Microsoft Rewards**  
-
-✅ Daily check-ins & read-to-earn  
-
-✅ Multi-account orchestration  *Earn points effortlessly while you sleep*
-
-
-
-</td>See `docs/index.md` for the curated documentation entry point.[Legacy-1.5.3](https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/tree/Legacy-1.5.3)
-
-<td width="50%">
-
-
-
-### 🛡️ **Built for Safety**
-
-🧠 Human-like behavior patterns  ---[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-
-🔐 TOTP 2FA support  
-
-🌐 Per-account proxy routing  [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-
-📊 Ban detection & alerts  
-
-🔄 Session persistence & recovery  ## Requirements[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-
-
-
-</td>[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
-
-</tr>
-
-</table>- Node.js 18 or newer (Node.js 22 recommended)
-
-
-
-### 🚀 Modern Architecture- npm (ships with Node.js)<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
-
-
-
-- **Commented Configuration** — `src/config.jsonc` with inline documentation- Playwright-managed Chromium dependencies (installed automatically on first run)  <img alt="Contributors" src="https://img.shields.io/github/contributors/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&label=Contributors&color=FF6B6B&labelColor=4ECDC4" />
-
-- **Smart Scheduler** — Randomized timing with configurable windows
-
-- **Docker Ready** — Optimized headless container deployment- Optional: Docker and Docker Compose if you prefer containerized execution</a>
-
-- **Rich Notifications** — Discord webhooks + NTFY push alerts
-
-- **Full Diagnostics** — Automated screenshot & HTML capture on errors<img alt="Stars" src="https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=FFD93D&labelColor=6BCF7F" />
-
-
-
-------<img alt="Version" src="https://img.shields.io/badge/Version-2.0-9B59B6?style=for-the-badge&labelColor=3498DB" />
-
-
-
-## ⚡ Quick Start
-
-
-
-<details open>## Quick Start</div>
-
-<summary><h3>🪄 One-Command Setup (Recommended)</h3></summary>
-
-
-
-```bash
-
-# 🪟 Windows```bash---
+```cmd[📚 Documentation](./docs/index.md) • [🐳 Docker Guide](./docs/docker.md) • [💬 Discord](https://discord.gg/KRBFxxsU) • [🐛 Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
 
 setup\setup.bat
 
-# Windows
-
-# 🐧 Linux / macOS / WSL
-
-bash setup/setup.shsetup/setup.bat<div align="center">
+```## Highlights ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
 
 
 
-# 🌍 Cross-platform
-
-npm run setup
-
-```# Linux, macOS, or WSL## 🚀 **Big Update Alert — V2 is here!**
-
-
-
-The wizard handles everything: account setup, dependencies, build, and first run.bash setup/setup.sh
-
-
-
-</details><table>
-
-
-
-<details># Any platform (runs the same wizard)<tr>
-
-<summary><h3>🔧 Manual Installation</h3></summary>
-
-npm run setup<td width="33%" align="center">
+### Linux / macOS / WSL</div>
 
 ```bash
 
-# 1️⃣ Configure accounts```<img src="https://github.com/TheNetsky.png" width="80" style="border-radius: 50%;" /><br />
-
-cp src/accounts.example.json src/accounts.json
-
-# Edit src/accounts.json with your Microsoft credentials<strong><a href="https://github.com/TheNetsky/">TheNetsky</a></strong> 🙌<br />
-
-
-
-# 2️⃣ Install dependencies & buildThe setup wizard copies `src/accounts.example.json` to `src/accounts.json`, guides credential entry, installs dependencies, builds the TypeScript output, and launches the first run using the current defaults (browser windows visible, diagnostics enabled).<em>Foundation Architect</em><br />
-
-npm install
-
-npm run build<sub>Building the massive foundation</sub>
-
-
-
-# 3️⃣ Choose your modePrefer manual steps? Follow the outline below.</td>
-
-npm start               # Single run (test mode)
-
-npm run start:schedule  # Automated daily runs<td width="33%" align="center">
+bash setup/setup.sh ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
 
 ```
 
-```bash<img src="https://github.com/mgrimace.png" width="80" style="border-radius: 50%;" /><br />
+---
 
-</details>
+### Any Platform
 
-# 1. Prepare accounts and configuration<strong><a href="https://github.com/mgrimace">Mgrimace</a></strong> 🔥<br />
+```bash- Coverage for desktop and mobile searches, daily sets, quizzes, punch cards, and promo activities ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
+
+npm run setup
+
+```## ✨ What Makes V2 Special
+
+
+
+The wizard will guide you through account configuration, dependency installation, and your first run.- Multi-account orchestration with optional per-account proxies and Time-based One-Time Password (TOTP) support ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
+
+
+
+---<table>
+
+
+
+## Manual Setup<tr>- Humanization layer for realistic input timing, scrolling, and idle pauses ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
+
+
+
+```bash<td width="50%">
+
+# 1. Configure accounts
+
+cp src/accounts.example.json src/accounts.json- JSONC configuration (`src/config.jsonc`) with documented defaults and inline guidance```
+
+# Edit src/accounts.json with your Microsoft credentials
+
+### 🎯 **Complete Automation**
+
+# 2. Install and build
+
+npm install✅ Desktop & Mobile Bing searches  - Scheduler and Docker workflows that run the same logic paths as local executions
+
+npm run build
+
+✅ Daily sets, quizzes, and polls  
+
+# 3. Run
+
+npm start                 # Single run✅ Promotional activities & punch cards  - Notification hooks for Discord webhooks and NTFY push, plus rich diagnostics when runs fail**🤖 Intelligent automation meets Microsoft Rewards**  
+
+npm run start:schedule    # Automated scheduler
+
+```✅ Daily check-ins & read-to-earn  
+
+
+
+---✅ Multi-account orchestration  *Earn points effortlessly while you sleep*
+
+
+
+## Commands
+
+
+
+| Command | Description |</td>See `docs/index.md` for the curated documentation entry point.[Legacy-1.5.3](https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/tree/Legacy-1.5.3)
+
+|---------|-------------|
+
+| `npm start` | Run once for all accounts |<td width="50%">
+
+| `npm run start:schedule` | Start automated daily scheduler |
+
+| `npm run dev` | Development mode with live reload |
+
+| `npm start -- -buy email@example.com` | Interactive redemption mode |
+
+| `docker compose up -d` | Run in Docker container |### 🛡️ **Built for Safety**
+
+
+
+---🧠 Human-like behavior patterns  ---[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+
+
+## Docker Deployment🔐 TOTP 2FA support  
+
+
+
+```bash🌐 Per-account proxy routing  [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+
+# Start container
+
+docker compose up -d📊 Ban detection & alerts  
+
+
+
+# View logs🔄 Session persistence & recovery  ## Requirements[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+
+docker logs -f microsoft-rewards-script
+
+
+
+# Stop container
+
+docker compose down</td>[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
+
+```
+
+</tr>
+
+Docker runs headless by default using Chromium Headless Shell for minimal footprint.
+
+</table>- Node.js 18 or newer (Node.js 22 recommended)
 
 ---
+
+
+
+## Configuration
+
+### 🚀 Modern Architecture- npm (ships with Node.js)<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
+
+Primary configuration file: `src/config.jsonc`
+
+
+
+This file uses JSONC format (JSON with comments) so you can document your settings inline without breaking the parser.
+
+- **Commented Configuration** — `src/config.jsonc` with inline documentation- Playwright-managed Chromium dependencies (installed automatically on first run)  <img alt="Contributors" src="https://img.shields.io/github/contributors/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&label=Contributors&color=FF6B6B&labelColor=4ECDC4" />
+
+Key settings:
+
+- `browser.headless` — Set to `false` to see browser windows (default for local runs)- **Smart Scheduler** — Randomized timing with configurable windows
+
+- `humanization.enabled` — Realistic delays and behavior patterns
+
+- `workers` — Enable/disable specific activity types- **Docker Ready** — Optimized headless container deployment- Optional: Docker and Docker Compose if you prefer containerized execution</a>
+
+- `notifications` — Discord webhooks and NTFY push alerts
+
+- **Rich Notifications** — Discord webhooks + NTFY push alerts
+
+See full documentation: [docs/config.md](./docs/config.md)
+
+- **Full Diagnostics** — Automated screenshot & HTML capture on errors<img alt="Stars" src="https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=FFD93D&labelColor=6BCF7F" />
+
+---
+
+
+
+## Documentation
+
+------<img alt="Version" src="https://img.shields.io/badge/Version-2.0-9B59B6?style=for-the-badge&labelColor=3498DB" />
+
+**Essential guides:**
+
+- [Getting Started](./docs/getting-started.md) — Complete setup walkthrough
+
+- [Accounts & 2FA](./docs/accounts.md) — Multi-account configuration and TOTP
+
+- [Configuration Reference](./docs/config.md) — All available settings## ⚡ Quick Start
+
+- [Docker Guide](./docs/docker.md) — Container deployment
+
+
+
+**Advanced topics:**
+
+- [Scheduling](./docs/schedule.md) — Automated daily runs<details open>## Quick Start</div>
+
+- [Diagnostics](./docs/diagnostics.md) — Troubleshooting and logs
+
+- [Humanization](./docs/humanization.md) — Anti-detection features<summary><h3>🪄 One-Command Setup (Recommended)</h3></summary>
+
+- [Notifications](./docs/ntfy.md) — Push alerts and webhooks
+
+
+
+**[Complete documentation index](./docs/index.md)**
+
+```bash
+
+---
+
+# 🪟 Windows```bash---
+
+## Key Features
+
+setup\setup.bat
+
+- **Multi-account support** with isolated sessions and optional proxies
+
+- **Human-like behavior** with randomized timing, scrolling, and gestures# Windows
+
+- **Session persistence** to reduce login frequency
+
+- **Ban detection** with automatic alerts# 🐧 Linux / macOS / WSL
+
+- **Rich diagnostics** with screenshot and HTML capture
+
+- **Docker ready** with optimized headless configurationbash setup/setup.shsetup/setup.bat<div align="center">
+
+- **Flexible scheduling** with randomized daily windows
+
+- **Notification hooks** for Discord and NTFY
+
+
+
+---# 🌍 Cross-platform
+
+
+
+## Requirementsnpm run setup
+
+
+
+- Node.js 18 or newer (22 recommended)```# Linux, macOS, or WSL## 🚀 **Big Update Alert — V2 is here!**
+
+- npm (included with Node.js)
+
+- Playwright dependencies (installed automatically)
+
+- Optional: Docker and Docker Compose
+
+The wizard handles everything: account setup, dependencies, build, and first run.bash setup/setup.sh
+
+---
+
+
+
+## Support
+
+</details><table>
+
+- **Issues:** https://github.com/TheNetsky/Microsoft-Rewards-Script/issues
+
+- **Discord:** https://discord.gg/KRBFxxsU
+
+- **Legacy branch:** https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/tree/Legacy-1.5.3
+
+<details># Any platform (runs the same wizard)<tr>
+
+Before reporting issues, enable diagnostics and check the `reports/` folder for logs and screenshots.
+
+<summary><h3>🔧 Manual Installation</h3></summary>
+
+---
+
+npm run setup<td width="33%" align="center">
+
+## Security
+
+```bash
+
+- No telemetry or data collection
+
+- All credentials stored locally# 1️⃣ Configure accounts```<img src="https://github.com/TheNetsky.png" width="80" style="border-radius: 50%;" /><br />
+
+- Session data saved on your machine only
+
+- Optional notifications controlled by youcp src/accounts.example.json src/accounts.json
+
+- Open source and auditable
+
+# Edit src/accounts.json with your Microsoft credentials<strong><a href="https://github.com/TheNetsky/">TheNetsky</a></strong> 🙌<br />
+
+See [SECURITY.md](./SECURITY.md) for complete security guidelines.
+
+
+
+---
+
+# 2️⃣ Install dependencies & buildThe setup wizard copies `src/accounts.example.json` to `src/accounts.json`, guides credential entry, installs dependencies, builds the TypeScript output, and launches the first run using the current defaults (browser windows visible, diagnostics enabled).<em>Foundation Architect</em><br />
+
+## Disclaimer
+
+npm install
+
+**This project is for educational purposes only.**
+
+npm run build<sub>Building the massive foundation</sub>
+
+Using automation with Microsoft Rewards may violate Microsoft's Terms of Service. Account suspension or termination is possible. The maintainers are not responsible for any consequences of using this software.
+
+
+
+Use at your own risk.
+
+# 3️⃣ Choose your modePrefer manual steps? Follow the outline below.</td>
+
+---
+
+npm start               # Single run (test mode)
+
+## Credits
+
+npm run start:schedule  # Automated daily runs<td width="33%" align="center">
+
+Built by the community with contributions from:
+
+- [TheNetsky](https://github.com/TheNetsky)```
+
+- [mgrimace](https://github.com/mgrimace)
+
+- [LightZirconite](https://github.com/LightZirconite)```bash<img src="https://github.com/mgrimace.png" width="80" style="border-radius: 50%;" /><br />
+
+
+
+[View all contributors](https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors)</details>
+
+
+
+---# 1. Prepare accounts and configuration<strong><a href="https://github.com/mgrimace">Mgrimace</a></strong> 🔥<br />
+
+
+
+**License:** Educational use only • See [SECURITY.md](./SECURITY.md) for privacy details---
+
 
 cp src/accounts.example.json src/accounts.json<em>Active Developer</em><br />
 
