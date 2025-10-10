@@ -415,18 +415,62 @@ export class Login {
     return null
   }
 
+  private async waitForRewardsRoot(page: Page, timeoutMs: number): Promise<string | null> {
+    const selectors = [
+      'html[data-role-name="RewardsPortal"]',
+      'html[data-role-name*="RewardsPortal"]',
+      'body[data-role-name*="RewardsPortal"]',
+      '[data-role-name*="RewardsPortal"]',
+      '[data-bi-name="rewards-dashboard"]',
+      'main[data-bi-name="dashboard"]',
+      '#more-activities',
+      '#dashboard'
+    ]
+
+    const start = Date.now()
+    while (Date.now() - start < timeoutMs) {
+      for (const sel of selectors) {
+        const loc = page.locator(sel).first()
+        if (await loc.isVisible().catch(()=>false)) {
+          return sel
+        }
+      }
+      await this.bot.utils.wait(350)
+    }
+    return null
+  }
+
   // --------------- Verification / State ---------------
   private async awaitRewardsPortal(page: Page) {
     const start = Date.now()
     while (Date.now() - start < DEFAULT_TIMEOUTS.loginMaxMs) {
       await this.handlePasskeyPrompts(page, 'main')
       const u = new URL(page.url())
-      if (u.hostname === LOGIN_TARGET.host && u.pathname === LOGIN_TARGET.path) break
+      const isRewardsHost = u.hostname === LOGIN_TARGET.host
+      const isKnownPath = u.pathname === LOGIN_TARGET.path
+        || u.pathname === '/dashboard'
+        || u.pathname === '/rewardsapp/dashboard'
+        || u.pathname.startsWith('/?')
+      if (isRewardsHost && isKnownPath) break
       await this.bot.utils.wait(1000)
     }
-    const portal = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 8000 }).catch(()=>null)
-    if (!portal) throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation', 'error')
-    this.bot.log(this.bot.isMobile, 'LOGIN', 'Reached rewards portal')
+
+    const portalSelector = await this.waitForRewardsRoot(page, 8000)
+    if (!portalSelector) {
+      try {
+        await this.bot.browser.func.goHome(page)
+      } catch {/* ignore fallback errors */}
+
+      const fallbackSelector = await this.waitForRewardsRoot(page, 6000)
+      if (!fallbackSelector) {
+        await this.bot.browser.utils.captureDiagnostics(page, 'login-portal-missing').catch(()=>{})
+        throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation (saved diagnostics to reports/)', 'error')
+      }
+      this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal via fallback (${fallbackSelector})`)
+      return
+    }
+
+    this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal (${portalSelector})`)
   }
 
   private async verifyBingContext(page: Page) {
