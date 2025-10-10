@@ -3,8 +3,7 @@
 The **v2 version is currently in Beta**.
 You can try it now, but expect bugs or unexpected behavior — your feedback helps stabilize the release.
 
-**Branch (v2) repository URL:**
-`https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v2`
+**Branch (v2) repository:** [V2](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v2)
 
 **To clone the v2 branch (recommended):**
 
