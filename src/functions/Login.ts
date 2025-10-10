@@ -3,13 +3,12 @@
 
 import type { Page, Locator } from 'playwright'
 import * as crypto from 'crypto'
-import fs from 'fs'
-import path from 'path'
 import readline from 'readline'
 import { AxiosRequestConfig } from 'axios'
 import { generateTOTP } from '../util/Totp'
 import { saveSessionData } from '../util/Load'
 import { MicrosoftRewardsBot } from '../index'
+import { captureDiagnostics } from '../util/Diagnostics'
 import { OAuth } from '../interface/OAuth'
 
 // -------------------------------
@@ -749,16 +748,7 @@ export class Login {
   }
 
   private async saveIncidentArtifacts(page: Page, slug: string) {
-    try {
-      const base = path.join(process.cwd(),'diagnostics','security-incidents')
-      await fs.promises.mkdir(base,{ recursive:true })
-      const ts = new Date().toISOString().replace(/[:.]/g,'-')
-      const dir = path.join(base, `${ts}-${slug}`)
-      await fs.promises.mkdir(dir,{ recursive:true })
-      try { await page.screenshot({ path: path.join(dir,'page.png'), fullPage:false }) } catch {/* ignore */}
-      try { const html = await page.content(); await fs.promises.writeFile(path.join(dir,'page.html'), html) } catch {/* ignore */}
-      this.bot.log(this.bot.isMobile,'SECURITY',`Saved incident artifacts: ${dir}`)
-    } catch {/* ignore */}
+    await captureDiagnostics(this.bot, page, slug, { scope: 'security', skipSlot: true, force: true })
   }
 
   private async openDocsTab(page: Page, url: string) {

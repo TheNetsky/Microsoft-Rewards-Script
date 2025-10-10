@@ -13,7 +13,7 @@
 
 ### **Prerequisites**
 - ✅ `src/accounts.json` configured with your Microsoft accounts
-- ✅ `src/config.json` exists (uses defaults if not customized)
+- ✅ `src/config.jsonc` exists (uses defaults if not customized)
 - ✅ Docker & Docker Compose installed
 
 ### **Launch**
@@ -33,7 +33,7 @@ docker compose down
 This project ships with a Docker setup tailored for headless runs. It uses Playwright’s Chromium Headless Shell to keep the image small.
 
 ## Quick Start
-- Ensure you have `src/accounts.json` and `src/config.json` in the repo
+- Ensure you have `src/accounts.json` and `src/config.jsonc` in the repo
 - Build and start:
   - `docker compose up -d`
 - Follow logs:
@@ -42,7 +42,7 @@ This project ships with a Docker setup tailored for headless runs. It uses Playw
 ## Volumes & Files
 The compose file mounts:
 - `./src/accounts.json` → `/usr/src/microsoft-rewards-script/accounts.json` (read‑only)
-- `./src/config.json` → `/usr/src/microsoft-rewards-script/config.json` (read‑only)
+- `./src/config.jsonc` → `/usr/src/microsoft-rewards-script/config.json` (read‑only)
 - `./sessions` → `/usr/src/microsoft-rewards-script/sessions` (persist login sessions)
 
 You can also use env overrides supported by the app loader:
@@ -64,6 +64,8 @@ The Docker image installs only Chromium Headless Shell via:
 - `npx playwright install --with-deps --only-shell`
 
 This dramatically reduces image size vs. installing all Playwright browsers.
+
+> ℹ️ While Playwright can launch Microsoft Edge on desktop, it currently lacks an official slim headless build. Shipping Edge inside the container would nearly double the image size and break headless stability, so we continue to run Chromium with an Edge fingerprint.
 
 ## One‑shot vs. Scheduler
 - Default command runs the built‑in scheduler: `npm run start:schedule`

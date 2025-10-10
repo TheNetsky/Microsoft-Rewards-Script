@@ -57,7 +57,7 @@ npm start -- -buy
 ## ⚙️ Configuration
 
 ### **Set Duration in Config**
-Add to `src/config.json`:
+Add to `src/config.jsonc`:
 ```json
 {
   "buyMode": {
@@ -203,6 +203,6 @@ During monitoring:
 ## Troubleshooting
 
 - **Monitor tab closed**: Script automatically reopens it in background
-- **No notifications**: Check webhook/NTFY configuration in `config.json`
+- **No notifications**: Check webhook/NTFY configuration in `config.jsonc`
 - **Session timeout**: Increase `maxMinutes` if you need longer monitoring
 - **Login issues**: Ensure account credentials are correct in `accounts.json`

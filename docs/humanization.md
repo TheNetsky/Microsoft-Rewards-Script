@@ -72,6 +72,7 @@ Human Mode adds **subtle human-like behavior** to make your automation look and 
 - **Micro mouse moves** — Tiny cursor adjustments (safe zones only)
 - **Minor scrolls** — Small page movements (non-interactive areas)
 - **Probability-based** — Not every action includes gestures
+- **Centralized controller** — The `Humanizer` service now drives all gesture + pause behavior so every module uses the same probabilities and timing windows.
 
 ### **Temporal Patterns**
 - **Time windows** — Only run during specified hours

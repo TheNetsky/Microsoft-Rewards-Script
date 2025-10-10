@@ -340,7 +340,7 @@ services:
 node -e "console.log(new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}))"
 
 # Verify config syntax
-node -e "console.log(JSON.parse((Get-Content 'src/config.json' | Out-String)))"
+node -e "const fs=require('fs');const strip=input=>{let out='',inString=false,stringChar='',inLine=false,inBlock=false;for(let i=0;i<input.length;i++){const ch=input[i],next=input[i+1];if(inLine){if(ch==='\n'||ch==='\r'){inLine=false;out+=ch;}continue;}if(inBlock){if(ch==='*'&&next==='/' ){inBlock=false;i++;}continue;}if(inString){out+=ch;if(ch==='\\'){i++;if(i<input.length)out+=input[i];continue;}if(ch===stringChar)inString=false;continue;}if(ch==='"'||ch==='\''){inString=true;stringChar=ch;out+=ch;continue;}if(ch==='/'&&next==='/' ){inLine=true;i++;continue;}if(ch==='/'&&next==='*' ){inBlock=true;i++;continue;}out+=ch;}return out;};console.log(JSON.parse(strip(fs.readFileSync('src/config.jsonc','utf8'))));"
 
 # Check running processes
 Get-Process | Where-Object {$_.ProcessName -eq "node"}
@@ -578,7 +578,7 @@ nohup npm run start:schedule > schedule.log 2>&1 &
 **Scheduler not running:**
 - Check `enabled: true` in config
 - Verify timezone format is correct
-- Ensure no syntax errors in config.json
+- Ensure no syntax errors in config.jsonc (remember it allows comments)
 
 **Wrong execution time:**
 - Verify system clock is accurate
@@ -601,7 +601,7 @@ nohup npm run start:schedule > schedule.log 2>&1 &
 node -e "console.log(new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}))"
 
 # Verify config syntax
-node -e "console.log(JSON.parse(require('fs').readFileSync('src/config.json')))"
+node -e "const fs=require('fs');const strip=input=>{let out='',inString=false,stringChar='',inLine=false,inBlock=false;for(let i=0;i<input.length;i++){const ch=input[i],next=input[i+1];if(inLine){if(ch==='\n'||ch==='\r'){inLine=false;out+=ch;}continue;}if(inBlock){if(ch==='*'&&next==='/' ){inBlock=false;i++;}continue;}if(inString){out+=ch;if(ch==='\\'){i++;if(i<input.length)out+=input[i];continue;}if(ch===stringChar)inString=false;continue;}if(ch==='"'||ch==='\''){inString=true;stringChar=ch;out+=ch;continue;}if(ch==='/'&&next==='/' ){inLine=true;i++;continue;}if(ch==='/'&&next==='*' ){inBlock=true;i++;continue;}out+=ch;}return out;};console.log(JSON.parse(strip(fs.readFileSync('src/config.jsonc','utf8'))));"
 
 # Check process status
 ps aux | grep "start:schedule"
@@ -644,7 +644,7 @@ services:
 ```
 
 Dans ce mode :
-- `passesPerRun` fonctionne (exécutera plusieurs passes à chaque horaire interne défini par `src/config.json`).
+- `passesPerRun` fonctionne (exécutera plusieurs passes à chaque horaire interne défini par `src/config.jsonc`).
 - Vous n'avez plus besoin de `CRON_SCHEDULE` ni de `run_daily.sh`.
 
 ### Docker + External Cron (par défaut du projet)

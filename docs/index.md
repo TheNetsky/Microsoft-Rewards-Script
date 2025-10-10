@@ -25,7 +25,7 @@
 | **[🛠️ Diagnostics](./diagnostics.md)** | Troubleshooting and error capture |
 | **[🧠 Humanization](./humanization.md)** | Anti-detection and natural behavior |
 | **[🌐 Proxy Setup](./proxy.md)** | Network routing and IP management |
-| **[⚙️ Configuration Reference](./config.md)** | Full `config.json` field documentation |
+| **[⚙️ Configuration Reference](./config.md)** | Full configuration field documentation |
 
 ### **Notifications & Monitoring**
 | Guide | Description |

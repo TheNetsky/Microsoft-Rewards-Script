@@ -13,7 +13,7 @@ Hi there! 👋 Thanks for caring about security and privacy — we do too. This 
 
 This is a local automation tool that drives a browser (Playwright) to perform Microsoft Rewards activities. By default:
 
-- It reads configuration from local files (e.g., `src/config.json`, `src/accounts.json`).
+- It reads configuration from local files (e.g., `src/config.jsonc`, `src/accounts.json`).
 - It can save session data (cookies and optional fingerprints) locally under `./src/browser/<sessionPath>/<email>/`.
 - It can send optional notifications/webhooks if you enable them and provide a URL.
 

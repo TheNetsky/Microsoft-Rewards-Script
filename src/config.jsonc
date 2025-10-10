@@ -5,8 +5,8 @@
     "sessionPath": "sessions",
     
     "browser": {
-        // Run browser without UI (true=headless, false=visible). Visible can help with stability.
-        "headless": true,
+        // Keep headless=false so the browser window stays visible by default
+        "headless": false,
         // Max time to wait for common operations (supports ms/s/min: e.g. 30000, "30s", "2min")
         "globalTimeout": "30s"
     },
@@ -50,8 +50,8 @@
             "retryMobileSearchAmount": 2,
             // Delay between searches (supports numbers in ms or time strings)
             "delay": {
-                "min": "1min",
-                "max": "5min"
+                "min": "8s",
+                "max": "22s"
             }
         }
     },
@@ -80,12 +80,12 @@
 
     // Optional monthly "vacation" block: skip a contiguous range of days to look more human.
     // This is independent of weekly random off-days. When enabled, each month a random
-    // block between minDays and maxDays is selected (e.g., 3–5 days) and all runs within
+    // block between minDays and maxDays is selected (e.g., 2–4 days) and all runs within
     // that date range are skipped. The chosen block is logged at the start of the month.
     "vacation": {
         "enabled": true,
-        "minDays": 1,
-        "maxDays": 3
+        "minDays": 2,
+        "maxDays": 4
     },
     
     "retryPolicy": {

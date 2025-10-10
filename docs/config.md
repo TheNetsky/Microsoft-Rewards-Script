@@ -1,6 +1,6 @@
 # ⚙️ Configuration Guide
 
-This page documents every field in `config.json`. You can keep the file lean by deleting blocks you do not use – missing values fall back to defaults. Comments (`// ...`) are supported in the JSON thanks to a custom parser.
+This page documents every field in the configuration file. The default ships as `src/config.jsonc` so you get inline `//` guidance without editor warnings, and the loader still accepts traditional `config.json` files if you prefer plain JSON.
 
 Looking for ready-to-use presets? Check `docs/config-presets/` for curated examples such as `balanced.jsonc` (full automation with humanization) and `minimal.jsonc` (lean runs with quick scheduling).
 
@@ -19,7 +19,7 @@ Directory where session data (cookies / fingerprints / job-state) is stored.
 ## browser
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| headless | boolean | false | Run browser UI-less. Setting to `false` can improve stability or help visual debugging. |
+| headless | boolean | false | Run browser UI-less. Set to `false` to keep the browser visible (default). |
 | globalTimeout | string/number | "30s" | Max time for common Playwright operations. Accepts ms number or time string (e.g. `"45s"`, `"2min"`). |
 
 ---

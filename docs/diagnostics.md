@@ -25,7 +25,7 @@ The diagnostics system **automatically captures** error screenshots and HTML sna
 ## ⚙️ Configuration
 
 ### **Basic Setup**
-Add to `src/config.json`:
+Add to `src/config.jsonc`:
 ```json
 {
   "diagnostics": {
@@ -81,6 +81,8 @@ reports/
 └── 2025-01-21/
     └── ...
 ```
+
+> 🔐 Security incidents (login blocks, recovery mismatches) are stored separately under `diagnostics/security-incidents/<timestamp>-slug/` and always include both a screenshot and HTML snapshot for investigation.
 
 ### **File Naming Convention**
 ```
