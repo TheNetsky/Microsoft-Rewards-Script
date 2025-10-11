@@ -1,9 +1,9 @@
-# 📚 Microsoft Rewards Script V2 Documentation
+# 📚 Microsoft Rewards Script V2 Docs
 
 <div align="center">
 
-**🎯 Your complete guide to automating Microsoft Rewards**  
-*Everything you need to get started and master the script*
+**🎯 Your companion for mastering the automation stack**  
+*Curated guides, verified against the current codebase*
 
 </div>
 
@@ -12,85 +12,51 @@
 ## 🚀 Quick Navigation
 
 ### **Essential Setup**
-| Guide | Description |
-|-------|-------------|
-| **[🎬 Getting Started](./getting-started.md)** | Zero to running — complete setup guide |
-| **[👤 Accounts & 2FA](./accounts.md)** | Microsoft accounts + TOTP authentication |
-| **[🐳 Docker](./docker.md)** | Container deployment with headless browsers |
+| Guide | Why you should read it |
+|-------|------------------------|
+| **[🎬 Getting Started](./getting-started.md)** | Install, configure, and run the bot in minutes |
+| **[👤 Accounts & 2FA](./accounts.md)** | Add Microsoft accounts, enable TOTP, and secure logins |
+| **[⚙️ Configuration Reference](./config.md)** | Understand every option in `src/config.jsonc` |
 
-### **Operations & Advanced**
-| Guide | Description |
-|-------|-------------|
-| **[⏰ Scheduling](./schedule.md)** | Automated daily runs and timing |
-| **[🛠️ Diagnostics](./diagnostics.md)** | Troubleshooting and error capture |
-| **[🧠 Humanization](./humanization.md)** | Anti-detection and natural behavior |
-| **[🌐 Proxy Setup](./proxy.md)** | Network routing and IP management |
-| **[⚙️ Configuration Reference](./config.md)** | Full `config.json` field documentation |
+### **Run & Operate**
+| Guide | Focus |
+|-------|-------|
+| **[⏰ Scheduling](./schedule.md)** | Cron-style automation and daily cadence |
+| **[🐳 Docker](./docker.md)** | Container deployment with prewired headless settings |
+| **[🛠️ Diagnostics](./diagnostics.md)** | Troubleshooting, log capture, and support checklist |
+| **[🧠 Humanization](./humanization.md)** | Natural browser behavior and ban avoidance |
+| **[🌐 Proxy Setup](./proxy.md)** | Per-account proxy routing and geo-tuning |
+| **[📊 Job State](./jobstate.md)** | How runs persist progress and recover |
+| **[🔄 Auto Update](./update.md)** | Keep the script current without manual pulls |
+| **[🛡️ Security Notes](./security.md)** | Threat model, secrets handling, and best practices |
 
-### **Notifications & Monitoring**
-| Guide | Description |
-|-------|-------------|
-| **[📱 NTFY Push](./ntfy.md)** | Mobile push notifications |
-| **[🔗 Discord Webhooks](./conclusionwebhook.md)** | Rich server notifications |
+### **Notifications & Control**
+| Guide | Purpose |
+|-------|---------|
+| **[📱 NTFY Push](./ntfy.md)** | Real-time phone notifications |
+| **[� Discord Webhooks](./conclusionwebhook.md)** | Detailed run summaries in your server |
 
 ### **Special Modes**
-| Guide | Description |
-|-------|-------------|
-| **[💳 Buy Mode](./buy-mode.md)** | Manual redemption with live monitoring |
+| Guide | Purpose |
+|-------|---------|
+| **[💳 Buy Mode](./buy-mode.md)** | Assisted manual redemption and live monitoring |
 
 ---
 
-## 🎯 Recommended Reading Path
+## 🧭 Reading Paths
 
-**New Users:** Getting Started → Accounts & 2FA → Choose Docker OR Scheduling  
-**Advanced Users:** Humanization → Diagnostics → Notifications  
-**Docker Users:** Getting Started → Accounts & 2FA → Docker → NTFY/Webhookstion Index
+- **First install:** Getting Started → Accounts & 2FA → Configuration Reference → Scheduling **or** Docker
+- **Docker-first:** Getting Started prerequisites → Docker → Diagnostics → Notifications (NTFY or Webhooks)
+- **Optimizing runs:** Humanization → Schedule tuning → Proxy → Job State → Update
 
-Welcome to the Microsoft Rewards Script V2 docs. Start here:
-
-- Getting Started: high‑level setup from zero to running — [Getting Started](./getting-started.md)
-- Accounts & Authentication — [Accounts & TOTP (2FA)](./accounts.md)
-- Runtime & Operations — [Docker Guide](./docker.md), [Scheduling](./schedule.md), [Diagnostics](./diagnostics.md), [Humanization](./humanization.md), [Job State](./jobstate.md), [Auto Update](./update.md), [Security](./security.md)
-- Notifications — [NTFY Push](./ntfy.md), [Conclusion Webhook (Discord)](./conclusionwebhook.md)
-- Modes & Activities — [Buy Mode](./buy-mode.md)
-
-Recommended reading order if you’re new: Getting Started → Accounts & TOTP → Docker or Scheduler.# Documentation Index
-
-Welcome to the Microsoft Rewards Script V2 documentation. Start here to set up your environment, add your Microsoft accounts, and understand how the bot operates.
-
-- Getting Started: High‑level setup from zero to running
-  - [Getting Started](./getting-started.md)
-- Accounts & Authentication
-  - [Accounts & TOTP (2FA)](./accounts.md)
-  - [Proxy Setup](./proxy.md)
-- Runtime & Operations
-  - [Docker Guide](./docker.md)
-  - [Scheduling](./schedule.md)
-  - [Diagnostics](./diagnostics.md)
-  - [Humanization](./humanization.md)
-  - [Job State](./jobstate.md)
-  - [Auto Update](./update.md)
-  - [Security Notes](./security.md)
-- Notifications
-  - [NTFY Push](./ntfy.md)
-  - [Conclusion Webhook (Discord)](./conclusionwebhook.md)
-- Modes & Activities
-  - [Buy Mode](./buy-mode.md)
-
-If you are new, read Getting Started first, then Accounts & TOTP.
+Each guide now links back to the most relevant follow-up topics so you can jump between setup, operations, and troubleshooting without losing context.
 
 ---
 
-## 🚀 Quick Start Path
+## 🔗 Useful Shortcuts
 
-**New users should follow this sequence:**
+- Need sample configs? → [Config presets](./config-presets/)
+- Want a scripted environment? → [Scheduler](./schedule.md)
+- Looking to self-audit? → [Diagnostics](./diagnostics.md) + [Security](./security.md)
 
-1. **[Getting Started](./getting-started.md)** — Install and basic configuration
-2. **[Accounts & 2FA](./accounts.md)** — Add your Microsoft accounts  
-3. **[Docker](./docker.md)** OR **[Scheduler](./schedule.md)** — Choose deployment method
-4. **[NTFY](./ntfy.md)** OR **[Discord Webhooks](./conclusionwebhook.md)** — Set up notifications
-
-**Advanced users may also need:**
-- **[Proxy](./proxy.md)** — For privacy and geographic routing
-- **[Security](./security.md)** — Account protection and incident response
-- **[Humanization](./humanization.md)** — Natural behavior simulation
+If something feels out of sync with the code, open an issue or ping us on Discord—the docs are maintained to match the current defaults (`src/config.jsonc`, visible browsers by default, Docker headless enforcement via `FORCE_HEADLESS=1`).

@@ -93,7 +93,7 @@ The script will automatically:
 If you prefer containers:
 
 ```bash
-# Ensure accounts.json and config.json exist
+# Ensure accounts.json and config.jsonc exist
 docker compose up -d
 
 # Follow logs

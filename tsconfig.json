@@ -65,7 +65,8 @@
         "resolveJsonModule": true
     },
     "include": [
-        "src/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
         "src/functions/queries.json"
     ],
     "exclude": [

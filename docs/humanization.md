@@ -57,7 +57,7 @@ Human Mode adds **subtle human-like behavior** to make your automation look and 
 | `gestureMoveProb` | `0.4` | Probability (0-1) for tiny mouse moves |
 | `gestureScrollProb` | `0.2` | Probability (0-1) for minor scrolls |
 | `allowedWindows` | `[]` | Time windows for script execution |
-| `randomOffDaysPerWeek` | `1` | Skip N random days per week |
+| `randomOffDaysPerWeek` | `1` | Skip N random days per week. Set to `0` to disable (scheduler logs reference this setting explicitly). |
 
 ---
 
@@ -72,6 +72,7 @@ Human Mode adds **subtle human-like behavior** to make your automation look and 
 - **Micro mouse moves** — Tiny cursor adjustments (safe zones only)
 - **Minor scrolls** — Small page movements (non-interactive areas)
 - **Probability-based** — Not every action includes gestures
+- **Centralized controller** — The `Humanizer` service now drives all gesture + pause behavior so every module uses the same probabilities and timing windows.
 
 ### **Temporal Patterns**
 - **Time windows** — Only run during specified hours

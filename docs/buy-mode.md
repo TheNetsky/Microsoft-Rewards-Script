@@ -13,6 +13,8 @@
 
 Buy Mode allows you to **manually redeem rewards** while the script **passively monitors** your point balance. Perfect for safe redemptions without automation interference.
 
+> ℹ️ Buy Mode automatically launches the browser in a visible window (headless=false) so you can interact with captchas and checkout flows. Use `FORCE_HEADLESS=1` only if you understand the limitations.
+
 ### **Key Features**
 - 👀 **Passive monitoring** — No clicks or automation
 - 🔄 **Real-time tracking** — Instant spending alerts  
@@ -55,7 +57,7 @@ npm start -- -buy
 ## ⚙️ Configuration
 
 ### **Set Duration in Config**
-Add to `src/config.json`:
+Add to `src/config.jsonc`:
 ```json
 {
   "buyMode": {
@@ -201,6 +203,6 @@ During monitoring:
 ## Troubleshooting
 
 - **Monitor tab closed**: Script automatically reopens it in background
-- **No notifications**: Check webhook/NTFY configuration in `config.json`
+- **No notifications**: Check webhook/NTFY configuration in `config.jsonc`
 - **Session timeout**: Increase `maxMinutes` if you need longer monitoring
 - **Login issues**: Ensure account credentials are correct in `accounts.json`

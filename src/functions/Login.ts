@@ -1,15 +1,14 @@
 // Clean refactored Login implementation
 // Public API preserved: login(), getMobileAccessToken()
 
-import type { Page } from 'playwright'
+import type { Page, Locator } from 'playwright'
 import * as crypto from 'crypto'
-import fs from 'fs'
-import path from 'path'
 import readline from 'readline'
 import { AxiosRequestConfig } from 'axios'
 import { generateTOTP } from '../util/Totp'
 import { saveSessionData } from '../util/Load'
 import { MicrosoftRewardsBot } from '../index'
+import { captureDiagnostics } from '../util/Diagnostics'
 import { OAuth } from '../interface/OAuth'
 
 // -------------------------------
@@ -203,6 +202,14 @@ export class Login {
   // --------------- 2FA Handling ---------------
   private async handle2FA(page: Page) {
     try {
+      if (this.currentTotpSecret) {
+        const totpSelector = await this.ensureTotpInput(page)
+        if (totpSelector) {
+          await this.submitTotpCode(page, totpSelector)
+          return
+        }
+      }
+
       const number = await this.fetchAuthenticatorNumber(page)
       if (number) { await this.approveAuthenticator(page, number); return }
       await this.handleSMSOrTotp(page)
@@ -255,16 +262,16 @@ export class Login {
   }
 
   private async handleSMSOrTotp(page: Page) {
-    // TOTP auto entry
-    try {
-      if (this.currentTotpSecret) {
-        const code = generateTOTP(this.currentTotpSecret.trim())
-        await page.fill('input[name="otc"]', code)
-        await page.keyboard.press('Enter')
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP automatically')
-        return
-      }
-    } catch {/* ignore */}
+    // TOTP auto entry (second chance if ensureTotpInput needed longer)
+    if (this.currentTotpSecret) {
+      try {
+        const totpSelector = await this.ensureTotpInput(page)
+        if (totpSelector) {
+          await this.submitTotpCode(page, totpSelector)
+          return
+        }
+      } catch {/* ignore */}
+    }
 
     // Manual prompt
     this.bot.log(this.bot.isMobile, 'LOGIN', 'Waiting for user 2FA code (SMS / Email / App fallback)')
@@ -275,18 +282,194 @@ export class Login {
     this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code submitted')
   }
 
+  private async ensureTotpInput(page: Page): Promise<string | null> {
+    const selector = await this.findFirstVisibleSelector(page, this.totpInputSelectors())
+    if (selector) return selector
+
+    const attempts = 4
+    for (let i = 0; i < attempts; i++) {
+      let acted = false
+
+      // Step 1: expose alternative verification options if hidden
+      if (!acted) {
+        acted = await this.clickFirstVisibleSelector(page, this.totpAltOptionSelectors())
+        if (acted) await this.bot.utils.wait(900)
+      }
+
+      // Step 2: choose authenticator code option if available
+      if (!acted) {
+        acted = await this.clickFirstVisibleSelector(page, this.totpChallengeSelectors())
+        if (acted) await this.bot.utils.wait(900)
+      }
+
+      const ready = await this.findFirstVisibleSelector(page, this.totpInputSelectors())
+      if (ready) return ready
+
+      if (!acted) break
+    }
+
+    return null
+  }
+
+  private async submitTotpCode(page: Page, selector: string) {
+    try {
+      const code = generateTOTP(this.currentTotpSecret!.trim())
+      const input = page.locator(selector).first()
+      if (!await input.isVisible().catch(()=>false)) {
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'TOTP input unexpectedly hidden', 'warn')
+        return
+      }
+      await input.fill('')
+      await input.fill(code)
+      const submitSelectors = [
+        '#idSubmit_SAOTCC_Continue',
+        '#idSubmit_SAOTCC_OTC',
+        'button[type="submit"]:has-text("Verify")',
+        'button[type="submit"]:has-text("Continuer")',
+        'button:has-text("Verify")',
+        'button:has-text("Continuer")',
+        'button:has-text("Submit")'
+      ]
+      const submit = await this.findFirstVisibleLocator(page, submitSelectors)
+      if (submit) {
+        await submit.click().catch(()=>{})
+      } else {
+        await page.keyboard.press('Enter').catch(()=>{})
+      }
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP automatically')
+    } catch (error) {
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Failed to submit TOTP automatically: ' + error, 'warn')
+    }
+  }
+
+  private totpInputSelectors(): string[] {
+    return [
+      'input[name="otc"]',
+      '#idTxtBx_SAOTCC_OTC',
+      '#idTxtBx_SAOTCS_OTC',
+      'input[data-testid="otcInput"]',
+      'input[autocomplete="one-time-code"]',
+      'input[type="tel"][name="otc"]'
+    ]
+  }
+
+  private totpAltOptionSelectors(): string[] {
+    return [
+      '#idA_SAOTCS_ProofPickerChange',
+      '#idA_SAOTCC_AlternateLogin',
+      'a:has-text("Use a different verification option")',
+      'a:has-text("Sign in another way")',
+      'a:has-text("I can\'t use my Microsoft Authenticator app right now")',
+      'button:has-text("Use a different verification option")',
+      'button:has-text("Sign in another way")'
+    ]
+  }
+
+  private totpChallengeSelectors(): string[] {
+    return [
+      '[data-value="PhoneAppOTP"]',
+      '[data-value="OneTimeCode"]',
+      'button:has-text("Use a verification code")',
+      'button:has-text("Enter code manually")',
+      'button:has-text("Enter a code from your authenticator app")',
+      'button:has-text("Use code from your authentication app")',
+      'button:has-text("Utiliser un code de vérification")',
+      'button:has-text("Utiliser un code de verification")',
+      'button:has-text("Entrer un code depuis votre application")',
+      'button:has-text("Entrez un code depuis votre application")',
+      'button:has-text("Entrez un code")',
+      'div[role="button"]:has-text("Use a verification code")',
+      'div[role="button"]:has-text("Enter a code")'
+    ]
+  }
+
+  private async findFirstVisibleSelector(page: Page, selectors: string[]): Promise<string | null> {
+    for (const sel of selectors) {
+      const loc = page.locator(sel).first()
+      if (await loc.isVisible().catch(() => false)) {
+        return sel
+      }
+    }
+    return null
+  }
+
+  private async clickFirstVisibleSelector(page: Page, selectors: string[]): Promise<boolean> {
+    for (const sel of selectors) {
+      const loc = page.locator(sel).first()
+      if (await loc.isVisible().catch(() => false)) {
+        await loc.click().catch(()=>{})
+        return true
+      }
+    }
+    return false
+  }
+
+  private async findFirstVisibleLocator(page: Page, selectors: string[]): Promise<Locator | null> {
+    for (const sel of selectors) {
+      const loc = page.locator(sel).first()
+      if (await loc.isVisible().catch(() => false)) {
+        return loc
+      }
+    }
+    return null
+  }
+
+  private async waitForRewardsRoot(page: Page, timeoutMs: number): Promise<string | null> {
+    const selectors = [
+      'html[data-role-name="RewardsPortal"]',
+      'html[data-role-name*="RewardsPortal"]',
+      'body[data-role-name*="RewardsPortal"]',
+      '[data-role-name*="RewardsPortal"]',
+      '[data-bi-name="rewards-dashboard"]',
+      'main[data-bi-name="dashboard"]',
+      '#more-activities',
+      '#dashboard'
+    ]
+
+    const start = Date.now()
+    while (Date.now() - start < timeoutMs) {
+      for (const sel of selectors) {
+        const loc = page.locator(sel).first()
+        if (await loc.isVisible().catch(()=>false)) {
+          return sel
+        }
+      }
+      await this.bot.utils.wait(350)
+    }
+    return null
+  }
+
   // --------------- Verification / State ---------------
   private async awaitRewardsPortal(page: Page) {
     const start = Date.now()
     while (Date.now() - start < DEFAULT_TIMEOUTS.loginMaxMs) {
       await this.handlePasskeyPrompts(page, 'main')
       const u = new URL(page.url())
-      if (u.hostname === LOGIN_TARGET.host && u.pathname === LOGIN_TARGET.path) break
+      const isRewardsHost = u.hostname === LOGIN_TARGET.host
+      const isKnownPath = u.pathname === LOGIN_TARGET.path
+        || u.pathname === '/dashboard'
+        || u.pathname === '/rewardsapp/dashboard'
+        || u.pathname.startsWith('/?')
+      if (isRewardsHost && isKnownPath) break
       await this.bot.utils.wait(1000)
     }
-    const portal = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 8000 }).catch(()=>null)
-    if (!portal) throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation', 'error')
-    this.bot.log(this.bot.isMobile, 'LOGIN', 'Reached rewards portal')
+
+    const portalSelector = await this.waitForRewardsRoot(page, 8000)
+    if (!portalSelector) {
+      try {
+        await this.bot.browser.func.goHome(page)
+      } catch {/* ignore fallback errors */}
+
+      const fallbackSelector = await this.waitForRewardsRoot(page, 6000)
+      if (!fallbackSelector) {
+        await this.bot.browser.utils.captureDiagnostics(page, 'login-portal-missing').catch(()=>{})
+        throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation (saved diagnostics to reports/)', 'error')
+      }
+      this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal via fallback (${fallbackSelector})`)
+      return
+    }
+
+    this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal (${portalSelector})`)
   }
 
   private async verifyBingContext(page: Page) {
@@ -565,16 +748,7 @@ export class Login {
   }
 
   private async saveIncidentArtifacts(page: Page, slug: string) {
-    try {
-      const base = path.join(process.cwd(),'diagnostics','security-incidents')
-      await fs.promises.mkdir(base,{ recursive:true })
-      const ts = new Date().toISOString().replace(/[:.]/g,'-')
-      const dir = path.join(base, `${ts}-${slug}`)
-      await fs.promises.mkdir(dir,{ recursive:true })
-      try { await page.screenshot({ path: path.join(dir,'page.png'), fullPage:false }) } catch {/* ignore */}
-      try { const html = await page.content(); await fs.promises.writeFile(path.join(dir,'page.html'), html) } catch {/* ignore */}
-      this.bot.log(this.bot.isMobile,'SECURITY',`Saved incident artifacts: ${dir}`)
-    } catch {/* ignore */}
+    await captureDiagnostics(this.bot, page, slug, { scope: 'security', skipSlot: true, force: true })
   }
 
   private async openDocsTab(page: Page, url: string) {

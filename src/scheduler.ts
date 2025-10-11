@@ -1,4 +1,5 @@
 import { DateTime, IANAZone } from 'luxon'
+import cronParser from 'cron-parser'
 import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
@@ -6,6 +7,9 @@ import { MicrosoftRewardsBot } from './index'
 import { loadConfig } from './util/Load'
 import { log } from './util/Logger'
 import type { Config } from './interface/Config'
+
+type CronExpressionInfo = { expression: string; tz: string }
+type DateTimeInstance = ReturnType<typeof DateTime.fromJSDate>
 
 function resolveTimeParts(schedule: Config['schedule'] | undefined): { tz: string; hour: number; minute: number } {
   const tz = (schedule?.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
@@ -45,6 +49,55 @@ function parseTargetToday(now: Date, schedule: Config['schedule'] | undefined) {
   const { tz, hour, minute } = resolveTimeParts(schedule)
   const dtn = DateTime.fromJSDate(now, { zone: tz })
   return dtn.set({ hour, minute, second: 0, millisecond: 0 })
+}
+
+function normalizeCronExpressions(schedule: Config['schedule'] | undefined, fallbackTz: string): CronExpressionInfo[] {
+  if (!schedule) return []
+  const raw = schedule.cron
+  if (!raw) return []
+  const expressions = Array.isArray(raw) ? raw : [raw]
+  return expressions
+    .map(expr => (typeof expr === 'string' ? expr.trim() : ''))
+    .filter(expr => expr.length > 0)
+    .map(expr => ({ expression: expr, tz: (schedule.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : fallbackTz }))
+}
+
+function getNextCronOccurrence(after: DateTimeInstance, items: CronExpressionInfo[]): { next: DateTimeInstance; source: string } | null {
+  let soonest: { next: DateTimeInstance; source: string } | null = null
+  for (const item of items) {
+    try {
+      const iterator = cronParser.parseExpression(item.expression, {
+        currentDate: after.toJSDate(),
+        tz: item.tz
+      })
+      const nextDate = iterator.next().toDate()
+      const nextDt = DateTime.fromJSDate(nextDate, { zone: item.tz })
+      if (!soonest || nextDt < soonest.next) {
+        soonest = { next: nextDt, source: item.expression }
+      }
+    } catch (error) {
+      void log('main', 'SCHEDULER', `Invalid cron expression "${item.expression}": ${error instanceof Error ? error.message : String(error)}`, 'warn')
+    }
+  }
+  return soonest
+}
+
+function getNextDailyOccurrence(after: DateTimeInstance, schedule: Config['schedule'] | undefined): DateTimeInstance {
+  const todayTarget = parseTargetToday(after.toJSDate(), schedule)
+  const target = after >= todayTarget ? todayTarget.plus({ days: 1 }) : todayTarget
+  return target
+}
+
+function computeNextRun(after: DateTimeInstance, schedule: Config['schedule'] | undefined, cronItems: CronExpressionInfo[]): { next: DateTimeInstance; source: 'cron' | 'daily'; detail?: string } {
+  if (cronItems.length > 0) {
+    const cronNext = getNextCronOccurrence(after, cronItems)
+    if (cronNext) {
+      return { next: cronNext.next, source: 'cron', detail: cronNext.source }
+    }
+    void log('main', 'SCHEDULER', 'All cron expressions invalid; falling back to daily schedule', 'warn')
+  }
+
+  return { next: getNextDailyOccurrence(after, schedule), source: 'daily' }
 }
 
 async function runOnePass(): Promise<void> {
@@ -195,7 +248,8 @@ async function main() {
     }
     offDays = chosen.sort((a,b)=>a-b)
     offWeek = week
-    await log('main','SCHEDULER',`Selected random off-days this week (ISO): ${offDays.join(', ')}`,'warn')
+  const msg = offDays.length ? offDays.join(', ') : 'none'
+  await log('main','SCHEDULER',`Weekly humanization off-day sample (ISO weekday): ${msg} | adjust via config.humanization.randomOffDaysPerWeek`,'warn')
   }
 
   const chooseVacationRange = async (now: typeof DateTime.prototype) => {
@@ -226,6 +280,7 @@ async function main() {
   }
 
   const tz = (schedule.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
+  const cronExpressions = normalizeCronExpressions(schedule, tz)
   // Default to false to avoid unexpected immediate runs
   const runImmediate = schedule.runImmediatelyOnStart === true
   let running = false
@@ -256,7 +311,7 @@ async function main() {
     if (isVacationToday) {
       await log('main','SCHEDULER',`Skipping immediate run: vacation day (${todayIso})`,'warn')
     } else if (offDays.includes(nowDT.weekday)) {
-      await log('main','SCHEDULER',`Skipping immediate run: off-day (weekday ${nowDT.weekday})`,'warn')
+  await log('main','SCHEDULER',`Skipping immediate run: humanization off-day (ISO weekday ${nowDT.weekday}). Set humanization.randomOffDaysPerWeek=0 to disable.`,'warn')
     } else {
       await runPasses(passes)
     }
@@ -264,38 +319,32 @@ async function main() {
   }
 
   for (;;) {
-    const now = new Date()
-  const targetToday = parseTargetToday(now, schedule)
-    let next = targetToday
-    const nowDT = DateTime.fromJSDate(now, { zone: targetToday.zone })
-
-    if (nowDT >= targetToday) {
-      next = targetToday.plus({ days: 1 })
-    }
-
+  const nowDT = DateTime.local().setZone(tz)
+  const nextInfo = computeNextRun(nowDT, schedule, cronExpressions)
+  const next = nextInfo.next
   let ms = Math.max(0, next.toMillis() - nowDT.toMillis())
 
     // Optional daily jitter to further randomize the exact start time each day
-    const dailyJitterMin = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MIN || process.env.SCHEDULER_DAILY_JITTER_MIN || 0)
-    const dailyJitterMax = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MAX || process.env.SCHEDULER_DAILY_JITTER_MAX || 0)
-    const djMin = isFinite(dailyJitterMin) ? dailyJitterMin : 0
-    const djMax = isFinite(dailyJitterMax) ? dailyJitterMax : 0
     let extraMs = 0
-    if (djMin > 0 || djMax > 0) {
-      const mn = Math.max(0, Math.min(djMin, djMax))
-      const mx = Math.max(0, Math.max(djMin, djMax))
-      const jitterSec = (mn === mx) ? mn * 60 : (mn * 60 + Math.floor(Math.random() * ((mx - mn) * 60)))
-      extraMs = jitterSec * 1000
-      ms += extraMs
+    if (cronExpressions.length === 0) {
+      const dailyJitterMin = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MIN || process.env.SCHEDULER_DAILY_JITTER_MIN || 0)
+      const dailyJitterMax = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MAX || process.env.SCHEDULER_DAILY_JITTER_MAX || 0)
+      const djMin = isFinite(dailyJitterMin) ? dailyJitterMin : 0
+      const djMax = isFinite(dailyJitterMax) ? dailyJitterMax : 0
+      if (djMin > 0 || djMax > 0) {
+        const mn = Math.max(0, Math.min(djMin, djMax))
+        const mx = Math.max(0, Math.max(djMin, djMax))
+        const jitterSec = (mn === mx) ? mn * 60 : (mn * 60 + Math.floor(Math.random() * ((mx - mn) * 60)))
+        extraMs = jitterSec * 1000
+        ms += extraMs
+      }
     }
 
     const human = next.toFormat('yyyy-LL-dd HH:mm ZZZZ')
     const totalSec = Math.round(ms / 1000)
-    if (extraMs > 0) {
-      await log('main', 'SCHEDULER', `Next run at ${human} plus daily jitter (+${Math.round(extraMs/60000)}m) → in ${totalSec}s`)
-    } else {
-      await log('main', 'SCHEDULER', `Next run at ${human} (in ${totalSec}s)`) 
-    }
+    const jitterMsg = extraMs > 0 ? ` plus daily jitter (+${Math.round(extraMs/60000)}m)` : ''
+    const sourceMsg = nextInfo.source === 'cron' ? ` [cron: ${nextInfo.detail}]` : ''
+    await log('main', 'SCHEDULER', `Next run at ${human}${jitterMsg}${sourceMsg} (in ${totalSec}s)`) 
 
     await new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -310,7 +359,7 @@ async function main() {
       continue
     }
     if (offDays.includes(nowRun.weekday)) {
-      await log('main','SCHEDULER',`Skipping scheduled run: off-day (weekday ${nowRun.weekday})`,'warn')
+      await log('main','SCHEDULER',`Skipping scheduled run: humanization off-day (ISO weekday ${nowRun.weekday}). Set humanization.randomOffDaysPerWeek=0 to disable.`,'warn')
       continue
     }
     if (!running) {

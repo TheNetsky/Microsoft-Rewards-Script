@@ -1,6 +1,8 @@
 # ⚙️ Configuration Guide
 
-This page documents every field in `config.json`. You can keep the file lean by deleting blocks you do not use – missing values fall back to defaults. Comments (`// ...`) are supported in the JSON thanks to a custom parser.
+This page documents every field in the configuration file. The default ships as `src/config.jsonc` so you get inline `//` guidance without editor warnings, and the loader still accepts traditional `config.json` files if you prefer plain JSON.
+
+Looking for ready-to-use presets? Check `docs/config-presets/` for curated examples such as `balanced.jsonc` (full automation with humanization) and `minimal.jsonc` (lean runs with quick scheduling).
 
 > NOTE: Previous versions had `logging.live` (live streaming webhook); it was removed and replaced by a simple `logging.redactEmails` flag.
 
@@ -17,7 +19,7 @@ Directory where session data (cookies / fingerprints / job-state) is stored.
 ## browser
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| headless | boolean | false | Run browser UI-less. Setting to `false` can improve stability or help visual debugging. |
+| headless | boolean | false | Run browser UI-less. Set to `false` to keep the browser visible (default). |
 | globalTimeout | string/number | "30s" | Max time for common Playwright operations. Accepts ms number or time string (e.g. `"45s"`, `"2min"`). |
 
 ---
@@ -122,7 +124,7 @@ Manages notification channels (Discord webhooks, NTFY, etc.).
 Primary webhook (can be used for summary or generic messages).
 | Key | Default | Description |
 |-----|---------|-------------|
-| enabled | false | Allow sending webhook-based notifications. |
+| enabled | false | Allow sending webhook-based notifications and live log streaming. |
 | url | "" | Webhook endpoint. |
 
 ### notifications.conclusionWebhook
@@ -148,6 +150,7 @@ Lightweight push notifications.
 | excludeFunc | string[] | Log buckets suppressed in console + any webhook usage. |
 | webhookExcludeFunc | string[] | Buckets suppressed specifically for webhook output. |
 | redactEmails | boolean | If true, email addresses are partially masked in logs. |
+| liveWebhookUrl | string | Optional override URL for live log streaming (falls back to `notifications.webhook.url`). |
 
 _Removed fields_: `live.enabled`, `live.url`, `live.redactEmails` — replaced by `redactEmails` only.
 

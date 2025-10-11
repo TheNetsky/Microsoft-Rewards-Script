@@ -255,14 +255,21 @@ export function loadConfig(): Config {
             return configCache
         }
 
-        // Resolve config.json from common locations
-        const candidates = [
-            path.join(__dirname, '../', 'config.json'),          // root/config.json when compiled (expected primary)
-            path.join(__dirname, '../src', 'config.json'),       // fallback: running compiled dist but file still in src/
-            path.join(process.cwd(), 'config.json'),             // cwd root
-            path.join(process.cwd(), 'src', 'config.json'),      // running from repo root but config left in src/
-            path.join(__dirname, 'config.json')                  // last resort: dist/util/config.json
+        // Resolve configuration file from common locations (supports .jsonc and .json)
+        const names = ['config.jsonc', 'config.json']
+        const bases = [
+            path.join(__dirname, '../'),       // dist root when compiled
+            path.join(__dirname, '../src'),    // fallback: running dist but config still in src
+            process.cwd(),                     // repo root
+            path.join(process.cwd(), 'src'),   // repo/src when running ts-node
+            __dirname                          // dist/util
         ]
+        const candidates: string[] = []
+        for (const base of bases) {
+            for (const name of names) {
+                candidates.push(path.join(base, name))
+            }
+        }
     let cfgPath: string | null = null
         for (const p of candidates) {
             try { if (fs.existsSync(p)) { cfgPath = p; break } } catch { /* ignore */ }

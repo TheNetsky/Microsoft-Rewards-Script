@@ -1,0 +1,147 @@
+{
+  // Base URL for Rewards dashboard and APIs
+  "baseURL": "https://rewards.bing.com",
+  // Where to store sessions (cookies, fingerprints)
+  "sessionPath": "sessions",
+
+  "browser": {
+    // Headless mode is more stable on shared servers
+    "headless": true,
+    // Use short notation for readability
+    "globalTimeout": "30s"
+  },
+
+  "execution": {
+    "parallel": false,
+    "runOnZeroPoints": false,
+    "clusters": 1,
+    "passesPerRun": 1
+  },
+
+  "buyMode": {
+    "maxMinutes": 45
+  },
+
+  "fingerprinting": {
+    "saveFingerprint": {
+      "mobile": true,
+      "desktop": true
+    }
+  },
+
+  "search": {
+    "useLocalQueries": true,
+    "settings": {
+      "useGeoLocaleQueries": true,
+      "scrollRandomResults": true,
+      "clickRandomResults": true,
+      "retryMobileSearchAmount": 2,
+      "delay": {
+        "min": "8s",
+        "max": "22s"
+      }
+    }
+  },
+
+  "humanization": {
+    "enabled": true,
+    "stopOnBan": true,
+    "immediateBanAlert": true,
+    "actionDelay": {
+      "min": 500,
+      "max": 2200
+    },
+    "gestureMoveProb": 0.65,
+    "gestureScrollProb": 0.4,
+    "allowedWindows": []
+  },
+
+  "vacation": {
+    "enabled": true,
+    "minDays": 2,
+    "maxDays": 4
+  },
+
+  "retryPolicy": {
+    "maxAttempts": 3,
+    "baseDelay": 1000,
+    "maxDelay": "30s",
+    "multiplier": 2,
+    "jitter": 0.2
+  },
+
+  "workers": {
+    "doDailySet": true,
+    "doMorePromotions": true,
+    "doPunchCards": true,
+    "doDesktopSearch": true,
+    "doMobileSearch": true,
+    "doDailyCheckIn": true,
+    "doReadToEarn": true,
+    "bundleDailySetWithSearch": true
+  },
+
+  "proxy": {
+    "proxyGoogleTrends": true,
+    "proxyBingTerms": true
+  },
+
+  "notifications": {
+    "webhook": {
+      "enabled": false,
+      "url": "***"
+    },
+    "conclusionWebhook": {
+      "enabled": false,
+      "url": "***"
+    },
+    "ntfy": {
+      "enabled": false,
+      "url": "",
+      "topic": "rewards",
+      "authToken": ""
+    }
+  },
+
+  "logging": {
+    "excludeFunc": [
+      "SEARCH-CLOSE-TABS",
+      "LOGIN-NO-PROMPT",
+      "FLOW"
+    ],
+    "webhookExcludeFunc": [
+      "SEARCH-CLOSE-TABS",
+      "LOGIN-NO-PROMPT",
+      "FLOW"
+    ],
+    "redactEmails": true
+  },
+
+  "diagnostics": {
+    "enabled": true,
+    "saveScreenshot": true,
+    "saveHtml": true,
+    "maxPerRun": 2,
+    "retentionDays": 7
+  },
+
+  "jobState": {
+    "enabled": true,
+    "dir": ""
+  },
+
+  "schedule": {
+    "enabled": false,
+    "useAmPm": false,
+    "time12": "9:00 AM",
+    "time24": "09:00",
+    "timeZone": "America/New_York",
+    "runImmediatelyOnStart": false
+  },
+
+  "update": {
+    "git": true,
+    "docker": false,
+    "scriptPath": "setup/update/update.mjs"
+  }
+}

@@ -5,7 +5,7 @@
     "sessionPath": "sessions",
     
     "browser": {
-        // Run browser without UI (true=headless, false=visible). Visible can help with stability.
+        // Keep headless=false so the browser window stays visible by default
         "headless": false,
         // Max time to wait for common operations (supports ms/s/min: e.g. 30000, "30s", "2min")
         "globalTimeout": "30s"
@@ -31,17 +31,17 @@
     "fingerprinting": {
         // Persist browser fingerprints per device type to improve consistency across runs
         "saveFingerprint": {
-            "mobile": false,
-            "desktop": false
+            "mobile": true,
+            "desktop": true
         }
     },
     
     "search": {
         // Use locale-specific query sources
-        "useLocalQueries": false,
+        "useLocalQueries": true,
         "settings": {
             // Add geo/locale signal into query selection
-            "useGeoLocaleQueries": false,
+            "useGeoLocaleQueries": true,
             // Randomly scroll search result pages to look more natural
             "scrollRandomResults": true,
             // Occasionally click a result (safe targets only)
@@ -50,7 +50,7 @@
             "retryMobileSearchAmount": 2,
             // Delay between searches (supports numbers in ms or time strings)
             "delay": {
-                "min": "3min",
+                "min": "1min",
                 "max": "5min"
             }
         }
@@ -66,13 +66,13 @@
         "immediateBanAlert": true,
         // Extra random pause between actions (ms or time string e.g., "300ms", "1s")
         "actionDelay": { 
-            "min": 150, 
-            "max": 450 
+            "min": 500, 
+            "max": 2200 
         },
         // Probability (0..1) to move mouse a tiny bit in between actions
-        "gestureMoveProb": 0.4,
+        "gestureMoveProb": 0.65,
         // Probability (0..1) to perform a very small scroll
-        "gestureScrollProb": 0.2,
+        "gestureScrollProb": 0.4,
         // Optional local-time windows for execution (e.g., ["08:30-11:00", "19:00-22:00"]).
         // If provided, runs will wait until inside a window before starting.
         "allowedWindows": []
@@ -80,12 +80,12 @@
 
     // Optional monthly "vacation" block: skip a contiguous range of days to look more human.
     // This is independent of weekly random off-days. When enabled, each month a random
-    // block between minDays and maxDays is selected (e.g., 3–5 days) and all runs within
+    // block between minDays and maxDays is selected (e.g., 2–4 days) and all runs within
     // that date range are skipped. The chosen block is logged at the start of the month.
     "vacation": {
-        "enabled": false,
-        "minDays": 3,
-        "maxDays": 5
+        "enabled": true,
+        "minDays": 2,
+        "maxDays": 4
     },
     
     "retryPolicy": {
@@ -107,7 +107,7 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true,
         // If true, run a desktop search bundle right after Daily Set
-        "bundleDailySetWithSearch": false
+        "bundleDailySetWithSearch": true
     },
     
     "proxy": {

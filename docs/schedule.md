@@ -19,6 +19,7 @@ The built-in scheduler provides **automated script execution** at specified time
 - 🔄 **Multiple passes** — Execute script multiple times per run
 - 🏖️ **Vacation mode** — Skip random days monthly
 - 🎲 **Jitter support** — Randomize execution times
+- 📅 **Humanization off-days** — Weekly random skips (disable via `humanization.randomOffDaysPerWeek`)
 - ⚡ **Immediate start** — Option to run on startup
 
 ---
@@ -68,6 +69,28 @@ The built-in scheduler provides **automated script execution** at specified time
 | `vacation.enabled` | `false` | Skip random monthly off-block |
 | `vacation.minDays` | `3` | Minimum vacation days |
 | `vacation.maxDays` | `5` | Maximum vacation days |
+| `cron` | `undefined` | Optional cron expression (string or array) for advanced scheduling |
+
+### **Cron Expressions (Advanced)**
+
+You can now drive the scheduler with classic cron syntax instead of a single daily time. Provide either a string or an array in `schedule.cron`.
+
+```json
+{
+  "schedule": {
+    "enabled": true,
+    "cron": [
+      "0 7 * * *",      // every day at 07:00
+      "30 19 * * 1-5"    // weekdays at 19:30
+    ],
+    "timeZone": "Europe/Paris"
+  }
+}
+```
+
+- Supports 5-field and 6-field cron expressions (`second minute hour day month weekday`).
+- When `cron` is set, the legacy `time`, `time12`, `time24`, and daily jitter env vars are ignored.
+- The scheduler still honors vacation mode, weekly random off-days, run-on-start, and watchdog features.
 
 ---
 
@@ -317,7 +340,7 @@ services:
 node -e "console.log(new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}))"
 
 # Verify config syntax
-node -e "console.log(JSON.parse((Get-Content 'src/config.json' | Out-String)))"
+node -e "const fs=require('fs');const strip=input=>{let out='',inString=false,stringChar='',inLine=false,inBlock=false;for(let i=0;i<input.length;i++){const ch=input[i],next=input[i+1];if(inLine){if(ch==='\n'||ch==='\r'){inLine=false;out+=ch;}continue;}if(inBlock){if(ch==='*'&&next==='/' ){inBlock=false;i++;}continue;}if(inString){out+=ch;if(ch==='\\'){i++;if(i<input.length)out+=input[i];continue;}if(ch===stringChar)inString=false;continue;}if(ch==='"'||ch==='\''){inString=true;stringChar=ch;out+=ch;continue;}if(ch==='/'&&next==='/' ){inLine=true;i++;continue;}if(ch==='/'&&next==='*' ){inBlock=true;i++;continue;}out+=ch;}return out;};console.log(JSON.parse(strip(fs.readFileSync('src/config.jsonc','utf8'))));"
 
 # Check running processes
 Get-Process | Where-Object {$_.ProcessName -eq "node"}
@@ -555,7 +578,7 @@ nohup npm run start:schedule > schedule.log 2>&1 &
 **Scheduler not running:**
 - Check `enabled: true` in config
 - Verify timezone format is correct
-- Ensure no syntax errors in config.json
+- Ensure no syntax errors in config.jsonc (remember it allows comments)
 
 **Wrong execution time:**
 - Verify system clock is accurate
@@ -578,7 +601,7 @@ nohup npm run start:schedule > schedule.log 2>&1 &
 node -e "console.log(new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}))"
 
 # Verify config syntax
-node -e "console.log(JSON.parse(require('fs').readFileSync('src/config.json')))"
+node -e "const fs=require('fs');const strip=input=>{let out='',inString=false,stringChar='',inLine=false,inBlock=false;for(let i=0;i<input.length;i++){const ch=input[i],next=input[i+1];if(inLine){if(ch==='\n'||ch==='\r'){inLine=false;out+=ch;}continue;}if(inBlock){if(ch==='*'&&next==='/' ){inBlock=false;i++;}continue;}if(inString){out+=ch;if(ch==='\\'){i++;if(i<input.length)out+=input[i];continue;}if(ch===stringChar)inString=false;continue;}if(ch==='"'||ch==='\''){inString=true;stringChar=ch;out+=ch;continue;}if(ch==='/'&&next==='/' ){inLine=true;i++;continue;}if(ch==='/'&&next==='*' ){inBlock=true;i++;continue;}out+=ch;}return out;};console.log(JSON.parse(strip(fs.readFileSync('src/config.jsonc','utf8'))));"
 
 # Check process status
 ps aux | grep "start:schedule"
@@ -621,7 +644,7 @@ services:
 ```
 
 Dans ce mode :
-- `passesPerRun` fonctionne (exécutera plusieurs passes à chaque horaire interne défini par `src/config.json`).
+- `passesPerRun` fonctionne (exécutera plusieurs passes à chaque horaire interne défini par `src/config.jsonc`).
 - Vous n'avez plus besoin de `CRON_SCHEDULE` ni de `run_daily.sh`.
 
 ### Docker + External Cron (par défaut du projet)

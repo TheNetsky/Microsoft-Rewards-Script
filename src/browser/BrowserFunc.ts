@@ -127,7 +127,7 @@ export default class BrowserFunc {
                 }
             }
 
-            const scriptContent = await target.evaluate(() => {
+            let scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
 
@@ -135,7 +135,21 @@ export default class BrowserFunc {
             })
 
             if (!scriptContent) {
-                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
+                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch(()=>{})
+                // Force a navigation retry once before failing hard
+                try {
+                    await this.goHome(target)
+                    await target.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(()=>{})
+                } catch {/* ignore */}
+                const retryContent = await target.evaluate(() => {
+                    const scripts = Array.from(document.querySelectorAll('script'))
+                    const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
+                    return targetScript?.innerText ? targetScript.innerText : null
+                }).catch(()=>null)
+                if (!retryContent) {
+                    throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
+                }
+                scriptContent = retryContent
             }
 
             // Extract the dashboard object from the script content
@@ -151,6 +165,7 @@ export default class BrowserFunc {
             }, scriptContent)
 
             if (!dashboardData) {
+                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch(()=>{})
                 throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
             }
 

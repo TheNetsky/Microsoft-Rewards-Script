@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { HttpProxyAgent } from 'http-proxy-agent'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { SocksProxyAgent } from 'socks-proxy-agent'
@@ -45,6 +45,14 @@ class AxiosClient {
         try {
             return await this.instance.request(config)
         } catch (err: unknown) {
+            const axiosErr = err as AxiosError | undefined
+
+            // Detect HTTP proxy auth failures (status 407) and retry without proxy once.
+            if (!bypassProxy && axiosErr && axiosErr.response && axiosErr.response.status === 407) {
+                const bypassInstance = axios.create()
+                return bypassInstance.request(config)
+            }
+
             // If proxied request fails with common proxy/network errors, retry once without proxy
             const e = err as { code?: string; cause?: { code?: string }; message?: string } | undefined
             const code = e?.code || e?.cause?.code

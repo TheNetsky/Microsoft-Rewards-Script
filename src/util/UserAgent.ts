@@ -2,10 +2,21 @@ import axios from 'axios'
 import { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 
 import { log } from './Logger'
+import Retry from './Retry'
 
-import { ChromeVersion, EdgeVersion } from '../interface/UserAgentUtil'
+import { ChromeVersion, EdgeVersion, Architecture, Platform } from '../interface/UserAgentUtil'
 
 const NOT_A_BRAND_VERSION = '99'
+const EDGE_VERSION_URL = 'https://edgeupdates.microsoft.com/api/products'
+const EDGE_VERSION_CACHE_TTL_MS = 1000 * 60 * 60
+
+type EdgeVersionResult = {
+    android?: string
+    windows?: string
+}
+
+let edgeVersionCache: { data: EdgeVersionResult; expiresAt: number } | null = null
+let edgeVersionInFlight: Promise<EdgeVersionResult> | null = null
 
 export async function getUserAgent(isMobile: boolean) {
     const system = getSystemComponents(isMobile)
@@ -18,6 +29,7 @@ export async function getUserAgent(isMobile: boolean) {
     const platformVersion = `${isMobile ? Math.floor(Math.random() * 5) + 9 : Math.floor(Math.random() * 15) + 1}.0.0`
 
     const uaMetadata = {
+        mobile: isMobile,
         isMobile,
         platform: isMobile ? 'Android' : 'Windows',
         fullVersionList: [
@@ -33,7 +45,8 @@ export async function getUserAgent(isMobile: boolean) {
         platformVersion,
         architecture: isMobile ? '' : 'x86',
         bitness: isMobile ? '' : '64',
-        model: ''
+        model: '',
+        uaFullVersion: app['chrome_version']
     }
 
     return { userAgent: uaTemplate, userAgentMetadata: uaMetadata }
@@ -59,38 +72,49 @@ export async function getChromeVersion(isMobile: boolean): Promise<string> {
 }
 
 export async function getEdgeVersions(isMobile: boolean) {
-    try {
-        const request = {
-            url: 'https://edgeupdates.microsoft.com/api/products',
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        }
-
-        const response = await axios(request)
-        const data: EdgeVersion[] = response.data
-        const stable = data.find(x => x.Product == 'Stable') as EdgeVersion
-        return {
-            android: stable.Releases.find(x => x.Platform == 'Android')?.ProductVersion,
-            windows: stable.Releases.find(x => (x.Platform == 'Windows' && x.Architecture == 'x64'))?.ProductVersion
-        }
-
-
-    } catch (error) {
-        throw log(isMobile, 'USERAGENT-EDGE-VERSION', 'An error occurred:' + error, 'error')
+    const now = Date.now()
+    if (edgeVersionCache && edgeVersionCache.expiresAt > now) {
+        return edgeVersionCache.data
     }
+
+    if (edgeVersionInFlight) {
+        try {
+            return await edgeVersionInFlight
+        } catch (error) {
+            if (edgeVersionCache) {
+                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Using cached Edge versions after in-flight failure: ' + formatEdgeError(error), 'warn')
+                return edgeVersionCache.data
+            }
+            throw error
+        }
+    }
+
+    const fetchPromise = fetchEdgeVersionsWithRetry(isMobile)
+        .then(result => {
+            edgeVersionCache = { data: result, expiresAt: Date.now() + EDGE_VERSION_CACHE_TTL_MS }
+            edgeVersionInFlight = null
+            return result
+        })
+        .catch(error => {
+            edgeVersionInFlight = null
+            if (edgeVersionCache) {
+                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Falling back to cached Edge versions: ' + formatEdgeError(error), 'warn')
+                return edgeVersionCache.data
+            }
+            throw log(isMobile, 'USERAGENT-EDGE-VERSION', 'Failed to fetch Edge versions: ' + formatEdgeError(error), 'error')
+        })
+
+    edgeVersionInFlight = fetchPromise
+    return fetchPromise
 }
 
 export function getSystemComponents(mobile: boolean): string {
-    const osId: string = mobile ? 'Linux' : 'Windows NT 10.0'
-    const uaPlatform: string = mobile ? `Android 1${Math.floor(Math.random() * 5)}` : 'Win64; x64'
-
     if (mobile) {
-        return `${uaPlatform}; ${osId}; K`
+        const androidVersion = 10 + Math.floor(Math.random() * 5)
+        return `Linux; Android ${androidVersion}; K`
     }
 
-    return `${uaPlatform}; ${osId}`
+    return 'Windows NT 10.0; Win64; x64'
 }
 
 export async function getAppComponents(isMobile: boolean) {
@@ -113,12 +137,124 @@ export async function getAppComponents(isMobile: boolean) {
     }
 }
 
+async function fetchEdgeVersionsWithRetry(isMobile: boolean): Promise<EdgeVersionResult> {
+    const retry = new Retry()
+    return retry.run(async () => {
+        const versions = await fetchEdgeVersionsOnce(isMobile)
+        if (!versions.android && !versions.windows) {
+            throw new Error('Stable Edge releases did not include Android or Windows versions')
+        }
+        return versions
+    }, () => true)
+}
+
+async function fetchEdgeVersionsOnce(isMobile: boolean): Promise<EdgeVersionResult> {
+    try {
+        const response = await axios<EdgeVersion[]>({
+            url: EDGE_VERSION_URL,
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (compatible; rewards-bot/2.1)' // Provide UA to avoid stricter servers
+            },
+            timeout: 10000
+        })
+        return mapEdgeVersions(response.data)
+
+    } catch (primaryError) {
+        const fallback = await tryNativeFetchFallback(isMobile)
+        if (fallback) {
+            log(isMobile, 'USERAGENT-EDGE-VERSION', 'Axios failed, native fetch succeeded: ' + formatEdgeError(primaryError), 'warn')
+            return fallback
+        }
+        throw primaryError
+    }
+}
+
+async function tryNativeFetchFallback(isMobile: boolean): Promise<EdgeVersionResult | null> {
+    try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000)
+        const response = await fetch(EDGE_VERSION_URL, {
+            headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (compatible; rewards-bot/2.1)'
+            },
+            signal: controller.signal
+        })
+        clearTimeout(timeout)
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status)
+        }
+        const data = await response.json() as EdgeVersion[]
+        return mapEdgeVersions(data)
+    } catch (error) {
+        log(isMobile, 'USERAGENT-EDGE-VERSION', 'Native fetch fallback failed: ' + formatEdgeError(error), 'warn')
+        return null
+    }
+}
+
+function mapEdgeVersions(data: EdgeVersion[]): EdgeVersionResult {
+    const stable = data.find(entry => entry.Product.toLowerCase() === 'stable')
+        ?? data.find(entry => /stable/i.test(entry.Product))
+    if (!stable) {
+        throw new Error('Stable Edge channel not found in response payload')
+    }
+
+    const androidRelease = stable.Releases.find(release => release.Platform === Platform.Android)
+    const windowsRelease = stable.Releases.find(release => release.Platform === Platform.Windows && release.Architecture === Architecture.X64)
+        ?? stable.Releases.find(release => release.Platform === Platform.Windows)
+
+    return {
+        android: androidRelease?.ProductVersion,
+        windows: windowsRelease?.ProductVersion
+    }
+}
+
+function formatEdgeError(error: unknown): string {
+    if (isAggregateErrorLike(error)) {
+        const inner = error.errors
+            .map(innerErr => formatEdgeError(innerErr))
+            .filter(Boolean)
+            .join('; ')
+        const message = error.message || 'AggregateError'
+        return inner ? `${message} | causes: ${inner}` : message
+    }
+
+    if (error instanceof Error) {
+        const parts = [`${error.name}: ${error.message}`]
+        const cause = getErrorCause(error)
+        if (cause) {
+            parts.push('cause => ' + formatEdgeError(cause))
+        }
+        return parts.join(' | ')
+    }
+
+    return String(error)
+}
+
+type AggregateErrorLike = { message?: string; errors: unknown[] }
+
+function isAggregateErrorLike(error: unknown): error is AggregateErrorLike {
+    if (!error || typeof error !== 'object') {
+        return false
+    }
+    const candidate = error as { errors?: unknown }
+    return Array.isArray(candidate.errors)
+}
+
+function getErrorCause(error: { cause?: unknown } | Error): unknown {
+    if (typeof (error as { cause?: unknown }).cause === 'undefined') {
+        return undefined
+    }
+    return (error as { cause?: unknown }).cause
+}
+
 export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, isMobile: boolean): Promise<BrowserFingerprintWithHeaders> {
     try {
         const userAgentData = await getUserAgent(isMobile)
         const componentData = await getAppComponents(isMobile)
 
-        //@ts-expect-error Errors due it not exactly matching
         fingerprint.fingerprint.navigator.userAgentData = userAgentData.userAgentMetadata
         fingerprint.fingerprint.navigator.userAgent = userAgentData.userAgent
         fingerprint.fingerprint.navigator.appVersion = userAgentData.userAgent.replace(`${fingerprint.fingerprint.navigator.appCodeName}/`, '')

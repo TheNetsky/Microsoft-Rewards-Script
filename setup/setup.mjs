@@ -4,7 +4,7 @@
  * Handles:
  *  - Renaming accounts.example.json -> accounts.json (idempotent)
  *  - Prompt loop to confirm passwords added
- *  - Inform about config.json and conclusionWebhook
+ *  - Inform about config.jsonc and conclusionWebhook
  *  - Run npm install + npm run build
  *  - Optional start
  */
@@ -102,7 +102,7 @@ async function startOnly() {
 async function fullSetup() {
   renameAccountsIfNeeded();
   await loopForAccountsConfirmation();
-  log('\nYou can now review config.json (same folder) to adjust settings such as conclusionWebhook.');
+  log('\nYou can now review config.jsonc (same folder) to adjust settings such as conclusionWebhook.');
   log('(How to enable it is documented in the repository README.)\n');
   await ensureNpmAvailable();
   await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install']);

@@ -102,6 +102,14 @@ export class MicrosoftRewardsBot {
         }
     }
 
+    public isBuyModeEnabled(): boolean {
+        return this.buyMode.enabled === true
+    }
+
+    public getBuyModeTarget(): string | undefined {
+        return this.buyMode.email
+    }
+
     async initialize() {
         this.accounts = loadAccounts()
     }
