@@ -16,6 +16,8 @@ Our **Discord server is reserved for v2-related issues and contributions**. Plea
 
 **Join here:** [https://discord.gg/h6Z69ZPPCz](https://discord.gg/h6Z69ZPPCz)
 
+![discord-avatar-128-ULDXD](https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6)
+
 ---
 
 # 🚀 Quick Setup (Recommended)
@@ -233,3 +235,5 @@ Edit `src/config.json` to customize behavior.
 Contributions are welcome, but please keep changes compatible with the existing configuration system. This repository is primarily for v2 development — coordinate on Discord (v2 server) for feature work and bug reports.
 
 [![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge\&logo=discord)](https://discord.gg/h6Z69ZPPCz) [![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge\&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
+
+<img width="1380" height="1253" alt="Gc" src="https://github.com/user-attachments/assets/d81e6298-8b68-4a6e-b56c-2adf525a572f" />
