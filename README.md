@@ -1,4 +1,3 @@
-````markdown
 # ⚡ Microsoft Rewards Script v2 – Beta Release <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="28" align="right" alt="Animated Discord Icon" />
 
 The **v2 version is currently in Beta**.  
@@ -238,4 +237,3 @@ Contributions are welcome, but please keep changes compatible with the existing 
 <div align="center" style="margin-top:18px;">
   <img src="https://github.com/user-attachments/assets/d81e6298-8b68-4a6e-b56c-2adf525a572f" alt="Microsoft Rewards Script Logo" width="160">
 </div>
-```
