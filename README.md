@@ -88,7 +88,7 @@ npm run setup
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 
 # 2. Configure accounts
