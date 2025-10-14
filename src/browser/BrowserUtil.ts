@@ -62,6 +62,22 @@ export default class BrowserUtil {
                     }
                 }
             } catch { /* ignore */ }
+            try {
+                const streakDialog = page.locator("[role=\"dialog\"], div[role=\"alert\"], div.ms-Dialog").filter({ hasText: /streak protection has run out/i })
+                const visibleDialog = await streakDialog.first().isVisible({ timeout: 200 }).catch(()=>false)
+                if (visibleDialog) {
+                    const closeButton = streakDialog.locator("button[aria-label*=\"close\" i], button:has-text(\"Close\"), button:has-text(\"Dismiss\"), button:has-text(\"Got it\"), button:has-text(\"OK\"), button:has-text(\"Ok\")").first()
+                    if (await closeButton.isVisible({ timeout: 200 }).catch(()=>false)) {
+                        await closeButton.click({ timeout: 500 }).catch(()=>{})
+                        this.bot.log(this.bot.isMobile, "DISMISS-ALL-MESSAGES", "Dismissed: Streak Protection Dialog Button")
+                        dismissedThisRound++
+                    } else {
+                        await page.keyboard.press("Escape").catch(()=>{})
+                        this.bot.log(this.bot.isMobile, "DISMISS-ALL-MESSAGES", "Dismissed: Streak Protection Dialog Escape")
+                        dismissedThisRound++
+                    }
+                }
+            } catch { /* ignore */ }
             if (dismissedThisRound === 0) break // nothing new dismissed -> stop early
         }
     }
