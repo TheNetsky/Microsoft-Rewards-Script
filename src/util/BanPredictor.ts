@@ -1,4 +1,4 @@
-import { RiskManager, RiskEvent } from "./RiskManager"
+import { RiskManager, RiskEvent } from './RiskManager'
 
 export interface BanPattern {
   name: string
@@ -11,7 +11,7 @@ export interface BanPattern {
 export interface BanPrediction {
   riskScore: number // 0-100
   confidence: number // 0-1
-  likelihood: "very-low" | "low" | "medium" | "high" | "critical"
+  likelihood: 'very-low' | 'low' | 'medium' | 'high' | 'critical'
   patterns: BanPattern[]
   recommendation: string
   preventiveActions: string[]
@@ -51,7 +51,7 @@ export class BanPredictor {
     this.detectPatterns(recentEvents, accountAgeDays, totalRuns)
 
     // Calculate base risk from RiskManager
-    let baseRisk = riskMetrics.score
+    const baseRisk = riskMetrics.score
 
     // Apply ML-style feature weights
     const featureScore = this.calculateFeatureScore(recentEvents, accountAgeDays, totalRuns)
@@ -70,15 +70,15 @@ export class BanPredictor {
     const confidence = this.calculateConfidence(recentEvents.length, this.history.length)
 
     // Determine likelihood tier
-    let likelihood: BanPrediction["likelihood"]
-    if (finalScore < 20) likelihood = "very-low"
-    else if (finalScore < 40) likelihood = "low"
-    else if (finalScore < 60) likelihood = "medium"
-    else if (finalScore < 80) likelihood = "high"
-    else likelihood = "critical"
+    let likelihood: BanPrediction['likelihood']
+    if (finalScore < 20) likelihood = 'very-low'
+    else if (finalScore < 40) likelihood = 'low'
+    else if (finalScore < 60) likelihood = 'medium'
+    else if (finalScore < 80) likelihood = 'high'
+    else likelihood = 'critical'
 
     // Generate recommendations
-    const recommendation = this.generateRecommendation(finalScore, detectedPatterns)
+    const recommendation = this.generateRecommendation(finalScore)
     const preventiveActions = this.generatePreventiveActions(detectedPatterns)
 
     return {
@@ -136,43 +136,43 @@ export class BanPredictor {
   private initializePatterns(): void {
     this.patterns = [
       {
-        name: "rapid-captcha-sequence",
-        description: "Multiple captchas in short timespan",
+        name: 'rapid-captcha-sequence',
+        description: 'Multiple captchas in short timespan',
         weight: 8,
         detected: false,
         evidence: []
       },
       {
-        name: "high-error-rate",
-        description: "Excessive errors (>50% in last hour)",
+        name: 'high-error-rate',
+        description: 'Excessive errors (>50% in last hour)',
         weight: 6,
         detected: false,
         evidence: []
       },
       {
-        name: "timeout-storm",
-        description: "Many consecutive timeouts",
+        name: 'timeout-storm',
+        description: 'Many consecutive timeouts',
         weight: 7,
         detected: false,
         evidence: []
       },
       {
-        name: "suspicious-timing",
-        description: "Activity at unusual hours or too consistent",
+        name: 'suspicious-timing',
+        description: 'Activity at unusual hours or too consistent',
         weight: 5,
         detected: false,
         evidence: []
       },
       {
-        name: "new-account-aggressive",
-        description: "Aggressive activity on young account",
+        name: 'new-account-aggressive',
+        description: 'Aggressive activity on young account',
         weight: 9,
         detected: false,
         evidence: []
       },
       {
-        name: "proxy-flagged",
-        description: "Proxy showing signs of blacklisting",
+        name: 'proxy-flagged',
+        description: 'Proxy showing signs of blacklisting',
         weight: 7,
         detected: false,
         evidence: []
@@ -190,15 +190,15 @@ export class BanPredictor {
       p.evidence = []
     }
 
-    const captchaEvents = events.filter(e => e.type === "captcha")
-    const errorEvents = events.filter(e => e.type === "error")
-    const timeoutEvents = events.filter(e => e.type === "timeout")
+    const captchaEvents = events.filter(e => e.type === 'captcha')
+    const errorEvents = events.filter(e => e.type === 'error')
+    const timeoutEvents = events.filter(e => e.type === 'timeout')
 
     // Pattern 1: Rapid captcha sequence
     if (captchaEvents.length >= 3) {
       const timeSpan = (events[events.length - 1]?.timestamp || 0) - (events[0]?.timestamp || 0)
       if (timeSpan < 1800000) { // 30 min
-        const p = this.patterns.find(pat => pat.name === "rapid-captcha-sequence")
+        const p = this.patterns.find(pat => pat.name === 'rapid-captcha-sequence')
         if (p) {
           p.detected = true
           p.evidence.push(`${captchaEvents.length} captchas in ${Math.round(timeSpan / 60000)}min`)
@@ -209,7 +209,7 @@ export class BanPredictor {
     // Pattern 2: High error rate
     const errorRate = errorEvents.length / Math.max(1, events.length)
     if (errorRate > 0.5) {
-      const p = this.patterns.find(pat => pat.name === "high-error-rate")
+      const p = this.patterns.find(pat => pat.name === 'high-error-rate')
       if (p) {
         p.detected = true
         p.evidence.push(`Error rate: ${(errorRate * 100).toFixed(1)}%`)
@@ -218,7 +218,7 @@ export class BanPredictor {
 
     // Pattern 3: Timeout storm
     if (timeoutEvents.length >= 5) {
-      const p = this.patterns.find(pat => pat.name === "timeout-storm")
+      const p = this.patterns.find(pat => pat.name === 'timeout-storm')
       if (p) {
         p.detected = true
         p.evidence.push(`${timeoutEvents.length} timeouts detected`)
@@ -229,17 +229,17 @@ export class BanPredictor {
     if (events.length > 5) {
       const hours = new Set(events.map(e => new Date(e.timestamp).getHours()))
       if (hours.size === 1) {
-        const p = this.patterns.find(pat => pat.name === "suspicious-timing")
+        const p = this.patterns.find(pat => pat.name === 'suspicious-timing')
         if (p) {
           p.detected = true
-          p.evidence.push("All activity in same hour of day")
+          p.evidence.push('All activity in same hour of day')
         }
       }
     }
 
     // Pattern 5: New account aggressive
     if (accountAgeDays < 7 && totalRuns > 10) {
-      const p = this.patterns.find(pat => pat.name === "new-account-aggressive")
+      const p = this.patterns.find(pat => pat.name === 'new-account-aggressive')
       if (p) {
         p.detected = true
         p.evidence.push(`Account ${accountAgeDays} days old with ${totalRuns} runs`)
@@ -247,9 +247,9 @@ export class BanPredictor {
     }
 
     // Pattern 6: Proxy flagged (heuristic: many ban hints)
-    const banHints = events.filter(e => e.type === "ban_hint")
+    const banHints = events.filter(e => e.type === 'ban_hint')
     if (banHints.length >= 2) {
-      const p = this.patterns.find(pat => pat.name === "proxy-flagged")
+      const p = this.patterns.find(pat => pat.name === 'proxy-flagged')
       if (p) {
         p.detected = true
         p.evidence.push(`${banHints.length} ban hints detected`)
@@ -326,17 +326,17 @@ export class BanPredictor {
   /**
    * Generate human-readable recommendation
    */
-  private generateRecommendation(score: number, patterns: BanPattern[]): string {
+  private generateRecommendation(score: number): string {
     if (score < 20) {
-      return "Safe to proceed. Risk is minimal."
+      return 'Safe to proceed. Risk is minimal.'
     } else if (score < 40) {
-      return "Low risk detected. Monitor for issues but safe to continue."
+      return 'Low risk detected. Monitor for issues but safe to continue.'
     } else if (score < 60) {
-      return "Moderate risk. Consider increasing delays and reviewing patterns."
+      return 'Moderate risk. Consider increasing delays and reviewing patterns.'
     } else if (score < 80) {
-      return "High risk! Strongly recommend pausing automation for 24-48 hours."
+      return 'High risk! Strongly recommend pausing automation for 24-48 hours.'
     } else {
-      return "CRITICAL RISK! Stop all automation immediately. Manual review required."
+      return 'CRITICAL RISK! Stop all automation immediately. Manual review required.'
     }
   }
 
@@ -346,33 +346,33 @@ export class BanPredictor {
   private generatePreventiveActions(patterns: BanPattern[]): string[] {
     const actions: string[] = []
 
-    if (patterns.some(p => p.name === "rapid-captcha-sequence")) {
-      actions.push("Increase search delays to 3-5 minutes minimum")
-      actions.push("Enable longer cool-down periods between activities")
+    if (patterns.some(p => p.name === 'rapid-captcha-sequence')) {
+      actions.push('Increase search delays to 3-5 minutes minimum')
+      actions.push('Enable longer cool-down periods between activities')
     }
 
-    if (patterns.some(p => p.name === "high-error-rate")) {
-      actions.push("Check proxy connectivity and health")
-      actions.push("Verify User-Agent and fingerprint configuration")
+    if (patterns.some(p => p.name === 'high-error-rate')) {
+      actions.push('Check proxy connectivity and health')
+      actions.push('Verify User-Agent and fingerprint configuration')
     }
 
-    if (patterns.some(p => p.name === "new-account-aggressive")) {
-      actions.push("Slow down activity on new accounts (max 1 run per day for first week)")
-      actions.push("Allow account to age naturally before heavy automation")
+    if (patterns.some(p => p.name === 'new-account-aggressive')) {
+      actions.push('Slow down activity on new accounts (max 1 run per day for first week)')
+      actions.push('Allow account to age naturally before heavy automation')
     }
 
-    if (patterns.some(p => p.name === "proxy-flagged")) {
-      actions.push("Rotate to different proxy immediately")
-      actions.push("Test proxy manually before resuming")
+    if (patterns.some(p => p.name === 'proxy-flagged')) {
+      actions.push('Rotate to different proxy immediately')
+      actions.push('Test proxy manually before resuming')
     }
 
-    if (patterns.some(p => p.name === "suspicious-timing")) {
-      actions.push("Randomize execution times across different hours")
-      actions.push("Enable humanization.allowedWindows with varied schedules")
+    if (patterns.some(p => p.name === 'suspicious-timing')) {
+      actions.push('Randomize execution times across different hours')
+      actions.push('Enable humanization.allowedWindows with varied schedules')
     }
 
     if (actions.length === 0) {
-      actions.push("Continue monitoring but no immediate action needed")
+      actions.push('Continue monitoring but no immediate action needed')
     }
 
     return actions

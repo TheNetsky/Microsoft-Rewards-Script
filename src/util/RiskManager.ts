@@ -1,7 +1,7 @@
-import { AdaptiveThrottler } from "./AdaptiveThrottler"
+import { AdaptiveThrottler } from './AdaptiveThrottler'
 
 export interface RiskEvent {
-  type: "captcha" | "error" | "timeout" | "ban_hint" | "success"
+  type: 'captcha' | 'error' | 'timeout' | 'ban_hint' | 'success'
   timestamp: number
   severity: number // 0-10, higher = worse
   context?: string
@@ -9,7 +9,7 @@ export interface RiskEvent {
 
 export interface RiskMetrics {
   score: number // 0-100, higher = riskier
-  level: "safe" | "elevated" | "high" | "critical"
+  level: 'safe' | 'elevated' | 'high' | 'critical'
   recommendation: string
   delayMultiplier: number
 }
@@ -32,7 +32,7 @@ export class RiskManager {
   /**
    * Record a risk event (captcha, error, success, etc.)
    */
-  recordEvent(type: RiskEvent["type"], severity: number, context?: string): void {
+  recordEvent(type: RiskEvent['type'], severity: number, context?: string): void {
     const event: RiskEvent = {
       type,
       timestamp: Date.now(),
@@ -46,9 +46,9 @@ export class RiskManager {
     }
 
     // Feed success/error into adaptive throttler
-    if (type === "success") {
+    if (type === 'success') {
       this.throttler.record(true)
-    } else if (["error", "captcha", "timeout", "ban_hint"].includes(type)) {
+    } else if (['error', 'captcha', 'timeout', 'ban_hint'].includes(type)) {
       this.throttler.record(false)
     }
 
@@ -69,8 +69,8 @@ export class RiskManager {
     if (recentEvents.length === 0) {
       return {
         score: 0,
-        level: "safe",
-        recommendation: "Normal operation",
+        level: 'safe',
+        recommendation: 'Normal operation',
         delayMultiplier: 1.0
       }
     }
@@ -95,32 +95,32 @@ export class RiskManager {
     const frequencyPenalty = Math.min(30, eventRate * 5)
 
     // Bonus penalty for specific patterns
-    const captchaCount = recentEvents.filter(e => e.type === "captcha").length
-    const banHintCount = recentEvents.filter(e => e.type === "ban_hint").length
+    const captchaCount = recentEvents.filter(e => e.type === 'captcha').length
+    const banHintCount = recentEvents.filter(e => e.type === 'ban_hint').length
     const patternPenalty = (captchaCount * 15) + (banHintCount * 25)
 
     const finalScore = Math.min(100, baseScore + frequencyPenalty + patternPenalty)
 
     // Determine risk level
-    let level: RiskMetrics["level"]
+    let level: RiskMetrics['level']
     let recommendation: string
     let delayMultiplier: number
 
     if (finalScore < 20) {
-      level = "safe"
-      recommendation = "Normal operation"
+      level = 'safe'
+      recommendation = 'Normal operation'
       delayMultiplier = 1.0
     } else if (finalScore < 40) {
-      level = "elevated"
-      recommendation = "Minor issues detected. Increasing delays slightly."
+      level = 'elevated'
+      recommendation = 'Minor issues detected. Increasing delays slightly.'
       delayMultiplier = 1.5
     } else if (finalScore < 70) {
-      level = "high"
-      recommendation = "Significant risk detected. Applying heavy throttling."
+      level = 'high'
+      recommendation = 'Significant risk detected. Applying heavy throttling.'
       delayMultiplier = 2.5
     } else {
-      level = "critical"
-      recommendation = "CRITICAL: High ban risk. Consider stopping or manual review."
+      level = 'critical'
+      recommendation = 'CRITICAL: High ban risk. Consider stopping or manual review.'
       delayMultiplier = 4.0
     }
 

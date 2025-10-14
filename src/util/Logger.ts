@@ -71,13 +71,10 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     // Access logging config with fallback for backward compatibility
     const configAny = configData as unknown as Record<string, unknown>
-    const loggingConfig = configAny.logging || configData
-    const loggingConfigAny = loggingConfig as unknown as Record<string, unknown>
-    
-    const logExcludeFunc = Array.isArray(loggingConfigAny.excludeFunc) ? loggingConfigAny.excludeFunc : 
-                          Array.isArray(loggingConfigAny.logExcludeFunc) ? loggingConfigAny.logExcludeFunc : []
+    const logging = configAny.logging as { excludeFunc?: string[]; logExcludeFunc?: string[] } | undefined
+    const logExcludeFunc = logging?.excludeFunc ?? (configData as { logExcludeFunc?: string[] }).logExcludeFunc ?? []
 
-    if (Array.isArray(logExcludeFunc) && logExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
+    if (logExcludeFunc.some((x: string) => x.toLowerCase() === title.toLowerCase())) {
         return
     }
 
@@ -115,18 +112,46 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
         }
     } catch { /* ignore */ }
 
-    // Console output with better formatting
-    const typeIndicator = type === 'error' ? '✗' : type === 'warn' ? '⚠' : '●'
+    // Console output with better formatting and contextual emojis
+    const typeIndicator = type === 'error' ? '✗' : type === 'warn' ? '⚠' : '✓'
     const platformColor = isMobile === 'main' ? chalk.cyan : isMobile ? chalk.blue : chalk.magenta
     const typeColor = type === 'error' ? chalk.red : type === 'warn' ? chalk.yellow : chalk.green
+    
+    // Add contextual emoji based on title/message (priority order matters)
+    const titleLower = title.toLowerCase()
+    const msgLower = message.toLowerCase()
+    
+    const emojiMap: Array<[RegExp, string]> = [
+        [/security|compromised/i, '�'],
+        [/ban|suspend/i, '�'],
+        [/error/i, '❌'],
+        [/warn/i, '⚠️'],
+        [/success|complet/i, '✅'],
+        [/login/i, '🔐'],
+        [/point/i, '💰'],
+        [/search/i, '�'],
+        [/activity|quiz|poll/i, '🎯'],
+        [/browser/i, '🌐'],
+        [/main/i, '⚙️']
+    ]
+    
+    let emoji = ''
+    for (const [pattern, symbol] of emojiMap) {
+        if (pattern.test(titleLower) || pattern.test(msgLower)) {
+            emoji = symbol
+            break
+        }
+    }
+    
+    const emojiPart = emoji ? emoji + ' ' : ''
     
     const formattedStr = [
         chalk.gray(`[${currentTime}]`),
         chalk.gray(`[${process.pid}]`),
-        typeColor(`${typeIndicator} ${type.toUpperCase()}`),
+        typeColor(`${typeIndicator}`),
         platformColor(`[${platformText}]`),
         chalk.bold(`[${title}]`),
-        redact(message)
+        emojiPart + redact(message)
     ].join(' ')
 
     const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null

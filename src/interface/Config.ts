@@ -2,6 +2,8 @@ export interface Config {
     baseURL: string;
     sessionPath: string;
     headless: boolean;
+    browser?: ConfigBrowser; // Optional nested browser config
+    fingerprinting?: ConfigFingerprinting; // Optional nested fingerprinting config
     parallel: boolean;
     runOnZeroPoints: boolean;
     clusters: number;
@@ -36,6 +38,15 @@ export interface Config {
 export interface ConfigSaveFingerprint {
     mobile: boolean;
     desktop: boolean;
+}
+
+export interface ConfigBrowser {
+    headless?: boolean;
+    globalTimeout?: number | string;
+}
+
+export interface ConfigFingerprinting {
+    saveFingerprint?: ConfigSaveFingerprint;
 }
 
 export interface ConfigSearchSettings {
@@ -200,7 +211,7 @@ export interface ConfigAnalytics {
 
 export interface ConfigQueryDiversity {
     enabled?: boolean; // use multi-source query generation
-    sources?: Array<"google-trends" | "reddit" | "news" | "wikipedia" | "local-fallback">; // which sources to use
+    sources?: Array<'google-trends' | 'reddit' | 'news' | 'wikipedia' | 'local-fallback'>; // which sources to use
     maxQueriesPerSource?: number; // limit per source
     cacheMinutes?: number; // cache duration
 }

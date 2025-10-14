@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios from 'axios'
 
 export interface QuerySource {
   name: string
@@ -7,7 +7,7 @@ export interface QuerySource {
 }
 
 export interface QueryDiversityConfig {
-  sources: Array<"google-trends" | "reddit" | "news" | "wikipedia" | "local-fallback">
+  sources: Array<'google-trends' | 'reddit' | 'news' | 'wikipedia' | 'local-fallback'>
   deduplicate: boolean
   mixStrategies: boolean // Mix different source types in same session
   maxQueriesPerSource: number
@@ -24,7 +24,7 @@ export class QueryDiversityEngine {
 
   constructor(config?: Partial<QueryDiversityConfig>) {
     this.config = {
-      sources: config?.sources || ["google-trends", "reddit", "local-fallback"],
+      sources: config?.sources || ['google-trends', 'reddit', 'local-fallback'],
       deduplicate: config?.deduplicate !== false,
       mixStrategies: config?.mixStrategies !== false,
       maxQueriesPerSource: config?.maxQueriesPerSource || 10,
@@ -73,19 +73,19 @@ export class QueryDiversityEngine {
     let queries: string[] = []
 
     switch (source) {
-      case "google-trends":
+      case 'google-trends':
         queries = await this.fetchGoogleTrends()
         break
-      case "reddit":
+      case 'reddit':
         queries = await this.fetchReddit()
         break
-      case "news":
+      case 'news':
         queries = await this.fetchNews()
         break
-      case "wikipedia":
+      case 'wikipedia':
         queries = await this.fetchWikipedia()
         break
-      case "local-fallback":
+      case 'local-fallback':
         queries = this.getLocalFallback(20)
         break
       default:
@@ -105,11 +105,11 @@ export class QueryDiversityEngine {
    */
   private async fetchGoogleTrends(): Promise<string[]> {
     try {
-      const response = await axios.get("https://trends.google.com/trends/api/dailytrends?geo=US", {
+      const response = await axios.get('https://trends.google.com/trends/api/dailytrends?geo=US', {
         timeout: 10000
       })
 
-      const data = response.data.toString().replace(")]}',", "")
+      const data = response.data.toString().replace(')]}\',', '')
       const parsed = JSON.parse(data)
 
       const queries: string[] = []
@@ -132,13 +132,13 @@ export class QueryDiversityEngine {
    */
   private async fetchReddit(): Promise<string[]> {
     try {
-      const subreddits = ["news", "worldnews", "todayilearned", "askreddit", "technology"]
+      const subreddits = ['news', 'worldnews', 'todayilearned', 'askreddit', 'technology']
       const randomSub = subreddits[Math.floor(Math.random() * subreddits.length)]
 
       const response = await axios.get(`https://www.reddit.com/r/${randomSub}/hot.json?limit=15`, {
         timeout: 10000,
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       })
 
@@ -169,9 +169,9 @@ export class QueryDiversityEngine {
         return this.fetchNewsFallback()
       }
 
-      const response = await axios.get("https://newsapi.org/v2/top-headlines", {
+      const response = await axios.get('https://newsapi.org/v2/top-headlines', {
         params: {
-          country: "us",
+          country: 'us',
           pageSize: 15,
           apiKey
         },
@@ -190,10 +190,10 @@ export class QueryDiversityEngine {
    */
   private async fetchNewsFallback(): Promise<string[]> {
     try {
-      const response = await axios.get("https://www.bbc.com/news", {
+      const response = await axios.get('https://www.bbc.com/news', {
         timeout: 10000,
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       })
 
@@ -206,7 +206,7 @@ export class QueryDiversityEngine {
       }
 
       return matches
-        .map(m => m[1]?.replace(/<[^>]+>/g, "").trim())
+        .map(m => m[1]?.replace(/<[^>]+>/g, '').trim())
         .filter((t: string | undefined) => t && t.length > 10 && t.length < 100)
         .slice(0, 10) as string[]
     } catch {
@@ -219,13 +219,13 @@ export class QueryDiversityEngine {
    */
   private async fetchWikipedia(): Promise<string[]> {
     try {
-      const response = await axios.get("https://en.wikipedia.org/w/api.php", {
+      const response = await axios.get('https://en.wikipedia.org/w/api.php', {
         params: {
-          action: "query",
-          list: "random",
+          action: 'query',
+          list: 'random',
           rnnamespace: 0,
           rnlimit: 15,
-          format: "json"
+          format: 'json'
         },
         timeout: 10000
       })
@@ -242,36 +242,36 @@ export class QueryDiversityEngine {
    */
   private getLocalFallback(count: number): string[] {
     const fallback = [
-      "weather forecast",
-      "news today",
-      "stock market",
-      "sports scores",
-      "movie reviews",
-      "recipes",
-      "travel destinations",
-      "health tips",
-      "technology news",
-      "best restaurants near me",
-      "how to cook pasta",
-      "python tutorial",
-      "world events",
-      "climate change",
-      "electric vehicles",
-      "space exploration",
-      "artificial intelligence",
-      "cryptocurrency",
-      "gaming news",
-      "fashion trends",
-      "fitness workout",
-      "home improvement",
-      "gardening tips",
-      "pet care",
-      "book recommendations",
-      "music charts",
-      "streaming shows",
-      "historical events",
-      "science discoveries",
-      "education resources"
+      'weather forecast',
+      'news today',
+      'stock market',
+      'sports scores',
+      'movie reviews',
+      'recipes',
+      'travel destinations',
+      'health tips',
+      'technology news',
+      'best restaurants near me',
+      'how to cook pasta',
+      'python tutorial',
+      'world events',
+      'climate change',
+      'electric vehicles',
+      'space exploration',
+      'artificial intelligence',
+      'cryptocurrency',
+      'gaming news',
+      'fashion trends',
+      'fitness workout',
+      'home improvement',
+      'gardening tips',
+      'pet care',
+      'book recommendations',
+      'music charts',
+      'streaming shows',
+      'historical events',
+      'science discoveries',
+      'education resources'
     ]
 
     return this.shuffleArray(fallback).slice(0, count)
@@ -312,10 +312,10 @@ export class QueryDiversityEngine {
    * Guess which source a query came from (basic heuristic)
    */
   private guessSource(query: string): string {
-    if (/^[A-Z]/.test(query) && query.includes(" ")) return "news"
-    if (query.length > 80) return "reddit"
-    if (/how to|what is|why/i.test(query)) return "local"
-    return "trends"
+    if (/^[A-Z]/.test(query) && query.includes(' ')) return 'news'
+    if (query.length > 80) return 'reddit'
+    if (/how to|what is|why/i.test(query)) return 'local'
+    return 'trends'
   }
 
   /**

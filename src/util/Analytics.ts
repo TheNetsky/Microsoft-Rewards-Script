@@ -1,5 +1,5 @@
-import fs from "fs"
-import path from "path"
+import fs from 'fs'
+import path from 'path'
 
 export interface DailyMetrics {
   date: string // YYYY-MM-DD
@@ -29,7 +29,7 @@ export interface AccountHistory {
 }
 
 export interface AnalyticsSummary {
-  period: string // e.g., "last-7-days", "last-30-days", "all-time"
+  period: string // e.g., 'last-7-days', 'last-30-days', 'all-time'
   accounts: AccountHistory[]
   globalStats: {
     totalPoints: number
@@ -46,7 +46,7 @@ export interface AnalyticsSummary {
 export class Analytics {
   private dataDir: string
 
-  constructor(baseDir: string = "analytics") {
+  constructor(baseDir: string = 'analytics') {
     this.dataDir = path.join(process.cwd(), baseDir)
     if (!fs.existsSync(this.dataDir)) {
       fs.mkdirSync(this.dataDir, { recursive: true })
@@ -63,9 +63,9 @@ export class Analytics {
     const filePath = path.join(this.dataDir, fileName)
 
     try {
-      fs.writeFileSync(filePath, JSON.stringify(metrics, null, 2), "utf-8")
+      fs.writeFileSync(filePath, JSON.stringify(metrics, null, 2), 'utf-8')
     } catch (error) {
-      console.warn(`Failed to save analytics for ${email}:`, error)
+      console.error(`Failed to save metrics for ${metrics.email}:`, error)
     }
   }
 
@@ -84,7 +84,7 @@ export class Analytics {
         avgPointsPerDay: 0,
         avgExecutionTime: 0,
         successRate: 1.0,
-        lastRunDate: "never",
+        lastRunDate: 'never',
         banHistory: [],
         riskTrend: []
       }
@@ -99,14 +99,14 @@ export class Analytics {
     for (const file of files) {
       const filePath = path.join(this.dataDir, file)
       try {
-        const data: DailyMetrics = JSON.parse(fs.readFileSync(filePath, "utf-8"))
+        const data: DailyMetrics = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
         totalPoints += data.pointsEarned
         totalTime += data.executionTimeMs
         if (data.successRate > 0.5) successCount++
         if (data.banned) {
-          banHistory.push({ date: data.date, reason: "detected" })
+          banHistory.push({ date: data.date, reason: 'detected' })
         }
-        if (typeof data.riskScore === "number") {
+        if (typeof data.riskScore === 'number') {
           riskScores.push(data.riskScore)
         }
       } catch {
@@ -116,7 +116,7 @@ export class Analytics {
 
     const totalRuns = files.length
     const lastFile = files[files.length - 1]
-    const lastRunDate = lastFile ? lastFile.split("_")[1]?.replace(".json", "") || "unknown" : "unknown"
+    const lastRunDate = lastFile ? lastFile.split('_')[1]?.replace('.json', '') || 'unknown' : 'unknown'
 
     return {
       email,
@@ -145,9 +145,9 @@ export class Analytics {
     const totalPoints = accounts.reduce((sum, a) => sum + a.totalPointsEarned, 0)
     const avgSuccess = accounts.reduce((sum, a) => sum + a.successRate, 0) / Math.max(1, accounts.length)
 
-    let mostProductive = ""
+    let mostProductive = ''
     let maxPoints = 0
-    let mostRisky = ""
+    let mostRisky = ''
     let maxRisk = 0
 
     for (const acc of accounts) {
@@ -168,8 +168,8 @@ export class Analytics {
       globalStats: {
         totalPoints,
         avgSuccessRate: Number(avgSuccess.toFixed(2)),
-        mostProductiveAccount: mostProductive || "none",
-        mostRiskyAccount: mostRisky || "none"
+        mostProductiveAccount: mostProductive || 'none',
+        mostRiskyAccount: mostRisky || 'none'
       }
     }
   }
@@ -182,17 +182,17 @@ export class Analytics {
     const lines: string[] = []
 
     lines.push(`# Analytics Summary (${summary.period})`)
-    lines.push("")
-    lines.push("## Global Stats")
+    lines.push('')
+    lines.push('## Global Stats')
     lines.push(`- Total Points: ${summary.globalStats.totalPoints}`)
     lines.push(`- Avg Success Rate: ${(summary.globalStats.avgSuccessRate * 100).toFixed(1)}%`)
     lines.push(`- Most Productive: ${summary.globalStats.mostProductiveAccount}`)
     lines.push(`- Most Risky: ${summary.globalStats.mostRiskyAccount}`)
-    lines.push("")
-    lines.push("## Per-Account Breakdown")
-    lines.push("")
-    lines.push("| Account | Runs | Total Points | Avg/Day | Success Rate | Last Run | Bans |")
-    lines.push("|---------|------|--------------|---------|--------------|----------|------|")
+    lines.push('')
+    lines.push('## Per-Account Breakdown')
+    lines.push('')
+    lines.push('| Account | Runs | Total Points | Avg/Day | Success Rate | Last Run | Bans |')
+    lines.push('|---------|------|--------------|---------|--------------|----------|------|')
 
     for (const acc of summary.accounts) {
       const successPct = (acc.successRate * 100).toFixed(0)
@@ -202,7 +202,7 @@ export class Analytics {
       )
     }
 
-    return lines.join("\n")
+    return lines.join('\n')
   }
 
   /**
@@ -213,7 +213,7 @@ export class Analytics {
     const cutoff = Date.now() - (retentionDays * 24 * 60 * 60 * 1000)
 
     for (const file of files) {
-      if (!file.endsWith(".json")) continue
+      if (!file.endsWith('.json')) continue
       const filePath = path.join(this.dataDir, file)
       try {
         const stats = fs.statSync(filePath)
@@ -227,7 +227,7 @@ export class Analytics {
   }
 
   private sanitizeEmail(email: string): string {
-    return email.replace(/[^a-zA-Z0-9@._-]/g, "_")
+    return email.replace(/[^a-zA-Z0-9@._-]/g, '_')
   }
 
   private getAccountFiles(sanitizedEmail: string, days: number): string[] {
@@ -236,9 +236,9 @@ export class Analytics {
     cutoffDate.setDate(cutoffDate.getDate() - days)
 
     return files
-      .filter((f: string) => f.startsWith(sanitizedEmail) && f.endsWith(".json"))
+      .filter((f: string) => f.startsWith(sanitizedEmail) && f.endsWith('.json'))
       .filter((f: string) => {
-        const datePart = f.split("_")[1]?.replace(".json", "")
+        const datePart = f.split('_')[1]?.replace('.json', '')
         if (!datePart) return false
         const fileDate = new Date(datePart)
         return fileDate >= cutoffDate
@@ -251,8 +251,8 @@ export class Analytics {
     const emailSet = new Set<string>()
 
     for (const file of files) {
-      if (!file.endsWith(".json")) continue
-      const parts = file.split("_")
+      if (!file.endsWith('.json')) continue
+      const parts = file.split('_')
       if (parts.length >= 2) {
         const email = parts[0]
         if (email) emailSet.add(email)
