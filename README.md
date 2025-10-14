@@ -58,6 +58,40 @@ All actions simulate natural human behavior with **randomized delays, mouse move
 
 ---
 
+## 🧠 NEW: Intelligent Features (v2.1.5+)
+
+### 🛡️ Risk-Aware Throttling
+- **Real-time risk assessment** based on captchas, errors, timeouts
+- **Dynamic delay adjustment** (1x → 4x when risk is high)
+- **Automatic cool-down periods** after suspicious activity
+- **Ban prediction** using ML-style pattern analysis
+
+### 📊 Performance Dashboard
+- Track **points/day**, **success rates**, **execution times**
+- **Markdown reports** for easy analysis
+- **Historical trends** and account health monitoring
+- Lightweight JSON storage (no database needed)
+
+### 🔍 Query Diversity Engine
+- **Multi-source queries**: Google Trends, Reddit, News, Wikipedia
+- **Pattern breaking**: Mix different topics across sessions
+- **Smart deduplication** and query rotation
+- **Reduces detection** by avoiding repetitive searches
+
+### ✅ Config Validator
+- **Pre-flight checks** before execution
+- Detects **common mistakes** (empty passwords, invalid proxies, etc.)
+- **Security warnings** (shared proxies, weak configs)
+- **Helpful suggestions** for optimization
+
+### 🧪 Dry-Run Mode
+- **Test configurations** without touching accounts
+- **Execution time estimates**
+- **Debug issues** safely
+- **Validate changes** before going live
+
+---
+
 ## ⚡ Quick Start
 
 ### 🚀 Automated Setup (Recommended)

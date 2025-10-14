@@ -223,7 +223,60 @@ Auto-update behavior after a run.
 | Use daily schedule | Set `schedule.enabled=true` and adjust `time24` + `timeZone`. |
 
 ---
+## NEW INTELLIGENT FEATURES
+
+### riskManagement
+Dynamic risk assessment and ban prediction.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| enabled | boolean | true | Enable risk-aware throttling. |
+| autoAdjustDelays | boolean | true | Automatically increase delays when captchas/errors are detected. |
+| stopOnCritical | boolean | false | Stop execution if risk score exceeds threshold. |
+| banPrediction | boolean | true | Enable ML-style pattern analysis to predict ban risk. |
+| riskThreshold | number | 75 | Risk score (0-100) above which bot pauses or alerts. |
+
+**How it works:** Monitors captchas, errors, timeouts, and account patterns. Dynamically adjusts delays (e.g., 1x → 2.5x) and warns you before bans happen.
+
+---
+### analytics
+Performance dashboard and metrics tracking.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| enabled | boolean | true | Track points earned, success rates, execution times. |
+| retentionDays | number | 30 | How long to keep analytics data. |
+| exportMarkdown | boolean | true | Generate human-readable markdown reports. |
+| webhookSummary | boolean | false | Send analytics summary via webhook. |
+
+**Output location:** `analytics/` folder (JSON files per account per day).
+
+---
+### queryDiversity
+Multi-source search query generation.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| enabled | boolean | true | Use diverse sources instead of just Google Trends. |
+| sources | array | `["google-trends", "reddit", "local-fallback"]` | Which sources to query (google-trends, reddit, news, wikipedia, local-fallback). |
+| maxQueriesPerSource | number | 10 | Max queries to fetch per source. |
+| cacheMinutes | number | 30 | Cache duration to avoid hammering APIs. |
+
+**Why?** Reduces patterns by mixing Reddit posts, news headlines, Wikipedia topics instead of predictable Google Trends.
+
+---
+### dryRun
+Test mode: simulate execution without actually running tasks.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| dryRun | boolean | false | When true, logs actions but doesn't execute (useful for testing config). |
+
+**Use case:** Validate new config changes, estimate execution time, debug issues without touching accounts.
+
+---
 ## Changelog Notes
+- **v2.2.0**: Added risk-aware throttling, analytics dashboard, query diversity, ban prediction, dry-run mode.
 - Removed live webhook streaming complexity; now simpler logging.
 - Centralized redaction logic under `logging.redactEmails`.
 
