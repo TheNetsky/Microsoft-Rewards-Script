@@ -19,7 +19,7 @@
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 
-[![Version](https://img.shields.io/badge/Version-2.1.0-9B59B6?style=for-the-badge&labelColor=3498DB)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
+[![Version](https://img.shields.io/badge/Version-2.1.5-9B59B6?style=for-the-badge&labelColor=3498DB)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
 [![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](./LICENSE)
 
 </div>
@@ -289,15 +289,39 @@ Edit `src/config.jsonc` to customize behavior:
 
 ---
 
-## 📝 License & Credits
+## 📝 License
 
-**ISC License** — See [LICENSE](./LICENSE) for details
+This project is licensed under the **ISC License** — a permissive open-source license.
 
-**Built with:**
-- [Playwright](https://playwright.dev/) — Browser automation
-- [Rebrowser](https://github.com/rebrowser/rebrowser-playwright) — Anti-detection enhancements
-- [Cheerio](https://cheerio.js.org/) — HTML parsing
-- [Luxon](https://moment.github.io/luxon/) — Date/time handling
+See [LICENSE](./LICENSE) for the full legal text.
+
+### ⚠️ Important Disclaimers
+
+**Please read [NOTICE](./NOTICE) for critical information:**
+
+- ⚠️ **Terms of Service:** Using automation violates Microsoft's ToS
+- ⚠️ **Account Risk:** May result in suspension or permanent ban
+- ⚠️ **Educational Purpose:** This software is for learning purposes only
+- ⚠️ **No Warranty:** Provided "AS IS" without any guarantees
+- ⚠️ **No Liability:** Authors are not responsible for any consequences
+
+**By using this software, you accept full responsibility for your actions.**
+
+---
+
+### 🛠️ Built With
+
+**Core Technologies:**
+- [Playwright](https://playwright.dev/) — Browser automation framework
+- [Rebrowser](https://github.com/rebrowser/rebrowser-playwright) — Anti-fingerprinting extensions
+- [TypeScript](https://www.typescriptlang.org/) — Type-safe JavaScript
+- [Node.js](https://nodejs.org/) — JavaScript runtime
+
+**Key Libraries:**
+- [Cheerio](https://cheerio.js.org/) — Fast HTML parsing
+- [Luxon](https://moment.github.io/luxon/) — Modern date/time handling
+- [Axios](https://axios-http.com/) — HTTP client with proxy support
+- [fingerprint-generator](https://www.npmjs.com/package/fingerprint-generator) — Browser fingerprint spoofing
 
 ---
 
