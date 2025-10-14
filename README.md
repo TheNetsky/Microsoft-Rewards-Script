@@ -1,7 +1,5 @@
 <div align="center">
 
-# 🎯 Microsoft Rewards Script V2
-
 ```
  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
  ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
@@ -11,228 +9,305 @@
  ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
 ```
 
-**🤖 Intelligent automation meets Microsoft Rewards**  
-*Earn points effortlessly while you sleep*
-[Legacy-1.5.3](https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/tree/Legacy-1.5.3)
+# 🎯 Microsoft Rewards Automation — V2
+
+**Automate your Microsoft Rewards daily tasks with intelligent browser automation**  
+*Earn points while you sleep — naturally and safely* 💤
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 
-<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
-  <img alt="Contributors" src="https://img.shields.io/github/contributors/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&label=Contributors&color=FF6B6B&labelColor=4ECDC4" />
-</a>
-<img alt="Stars" src="https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=FFD93D&labelColor=6BCF7F" />
-<img alt="Version" src="https://img.shields.io/badge/Version-2.0-9B59B6?style=for-the-badge&labelColor=3498DB" />
-
-</div>
-
----
-
-<div align="center">
-
-## 🚀 **Big Update Alert — V2 is here!**
-
-<table>
-<tr>
-<td width="33%" align="center">
-<img src="https://github.com/TheNetsky.png" width="80" style="border-radius: 50%;" /><br />
-<strong><a href="https://github.com/TheNetsky/">TheNetsky</a></strong> 🙌<br />
-<em>Foundation Architect</em><br />
-<sub>Building the massive foundation</sub>
-</td>
-<td width="33%" align="center">
-<img src="https://github.com/mgrimace.png" width="80" style="border-radius: 50%;" /><br />
-<strong><a href="https://github.com/mgrimace">Mgrimace</a></strong> 🔥<br />
-<em>Active Developer</em><br />
-<sub>Regular updates & <a href="./docs/ntfy.md">NTFY mode</a></sub>
-</td>
-<td width="33%" align="center">
-<img src="https://github.com/LightZirconite.png" width="80" style="border-radius: 50%;" /><br />
-<strong><a href="https://github.com/LightZirconite">Light</a></strong> ✨<br />
-<em>V2 Mastermind</em><br />
-<sub>Massive feature overhaul</sub>
-</td>
-</tr>
-</table>
-
-**💡 Welcome to V2 — There are honestly so many changes that even I can't list them all!**  
-*Trust me, you've got a **massive upgrade** in front of you. Enjoy the ride!* 🎢
+[![Version](https://img.shields.io/badge/Version-2.1.0-9B59B6?style=for-the-badge&labelColor=3498DB)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
+[![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](./LICENSE)
 
 </div>
 
 ---
 
-## 🎯 **What Does This Script Do?**
+## 🎯 What Does This Do?
+
+This TypeScript-based automation **logs into your Microsoft Rewards account** and automatically completes daily activities to earn points:
 
 <div align="center">
 
-**Automatically earn Microsoft Rewards points by completing daily tasks:**
-- 🔍 **Daily Searches** — Desktop & Mobile Bing searches  
-- 📅 **Daily Set** — Complete daily quizzes and activities  
-- 🎁 **Promotions** — Bonus point opportunities  
-- 🃏 **Punch Cards** — Multi-day reward challenges  
-- ✅ **Daily Check-in** — Simple daily login rewards  
-- 📚 **Read to Earn** — News article reading points  
+| Activity | Description | Points |
+|----------|-------------|--------|
+| 🔍 **Bing Searches** | Desktop & mobile browser searches | ~150 pts/day |
+| 📅 **Daily Set** | Quizzes, polls, click-through tasks | ~30-50 pts |
+| 🎁 **Promotions** | Bonus offers and promotional activities | Variable |
+| 🃏 **Punch Cards** | Multi-step challenges for bonus points | Variable |
+| ✅ **Daily Check-In** | Mobile app check-in | 5-15 pts |
+| 📚 **Read to Earn** | Browse articles in Microsoft Start | Variable |
 
-*All done automatically while you sleep! 💤*
+**Estimated daily earnings:** 150-300+ points per account (varies by region)
 
 </div>
+
+### 🤖 How It Works
+
+1. **Launches real browser** via Playwright (Chrome-based)
+2. **Logs in** to your Microsoft account (supports 2FA/TOTP)
+3. **Navigates** to Microsoft Rewards dashboard
+4. **Detects** available tasks (Daily Set, searches, etc.)
+5. **Completes** each activity with human-like behavior
+6. **Reports** total points earned
+
+All actions simulate natural human behavior with **randomized delays, mouse movements, and scrolling** to avoid detection.
 
 ---
 
 ## ⚡ Quick Start
 
-```bash
-# 🪟 Windows — One command setup
-setup/setup.bat
+### 🚀 Automated Setup (Recommended)
 
-# 🐧 Linux/macOS/WSL  
+Run the setup wizard to get started in seconds:
+
+```bash
+# Windows
+setup\setup.bat
+
+# Linux/macOS/WSL
 bash setup/setup.sh
 
-# 🌍 Any platform
+# Universal (any platform)
 npm run setup
 ```
 
-**That's it!** The setup wizard configures accounts, installs dependencies, builds the project, and starts earning points.
+The wizard will:
+- ✅ Create `accounts.json` from your Microsoft credentials
+- ✅ Install dependencies and build the project
+- ✅ Optionally run your first automation
+
+### 🛠️ Manual Setup
 
 <details>
-<summary><strong>📖 Manual Setup</strong></summary>
+<summary><strong>Click to expand manual steps</strong></summary>
 
 ```bash
-# 1️⃣ Configure your Microsoft accounts
+# 1. Configure accounts
 cp src/accounts.example.json src/accounts.json
-# Edit accounts.json with your credentials
+# Edit accounts.json with your email/password
 
-# 2️⃣ Install & Build
-npm install && npm run build
+# 2. Install dependencies
+npm install
 
-# 3️⃣ Run once or start scheduler
-npm start                    # Single run
-npm run start:schedule       # Automated daily runs
+# 3. Build TypeScript
+npm run build
+
+# 4. Run automation
+npm start
 ```
 
 </details>
 
 ---
 
-## 📑 Documentation
-
-| Topic | Description |
-|-------|-------------|
-| **[🚀 Getting Started](./docs/getting-started.md)** | Complete setup guide from zero to running |
-| **[👤 Accounts & 2FA](./docs/accounts.md)** | Microsoft account setup + TOTP authentication |
-| **[🐳 Docker](./docs/docker.md)** | Containerized deployment with slim headless image |
-| **[⏰ Scheduling](./docs/schedule.md)** | Automated daily runs with built-in scheduler |
-| **[🛠️ Diagnostics](./docs/diagnostics.md)** | Troubleshooting, error capture, and logs |
-| **[⚙️ Configuration](./docs/config.md)** | Full config.json reference |
-
-**[📚 Full Documentation Index →](./docs/index.md)**
-
-## 🎮 Commands
-
-```bash
-# 🚀 Run the automation once
-npm start
-
-# � Start automated daily scheduler  
-npm run start:schedule
-
-# 💳 Manual points redemption mode
-npm start -- -buy your@email.com
-
-# � Deploy with Docker
-docker compose up -d
-
-# � Development mode
-npm run dev
-```
-
----
-
-## ✨ Key Features
+## 📋 Core Features
 
 <div align="center">
 
 | Feature | Description |
 |---------|-------------|
-| **🔐 Multi-Account** | Support multiple Microsoft accounts with 2FA |
-| **🤖 Human-like** | Natural delays, scrolling, clicking patterns |
-| **📱 Cross-Platform** | Desktop + Mobile search automation |
-| **🎯 Smart Activities** | Quizzes, polls, daily sets, punch cards |
+| **🔐 Multi-Account Support** | Run multiple Microsoft accounts in sequence or parallel |
+| **🎭 Human-Like Behavior** | Randomized delays, mouse movements, scrolling patterns |
+| **🔄 Session Persistence** | Saves cookies/fingerprints to avoid repeated logins |
+| **📱 Desktop + Mobile** | Automates both desktop and mobile search quotas |
+| **🧩 Activity Detection** | Automatically finds and completes all available tasks |
+| **🎯 Smart Quiz Solver** | Handles polls, ABC quizzes, This or That, 4/8-option quizzes |
+| **🛡️ Proxy Support** | Per-account proxy configuration (HTTP/HTTPS/SOCKS) |
+| **⏰ Built-in Scheduler** | Set daily run times without external cron |
 | **🔔 Notifications** | Discord webhooks + NTFY push alerts |
-| **🐳 Docker Ready** | Slim headless container deployment |
-| **🛡️ Resilient** | Session persistence, job state recovery |
-| **🕸️ Proxy Support** | Per-account proxy configuration |
+| **📊 Detailed Reports** | JSON reports with points earned per account |
+| **🐳 Docker Ready** | Containerized deployment with headless browser |
+| **💳 Buy Mode** | Manual redemption mode with live points monitoring |
 
 </div>
 
 ---
 
-## 🚀 Advanced Features
+## 🎮 Usage
 
-**[💳 Buy Mode](./docs/buy-mode.md)** — Manual redemption with live points monitoring  
-**[🧠 Humanization](./docs/humanization.md)** — Advanced anti-detection patterns  
-**[📊 Diagnostics](./docs/diagnostics.md)** — Error capture with screenshots/HTML  
-**[🔗 Webhooks](./docs/conclusionwebhook.md)** — Rich Discord notifications  
-**[📱 NTFY](./docs/ntfy.md)** — Push notifications to your phone
+### Basic Commands
+
+```bash
+# Run automation once
+npm start
+
+# Automated daily scheduler (see docs/schedule.md)
+npm run start:schedule
+
+# Manual redemption mode (passive monitoring while you shop)
+npm start -- -buy your@email.com
+
+# Docker deployment
+docker compose up -d
+```
+
+### 🔧 Configuration
+
+Edit `src/config.jsonc` to customize behavior:
+
+```jsonc
+{
+  "browser": {
+    "headless": false  // Set true for background operation
+  },
+  "execution": {
+    "parallel": false,     // Run desktop+mobile at same time
+    "runOnZeroPoints": false,  // Skip when no points available
+    "clusters": 1      // Number of parallel account processes
+  },
+  "workers": {
+    "doDailySet": true,
+    "doDesktopSearch": true,
+    "doMobileSearch": true,
+    "doPunchCards": true
+    // ... enable/disable specific tasks
+  },
+  "humanization": {
+    "enabled": true,   // Add natural human-like delays and gestures
+    "actionDelay": { "min": 500, "max": 2200 },
+    "randomOffDaysPerWeek": 1  // Skip random days naturally
+  }
+}
+```
+
+**[📖 Full Configuration Reference →](./docs/config.md)**
 
 ---
 
-## 📚 Documentation & Support
+## 📚 Documentation
+
+### 🚀 Getting Started
+- **[Installation & Setup](./docs/getting-started.md)** — Zero to first run
+- **[Accounts Configuration](./docs/accounts.md)** — Add Microsoft accounts + 2FA
+- **[Docker Deployment](./docs/docker.md)** — Container setup with headless mode
+
+### ⚙️ Configuration & Advanced
+- **[Configuration Guide](./docs/config.md)** — All `config.jsonc` options explained
+- **[Scheduler Setup](./docs/schedule.md)** — Automated daily runs
+- **[Humanization](./docs/humanization.md)** — Anti-detection behavior settings
+- **[Proxy Configuration](./docs/proxy.md)** — Per-account proxy setup
+
+### 🔔 Monitoring & Troubleshooting
+- **[Notifications (Discord/NTFY)](./docs/ntfy.md)** — Get alerts on completion
+- **[Diagnostics & Logs](./docs/diagnostics.md)** — Debug issues with screenshots
+- **[Buy Mode](./docs/buy-mode.md)** — Manual redemption monitoring
+
+**[📚 Complete Documentation Index →](./docs/index.md)**
+
+---
+
+## 🧠 Key Technical Details
+
+### Architecture
+
+- **Language:** TypeScript (Node.js 18+)
+- **Browser:** Playwright + Rebrowser (anti-detection browser profiles)
+- **Fingerprinting:** `fingerprint-generator` for device consistency
+- **Session Management:** Persistent cookies + local storage
+- **Search Queries:** Google Trends API + Bing autocomplete
+- **Parallel Processing:** Node cluster for multi-account execution
+
+### What Gets Automated
+
+| Module | File | What It Does |
+|--------|------|--------------|
+| **Login** | `Login.ts` | Handles Microsoft auth flow, detects 2FA, supports TOTP |
+| **Workers** | `Workers.ts` | Completes Daily Set, More Promotions, Punch Cards |
+| **Activities** | `Activities.ts` | Routes to specific activity handlers (Quiz, Poll, etc.) |
+| **Search** | `Search.ts` | Desktop/mobile Bing searches with natural query variations |
+| **Quiz Handlers** | `activities/*.ts` | Poll, ABC, This or That, 4/8-option quizzes, URL rewards |
+
+### Security Features
+
+- ✅ **Ban Detection:** Heuristics to detect account suspension (stops automation)
+- ✅ **Compromised Mode:** Leaves browser open if security challenge detected
+- ✅ **Retry Logic:** Adaptive backoff for transient failures
+- ✅ **Job State:** Tracks completed tasks to avoid duplicate work
+- ✅ **Diagnostic Capture:** Saves screenshots + HTML on errors
+
+---
+
+## 🛡️ Safety & Best Practices
+
+### ⚠️ Important Warnings
+
+> **Use at your own risk.** Microsoft may suspend accounts that use automation tools.  
+> This project is for **educational purposes only**. The authors are not responsible for account actions.
+
+### 🎯 Recommendations
+
+- ✅ **Use 2FA/TOTP** for added security (see [Accounts Guide](./docs/accounts.md))
+- ✅ **Enable humanization** to add natural delays and behavior
+- ✅ **Schedule runs 1-2x daily** (avoid hourly runs)
+- ✅ **Set `runOnZeroPoints: false`** to skip unnecessary runs
+- ✅ **Monitor diagnostics** for errors or detection signals
+- ✅ **Use proxies** if running many accounts
+- ⚠️ **Don't run on main account** — test with secondary accounts first
+
+---
+
+## 🤝 Community & Support
 
 <div align="center">
 
-**📖 [Complete Documentation Index](./docs/index.md)**
+[![Discord](https://img.shields.io/badge/💬_Discord_Support-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/KRBFxxsU)
+[![GitHub Issues](https://img.shields.io/badge/🐛_Report_Bug-red?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
 
 </div>
 
-### Essential Guides
-- **[Getting Started](./docs/getting-started.md)** — Zero to running in minutes
-- **[Accounts Setup](./docs/accounts.md)** — Microsoft accounts + 2FA configuration  
-- **[Docker Guide](./docs/docker.md)** — Container deployment
-- **[Scheduling](./docs/schedule.md)** — Automated daily runs
-- **[Troubleshooting](./docs/diagnostics.md)** — Fix common issues
+### 👥 Core Contributors
 
-### Advanced Topics
-- **[Humanization](./docs/humanization.md)** — Anti-detection features
-- **[Notifications](./docs/ntfy.md)** — Push alerts & Discord webhooks
-- **[Proxy Setup](./docs/proxy.md)** — Network configuration
-- **[Buy Mode](./docs/buy-mode.md)** — Manual redemption tracking
+<table>
+<tr>
+<td align="center" width="33%">
+<img src="https://github.com/TheNetsky.png" width="80" style="border-radius: 50%;" /><br />
+<strong><a href="https://github.com/TheNetsky/">TheNetsky</a></strong><br />
+<sub>Foundation Architect</sub>
+</td>
+<td align="center" width="33%">
+<img src="https://github.com/mgrimace.png" width="80" style="border-radius: 50%;" /><br />
+<strong><a href="https://github.com/mgrimace">Mgrimace</a></strong><br />
+<sub>Active Developer + NTFY</sub>
+</td>
+<td align="center" width="33%">
+<img src="https://github.com/LightZirconite.png" width="80" style="border-radius: 50%;" /><br />
+<strong><a href="https://github.com/LightZirconite">Light</a></strong><br />
+<sub>V2 Lead + Security</sub>
+</td>
+</tr>
+</table>
 
----
-
-## 🤝 Community
-
-<div align="center">
-
-[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/KRBFxxsU)
-[![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
-
-**Found a bug?** [Report an issue](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)  
-**Have suggestions?** [Start a discussion](https://github.com/TheNetsky/Microsoft-Rewards-Script/discussions)
-
-</div>
-
----
-
-<div align="center">
-
-## ⚠️ Disclaimer
-
-This project is for educational purposes only. Use at your own risk. Microsoft may suspend accounts that use automation tools. The authors are not responsible for any account actions taken by Microsoft.
-
-**🎯 Contributors**
+### 🌟 All Contributors
 
 <a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
-<img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" alt="Contributors" />
+  <img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" alt="Contributors" />
 </a>
-
-*Made with ❤️ by the community • Happy automating! 🎉*
-
-</div>
 
 ---
 
+## 📝 License & Credits
+
+**ISC License** — See [LICENSE](./LICENSE) for details
+
+**Built with:**
+- [Playwright](https://playwright.dev/) — Browser automation
+- [Rebrowser](https://github.com/rebrowser/rebrowser-playwright) — Anti-detection enhancements
+- [Cheerio](https://cheerio.js.org/) — HTML parsing
+- [Luxon](https://moment.github.io/luxon/) — Date/time handling
+
+---
+
+<div align="center">
+
+**Made with ❤️ by the community**  
+*Happy automating — and happy earning! 🎉*
+
+[![Star History](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=social)](https://github.com/TheNetsky/Microsoft-Rewards-Script/stargazers)
+
 ![discord-avatar-128-ULDXD](https://github.com/user-attachments/assets/c33b0ee7-c56c-4f14-b177-851627236457)
+
+</div>
