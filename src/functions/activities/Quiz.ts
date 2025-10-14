@@ -20,6 +20,14 @@ export class Quiz extends Workers {
             await this.bot.utils.wait(2000)
 
             let quizData = await this.bot.browser.func.getQuizData(page)
+            
+            // Verify quiz is actually loaded before proceeding
+            const firstOptionExists = await page.waitForSelector('#rqAnswerOption0', { state: 'attached', timeout: 5000 }).then(() => true).catch(() => false)
+            if (!firstOptionExists) {
+                this.bot.log(this.bot.isMobile, 'QUIZ', 'Quiz options not found - page may not have loaded correctly. Skipping.', 'warn')
+                await page.close()
+                return
+            }
             const questionsRemaining = quizData.maxQuestions - quizData.CorrectlyAnsweredQuestionCount // Amount of questions remaining
 
             // All questions
@@ -29,12 +37,25 @@ export class Quiz extends Workers {
                     const answers: string[] = []
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
-                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 })
+                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 }).catch(() => null)
+                        
+                        if (!answerSelector) {
+                            this.bot.log(this.bot.isMobile, 'QUIZ', `Option ${i} not found - quiz structure may have changed. Skipping remaining options.`, 'warn')
+                            break
+                        }
+                        
                         const answerAttribute = await answerSelector?.evaluate((el: Element) => el.getAttribute('iscorrectoption'))
 
                         if (answerAttribute && answerAttribute.toLowerCase() === 'true') {
                             answers.push(`#rqAnswerOption${i}`)
                         }
+                    }
+                    
+                    // If no correct answers found, skip this question
+                    if (answers.length === 0) {
+                        this.bot.log(this.bot.isMobile, 'QUIZ', 'No correct answers found for 8-option quiz. Skipping.', 'warn')
+                        await page.close()
+                        return
                     }
 
                     // Click the answers
@@ -56,15 +77,24 @@ export class Quiz extends Workers {
                 } else if ([2, 3, 4].includes(quizData.numberOfOptions)) {
                     quizData = await this.bot.browser.func.getQuizData(page) // Refresh Quiz Data
                     const correctOption = quizData.correctAnswer
+                    
+                    let answerClicked = false
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
 
-                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 })
+                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 }).catch(() => null)
+                        
+                        if (!answerSelector) {
+                            this.bot.log(this.bot.isMobile, 'QUIZ', `Option ${i} not found for ${quizData.numberOfOptions}-option quiz. Skipping.`, 'warn')
+                            continue
+                        }
+                        
                         const dataOption = await answerSelector?.evaluate((el: Element) => el.getAttribute('data-option'))
 
                         if (dataOption === correctOption) {
                             // Click the answer on page
                             await page.click(`#rqAnswerOption${i}`)
+                            answerClicked = true
 
                             const refreshSuccess = await this.bot.browser.func.waitForQuizRefresh(page)
                             if (!refreshSuccess) {
@@ -72,8 +102,16 @@ export class Quiz extends Workers {
                                 this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred, refresh was unsuccessful', 'error')
                                 return
                             }
+                            break
                         }
                     }
+                    
+                    if (!answerClicked) {
+                        this.bot.log(this.bot.isMobile, 'QUIZ', `Could not find correct answer for ${quizData.numberOfOptions}-option quiz. Skipping.`, 'warn')
+                        await page.close()
+                        return
+                    }
+                    
                     await this.bot.utils.wait(2000)
                 }
             }
