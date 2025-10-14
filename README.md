@@ -395,7 +395,7 @@ This project is for **educational purposes only**.
 <a href="https://github.com/LightZirconite">
 <img src="https://github.com/LightZirconite.png" width="100" style="border-radius: 50%;" /><br />
 <sub><b>LightZirconite</b></sub><br>
-<sub>🔐 V2 Lead + Security</sub>
+<sub>🔐 V2+</sub>
 </a>
 </td>
 </tr>
