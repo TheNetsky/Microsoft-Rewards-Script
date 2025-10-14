@@ -96,8 +96,7 @@ cp src/accounts.example.json src/accounts.json
 # Edit accounts.json with your Microsoft credentials
 
 # 3. Install & build
-npm install
-npm run build
+npm i
 
 # 4. Run automation
 npm start
