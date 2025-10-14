@@ -1,0 +1,31 @@
+{
+  "_note": "Microsoft allows up to 3 new accounts per IP per day; in practice it is recommended not to exceed around 5 active accounts per household IP to avoid looking suspicious; there is no official lifetime cap, but creating too many accounts quickly may trigger verification (phone, OTP, captcha); Microsoft discourages bulk account creation from the same IP; unusual activity can result in temporary blocks or account restrictions.",
+  "accounts": [
+    {
+      "email": "email_1",
+      "password": "password_1",
+      "totp": "",
+      "recoveryEmail": "your_email@domain.com",
+      "proxy": {
+        "proxyAxios": true,
+        "url": "",
+        "port": 0,
+        "username": "",
+        "password": ""
+      }
+    },
+    {
+      "email": "email_2",
+      "password": "password_2",
+      "totp": "",
+      "recoveryEmail": "your_email@domain.com",
+      "proxy": {
+        "proxyAxios": true,
+        "url": "",
+        "port": 0,
+        "username": "",
+        "password": ""
+      }
+    }
+  ]
+}
