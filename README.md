@@ -1,7 +1,7 @@
 <div align="center">
 
-<!-- Epic Header with Custom Gradient -->
-<img src="https://capsule-render.vercel.app/api?type=venom&height=300&color=gradient&customColorList=12,14,16,18,20,22,24,26,28,30&text=MICROSOFT%20REWARDS&fontSize=70&fontColor=fff&animation=fadeIn&stroke=FFD700&strokeWidth=2&fontAlignY=42&desc=Intelligent%20Automation%20for%20Daily%20Rewards&descSize=22&descAlignY=62" />
+<!-- Epic Header -->
+<img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&customColorList=0,2,2,5,6,8&text=MICROSOFT%20REWARDS&fontSize=75&fontColor=fff&animation=twinkling&fontAlignY=38&desc=Intelligent%20Browser%20Automation&descSize=24&descAlignY=58" />
 
 </div>
 
@@ -9,97 +9,62 @@
 
 <div align="center">
 
-<!-- Premium Badges -->
-<img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white&labelColor=1a1a1a" />
-<img src="https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white&labelColor=1a1a1a" />
-<img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white&labelColor=1a1a1a" />
-<img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white&labelColor=1a1a1a" />
+<!-- Badges modernes -->
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-<br><br>
+<br>
 
-<img src="https://img.shields.io/badge/VERSION-2.1.5-FFD700?style=for-the-badge&labelColor=1a1a1a&logo=github" />
-<img src="https://img.shields.io/badge/LICENSE-ISC-00D9FF?style=for-the-badge&labelColor=1a1a1a" />
-<img src="https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=FFD700&labelColor=1a1a1a&logo=github" />
-<img src="https://img.shields.io/badge/STATUS-ACTIVE-00FF00?style=for-the-badge&labelColor=1a1a1a" />
+![Version](https://img.shields.io/badge/v2.1.5-blue?style=for-the-badge&logo=github&logoColor=white)
+![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)
+![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
+![Status](https://img.shields.io/badge/Active-00C851?style=for-the-badge)
 
 <br><br>
 
 <!-- Animated Description -->
-<img src="https://readme-typing-svg.demolab.com?font=Orbitron&weight=700&size=26&duration=2500&pause=1000&color=FFD700&center=true&vCenter=true&width=700&lines=Earn+Points+Automatically+24%2F7;Human-Like+Behavior+%E2%80%A2+Anti-Detection;Multi-Account+%E2%80%A2+Smart+Scheduling;TypeScript+Powered+%E2%80%A2+Open+Source" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=650&lines=Automate+Microsoft+Rewards+Daily+Tasks;Human-Like+Behavior+%E2%80%A2+Anti-Detection;Multi-Account+%E2%80%A2+Smart+Scheduling;150-300%2B+Points+Per+Day+Automatically" />
 
 </div>
 
 <br>
 
-<!-- Gold Divider -->
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 💎 **WHAT IS THIS?**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          WHAT DOES THIS DO?                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
-**Automate Microsoft Rewards like a pro.**  
-This intelligent bot completes your daily searches, quizzes, and promotions  
-while mimicking human behavior to avoid detection.
+**Automate your Microsoft Rewards daily activities with intelligent browser automation.**  
+Complete searches, quizzes, and promotions automatically while mimicking natural human behavior.
 
 <br>
 
-### **⚡ DAILY EARNINGS ⚡**
+### **Daily Earnings Breakdown**
 
-<table>
-<tr>
-<th>🎯 Activity</th>
-<th>💰 Points</th>
-<th>⏱️ Duration</th>
-</tr>
-<tr>
-<td><b>Desktop Searches</b></td>
-<td><code>~90 pts</code></td>
-<td><code>30 sec</code></td>
-</tr>
-<tr>
-<td><b>Mobile Searches</b></td>
-<td><code>~60 pts</code></td>
-<td><code>20 sec</code></td>
-</tr>
-<tr>
-<td><b>Daily Set</b> (Quizzes/Polls)</td>
-<td><code>~30-50 pts</code></td>
-<td><code>1-2 min</code></td>
-</tr>
-<tr>
-<td><b>Promotions & Punch Cards</b></td>
-<td><code>Variable</code></td>
-<td><code>30s-2min</code></td>
-</tr>
-<tr>
-<td><b>🏆 TOTAL AVERAGE</b></td>
-<td><b><code>150-300+ pts</code></b></td>
-<td><b><code>3-5 min</code></b></td>
-</tr>
-</table>
+| 🎯 Activity | 💎 Points | ⏱️ Time |
+|:-----------|:---------|:--------|
+| **Desktop Searches** | ~90 pts | 30 sec |
+| **Mobile Searches** | ~60 pts | 20 sec |
+| **Daily Set Tasks** | ~30-50 pts | 1-2 min |
+| **Promotions & Punch Cards** | Variable | 30s-2min |
+| **📊 TOTAL AVERAGE** | **150-300+ pts** | **3-5 min** |
 
 </div>
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                             QUICK START                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
-<br>
-
-## 🚀 **QUICK START**
-
-<div align="center">
-
-### **Option 1: Automated Setup** *(Recommended)*
-
-</div>
+### **🚀 Automated Setup** (Recommended)
 
 ```bash
 # Windows
@@ -108,26 +73,21 @@ setup\setup.bat
 # Linux / macOS / WSL
 bash setup/setup.sh
 
-# Universal (any platform)
+# Universal
 npm run setup
 ```
 
-<div align="center">
-
 **The wizard handles everything:**
 - ✅ Creates `accounts.json` with your credentials
-- ✅ Installs all dependencies
-- ✅ Builds the TypeScript project
-- ✅ Runs your first automation (optional)
+- ✅ Installs dependencies & builds project
+- ✅ Runs first automation (optional)
 
 <br>
 
-### **Option 2: Manual Setup**
-
-</div>
+### **🛠️ Manual Setup**
 
 ```bash
-# 1. Clone the repository
+# 1. Clone repository
 git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 
@@ -135,95 +95,76 @@ cd Microsoft-Rewards-Script
 cp src/accounts.example.json src/accounts.json
 # Edit accounts.json with your Microsoft credentials
 
-# 3. Install dependencies
-npm i
+# 3. Install & build
+npm install
+npm run build
 
-# 5. Run automation
+# 4. Run automation
 npm start
 ```
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 🧠 **AI-POWERED FEATURES**
-
-<div align="center">
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        INTELLIGENT FEATURES                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <table>
 <tr>
-<td align="center" width="50%">
+<td width="50%" valign="top">
 
-### 🛡️ **RISK INTELLIGENCE**
+### 🛡️ **Risk-Aware System**
+```
+Real-time threat detection
+├─ Monitors captchas & errors
+├─ Dynamic delay adjustment (1x→4x)
+├─ Automatic cool-down periods
+└─ ML-based ban prediction
+```
 
-<img src="https://img.icons8.com/3d-fluency/94/brain.png" width="80"/>
-
-**Real-time threat detection**
-- Monitors captchas & error patterns
-- Dynamic delay adjustment (1x→4x)
-- Automatic cool-down periods
-- ML-based ban prediction
-
-</td>
-<td align="center" width="50%">
-
-### 📊 **PERFORMANCE ANALYTICS**
-
-<img src="https://img.icons8.com/3d-fluency/94/combo-chart.png" width="80"/>
-
-**Track everything**
-- Points earned per day
-- Success/failure rates
-- Historical trends
-- Account health status
+### 📊 **Performance Analytics**
+```
+Track everything
+├─ Points earned per day
+├─ Success/failure rates
+├─ Historical trends
+└─ Account health monitoring
+```
 
 </td>
-</tr>
-<tr>
-<td align="center" width="50%">
+<td width="50%" valign="top">
 
-### 🔍 **QUERY DIVERSITY**
+### 🔍 **Query Diversity Engine**
+```
+Natural search patterns
+├─ Multi-source queries
+├─ Pattern breaking algorithms
+├─ Smart deduplication
+└─ Reduced detection risk
+```
 
-<img src="https://img.icons8.com/3d-fluency/94/search.png" width="80"/>
-
-**Natural search patterns**
-- Multi-source queries (Trends/Reddit/News)
-- Pattern breaking algorithms
-- Smart deduplication
-- Reduced detection risk
-
-</td>
-<td align="center" width="50%">
-
-### ✅ **CONFIG VALIDATOR**
-
-<img src="https://img.icons8.com/3d-fluency/94/approval.png" width="80"/>
-
-**Pre-flight checks**
-- Detects common mistakes
-- Security warnings
-- Optimization suggestions
-- Safe testing with dry-run mode
+### ✅ **Config Validator**
+```
+Pre-flight checks
+├─ Detects common mistakes
+├─ Security warnings
+├─ Optimization suggestions
+└─ Dry-run test mode
+```
 
 </td>
 </tr>
 </table>
 
-</div>
-
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 🎮 **USAGE COMMANDS**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          USAGE COMMANDS                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 ```bash
 # Run automation once
@@ -244,19 +185,13 @@ npm start -- --dry-run
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           CONFIGURATION                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
-<br>
-
-## ⚙️ **CONFIGURATION**
-
-<div align="center">
-
-Edit `src/config.jsonc` to customize automation behavior
-
-</div>
+Edit `src/config.jsonc` to customize behavior:
 
 ```jsonc
 {
@@ -266,7 +201,7 @@ Edit `src/config.jsonc` to customize automation behavior
   "execution": {
     "parallel": false,           // Run desktop + mobile simultaneously
     "runOnZeroPoints": false,    // Skip when no points available
-    "clusters": 1                // Number of parallel account processes
+    "clusters": 1                // Parallel account processes
   },
   "workers": {
     "doDailySet": true,
@@ -275,64 +210,58 @@ Edit `src/config.jsonc` to customize automation behavior
     "doPunchCards": true
   },
   "humanization": {
-    "enabled": true,             // Add natural human-like delays
+    "enabled": true,             // Natural human-like delays
     "actionDelay": { "min": 500, "max": 2200 },
     "randomOffDaysPerWeek": 1    // Skip random days naturally
   }
 }
 ```
 
-<div align="center">
-
-**[📖 Complete Configuration Documentation →](./docs/config.md)**
-
-</div>
+**[📖 Complete Configuration Guide →](./docs/config.md)**
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 🔥 **CORE FEATURES**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           CORE FEATURES                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
 <table>
 <tr>
 <td align="center" width="33%">
-<img src="https://img.icons8.com/3d-fluency/94/bot.png" width="90"/><br>
-<h3>🤖 Human-Like</h3>
-<sub>Randomized delays • Mouse movements • Natural scrolling</sub>
+<img src="https://img.icons8.com/fluency/96/bot.png" width="80"/><br>
+<b>Human-Like Behavior</b><br>
+<sub>Randomized delays • Mouse movements<br>Natural scrolling patterns</sub>
 </td>
 <td align="center" width="33%">
-<img src="https://img.icons8.com/3d-fluency/94/security-shield-green.png" width="90"/><br>
-<h3>🔒 Anti-Detection</h3>
-<sub>Session persistence • Fingerprinting • Proxy support</sub>
+<img src="https://img.icons8.com/fluency/96/security-checked.png" width="80"/><br>
+<b>Anti-Detection</b><br>
+<sub>Session persistence • Fingerprinting<br>Proxy support</sub>
 </td>
 <td align="center" width="33%">
-<img src="https://img.icons8.com/3d-fluency/94/user-group-man-man.png" width="90"/><br>
-<h3>👥 Multi-Account</h3>
-<sub>Parallel execution • 2FA/TOTP • Per-account proxies</sub>
+<img src="https://img.icons8.com/fluency/96/user-group-man-man.png" width="80"/><br>
+<b>Multi-Account</b><br>
+<sub>Parallel execution • 2FA/TOTP<br>Per-account proxies</sub>
 </td>
 </tr>
 <tr>
 <td align="center" width="33%">
-<img src="https://img.icons8.com/3d-fluency/94/brain--v2.png" width="90"/><br>
-<h3>🧩 Smart Solver</h3>
-<sub>Polls • ABC Quiz • This or That • 4/8-option quizzes</sub>
+<img src="https://img.icons8.com/fluency/96/artificial-intelligence.png" width="80"/><br>
+<b>Smart Quiz Solver</b><br>
+<sub>Polls • ABC Quiz • This or That<br>4/8-option quizzes</sub>
 </td>
 <td align="center" width="33%">
-<img src="https://img.icons8.com/3d-fluency/94/clock.png" width="90"/><br>
-<h3>⏰ Auto-Scheduler</h3>
-<sub>Daily automation • No external cron needed</sub>
+<img src="https://img.icons8.com/fluency/96/clock.png" width="80"/><br>
+<b>Built-in Scheduler</b><br>
+<sub>Daily automation<br>No external cron needed</sub>
 </td>
 <td align="center" width="33%">
-<img src="https://img.icons8.com/3d-fluency/94/bell.png" width="90"/><br>
-<h3>🔔 Notifications</h3>
-<sub>Discord webhooks • NTFY push • Real-time alerts</sub>
+<img src="https://img.icons8.com/fluency/96/alarm.png" width="80"/><br>
+<b>Notifications</b><br>
+<sub>Discord webhooks • NTFY<br>Real-time alerts</sub>
 </td>
 </tr>
 </table>
@@ -341,158 +270,131 @@ Edit `src/config.jsonc` to customize automation behavior
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 📚 **DOCUMENTATION**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           DOCUMENTATION                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
 | 📖 Getting Started | ⚙️ Configuration | 🔔 Monitoring |
-|:------------------:|:----------------:|:-------------:|
+|:------------------|:----------------|:-------------|
 | [Installation & Setup](./docs/getting-started.md) | [Config Guide](./docs/config.md) | [Notifications](./docs/ntfy.md) |
-| [Accounts Setup](./docs/accounts.md) | [Scheduler](./docs/schedule.md) | [Diagnostics & Logs](./docs/diagnostics.md) |
+| [Accounts Setup](./docs/accounts.md) | [Scheduler](./docs/schedule.md) | [Diagnostics](./docs/diagnostics.md) |
 | [Docker Deployment](./docs/docker.md) | [Humanization](./docs/humanization.md) | [Buy Mode](./docs/buy-mode.md) |
 | | [Proxy Configuration](./docs/proxy.md) | |
 
-<br>
-
-**[📚 View Complete Documentation Index →](./docs/index.md)**
+**[📚 Complete Documentation Index →](./docs/index.md)**
 
 </div>
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 🏗️ **TECHNICAL ARCHITECTURE**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                       TECHNICAL ARCHITECTURE                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
-### **Built with Modern Technologies**
+**Built with Modern Technologies**
 
 <br>
 
-<img src="https://skillicons.dev/icons?i=ts,nodejs,playwright,docker&theme=dark&perline=4" />
-
-<br><br>
-
-| Component | Technology |
-|:---------:|:----------:|
-| **Language** | TypeScript (Node.js 18+) |
-| **Browser Engine** | Playwright + Rebrowser |
-| **Fingerprinting** | fingerprint-generator |
-| **HTML Parsing** | Cheerio |
-| **Date/Time** | Luxon |
-| **HTTP Client** | Axios |
+<img src="https://skillicons.dev/icons?i=ts,nodejs,playwright,docker&theme=light&perline=4" />
 
 </div>
 
 <br>
 
-### **Core Modules**
+**Core Modules:**
 
 | Module | Purpose |
 |--------|---------|
 | `Login.ts` | Microsoft authentication flow with 2FA/TOTP support |
 | `Workers.ts` | Completes Daily Set, Promotions, and Punch Cards |
-| `Search.ts` | Executes desktop/mobile Bing searches with natural queries |
+| `Search.ts` | Desktop/mobile Bing searches with natural query variations |
 | `Activities.ts` | Routes to specific activity handlers (Quiz, Poll, etc.) |
 | `activities/*.ts` | Individual handlers for each reward type |
 
+**Key Technologies:**
+- [Playwright](https://playwright.dev/) — Browser automation framework
+- [Rebrowser](https://github.com/rebrowser/rebrowser-playwright) — Anti-fingerprinting extensions
+- [fingerprint-generator](https://www.npmjs.com/package/fingerprint-generator) — Device consistency
+- [Cheerio](https://cheerio.js.org/) — Fast HTML parsing
+- [Luxon](https://moment.github.io/luxon/) — Modern date/time handling
+
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## ⚠️ **IMPORTANT DISCLAIMERS**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      IMPORTANT DISCLAIMERS                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
-### **🚨 READ THIS CAREFULLY 🚨**
+### ⚠️ **USE AT YOUR OWN RISK** ⚠️
 
-<br>
+**Using automation violates Microsoft's Terms of Service.**  
+Accounts may be **suspended or permanently banned**.
 
-<table>
-<tr>
-<td align="center" width="100%">
-
-**Using automation violates Microsoft's Terms of Service**
-
-Accounts may be **suspended** or **permanently banned**
-
-This project is for **educational purposes only**
-
-**By using this software, you accept full responsibility**
-
-</td>
-</tr>
-</table>
+This project is for **educational purposes only**.
 
 </div>
 
 <br>
 
-### **✅ Best Practices**
+**Best Practices:**
+
+✅ **DO:**
+- Use 2FA/TOTP for security
+- Enable humanization features
+- Schedule 1-2x daily maximum
+- Set `runOnZeroPoints: false`
+- Test on secondary accounts first
+- Monitor diagnostics regularly
+
+❌ **DON'T:**
+- Run on your main account
+- Schedule hourly runs
+- Ignore security warnings
+- Use shared proxies
+- Skip configuration validation
+
+<br>
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         CONTRIBUTORS                                         ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
-| ✅ DO | ❌ DON'T |
-|:------|:---------|
-| Use 2FA/TOTP for security | Run on your main account |
-| Enable humanization features | Schedule hourly runs |
-| Schedule 1-2x daily max | Ignore security warnings |
-| Set `runOnZeroPoints: false` | Use shared proxies |
-| Test on secondary accounts first | Skip configuration validation |
-| Monitor diagnostics regularly | Ignore ban detection signals |
-
-</div>
-
-<br>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 👥 **CONTRIBUTORS**
-
-<div align="center">
-
-### **⭐ Core Development Team ⭐**
-
-<br>
+### **Core Development Team**
 
 <table>
 <tr>
 <td align="center">
 <a href="https://github.com/TheNetsky/">
-<img src="https://github.com/TheNetsky.png" width="120" style="border-radius: 60px; border: 3px solid #FFD700;" /><br />
+<img src="https://github.com/TheNetsky.png" width="100" style="border-radius: 50%;" /><br />
 <sub><b>TheNetsky</b></sub><br>
 <sub>🏗️ Foundation Architect</sub>
 </a>
 </td>
 <td align="center">
 <a href="https://github.com/mgrimace">
-<img src="https://github.com/mgrimace.png" width="120" style="border-radius: 60px; border: 3px solid #FFD700;" /><br />
+<img src="https://github.com/mgrimace.png" width="100" style="border-radius: 50%;" /><br />
 <sub><b>Mgrimace</b></sub><br>
 <sub>💻 Active Developer</sub>
 </a>
 </td>
 <td align="center">
 <a href="https://github.com/LightZirconite">
-<img src="https://github.com/LightZirconite.png" width="120" style="border-radius: 60px; border: 3px solid #FFD700;" /><br />
+<img src="https://github.com/LightZirconite.png" width="100" style="border-radius: 50%;" /><br />
 <sub><b>LightZirconite</b></sub><br>
 <sub>🔐 V2 Lead + Security</sub>
 </a>
@@ -502,60 +404,52 @@ This project is for **educational purposes only**
 
 <br>
 
-### **🌟 All Contributors 🌟**
+### **All Contributors**
 
 <a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script&max=100&columns=12" />
+  <img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" />
 </a>
 
 </div>
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
-
-## 💬 **COMMUNITY & SUPPORT**
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      COMMUNITY & SUPPORT                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
 
-<br>
+### **Need Help? Found a Bug?**
 
-<a href="https://discord.gg/KRBFxxsU">
-<img src="https://img.shields.io/badge/💬_Discord_Support-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=1a1a1a" />
-</a>
-
-<br><br>
-
-**Having issues? Found a bug? Need help?**  
-Join our Discord server — we're here to help!
+**Join our Discord community — we're here to help!**
 
 <br>
 
-<img src="https://img.shields.io/discord/YOUR_DISCORD_ID?style=for-the-badge&logo=discord&logoColor=white&label=MEMBERS&labelColor=1a1a1a&color=FFD700" />
+[![Discord](https://img.shields.io/badge/Join_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KRBFxxsU)
 
-<br><br>
+<br>
 
-<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/issues">
-<img src="https://img.shields.io/badge/🐛_Report_Bug_on_GitHub-181717?style=for-the-badge&logo=github&logoColor=white&labelColor=1a1a1a" />
-</a>
+**For bug reports and feature requests, please use Discord first.**  
+GitHub Issues are also available for documentation and tracking.
+
+<br>
+
+[![GitHub Issues](https://img.shields.io/badge/GitHub_Issues-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
 
 </div>
 
 <br>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/gold.png" width="100%" />
-</p>
-
-<br>
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                             LICENSE                                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
 <div align="center">
-
-## 📄 **LICENSE**
 
 **ISC License** — Free and open source
 
@@ -567,15 +461,15 @@ See [LICENSE](./LICENSE) for details • [NOTICE](./NOTICE) for disclaimers
 
 <br>
 
-### **⭐ Star this repo if you found it useful! ⭐**
+**⭐ Star this repo if you found it useful! ⭐**
 
 <br>
 
-<img src="https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=social" />
+![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=social)
 
 <br><br>
 
-**Made with ❤️ and ☕ by the open source community**
+**Made with ❤️ by the open source community**
 
 <br>
 
@@ -583,6 +477,6 @@ See [LICENSE](./LICENSE) for details • [NOTICE](./NOTICE) for disclaimers
 
 <br><br>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=150&color=gradient&customColorList=12,14,16,18,20,22,24,26,28,30&section=footer" />
+<img src="https://capsule-render.vercel.app/api?type=waving&height=120&color=gradient&customColorList=0,2,2,5,6,8&section=footer" />
 
 </div>
