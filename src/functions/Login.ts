@@ -321,16 +321,8 @@ export class Login {
       }
       await input.fill('')
       await input.fill(code)
-      const submitSelectors = [
-        '#idSubmit_SAOTCC_Continue',
-        '#idSubmit_SAOTCC_OTC',
-        'button[type="submit"]:has-text("Verify")',
-        'button[type="submit"]:has-text("Continuer")',
-        'button:has-text("Verify")',
-        'button:has-text("Continuer")',
-        'button:has-text("Submit")'
-      ]
-      const submit = await this.findFirstVisibleLocator(page, submitSelectors)
+      // Use unified selector system
+      const submit = await this.findFirstVisibleLocator(page, Login.TOTP_SELECTORS.submit)
       if (submit) {
         await submit.click().catch(()=>{})
       } else {
@@ -342,19 +334,17 @@ export class Login {
     }
   }
 
-  private totpInputSelectors(): string[] {
-    return [
+  // Unified selector system - DRY principle
+  private static readonly TOTP_SELECTORS = {
+    input: [
       'input[name="otc"]',
       '#idTxtBx_SAOTCC_OTC',
       '#idTxtBx_SAOTCS_OTC',
       'input[data-testid="otcInput"]',
       'input[autocomplete="one-time-code"]',
       'input[type="tel"][name="otc"]'
-    ]
-  }
-
-  private totpAltOptionSelectors(): string[] {
-    return [
+    ],
+    altOptions: [
       '#idA_SAOTCS_ProofPickerChange',
       '#idA_SAOTCC_AlternateLogin',
       'a:has-text("Use a different verification option")',
@@ -362,11 +352,8 @@ export class Login {
       'a:has-text("I can\'t use my Microsoft Authenticator app right now")',
       'button:has-text("Use a different verification option")',
       'button:has-text("Sign in another way")'
-    ]
-  }
-
-  private totpChallengeSelectors(): string[] {
-    return [
+    ],
+    challenge: [
       '[data-value="PhoneAppOTP"]',
       '[data-value="OneTimeCode"]',
       'button:has-text("Use a verification code")',
@@ -380,20 +367,32 @@ export class Login {
       'button:has-text("Entrez un code")',
       'div[role="button"]:has-text("Use a verification code")',
       'div[role="button"]:has-text("Enter a code")'
+    ],
+    submit: [
+      '#idSubmit_SAOTCC_Continue',
+      '#idSubmit_SAOTCC_OTC',
+      'button[type="submit"]:has-text("Verify")',
+      'button[type="submit"]:has-text("Continuer")',
+      'button:has-text("Verify")',
+      'button:has-text("Continuer")',
+      'button:has-text("Submit")'
     ]
-  }
+  } as const
 
-  private async findFirstVisibleSelector(page: Page, selectors: string[]): Promise<string | null> {
+  private totpInputSelectors(): readonly string[] { return Login.TOTP_SELECTORS.input }
+  private totpAltOptionSelectors(): readonly string[] { return Login.TOTP_SELECTORS.altOptions }
+  private totpChallengeSelectors(): readonly string[] { return Login.TOTP_SELECTORS.challenge }
+
+  // Generic selector finder - reduces duplication from 3 functions to 1
+  private async findFirstVisibleSelector(page: Page, selectors: readonly string[]): Promise<string | null> {
     for (const sel of selectors) {
       const loc = page.locator(sel).first()
-      if (await loc.isVisible().catch(() => false)) {
-        return sel
-      }
+      if (await loc.isVisible().catch(() => false)) return sel
     }
     return null
   }
 
-  private async clickFirstVisibleSelector(page: Page, selectors: string[]): Promise<boolean> {
+  private async clickFirstVisibleSelector(page: Page, selectors: readonly string[]): Promise<boolean> {
     for (const sel of selectors) {
       const loc = page.locator(sel).first()
       if (await loc.isVisible().catch(() => false)) {
@@ -404,12 +403,10 @@ export class Login {
     return false
   }
 
-  private async findFirstVisibleLocator(page: Page, selectors: string[]): Promise<Locator | null> {
+  private async findFirstVisibleLocator(page: Page, selectors: readonly string[]): Promise<Locator | null> {
     for (const sel of selectors) {
       const loc = page.locator(sel).first()
-      if (await loc.isVisible().catch(() => false)) {
-        return loc
-      }
+      if (await loc.isVisible().catch(() => false)) return loc
     }
     return null
   }

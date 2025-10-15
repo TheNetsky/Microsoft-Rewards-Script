@@ -147,95 +147,98 @@ export class Workers {
 
     // Solve all the different types of activities
     private async solveActivities(activityPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
-        const activityInitial = activityPage.url() // Homepage for Daily/More and Index for promotions
+        const activityInitial = activityPage.url()
+        const retry = new Retry(this.bot.config.retryPolicy)
+        const throttle = new AdaptiveThrottler()
 
-    const retry = new Retry(this.bot.config.retryPolicy)
-    const throttle = new AdaptiveThrottler()
-    for (const activity of activities) {
+        for (const activity of activities) {
             try {
-                // Reselect the worker page
-                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                activityPage = await this.manageTabLifecycle(activityPage, activityInitial)
+                await this.applyThrottle(throttle, 800, 1400)
 
-                const pages = activityPage.context().pages()
-                if (pages.length > 3) {
-                    await activityPage.close()
+                const selector = await this.buildActivitySelector(activityPage, activity, punchCard)
+                await this.prepareActivityPage(activityPage, selector, throttle)
 
-                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                }
-
-                await this.bot.browser.utils.humanizePage(activityPage)
-                {
-                    const m = throttle.getDelayMultiplier()
-                    await this.bot.utils.waitRandom(Math.floor(800*m), Math.floor(1400*m))
-                }
-
-                if (activityPage.url() !== activityInitial) {
-                    await activityPage.goto(activityInitial)
-                }
-
-
-                let selector = `[data-bi-id^="${activity.offerId}"] .pointLink:not(.contentContainer .pointLink)`
-
-                if (punchCard) {
-                    selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
-
-                } else if (activity.name.toLowerCase().includes('membercenter') || activity.name.toLowerCase().includes('exploreonbing')) {
-                    selector = `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
-                }
-
-                // Wait for the new tab to fully load, ignore error.
-                /*
-                Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster,
-                if it didn't then it gave enough time for the page to load.
-                */
-                await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
-                // Small human-like jitter before executing
-                await this.bot.browser.utils.humanizePage(activityPage)
-                {
-                    const m = throttle.getDelayMultiplier()
-                    await this.bot.utils.waitRandom(Math.floor(1200*m), Math.floor(2600*m))
-                }
-
-                // Log the detected type using the same heuristics as before
                 const typeLabel = this.bot.activities.getTypeLabel(activity)
                 if (typeLabel !== 'Unsupported') {
-                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "${typeLabel}" title: "${activity.title}"`)
-                    await activityPage.click(selector)
-                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                    // Watchdog: abort if the activity hangs too long
-                    const timeoutMs = this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? '30s') * 2
-                    const runWithTimeout = (p: Promise<void>) => Promise.race([
-                        p,
-                        new Promise<void>((_, rej) => setTimeout(() => rej(new Error('activity-timeout')), timeoutMs))
-                    ])
-                    await retry.run(async () => {
-                        try {
-                            await runWithTimeout(this.bot.activities.run(activityPage, activity))
-                            throttle.record(true)
-                        } catch (e) {
-                            await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_timeout_${activity.title || activity.offerId}`)
-                            throttle.record(false)
-                            throw e
-                        }
-                    }, () => true)
+                    await this.executeActivity(activityPage, activity, selector, throttle, retry)
                 } else {
                     this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
                 }
 
-                // Cooldown with jitter
-                await this.bot.browser.utils.humanizePage(activityPage)
-                {
-                    const m = throttle.getDelayMultiplier()
-                    await this.bot.utils.waitRandom(Math.floor(1200*m), Math.floor(2600*m))
-                }
-
+                await this.applyThrottle(throttle, 1200, 2600)
             } catch (error) {
                 await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_error_${activity.title || activity.offerId}`)
                 this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
                 throttle.record(false)
             }
-
         }
+    }
+
+    private async manageTabLifecycle(page: Page, initialUrl: string): Promise<Page> {
+        page = await this.bot.browser.utils.getLatestTab(page)
+
+        const pages = page.context().pages()
+        if (pages.length > 3) {
+            await page.close()
+            page = await this.bot.browser.utils.getLatestTab(page)
+        }
+
+        if (page.url() !== initialUrl) {
+            await page.goto(initialUrl)
+        }
+
+        return page
+    }
+
+    private async buildActivitySelector(page: Page, activity: PromotionalItem | MorePromotion, punchCard?: PunchCard): Promise<string> {
+        if (punchCard) {
+            return await this.bot.browser.func.getPunchCardActivity(page, activity)
+        }
+
+        const name = activity.name.toLowerCase()
+        if (name.includes('membercenter') || name.includes('exploreonbing')) {
+            return `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
+        }
+
+        return `[data-bi-id^="${activity.offerId}"] .pointLink:not(.contentContainer .pointLink)`
+    }
+
+    private async prepareActivityPage(page: Page, selector: string, throttle: AdaptiveThrottler): Promise<void> {
+        await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+        await this.bot.browser.utils.humanizePage(page)
+        await this.applyThrottle(throttle, 1200, 2600)
+    }
+
+    private async executeActivity(page: Page, activity: PromotionalItem | MorePromotion, selector: string, throttle: AdaptiveThrottler, retry: Retry): Promise<void> {
+        this.bot.log(this.bot.isMobile, 'ACTIVITY', `Found activity type: "${this.bot.activities.getTypeLabel(activity)}" title: "${activity.title}"`)
+        
+        await page.click(selector)
+        page = await this.bot.browser.utils.getLatestTab(page)
+
+        const timeoutMs = this.bot.utils.stringToMs(this.bot.config?.globalTimeout ?? '30s') * 2
+        const runWithTimeout = (p: Promise<void>) => Promise.race([
+            p,
+            new Promise<void>((_, rej) => setTimeout(() => rej(new Error('activity-timeout')), timeoutMs))
+        ])
+
+        await retry.run(async () => {
+            try {
+                await runWithTimeout(this.bot.activities.run(page, activity))
+                throttle.record(true)
+            } catch (e) {
+                await this.bot.browser.utils.captureDiagnostics(page, `activity_timeout_${activity.title || activity.offerId}`)
+                throttle.record(false)
+                throw e
+            }
+        }, () => true)
+
+        await this.bot.browser.utils.humanizePage(page)
+    }
+
+    private async applyThrottle(throttle: AdaptiveThrottler, min: number, max: number): Promise<void> {
+        const multiplier = throttle.getDelayMultiplier()
+        await this.bot.utils.waitRandom(Math.floor(min * multiplier), Math.floor(max * multiplier))
     }
 
 }

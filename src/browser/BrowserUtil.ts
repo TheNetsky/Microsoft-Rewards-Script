@@ -4,65 +4,134 @@ import { load } from 'cheerio'
 import { MicrosoftRewardsBot } from '../index'
 import { captureDiagnostics as captureSharedDiagnostics } from '../util/Diagnostics'
 
+type DismissButton = { selector: string; label: string; isXPath?: boolean }
 
 export default class BrowserUtil {
     private bot: MicrosoftRewardsBot
+
+    private static readonly DISMISS_BUTTONS: readonly DismissButton[] = [
+        { selector: '#acceptButton', label: 'AcceptButton' },
+        { selector: '.optanon-allow-all, .optanon-alert-box-button', label: 'OneTrust Accept' },
+        { selector: '.ext-secondary.ext-button', label: 'Skip For Now' },
+        { selector: '#iLandingViewAction', label: 'Landing Continue' },
+        { selector: '#iShowSkip', label: 'Show Skip' },
+        { selector: '#iNext', label: 'Next' },
+        { selector: '#iLooksGood', label: 'LooksGood' },
+        { selector: '#idSIButton9', label: 'PrimaryLoginButton' },
+        { selector: '.ms-Button.ms-Button--primary', label: 'Primary Generic' },
+        { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Cancel' },
+        { selector: '.maybe-later, button[data-automation-id*="maybeLater" i]', label: 'Maybe Later' },
+        { selector: '#bnp_btn_reject', label: 'Bing Cookie Reject' },
+        { selector: '#bnp_btn_accept', label: 'Bing Cookie Accept' },
+        { selector: '#bnp_close_link', label: 'Bing Cookie Close' },
+        { selector: '#reward_pivot_earn', label: 'Rewards Pivot Earn' },
+        { selector: '//div[@id="cookieConsentContainer"]//button[contains(text(), "Accept")]', label: 'Legacy Cookie Accept', isXPath: true }
+    ]
+
+    private static readonly OVERLAY_SELECTORS = {
+        container: '#bnp_overlay_wrapper',
+        reject: '#bnp_btn_reject, button[aria-label*="Reject" i]',
+        accept: '#bnp_btn_accept'
+    } as const
+
+    private static readonly STREAK_DIALOG_SELECTORS = {
+        container: '[role="dialog"], div[role="alert"], div.ms-Dialog',
+        textFilter: /streak protection has run out/i,
+        closeButtons: 'button[aria-label*="close" i], button:has-text("Close"), button:has-text("Dismiss"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Ok")'
+    } as const
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
     }
 
     async tryDismissAllMessages(page: Page): Promise<void> {
-        const attempts = 3
-        const buttonGroups: { selector: string; label: string; isXPath?: boolean }[] = [
-            { selector: '#acceptButton', label: 'AcceptButton' },
-            { selector: '.optanon-allow-all, .optanon-alert-box-button', label: 'OneTrust Accept' },
-            { selector: '.ext-secondary.ext-button', label: 'Skip For Now' },
-            { selector: '#iLandingViewAction', label: 'Landing Continue' },
-            { selector: '#iShowSkip', label: 'Show Skip' },
-            { selector: '#iNext', label: 'Next' },
-            { selector: '#iLooksGood', label: 'LooksGood' },
-            { selector: '#idSIButton9', label: 'PrimaryLoginButton' },
-            { selector: '.ms-Button.ms-Button--primary', label: 'Primary Generic' },
-            { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Cancel' },
-            { selector: '.maybe-later, button[data-automation-id*="maybeLater" i]', label: 'Maybe Later' },
-            { selector: '#bnp_btn_reject', label: 'Bing Cookie Reject' },
-            { selector: '#bnp_btn_accept', label: 'Bing Cookie Accept' },
-            { selector: '#bnp_close_link', label: 'Bing Cookie Close' },
-            { selector: '#reward_pivot_earn', label: 'Rewards Pivot Earn' },
-            { selector: '//div[@id="cookieConsentContainer"]//button[contains(text(), "Accept")]', label: 'Legacy Cookie Accept', isXPath: true }
-        ]
-        for (let round = 0; round < attempts; round++) {
-            let dismissedThisRound = 0
-            for (const btn of buttonGroups) {
-                try {
-                    const loc = btn.isXPath ? page.locator(`xpath=${btn.selector}`) : page.locator(btn.selector)
-                    if (await loc.first().isVisible({ timeout: 200 }).catch(()=>false)) {
-                        await loc.first().click({ timeout: 500 }).catch(()=>{})
-                        dismissedThisRound++
-                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${btn.label}`)
-                        await page.waitForTimeout(150)
-                    }
-                } catch { /* ignore */ }
+        const maxRounds = 3
+        for (let round = 0; round < maxRounds; round++) {
+            const dismissCount = await this.dismissRound(page)
+            if (dismissCount === 0) break
+        }
+    }
+
+    private async dismissRound(page: Page): Promise<number> {
+        let count = 0
+        count += await this.dismissStandardButtons(page)
+        count += await this.dismissOverlayButtons(page)
+        count += await this.dismissStreakDialog(page)
+        return count
+    }
+
+    private async dismissStandardButtons(page: Page): Promise<number> {
+        let count = 0
+        for (const btn of BrowserUtil.DISMISS_BUTTONS) {
+            const dismissed = await this.tryClickButton(page, btn)
+            if (dismissed) {
+                count++
+                await page.waitForTimeout(150)
             }
-            // Special case: blocking overlay with inside buttons
-            try {
-                const overlay = page.locator('#bnp_overlay_wrapper')
-                if (await overlay.isVisible({ timeout: 200 }).catch(()=>false)) {
-                    const reject = overlay.locator('#bnp_btn_reject, button[aria-label*="Reject" i]')
-                    const accept = overlay.locator('#bnp_btn_accept')
-                    if (await reject.first().isVisible().catch(()=>false)) {
-                        await reject.first().click({ timeout: 500 }).catch(()=>{})
-                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Reject')
-                        dismissedThisRound++
-                    } else if (await accept.first().isVisible().catch(()=>false)) {
-                        await accept.first().click({ timeout: 500 }).catch(()=>{})
-                        this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Accept')
-                        dismissedThisRound++
-                    }
-                }
-            } catch { /* ignore */ }
-            if (dismissedThisRound === 0) break // nothing new dismissed -> stop early
+        }
+        return count
+    }
+
+    private async tryClickButton(page: Page, btn: DismissButton): Promise<boolean> {
+        try {
+            const loc = btn.isXPath ? page.locator(`xpath=${btn.selector}`) : page.locator(btn.selector)
+            const visible = await loc.first().isVisible({ timeout: 200 }).catch(() => false)
+            if (!visible) return false
+
+            await loc.first().click({ timeout: 500 }).catch(() => {})
+            this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', `Dismissed: ${btn.label}`)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private async dismissOverlayButtons(page: Page): Promise<number> {
+        try {
+            const { container, reject, accept } = BrowserUtil.OVERLAY_SELECTORS
+            const overlay = page.locator(container)
+            const visible = await overlay.isVisible({ timeout: 200 }).catch(() => false)
+            if (!visible) return 0
+
+            const rejectBtn = overlay.locator(reject)
+            if (await rejectBtn.first().isVisible().catch(() => false)) {
+                await rejectBtn.first().click({ timeout: 500 }).catch(() => {})
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Reject')
+                return 1
+            }
+
+            const acceptBtn = overlay.locator(accept)
+            if (await acceptBtn.first().isVisible().catch(() => false)) {
+                await acceptBtn.first().click({ timeout: 500 }).catch(() => {})
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Accept')
+                return 1
+            }
+
+            return 0
+        } catch {
+            return 0
+        }
+    }
+
+    private async dismissStreakDialog(page: Page): Promise<number> {
+        try {
+            const { container, textFilter, closeButtons } = BrowserUtil.STREAK_DIALOG_SELECTORS
+            const dialog = page.locator(container).filter({ hasText: textFilter })
+            const visible = await dialog.first().isVisible({ timeout: 200 }).catch(() => false)
+            if (!visible) return 0
+
+            const closeBtn = dialog.locator(closeButtons).first()
+            if (await closeBtn.isVisible({ timeout: 200 }).catch(() => false)) {
+                await closeBtn.click({ timeout: 500 }).catch(() => {})
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Streak Protection Dialog Button')
+                return 1
+            }
+
+            await page.keyboard.press('Escape').catch(() => {})
+            this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Streak Protection Dialog Escape')
+            return 1
+        } catch {
+            return 0
         }
     }
 

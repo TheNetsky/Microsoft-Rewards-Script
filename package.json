@@ -1,11 +1,20 @@
 {
   "name": "microsoft-rewards-script",
-  "version": "2.1.0",
+  "version": "2.1.5",
   "description": "Automatically do tasks for Microsoft Rewards but in TS!",
+  "private": true,
   "main": "index.js",
   "engines": {
     "node": ">=18.0.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheNetsky/Microsoft-Rewards-Script.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TheNetsky/Microsoft-Rewards-Script/issues"
+  },
+  "homepage": "https://github.com/TheNetsky/Microsoft-Rewards-Script#readme",
   "scripts": {
     "clean": "rimraf dist",
     "pre-build": "npm i && npm run clean && node -e \"process.exit(process.env.SKIP_PLAYWRIGHT_INSTALL?0:1)\" || npx playwright install chromium",
@@ -32,7 +41,17 @@
     "Cheerio"
   ],
   "author": "Netsky",
+  "contributors": [
+    "TheNetsky (https://github.com/TheNetsky)",
+    "LightZirconite (https://github.com/LightZirconite)",
+    "Mgrimace (https://github.com/mgrimace)",
+    "hmcdat (https://github.com/hmcdat)"
+  ],
   "license": "ISC",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/TheNetsky"
+  },
   "devDependencies": {
   "@types/node": "^20.14.11",
     "@types/ms": "^0.7.34",

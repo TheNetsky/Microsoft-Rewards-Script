@@ -35,12 +35,13 @@ class Browser {
         }
 
         let browser: import('rebrowser-playwright').Browser
-        // Support both legacy and new config structures (wider scope for later usage)
-        const cfgAny = this.bot.config as unknown as Record<string, unknown>
         try {
             // FORCE_HEADLESS env takes precedence (used in Docker with headless shell only)
             const envForceHeadless = process.env.FORCE_HEADLESS === '1'
-            let headlessValue = envForceHeadless ? true : ((cfgAny['headless'] as boolean | undefined) ?? (cfgAny['browser'] && (cfgAny['browser'] as Record<string, unknown>)['headless'] as boolean | undefined) ?? false)
+            // Support legacy config.headless OR nested config.browser.headless
+            const legacyHeadless = (this.bot.config as { headless?: boolean }).headless
+            const nestedHeadless = (this.bot.config.browser as { headless?: boolean } | undefined)?.headless
+            let headlessValue = envForceHeadless ? true : (legacyHeadless ?? nestedHeadless ?? false)
             if (this.bot.isBuyModeEnabled() && !envForceHeadless) {
                 if (headlessValue !== false) {
                     const target = this.bot.getBuyModeTarget()
@@ -77,8 +78,9 @@ class Browser {
         }
 
     // Resolve saveFingerprint from legacy root or new fingerprinting.saveFingerprint
-    const fpConfig = (cfgAny['saveFingerprint'] as unknown) || ((cfgAny['fingerprinting'] as Record<string, unknown> | undefined)?.['saveFingerprint'] as unknown)
-    const saveFingerprint: { mobile: boolean; desktop: boolean } = (fpConfig as { mobile: boolean; desktop: boolean }) || { mobile: false, desktop: false }
+    const legacyFp = (this.bot.config as { saveFingerprint?: { mobile: boolean; desktop: boolean } }).saveFingerprint
+    const nestedFp = (this.bot.config.fingerprinting as { saveFingerprint?: { mobile: boolean; desktop: boolean } } | undefined)?.saveFingerprint
+    const saveFingerprint = legacyFp || nestedFp || { mobile: false, desktop: false }
 
     const sessionData = await loadSessionData(this.bot.config.sessionPath, email, this.bot.isMobile, saveFingerprint)
 
@@ -87,8 +89,10 @@ class Browser {
     const context = await newInjectedContext(browser as unknown as import('playwright').Browser, { fingerprint: fingerprint })
 
     // Set timeout to preferred amount (supports legacy globalTimeout or browser.globalTimeout)
-    const globalTimeout = (cfgAny['globalTimeout'] as unknown) ?? ((cfgAny['browser'] as Record<string, unknown> | undefined)?.['globalTimeout'] as unknown) ?? 30000
-    context.setDefaultTimeout(this.bot.utils.stringToMs(globalTimeout as (number | string)))
+    const legacyTimeout = (this.bot.config as { globalTimeout?: number | string }).globalTimeout
+    const nestedTimeout = (this.bot.config.browser as { globalTimeout?: number | string } | undefined)?.globalTimeout
+    const globalTimeout = legacyTimeout ?? nestedTimeout ?? 30000
+    context.setDefaultTimeout(this.bot.utils.stringToMs(globalTimeout))
 
         // Normalize viewport and page rendering so content fits typical screens
         try {
@@ -126,7 +130,7 @@ class Browser {
         await context.addCookies(sessionData.cookies)
 
         // Persist fingerprint when feature is configured
-        if (fpConfig) {
+        if (saveFingerprint.mobile || saveFingerprint.desktop) {
             await saveFingerprintData(this.bot.config.sessionPath, email, this.bot.isMobile, fingerprint)
         }
 

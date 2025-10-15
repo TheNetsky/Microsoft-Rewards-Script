@@ -193,5 +193,44 @@
         "docker": false,
         // Custom updater script path (relative to repo root)
         "scriptPath": "setup/update/update.mjs"
-    }
+    },
+    
+    // NEW INTELLIGENT FEATURES
+    "riskManagement": {
+        // Risk-Aware Throttling: dynamically adjusts delays based on detected risk signals
+        "enabled": true,
+        // Automatically increase delays when captchas/errors are detected
+        "autoAdjustDelays": true,
+        // Stop execution if risk level reaches critical (score > riskThreshold)
+        "stopOnCritical": false,
+        // Enable ML-style ban prediction based on patterns
+        "banPrediction": true,
+        // Risk threshold (0-100). If exceeded, bot pauses or alerts you.
+        "riskThreshold": 75
+    },
+    
+    "analytics": {
+        // Performance Dashboard: track points earned, success rates, execution times
+        "enabled": true,
+        // How long to keep analytics data (days)
+        "retentionDays": 30,
+        // Generate markdown summary reports
+        "exportMarkdown": true,
+        // Send analytics summary via webhook
+        "webhookSummary": false
+    },
+    
+    "queryDiversity": {
+        // Multi-source query generation: use Reddit, News, Wikipedia instead of just Google Trends
+        "enabled": true,
+        // Which sources to use (google-trends, reddit, news, wikipedia, local-fallback)
+        "sources": ["google-trends", "reddit", "local-fallback"],
+        // Max queries to fetch per source
+        "maxQueriesPerSource": 10,
+        // Cache duration in minutes (avoids hammering APIs)
+        "cacheMinutes": 30
+    },
+    
+    // Dry-run mode: simulate execution without actually running tasks (useful for testing config)
+    "dryRun": false
 }

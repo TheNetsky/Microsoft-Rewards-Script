@@ -1,0 +1,128 @@
+# IMPORTANT LEGAL NOTICES
+
+## 🚨 Terms of Service Violation Warning
+
+**Using this software violates Microsoft's Terms of Service.**
+
+Microsoft Rewards explicitly prohibits:
+- Automated point collection
+- Bot usage for completing tasks
+- Any form of automation on their platform
+
+### Potential Consequences:
+- ❌ **Immediate account suspension**
+- ❌ **Permanent ban from Microsoft Rewards**
+- ❌ **Forfeiture of all accumulated points**
+- ❌ **Loss of redemption history**
+- ⚠️ Possible restrictions on other Microsoft services
+
+---
+
+## 🏢 Commercial Use Prohibited
+
+This software is licensed for **PERSONAL, NON-COMMERCIAL USE ONLY**.
+
+### ❌ Prohibited Activities:
+- Selling this software or modifications
+- Offering it as a paid service
+- Using it for business purposes
+- Creating commercial automation services
+- Bulk account management for profit
+- Integration into commercial platforms
+
+### ✅ Permitted Activities:
+- Personal use for your own accounts
+- Educational purposes and learning
+- Private modifications for personal use
+- Sharing with family/friends (non-commercial)
+
+---
+
+## ⚖️ Legal Disclaimer
+
+### No Warranty
+This software is provided "AS IS" without any warranty of any kind.
+
+### No Liability
+The authors and contributors:
+- Are NOT responsible for account suspensions
+- Are NOT responsible for lost points or rewards
+- Are NOT responsible for any damages
+- Do NOT encourage ToS violations
+- Provide this for educational purposes ONLY
+
+### Your Responsibility
+You are solely responsible for:
+- Your use of this software
+- Compliance with Microsoft's policies
+- Any consequences from automation
+- Legal implications in your jurisdiction
+
+---
+
+## 🎓 Educational Purpose Statement
+
+This project is developed and maintained for **educational purposes**:
+- To demonstrate browser automation techniques
+- To showcase TypeScript and Playwright capabilities
+- To teach software architecture patterns
+- To explore anti-detection methodologies
+
+**The authors do not condone using this software in violation of any Terms of Service.**
+
+---
+
+## 🔒 Privacy & Security
+
+### Your Data:
+- This software stores credentials **locally only**
+- No data is sent to third parties
+- Sessions are stored in the `sessions/` folder
+- You can delete all data by removing local files
+
+### Third-Party Services:
+- Google Trends (for search queries)
+- Bing Search (for automation)
+- Discord/NTFY (optional, for notifications)
+
+### Your Responsibility:
+- Protect your `accounts.json` file
+- Use strong passwords
+- Enable 2FA where possible
+- Don't share your configuration publicly
+
+---
+
+## 🌍 Geographic Restrictions
+
+Microsoft Rewards availability and terms vary by region:
+- Available in select countries only
+- Region-specific earning rates
+- Local laws may apply
+- Check your local regulations
+
+**By using this software, you confirm:**
+1. Microsoft Rewards is available in your region
+2. You understand the risks of automation
+3. You accept full responsibility for your actions
+4. You will not use this for commercial purposes
+
+---
+
+## 📞 Contact & Reporting
+
+**Questions about licensing?**  
+Open an issue at: https://github.com/TheNetsky/Microsoft-Rewards-Script/issues
+
+**Found a security issue?**  
+See: SECURITY.md
+
+**General discussion?**  
+Join Discord: https://discord.gg/KRBFxxsU
+
+---
+
+**Last Updated:** October 2025  
+**Applies to:** Microsoft Rewards Script V2.1.5 and later
+
+**BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ AND UNDERSTOOD THESE NOTICES.**

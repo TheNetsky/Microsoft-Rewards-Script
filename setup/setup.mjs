@@ -1,12 +1,21 @@
 #!/usr/bin/env node
 /**
- * Unified cross-platform setup script for Microsoft Rewards Script.
- * Handles:
- *  - Renaming accounts.example.json -> accounts.json (idempotent)
- *  - Prompt loop to confirm passwords added
- *  - Inform about config.jsonc and conclusionWebhook
- *  - Run npm install + npm run build
- *  - Optional start
+ * Unified cross-platform setup script for Microsoft Rewards Script V2.
+ * 
+ * Features:
+ *  - Renames accounts.example.json -> accounts.json (idempotent)
+ *  - Guides user through account configuration (email, password, TOTP, proxy)
+ *  - Explains config.jsonc structure and key settings
+ *  - Installs dependencies (npm install)
+ *  - Builds TypeScript project (npm run build)
+ *  - Installs Playwright Chromium browser (idempotent with marker)
+ *  - Optional immediate start or manual start instructions
+ * 
+ * V2 Updates:
+ *  - Enhanced prompts for new config.jsonc structure
+ *  - Explains humanization, scheduling, notifications
+ *  - References updated documentation (docs/config.md, docs/accounts.md)
+ *  - Improved user guidance for first-time setup
  */
 
 import fs from 'fs';
@@ -52,12 +61,19 @@ async function prompt(question) {
 }
 
 async function loopForAccountsConfirmation() {
+  log('\n📝 Please configure your Microsoft accounts:');
+  log('   - Open: src/accounts.json');
+  log('   - Add your email and password for each account');
+  log('   - Optional: Add TOTP secret for 2FA (see docs/accounts.md)');
+  log('   - Optional: Configure proxy settings per account');
+  log('   - Save the file (Ctrl+S or Cmd+S)\n');
+  
   // Keep asking until user says yes
   for (;;) {
-    const ans = (await prompt('Have you entered your passwords in accounts.json? (yes/no) : ')).toLowerCase();
+    const ans = (await prompt('Have you configured your accounts in accounts.json? (yes/no): ')).toLowerCase();
     if (['yes', 'y'].includes(ans)) break;
     if (['no', 'n'].includes(ans)) {
-      log('Please enter your passwords in accounts.json and save the file (Ctrl+S), then answer yes.');
+      log('Please configure accounts.json and save the file, then answer yes.');
       continue;
     }
     log('Please answer yes or no.');
@@ -102,17 +118,44 @@ async function startOnly() {
 async function fullSetup() {
   renameAccountsIfNeeded();
   await loopForAccountsConfirmation();
-  log('\nYou can now review config.jsonc (same folder) to adjust settings such as conclusionWebhook.');
-  log('(How to enable it is documented in the repository README.)\n');
+  
+  log('\n⚙️  Configuration Options (src/config.jsonc):');
+  log('   - browser.headless: Set to true for background operation');
+  log('   - execution.clusters: Number of parallel account processes');
+  log('   - workers: Enable/disable specific tasks (dailySet, searches, etc.)');
+  log('   - humanization: Add natural delays and behavior (recommended: enabled)');
+  log('   - schedule: Configure automated daily runs');
+  log('   - notifications: Discord webhooks, NTFY push alerts');
+  log('   📚 Full guide: docs/config.md\n');
+  
+  const reviewConfig = (await prompt('Do you want to review config.jsonc now? (yes/no): ')).toLowerCase();
+  if (['yes', 'y'].includes(reviewConfig)) {
+    log('⏸️  Setup paused. Please review src/config.jsonc, then re-run this setup.');
+    log('   Common settings to check:');
+    log('   - browser.headless (false = visible browser, true = background)');
+    log('   - execution.runOnZeroPoints (false = skip when no points available)');
+    log('   - humanization.enabled (true = natural behavior, recommended)');
+    log('   - schedule.enabled (false = manual runs, true = automated scheduling)');
+    log('\n   After editing config.jsonc, run: npm run setup');
+    process.exit(0);
+  }
+  
   await ensureNpmAvailable();
   await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install']);
   await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build']);
   await installPlaywrightBrowsers();
-  const start = (await prompt('Do you want to start the program now? (yes/no) : ')).toLowerCase();
+  
+  log('\n✅ Setup complete!');
+  log('   - Accounts configured: src/accounts.json');
+  log('   - Configuration: src/config.jsonc');
+  log('   - Documentation: docs/index.md\n');
+  
+  const start = (await prompt('Do you want to start the automation now? (yes/no): ')).toLowerCase();
   if (['yes', 'y'].includes(start)) {
     await runCommand(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'start']);
   } else {
-    log('Finished setup without starting.');
+    log('\nFinished setup. To start later, run: npm start');
+    log('For automated scheduling, run: npm run start:schedule');
   }
 }
 

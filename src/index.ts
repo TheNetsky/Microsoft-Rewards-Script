@@ -84,20 +84,19 @@ export class MicrosoftRewardsBot {
         this.humanizer = new Humanizer(this.utils, this.config.humanization)
         this.activeWorkers = this.config.clusters
         this.mobileRetryAttempts = 0
-        // Base buy mode from config
-        const cfgAny = this.config as unknown as { buyMode?: { enabled?: boolean } }
-        if (cfgAny.buyMode?.enabled === true) {
-            this.buyMode.enabled = true
-        }
-
-        // CLI: detect buy mode flag and target email (overrides config)
+        
+        // Buy mode: CLI args take precedence over config
         const idx = process.argv.indexOf('-buy')
         if (idx >= 0) {
             const target = process.argv[idx + 1]
-            if (target && /@/.test(target)) {
-                this.buyMode = { enabled: true, email: target }
-            } else {
-                this.buyMode = { enabled: true }
+            this.buyMode = target && /@/.test(target) 
+                ? { enabled: true, email: target }
+                : { enabled: true }
+        } else {
+            // Fallback to config if no CLI flag
+            const buyModeConfig = this.config.buyMode as { enabled?: boolean } | undefined
+            if (buyModeConfig?.enabled === true) {
+                this.buyMode.enabled = true
             }
         }
     }
@@ -221,10 +220,8 @@ export class MicrosoftRewardsBot {
             let last = initial
             let spent = 0
 
-            const cfgAny = this.config as unknown as Record<string, unknown>
-            const buyModeConfig = cfgAny['buyMode'] as Record<string, unknown> | undefined
-            const maxMinutesRaw = buyModeConfig?.['maxMinutes'] ?? 45
-            const maxMinutes = Math.max(10, Number(maxMinutesRaw))
+            const buyModeConfig = this.config.buyMode as { maxMinutes?: number } | undefined
+            const maxMinutes = Math.max(10, buyModeConfig?.maxMinutes ?? 45)
             const endAt = start + maxMinutes * 60 * 1000
 
             while (Date.now() < endAt) {
@@ -292,25 +289,33 @@ export class MicrosoftRewardsBot {
         if (this.config.clusters > 1 && !cluster.isPrimary) return
         
         const banner = `
- ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗
- ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
- ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗
- ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║
- ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║
- ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
-                                                                                   
-                      TypeScript • Playwright • Automated Point Collection        
+ ╔═══════════════════════════════════════════════════════════════════════════╗
+ ║                                                                           ║
+ ║  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗  ║
+ ║  ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝  ║
+ ║  ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗  ║
+ ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║  ║
+ ║  ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║  ║
+ ║  ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝  ║
+ ║                                                                           ║
+ ║          TypeScript • Playwright • Intelligent Automation                ║
+ ║                                                                           ║
+ ╚═══════════════════════════════════════════════════════════════════════════╝
 `
 
         const buyModeBanner = `
- ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗
- ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝
- ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝ 
- ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝  
- ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║   
- ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝   
-                                                   
-            By @Light • Manual Purchase Mode • Passive Monitoring
+ ╔══════════════════════════════════════════════════════╗
+ ║                                                      ║
+ ║  ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗  ║
+ ║  ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝  ║
+ ║  ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝   ║
+ ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝    ║
+ ║  ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║     ║
+ ║  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝     ║
+ ║                                                      ║
+ ║      Manual Purchase Mode • Passive Monitoring       ║
+ ║                                                      ║
+ ╚══════════════════════════════════════════════════════╝
 `
         
         try {

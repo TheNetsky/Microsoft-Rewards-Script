@@ -12,13 +12,13 @@ type WebhookContext = 'summary' | 'ban' | 'security' | 'compromised' | 'spend' |
 
 function pickUsername(ctx: WebhookContext, fallbackColor?: number): string {
     switch (ctx) {
-        case 'summary': return 'Summary'
-        case 'ban': return 'Ban'
-        case 'security': return 'Security'
-        case 'compromised': return 'Pirate'
-        case 'spend': return 'Spend'
-        case 'error': return 'Error'
-        default: return fallbackColor === 0xFF0000 ? 'Error' : 'Rewards'
+        case 'summary': return '📊 MS Rewards Summary'
+        case 'ban': return '🚫 Ban Alert'
+        case 'security': return '🔐 Security Alert'
+        case 'compromised': return '⚠️ Security Issue'
+        case 'spend': return '💳 Spend Notice'
+        case 'error': return '❌ Error Report'
+        default: return fallbackColor === 0xFF0000 ? '❌ Error Report' : '🎯 MS Rewards'
     }
 }
 
