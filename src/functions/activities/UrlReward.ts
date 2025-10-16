@@ -9,7 +9,7 @@ export class UrlReward extends Workers {
         this.bot.log(this.bot.isMobile, 'URL-REWARD', 'Trying to complete UrlReward')
 
         try {
-            this.bot.utils.wait(2000)
+            await this.bot.utils.wait(2000)
 
             await page.close()
 

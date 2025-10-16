@@ -10,6 +10,7 @@ import BrowserUtil from './browser/BrowserUtil'
 import { log } from './util/Logger'
 import Util from './util/Utils'
 import { loadAccounts, loadConfig, saveSessionData } from './util/Load'
+import { DISCORD } from './constants'
 
 import { Login } from './functions/Login'
 import { Workers } from './functions/Workers'
@@ -673,7 +674,7 @@ export class MicrosoftRewardsBot {
                     {
                         title,
                         description: desc,
-                        color: 0xFF0000
+                        color: DISCORD.COLOR_RED
                     }
                 ]
             })
@@ -1017,7 +1018,7 @@ export class MicrosoftRewardsBot {
                 '**📈 Account Details**',
                 ...accountDetails
             ].filter(Boolean).join('\n'),
-            color: accountsWithErrors > 0 ? 0xFFA500 : 0x00D26A,
+            color: accountsWithErrors > 0 ? DISCORD.COLOR_ORANGE : DISCORD.COLOR_GREEN,
             thumbnail: {
                 url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
             },
@@ -1159,7 +1160,7 @@ export class MicrosoftRewardsBot {
                     {
                         title,
                         description: desc,
-                        color: 0xFF0000
+                        color: DISCORD.COLOR_RED
                     }
                 ]
             })

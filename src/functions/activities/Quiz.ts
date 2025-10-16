@@ -1,7 +1,7 @@
 import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
-import { TIMEOUTS } from '../../constants'
+import { RETRY_LIMITS, TIMEOUTS, DELAYS } from '../../constants'
 
 
 export class Quiz extends Workers {
@@ -61,7 +61,7 @@ export class Quiz extends Workers {
 
                     // Click the answers
                     for (const answer of answers) {
-                        await page.waitForSelector(answer, { state: 'visible', timeout: 2000 })
+                        await page.waitForSelector(answer, { state: 'visible', timeout: DELAYS.QUIZ_ANSWER_WAIT })
 
                         // Click the answer on page
                         await page.click(answer)
@@ -83,7 +83,7 @@ export class Quiz extends Workers {
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
 
-                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 }).catch(() => null)
+                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: RETRY_LIMITS.QUIZ_ANSWER_TIMEOUT }).catch(() => null)
                         
                         if (!answerSelector) {
                             this.bot.log(this.bot.isMobile, 'QUIZ', `Option ${i} not found for ${quizData.numberOfOptions}-option quiz. Skipping.`, 'warn')
@@ -113,12 +113,12 @@ export class Quiz extends Workers {
                         return
                     }
                     
-                    await this.bot.utils.wait(2000)
+                    await this.bot.utils.wait(DELAYS.QUIZ_ANSWER_WAIT)
                 }
             }
 
             // Done with
-            await this.bot.utils.wait(2000)
+            await this.bot.utils.wait(DELAYS.QUIZ_ANSWER_WAIT)
             await page.close()
 
             this.bot.log(this.bot.isMobile, 'QUIZ', 'Completed the quiz successfully')
