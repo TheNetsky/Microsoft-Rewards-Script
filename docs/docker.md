@@ -1,90 +1,167 @@
 # 🐳 Docker Guide
 
-<div align="center">
-
-**⚡ Lightweight containerized deployment**  
-*Automated Microsoft Rewards with minimal Docker footprint*
-
-</div>
+**Run the script in a container**
 
 ---
 
-## 🚀 Quick Start Checklist
+## ⚡ Quick Start
 
-1. `src/accounts.json` populated with your Microsoft credentials
-2. `src/config.jsonc` present (defaults are fine; comments stay intact)
-3. Docker + Docker Compose installed locally (Desktop app or CLI)
+### 1. Create Required Files
+
+Ensure you have:
+- `src/accounts.json` with your credentials
+- `src/config.jsonc` (uses defaults if missing)
+
+### 2. Start Container
 
 ```bash
-# Build and start the container (scheduler runs automatically)
+docker compose up -d
+```
+
+### 3. View Logs
+
+```bash
+docker logs -f microsoft-rewards-script
+```
+
+**That's it!** Script runs automatically.
+
+---
+
+## 🎯 What's Included
+
+The Docker setup:
+- ✅ **Chromium Headless Shell** — Lightweight browser
+- ✅ **Scheduler enabled** — Daily automation
+- ✅ **Volume mounts** — Persistent sessions
+- ✅ **Force headless** — Required for containers
+
+---
+
+## 📁 Mounted Volumes
+
+| Host Path | Container Path | Purpose |
+|-----------|----------------|---------|
+| `./src/accounts.json` | `/usr/src/.../accounts.json` | Account credentials (read-only) |
+| `./src/config.jsonc` | `/usr/src/.../config.json` | Configuration (read-only) |
+| `./sessions` | `/usr/src/.../sessions` | Cookies & fingerprints |
+
+---
+
+## 🌍 Environment Variables
+
+### Set Timezone
+
+```yaml
+services:
+  rewards:
+    environment:
+      TZ: Europe/Paris
+```
+
+### Use Inline JSON
+
+```bash
+docker run -e ACCOUNTS_JSON='{"accounts":[...]}' ...
+```
+
+### Custom Config Path
+
+```bash
+docker run -e ACCOUNTS_FILE=/custom/path/accounts.json ...
+```
+
+---
+
+## 🔧 Common Commands
+
+```bash
+# Start container
 docker compose up -d
 
-# Stream logs from the running container
+# View logs
 docker logs -f microsoft-rewards-script
 
-# Stop the stack when you are done
+# Stop container
 docker compose down
-```
 
-The compose file uses the same Playwright build as local runs but forces headless mode inside the container via `FORCE_HEADLESS=1`, matching the bundled image.
+# Rebuild image
+docker compose build --no-cache
+
+# Restart container
+docker compose restart
+```
 
 ---
 
-## 📦 What the Compose File Mounts
+## 🛠️ Troubleshooting
 
-| Host path | Container path | Purpose |
-|-----------|----------------|---------|
-| `./src/accounts.json` | `/usr/src/microsoft-rewards-script/accounts.json` | Read-only account credentials |
-| `./src/config.jsonc` | `/usr/src/microsoft-rewards-script/config.json` | Read-only runtime configuration |
-| `./sessions` | `/usr/src/microsoft-rewards-script/sessions` | Persisted cookies & fingerprints |
+| Problem | Solution |
+|---------|----------|
+| **"accounts.json not found"** | Mount file in `docker-compose.yml` |
+| **"Browser launch failed"** | Ensure `FORCE_HEADLESS=1` is set |
+| **"Permission denied"** | Check file permissions (`chmod 644`) |
+| **Scheduler not running** | Verify `schedule.enabled: true` in config |
 
-Prefer environment variables? The loader accepts the same overrides as local runs:
+### Debug Container
 
 ```bash
-ACCOUNTS_FILE=/custom/accounts.json
-ACCOUNTS_JSON='[{"email":"name@example.com","password":"hunter2"}]'
+# Enter container shell
+docker exec -it microsoft-rewards-script /bin/bash
+
+# Check Node.js version
+docker exec -it microsoft-rewards-script node --version
+
+# View config
+docker exec -it microsoft-rewards-script cat config.json
 ```
 
 ---
 
-## 🌍 Useful Environment Variables
+## 🎛️ Custom Configuration
 
-- `TZ` — set container timezone (`Europe/Paris`, `America/New_York`, etc.)
-- `NODE_ENV=production` — default; keeps builds lean
-- `FORCE_HEADLESS=1` — required in Docker (Chromium Headless Shell only)
-- Scheduler tuning (optional):
-  - `SCHEDULER_DAILY_JITTER_MINUTES_MIN` / `SCHEDULER_DAILY_JITTER_MINUTES_MAX`
-  - `SCHEDULER_PASS_TIMEOUT_MINUTES`
-  - `SCHEDULER_FORK_PER_PASS`
+### Use Built-in Scheduler
 
----
+**Default** `docker-compose.yml`:
+```yaml
+services:
+  rewards:
+    build: .
+    command: ["npm", "run", "start:schedule"]
+```
 
-## 🧠 Browser Footprint
+### Single Run (Manual)
 
-The Docker image installs Chromium Headless Shell via `npx playwright install --with-deps --only-shell`. This keeps the image compact while retaining Chromium’s Edge-compatible user agent. Installing full Edge or all browsers roughly doubles the footprint and adds instability, so we ship only the shell.
+```yaml
+services:
+  rewards:
+    build: .
+    command: ["node", "./dist/index.js"]
+```
 
----
+### External Cron (Alternative)
 
-## 🔁 Alternate Commands
-
-- **Default:** `npm run start:schedule` (inside container) — keeps the scheduler alive
-- **Single pass:** `docker compose run --rm app node ./dist/index.js`
-- **Custom script:** Override `command:` in `compose.yaml` to suit your workflow
-
----
-
-## 💡 Tips
-
-- Add TOTP secrets to `accounts.json` so the bot can respond to MFA prompts automatically
-- Keep the `sessions` volume; deleting it forces fresh logins and can trigger security reviews
-- Mixing proxies? Configure per-account proxies in `accounts.json` (see [Proxy Setup](./proxy.md))
-- Want notifications? Layer [NTFY](./ntfy.md) or [Discord Webhooks](./conclusionwebhook.md) on top once the container is stable
+```yaml
+services:
+  rewards:
+    environment:
+      CRON_SCHEDULE: "0 7,16,20 * * *"
+      RUN_ON_START: "true"
+```
 
 ---
 
-## 🔗 Related Guides
+## 📚 Next Steps
 
-- **[Getting Started](./getting-started.md)** — Prep work before switching to containers
-- **[Accounts & 2FA](./accounts.md)** — Ensure every account can pass MFA headlessly
-- **[Scheduler](./schedule.md)** — If you prefer a host-side cron instead of Docker
-- **[Diagnostics](./diagnostics.md)** — Capture logs and debug a failing container
+**Need 2FA?**  
+→ **[Accounts & TOTP Setup](./accounts.md)**
+
+**Want notifications?**  
+→ **[Discord Webhooks](./conclusionwebhook.md)**
+
+**Scheduler config?**  
+→ **[Scheduler Guide](./schedule.md)**
+
+---
+
+**[← Back to Hub](./index.md)** | **[Getting Started](./getting-started.md)**

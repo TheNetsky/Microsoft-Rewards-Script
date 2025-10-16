@@ -3,6 +3,11 @@ import chalk from 'chalk'
 
 import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
+import { DISCORD } from '../constants'
+
+// Avatar URL for webhook (consistent with ConclusionWebhook)
+const WEBHOOK_AVATAR_URL = 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
+const WEBHOOK_USERNAME = 'MS Rewards - Live Logs'
 
 type WebhookBuffer = {
     lines: string[]
@@ -30,20 +35,31 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
         while (buf.lines.length > 0) {
             const next = buf.lines[0]!
             const projected = currentLength + next.length + (chunk.length > 0 ? 1 : 0)
-            if (projected > 1900 && chunk.length > 0) break
+            if (projected > DISCORD.MAX_EMBED_LENGTH && chunk.length > 0) break
             buf.lines.shift()
             chunk.push(next)
             currentLength = projected
         }
 
-        const content = chunk.join('\n').slice(0, 1900)
+        const content = chunk.join('\n').slice(0, DISCORD.MAX_EMBED_LENGTH)
         if (!content) {
             continue
         }
 
+        // Enhanced webhook payload with embed, username and avatar
+        const payload = {
+            username: WEBHOOK_USERNAME,
+            avatar_url: WEBHOOK_AVATAR_URL,
+            embeds: [{
+                description: `\`\`\`\n${content}\n\`\`\``,
+                color: determineColorFromContent(content),
+                timestamp: new Date().toISOString()
+            }]
+        }
+
         try {
-            await axios.post(url, { content }, { headers: { 'Content-Type': 'application/json' }, timeout: 10000 })
-            await new Promise(resolve => setTimeout(resolve, 500))
+            await axios.post(url, payload, { headers: { 'Content-Type': 'application/json' }, timeout: DISCORD.WEBHOOK_TIMEOUT })
+            await new Promise(resolve => setTimeout(resolve, DISCORD.RATE_LIMIT_DELAY))
         } catch (error) {
             // Re-queue failed batch at front and exit loop
             buf.lines = chunk.concat(buf.lines)
@@ -54,6 +70,32 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
     buf.sending = false
 }
 
+function determineColorFromContent(content: string): number {
+    const lower = content.toLowerCase()
+    // Security/Ban alerts - Red
+    if (lower.includes('[banned]') || lower.includes('[security]') || lower.includes('suspended') || lower.includes('compromised')) {
+        return DISCORD.COLOR_RED
+    }
+    // Errors - Dark Red
+    if (lower.includes('[error]') || lower.includes('✗')) {
+        return DISCORD.COLOR_CRIMSON
+    }
+    // Warnings - Orange/Yellow
+    if (lower.includes('[warn]') || lower.includes('⚠')) {
+        return DISCORD.COLOR_ORANGE
+    }
+    // Success - Green
+    if (lower.includes('[ok]') || lower.includes('✓') || lower.includes('complet')) {
+        return DISCORD.COLOR_GREEN
+    }
+    // Info/Main - Blue
+    if (lower.includes('[main]')) {
+        return DISCORD.COLOR_BLUE
+    }
+    // Default - Gray
+    return 0x95A5A6 // Gray
+}
+
 function enqueueWebhookLog(url: string, line: string) {
     const buf = getBuffer(url)
     buf.lines.push(line)
@@ -61,7 +103,7 @@ function enqueueWebhookLog(url: string, line: string) {
         buf.timer = setTimeout(() => {
             buf.timer = undefined
             void sendBatch(url, buf)
-        }, 750)
+        }, DISCORD.DEBOUNCE_DELAY)
     }
 }
 

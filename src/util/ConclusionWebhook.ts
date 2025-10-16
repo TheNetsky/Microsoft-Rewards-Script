@@ -2,23 +2,20 @@ import axios from 'axios'
 import { Config } from '../interface/Config'
 import { Ntfy } from './Ntfy'
 
-// Light obfuscation of the avatar URL (base64). Prevents casual editing in config.
-const AVATAR_B64 = 'aHR0cHM6Ly9tZWRpYS5kaXNjb3JkYXBwLm5ldC9hdHRhY2htZW50cy8xNDIxMTYzOTUyOTcyMzY5OTMxLzE0MjExNjQxNDU5OTQyNDAxMTAvbXNuLnBuZz93aWR0aD01MTImZWlnaHQ9NTEy'
-function getAvatarUrl(): string {
-    try { return Buffer.from(AVATAR_B64, 'base64').toString('utf-8') } catch { return '' }
-}
+// Avatar URL for webhook (new clean logo)
+const AVATAR_URL = 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
 
 type WebhookContext = 'summary' | 'ban' | 'security' | 'compromised' | 'spend' | 'error' | 'default'
 
 function pickUsername(ctx: WebhookContext, fallbackColor?: number): string {
     switch (ctx) {
-        case 'summary': return '📊 MS Rewards Summary'
-        case 'ban': return '🚫 Ban Alert'
-        case 'security': return '🔐 Security Alert'
-        case 'compromised': return '⚠️ Security Issue'
-        case 'spend': return '💳 Spend Notice'
-        case 'error': return '❌ Error Report'
-        default: return fallbackColor === 0xFF0000 ? '❌ Error Report' : '🎯 MS Rewards'
+        case 'summary': return 'MS Rewards - Daily Summary'
+        case 'ban': return 'MS Rewards - Ban Detected'
+        case 'security': return 'MS Rewards - Security Alert'
+        case 'compromised': return 'MS Rewards - Account Compromised'
+        case 'spend': return 'MS Rewards - Purchase Notification'
+        case 'error': return 'MS Rewards - Error Report'
+        default: return fallbackColor === 0xFF0000 ? 'MS Rewards - Error Report' : 'MS Rewards Bot'
     }
 }
 
@@ -55,7 +52,7 @@ export async function ConclusionWebhook(config: Config, content: string, payload
     const firstColor = payload?.embeds && payload.embeds[0]?.color
     const ctx: WebhookContext = payload?.context || (firstColor === 0xFF0000 ? 'error' : 'default')
     body.username = pickUsername(ctx, firstColor)
-    body.avatar_url = getAvatarUrl()
+    body.avatar_url = AVATAR_URL
 
     // Post to conclusion webhook if configured
     const postWithRetry = async (url: string, label: string) => {

@@ -10,6 +10,7 @@ import BrowserUtil from './browser/BrowserUtil'
 import { log } from './util/Logger'
 import Util from './util/Utils'
 import { loadAccounts, loadConfig, saveSessionData } from './util/Load'
+import { DISCORD } from './constants'
 
 import { Login } from './functions/Login'
 import { Workers } from './functions/Workers'
@@ -66,8 +67,7 @@ export class MicrosoftRewardsBot {
     private heartbeatFile?: string
     private heartbeatTimer?: NodeJS.Timeout
 
-    //@ts-expect-error Will be initialized later
-    public axios: Axios
+    public axios!: Axios
 
     constructor(isMobile: boolean) {
         this.isMobile = isMobile
@@ -650,10 +650,15 @@ export class MicrosoftRewardsBot {
             // Cleanup heartbeat timer/file at end of run
             if (this.heartbeatTimer) { try { clearInterval(this.heartbeatTimer) } catch { /* ignore */ } }
             if (this.heartbeatFile) { try { if (fs.existsSync(this.heartbeatFile)) fs.unlinkSync(this.heartbeatFile) } catch { /* ignore */ } }
-            // After conclusion, run optional auto-update
-            await this.runAutoUpdate().catch(() => {/* ignore update errors */})
+            // After conclusion, run optional auto-update (only if not in scheduler mode)
+            if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
+                await this.runAutoUpdate().catch(() => {/* ignore update errors */})
+            }
         }
-        process.exit()
+        // Only exit if not spawned by scheduler
+        if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
+            process.exit()
+        }
     }
 
     /** Send immediate ban alert if configured. */
@@ -669,7 +674,7 @@ export class MicrosoftRewardsBot {
                     {
                         title,
                         description: desc,
-                        color: 0xFF0000
+                        color: DISCORD.COLOR_RED
                     }
                 ]
             })
@@ -956,20 +961,7 @@ export class MicrosoftRewardsBot {
         let accountsWithErrors = 0
         let successes = 0
 
-        type DiscordField = { name: string; value: string; inline?: boolean }
-        type DiscordFooter = { text: string }
-        type DiscordEmbed = {
-            title?: string
-            description?: string
-            color?: number
-            fields?: DiscordField[]
-            timestamp?: string
-            footer?: DiscordFooter
-        }
-
-        const accountFields: DiscordField[] = []
-        const accountLines: string[] = []
-
+        // Calculate summary statistics
         for (const s of summaries) {
             totalCollected += s.totalCollected
             totalInitial += s.initialTotal
@@ -977,44 +969,12 @@ export class MicrosoftRewardsBot {
             totalDuration += s.durationMs
             if (s.errors.length) accountsWithErrors++
             else successes++
-
-            const statusEmoji = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
-            const diff = s.totalCollected
-            const duration = formatDuration(s.durationMs)
-
-            // Build embed fields (Discord)
-            const valueLines: string[] = [
-                `Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )`,
-                `Breakdown: 🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
-                `Duration: ⏱️ ${duration}`
-            ]
-            if (s.banned?.status) {
-                valueLines.push(`Banned: ${s.banned.reason || 'detected by heuristics'}`)
-            }
-            if (s.errors.length) {
-                valueLines.push(`Errors: ${s.errors.slice(0, 2).join(' | ')}`)
-            }
-            accountFields.push({
-                name: `${statusEmoji} ${s.email}`.substring(0, 256),
-                value: valueLines.join('\n').substring(0, 1024),
-                inline: false
-            })
-
-            // Build plain text lines (NTFY)
-            const lines = [
-                `${statusEmoji} ${s.email}`,
-                `  Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )`,
-                `  🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
-                `  Duration: ${duration}`
-            ]
-            if (s.banned?.status) lines.push(`  Banned: ${s.banned.reason || 'detected by heuristics'}`)
-            if (s.errors.length) lines.push(`  Errors: ${s.errors.slice(0, 2).join(' | ')}`)
-            accountLines.push(lines.join('\n') + '\n')
         }
 
         const avgDuration = totalDuration / totalAccounts
+        const avgPointsPerAccount = Math.round(totalCollected / totalAccounts)
 
-        // Read package version (best-effort)
+        // Read package version
         let version = 'unknown'
         try {
             const pkgPath = path.join(process.cwd(), 'package.json')
@@ -1025,80 +985,70 @@ export class MicrosoftRewardsBot {
             }
         } catch { /* ignore */ }
 
-        // Discord/Webhook embeds with chunking (limits: 10 embeds/message, 25 fields/embed)
-        const MAX_EMBEDS = 10
-        const MAX_FIELDS = 25
+        // Build clean embed with account details
+        type DiscordField = { name: string; value: string; inline?: boolean }
+        type DiscordEmbed = {
+            title?: string
+            description?: string
+            color?: number
+            fields?: DiscordField[]
+            thumbnail?: { url: string }
+            timestamp?: string
+            footer?: { text: string; icon_url?: string }
+        }
 
-        const baseFields = [
-            {
-                name: 'Global Totals',
-                value: [
-                    `Total Points: ${totalInitial} → ${totalEnd} ( +${totalCollected} )`,
-                    `Accounts: ✅ ${successes} • ⚠️ ${accountsWithErrors} (of ${totalAccounts})`,
-                    `Average Duration: ${formatDuration(avgDuration)}`,
-                    `Cumulative Runtime: ${formatDuration(totalDuration)}`
-                ].join('\n')
-            }
-        ]
+        const accountDetails: string[] = []
+        for (const s of summaries) {
+            const statusIcon = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
+            const line = `${statusIcon} **${s.email}** → +${s.totalCollected}pts (🖥️${s.desktopCollected} 📱${s.mobileCollected}) • ${formatDuration(s.durationMs)}`
+            accountDetails.push(line)
+            if (s.banned?.status) accountDetails.push(`  └ Banned: ${s.banned.reason || 'detected'}`)
+            if (s.errors.length > 0) accountDetails.push(`  └ Errors: ${s.errors.slice(0, 2).join(', ')}`)
+        }
 
-        // Prepare embeds: first embed for totals, subsequent for accounts
-        const embeds: DiscordEmbed[] = []
-        const headerEmbed: DiscordEmbed = {
-            title: '🎯 Microsoft Rewards Summary',
-            description: `Processed **${totalAccounts}** account(s)${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
-            color: accountsWithErrors ? 0xFFAA00 : 0x32CD32,
-            fields: baseFields,
+        const embed: DiscordEmbed = {
+            title: '🎯 Microsoft Rewards - Daily Summary',
+            description: [
+                '**📊 Global Statistics**',
+                `├ Total Points: **${totalInitial}** → **${totalEnd}** (+**${totalCollected}**)`,
+                `├ Accounts: ✅ ${successes} • ${accountsWithErrors > 0 ? `⚠️ ${accountsWithErrors}` : ''} (${totalAccounts} total)`,
+                `├ Average: **${avgPointsPerAccount}pts/account** • **${formatDuration(avgDuration)}/account**`,
+                `└ Runtime: **${formatDuration(totalDuration)}**`,
+                '',
+                '**📈 Account Details**',
+                ...accountDetails
+            ].filter(Boolean).join('\n'),
+            color: accountsWithErrors > 0 ? DISCORD.COLOR_ORANGE : DISCORD.COLOR_GREEN,
+            thumbnail: {
+                url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
+            },
             timestamp: new Date().toISOString(),
-            footer: { text: `Run ${this.runId}${version !== 'unknown' ? ` • v${version}` : ''}` }
-        }
-        embeds.push(headerEmbed)
-
-        // Chunk account fields across remaining embeds
-        const fieldsPerEmbed = Math.min(MAX_FIELDS, 25)
-        const availableEmbeds = MAX_EMBEDS - embeds.length
-        const chunks: DiscordField[][] = []
-        for (let i = 0; i < accountFields.length; i += fieldsPerEmbed) {
-            chunks.push(accountFields.slice(i, i + fieldsPerEmbed))
-        }
-
-        const includedChunks = chunks.slice(0, availableEmbeds)
-        for (const [idx, chunk] of includedChunks.entries()) {
-            const chunkEmbed: DiscordEmbed = {
-                title: `Accounts ${idx * fieldsPerEmbed + 1}–${Math.min((idx + 1) * fieldsPerEmbed, accountFields.length)}`,
-                color: accountsWithErrors ? 0xFFAA00 : 0x32CD32,
-                fields: chunk,
-                timestamp: new Date().toISOString()
-            }
-            embeds.push(chunkEmbed)
-        }
-
-        const omitted = chunks.length - includedChunks.length
-        if (omitted > 0 && embeds.length > 0) {
-            // Add a small note to the last embed about omitted accounts
-            const last = embeds[embeds.length - 1]!
-            const noteField: DiscordField = { name: 'Note', value: `And ${omitted * fieldsPerEmbed} more account entries not shown due to Discord limits.`, inline: false }
-            if (last.fields && Array.isArray(last.fields)) {
-                last.fields = [...last.fields, noteField].slice(0, MAX_FIELDS)
+            footer: {
+                text: `MS Rewards Bot v${version} • Run ${this.runId}`,
+                icon_url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
             }
         }
 
-        // NTFY-compatible plain text (includes per-account breakdown)
+        // NTFY plain text fallback
         const fallback = [
-            'Microsoft Rewards Summary',
-            `Accounts: ${totalAccounts}${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
-            `Total: ${totalInitial} -> ${totalEnd} (+${totalCollected})`,
-            `Average Duration: ${formatDuration(avgDuration)}`,
-            `Cumulative Runtime: ${formatDuration(totalDuration)}`,
+            '🎯 Microsoft Rewards Summary',
+            `Accounts: ${totalAccounts} (✅${successes} ${accountsWithErrors > 0 ? `⚠️${accountsWithErrors}` : ''})`,
+            `Total: ${totalInitial}→${totalEnd} (+${totalCollected})`,
+            `Average: ${avgPointsPerAccount}pts/account • ${formatDuration(avgDuration)}`,
+            `Runtime: ${formatDuration(totalDuration)}`,
             '',
-            ...accountLines
+            ...summaries.map(s => {
+                const st = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
+                return `${st} ${s.email}: +${s.totalCollected}pts (🖥️${s.desktopCollected} 📱${s.mobileCollected})`
+            })
         ].join('\n')
 
-    // Send both when any channel is enabled: Discord gets embeds, NTFY gets fallback
-    if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
-        await ConclusionWebhook(cfg, fallback, { embeds })
-    }
+        // Send webhook
+        if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
+            await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
+        }
 
-        // Write local JSON report for observability
+        // Write local JSON report
         try {
             const fs = await import('fs')
             const path = await import('path')
@@ -1119,7 +1069,7 @@ export class MicrosoftRewardsBot {
             log('main','REPORT',`Failed to save report: ${e instanceof Error ? e.message : e}`,'warn')
         }
 
-    // Optionally cleanup old diagnostics folders
+        // Cleanup old diagnostics
         try {
             const days = cfg.diagnostics?.retentionDays
             if (typeof days === 'number' && days > 0) {
@@ -1128,6 +1078,7 @@ export class MicrosoftRewardsBot {
         } catch (e) {
             log('main','REPORT',`Failed diagnostics cleanup: ${e instanceof Error ? e.message : e}`,'warn')
         }
+
     }
 
     /** Reserve one diagnostics slot for this run (caps captures). */
@@ -1209,7 +1160,7 @@ export class MicrosoftRewardsBot {
                     {
                         title,
                         description: desc,
-                        color: 0xFF0000
+                        color: DISCORD.COLOR_RED
                     }
                 ]
             })
@@ -1252,8 +1203,6 @@ function formatDuration(ms: number): string {
 }
 
 async function main() {
-    // CommunityReporter disabled per project policy
-    // (previously: init + global hooks for uncaughtException/unhandledRejection)
     const rewardsBot = new MicrosoftRewardsBot(false)
 
     const crashState = { restarts: 0 }
@@ -1307,7 +1256,6 @@ async function main() {
 if (require.main === module) {
     main().catch(error => {
         log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
-        // CommunityReporter disabled
         process.exit(1)
     })
 }

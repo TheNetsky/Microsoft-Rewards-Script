@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import path from 'path'
 
 import { Workers } from '../Workers'
+import { DELAYS } from '../../constants'
 
 import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
 
@@ -13,7 +14,7 @@ export class SearchOnBing extends Workers {
         this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'Trying to complete SearchOnBing')
 
         try {
-            await this.bot.utils.wait(5000)
+            await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_WAIT)
 
             await this.bot.browser.utils.tryDismissAllMessages(page)
 
@@ -21,20 +22,20 @@ export class SearchOnBing extends Workers {
 
             const searchBar = '#sb_form_q'
             const box = page.locator(searchBar)
-            await box.waitFor({ state: 'attached', timeout: 15000 })
+            await box.waitFor({ state: 'attached', timeout: DELAYS.SEARCH_BAR_TIMEOUT })
             await this.bot.browser.utils.tryDismissAllMessages(page)
-            await this.bot.utils.wait(200)
+            await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_FOCUS)
             try {
-                await box.focus({ timeout: 2000 }).catch(() => { /* ignore */ })
+                await box.focus({ timeout: DELAYS.THIS_OR_THAT_START }).catch(() => { /* ignore */ })
                 await box.fill('')
-                await this.bot.utils.wait(200)
-                await page.keyboard.type(query, { delay: 20 })
+                await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_FOCUS)
+                await page.keyboard.type(query, { delay: DELAYS.TYPING_DELAY })
                 await page.keyboard.press('Enter')
             } catch {
                 const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`
                 await page.goto(url)
             }
-            await this.bot.utils.wait(3000)
+            await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_COMPLETE)
 
             await page.close()
 

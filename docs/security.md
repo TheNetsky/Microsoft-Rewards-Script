@@ -1,296 +1,201 @@
-# 🔒 Security & Privacy Guide
+# 🔒 Security Guide
 
-<div align="center">
-
-**🛡️ Comprehensive security measures and incident response**  
-*Protect your accounts and maintain privacy*
-
-</div>
+**Protect your accounts and handle security incidents**
 
 ---
 
-## 🎯 Security Overview
+## ⚠️ Important Disclaimer
 
-This guide explains how the script **detects security-related issues**, what it does automatically, and how you can **resolve incidents** safely.
+**Using automation violates Microsoft's Terms of Service.**
 
-### **Security Features**
-- 🚨 **Automated detection** — Recognizes account compromise attempts
-- 🛑 **Emergency halting** — Stops all automation during incidents
-- 🔔 **Strong alerts** — Immediate notifications via Discord/NTFY
-- 📋 **Recovery guidance** — Step-by-step incident resolution
-- 🔒 **Privacy protection** — Local-only operation by default
+Your accounts **may be banned**. Use at your own risk.
 
 ---
 
-## 🚨 Security Incidents & Resolutions
+## 🛡️ Best Practices
 
-### **Recovery Email Mismatch**
+### ✅ DO
 
-#### **Symptoms**
-During Microsoft login, the page shows a masked recovery email like `ko*****@hacker.net` that **doesn't match** your expected recovery email pattern.
+- **Enable humanization** — Natural behavior reduces detection
+- **Use 2FA/TOTP** — More secure authentication
+- **Run 1-2x daily max** — Don't be greedy
+- **Test on secondary accounts** — Never risk your main account
+- **Enable vacation mode** — Random off days look natural
+- **Monitor regularly** — Check diagnostics and logs
 
-#### **What the Script Does**
-- 🛑 **Halts automation** for the current account (leaves page open for manual action)
-- 🚨 **Sends strong alerts** to all channels and engages global standby
-- ⏸️ **Stops processing** — No further accounts are processed
-- 🔔 **Repeats reminders** every 5 minutes until intervention
+### ❌ DON'T
 
-#### **Likely Causes**
-- ⚠️ **Account takeover** — Recovery email changed by someone else
-- 🔄 **Recent change** — You changed recovery email but forgot to update config
+- **Run on main account** — Too risky
+- **Schedule hourly** — Obvious bot pattern
+- **Ignore warnings** — Security alerts matter
+- **Use shared proxies** — Higher detection risk
+- **Skip humanization** — Robotic behavior gets caught
 
-#### **How to Fix**
-1. **🔍 Verify account security** in Microsoft Account settings
-2. **📝 Update config** if you changed recovery email yourself:
+---
+
+## 🚨 Security Incidents
+
+### Recovery Email Mismatch
+
+**What:** Login shows unfamiliar recovery email (e.g., `ko*****@hacker.net`)
+
+**Action:**
+1. **Stop immediately** — Script halts automatically
+2. **Check Microsoft Account** → Security settings
+3. **Update config** if you changed email yourself:
    ```json
    {
-     "email": "your@email.com",
      "recoveryEmail": "ko*****@hacker.net"
    }
    ```
-3. **🔐 Change password** and review sign-in activity if compromise suspected
-4. **🚀 Restart script** to resume normal operation
-
-#### **Prevention**
-- ✅ Keep `recoveryEmail` in `accounts.json` up to date
-- ✅ Use strong unique passwords and MFA
-- ✅ Regular security reviews
+4. **Change password** if compromise suspected
 
 ---
 
-### **"We Can't Sign You In" (Blocked)**
+### "We Can't Sign You In" (Blocked)
 
-#### **Symptoms**
-Microsoft presents a page titled **"We can't sign you in"** during login attempts.
+**What:** Microsoft blocks login attempt
 
-#### **What the Script Does**
-- 🛑 **Stops automation** and leaves page open for manual recovery
-- 🚨 **Sends strong alert** with high priority notifications
-- ⏸️ **Engages global standby** to avoid processing other accounts
-
-#### **Likely Causes**
-- ⏱️ **Temporary lock** — Rate limiting or security check from Microsoft
-- 🚫 **Account restrictions** — Ban related to unusual activity
-- 🔒 **Verification required** — SMS code, authenticator, or other challenges
-
-#### **How to Fix**
-1. **✅ Complete verification** challenges (SMS, authenticator, etc.)
-2. **⏸️ Pause activity** for 24-48h if blocked repeatedly
-3. **🔧 Reduce concurrency** and increase delays between actions
-4. **🌐 Check proxies** — Ensure consistent IP/country
-5. **📞 Appeal if needed** — Contact Microsoft if ban is suspected
-
-#### **Prevention**
-- ✅ **Respect rate limits** — Use humanization settings
-- ✅ **Avoid patterns** — Don't run too many accounts from same IP
-- ✅ **Geographic consistency** — Use proxies from your actual region
-- ✅ **Human-like timing** — Avoid frequent credential retries
+**Action:**
+1. **Wait 24-48 hours** — Temporary locks usually lift
+2. **Complete any challenges** — SMS, authenticator, etc.
+3. **Reduce frequency** — Run less often
+4. **Enable humanization** — If not already enabled
+5. **Check proxy** — Ensure consistent IP/location
 
 ---
 
-## 🔐 Privacy & Data Protection
+## 🔐 Account Security
 
-### **Local-First Architecture**
-- 💾 **All data local** — Credentials, sessions, logs stored locally only
-- 🚫 **No telemetry** — Zero data collection or external reporting
-- 🔒 **No cloud storage** — Everything remains on your machine
+### Strong Credentials
 
-### **Credential Security**
 ```json
 {
   "accounts": [
     {
-      "email": "user@example.com",
-      "password": "secure-password-here",
-      "totpSecret": "optional-2fa-secret"
+      "email": "your@email.com",
+      "password": "strong-unique-password",
+      "totp": "JBSWY3DPEHPK3PXP"
     }
   ]
 }
 ```
 
-**Best Practices:**
-- 🔐 **Strong passwords** — Unique, complex passwords per account
-- 🔑 **2FA enabled** — Time-based one-time passwords when possible
-- 📁 **File permissions** — Restrict access to `accounts.json`
-- 🔄 **Regular rotation** — Change passwords periodically
+- ✅ **Unique passwords** per account
+- ✅ **TOTP enabled** for all accounts
+- ✅ **Strong passwords** (16+ characters)
+- 🔄 **Rotate every 90 days**
 
-### **Session Management**
-- 🍪 **Persistent cookies** — Stored locally in `sessions/` directory
-- 🔒 **Encrypted storage** — Session data protected at rest
-- ⏰ **Automatic expiry** — Old sessions cleaned up automatically
-- 🗂️ **Per-account isolation** — No session data mixing
+### File Permissions
+
+```bash
+# Linux/macOS - Restrict access
+chmod 600 src/accounts.json
+
+# Windows - Right-click → Properties → Security
+# Remove all users except yourself
+```
 
 ---
 
 ## 🌐 Network Security
 
-### **Proxy Configuration**
+### Use Proxies (Optional)
+
 ```json
 {
-  "browser": {
-    "proxy": {
-      "enabled": true,
-      "server": "proxy.example.com:8080",
-      "username": "user",
-      "password": "pass"
-    }
+  "proxy": {
+    "proxyAxios": true,
+    "url": "proxy.example.com",
+    "port": 8080,
+    "username": "user",
+    "password": "pass"
   }
 }
 ```
 
-**Security Benefits:**
-- 🎭 **IP masking** — Hide your real IP address
-- 🌍 **Geographic flexibility** — Appear from different locations
-- 🔒 **Traffic encryption** — HTTPS proxy connections
-- 🛡️ **Detection avoidance** — Rotate IPs to avoid patterns
+**Benefits:**
+- IP masking
+- Geographic flexibility
+- Reduces pattern detection
 
-### **Traffic Analysis Protection**
-- 🔐 **HTTPS only** — All Microsoft communications encrypted
-- 🚫 **No plaintext passwords** — Credentials protected in transit
-- 🛡️ **Certificate validation** — SSL/TLS verification enabled
-- 🔍 **Deep packet inspection** resistant
+→ **[Full Proxy Guide](./proxy.md)**
 
 ---
 
-## 🛡️ Anti-Detection Measures
+## 📊 Monitoring
 
-### **Humanization**
-```json
+### Enable Diagnostics
+
+```jsonc
 {
-  "humanization": {
+  "diagnostics": {
     "enabled": true,
-    "actionDelay": { "min": 150, "max": 450 },
-    "gestureMoveProb": 0.4,
-    "gestureScrollProb": 0.2
+    "saveScreenshot": true,
+    "saveHtml": true
   }
 }
 ```
 
-**Natural Behavior Simulation:**
-- ⏱️ **Random delays** — Variable timing between actions
-- 🖱️ **Mouse movements** — Subtle cursor adjustments
-- 📜 **Scrolling gestures** — Natural page interactions
-- 🎲 **Randomized patterns** — Avoid predictable automation
+→ **[Diagnostics Guide](./diagnostics.md)**
 
-### **Browser Fingerprinting**
-- 🌐 **Real user agents** — Authentic browser identification
-- 📱 **Platform consistency** — Mobile/desktop specific headers
-- 🔧 **Plugin simulation** — Realistic browser capabilities
-- 🖥️ **Screen resolution** — Appropriate viewport dimensions
+### Enable Notifications
 
----
-
-## 📊 Monitoring & Alerting
-
-### **Real-Time Monitoring**
-```json
+```jsonc
 {
-  "notifications": {
-    "webhook": {
-      "enabled": true,
-      "url": "https://discord.com/api/webhooks/..."
-    },
-    "ntfy": {
-      "enabled": true,
-      "url": "https://ntfy.sh",
-      "topic": "rewards-security"
-    }
+  "conclusionWebhook": {
+    "enabled": true,
+    "url": "https://discord.com/api/webhooks/..."
   }
 }
 ```
 
-**Alert Types:**
-- 🚨 **Security incidents** — Account compromise attempts
-- ⚠️ **Login failures** — Authentication issues
-- 🔒 **Account blocks** — Access restrictions detected
-- 📊 **Performance anomalies** — Unusual execution patterns
-
-### **Log Analysis**
-- 📝 **Detailed logging** — All actions recorded locally
-- 🔍 **Error tracking** — Failed operations highlighted
-- 📊 **Performance metrics** — Timing and success rates
-- 🛡️ **Security events** — Incident timeline reconstruction
+→ **[Webhook Setup](./conclusionwebhook.md)**
 
 ---
 
-## 🧪 Security Testing
+## 🛠️ Incident Response
 
-### **Penetration Testing**
-```powershell
-# Test credential handling
-$env:DEBUG_SECURITY=1; npm start
+### Account Compromised
 
-# Test session persistence  
-$env:DEBUG_SESSIONS=1; npm start
+1. **Stop all automation**
+2. **Change password immediately**
+3. **Check sign-in activity** in Microsoft Account
+4. **Enable 2FA** if not already
+5. **Review security info** (recovery email, phone)
+6. **Contact Microsoft** if unauthorized access
 
-# Test proxy configuration
-$env:DEBUG_PROXY=1; npm start
-```
+### Temporary Ban
 
-### **Vulnerability Assessment**
-- 🔍 **Regular audits** — Check for security issues
-- 📦 **Dependency scanning** — Monitor npm packages
-- 🔒 **Code review** — Manual security analysis
-- 🛡️ **Threat modeling** — Identify attack vectors
-
----
-
-## 📋 Security Checklist
-
-### **Initial Setup**
-- ✅ **Strong passwords** for all accounts
-- ✅ **2FA enabled** where possible
-- ✅ **File permissions** restricted to user only
-- ✅ **Proxy configured** if desired
-- ✅ **Notifications set up** for alerts
-
-### **Regular Maintenance**
-- ✅ **Password rotation** every 90 days
-- ✅ **Session cleanup** weekly
-- ✅ **Log review** for anomalies
-- ✅ **Security updates** for dependencies
-- ✅ **Backup verification** of configurations
-
-### **Incident Response**
-- ✅ **Alert investigation** within 15 minutes
-- ✅ **Account verification** when suspicious
-- ✅ **Password changes** if compromise suspected
-- ✅ **Activity review** in Microsoft account settings
-- ✅ **Documentation** of incidents and resolutions
+1. **Pause automation** for 48-72 hours
+2. **Reduce frequency** when resuming
+3. **Increase delays** in humanization
+4. **Use proxy** from your region
+5. **Monitor closely** after resuming
 
 ---
 
-## 🚨 Emergency Procedures
+## 🔗 Privacy Tips
 
-### **Account Compromise Response**
-1. **🛑 Immediate shutdown** — Stop all script activity
-2. **🔒 Change passwords** — Update all affected accounts
-3. **📞 Contact Microsoft** — Report unauthorized access
-4. **🔍 Audit activity** — Review recent sign-ins and changes
-5. **🛡️ Enable additional security** — Add 2FA, recovery options
-6. **📋 Document incident** — Record timeline and actions taken
-
-### **Detection Evasion**
-1. **⏸️ Temporary suspension** — Pause automation for 24-48h
-2. **🔧 Reduce intensity** — Lower pass counts and frequencies
-3. **🌐 Change IPs** — Rotate proxies or VPN endpoints
-4. **⏰ Adjust timing** — Modify scheduling patterns
-5. **🎭 Increase humanization** — More natural behavior simulation
+- 🔐 **Local-only** — All data stays on your machine
+- 🚫 **No telemetry** — Script doesn't phone home
+- 📁 **File security** — Restrict permissions
+- 🔄 **Regular backups** — Keep config backups
+- 🗑️ **Clean logs** — Delete old diagnostics
 
 ---
 
-## 🔗 Quick Reference Links
+## 📚 Next Steps
 
-When the script detects a security incident, it opens this guide directly to the relevant section:
+**Setup humanization?**  
+→ **[Humanization Guide](./humanization.md)**
 
-- **[Recovery Email Mismatch](#recovery-email-mismatch)** — Email change detection
-- **[Account Blocked](#we-cant-sign-you-in-blocked)** — Login restriction handling
+**Need proxies?**  
+→ **[Proxy Guide](./proxy.md)**
+
+**Want monitoring?**  
+→ **[Diagnostics](./diagnostics.md)**
 
 ---
 
-## 🔗 Related Guides
-
-- **[Getting Started](./getting-started.md)** — Initial setup and configuration  
-- **[Accounts & 2FA](./accounts.md)** — Microsoft account setup
-- **[Proxy Configuration](./proxy.md)** — Network privacy and routing
-- **[Humanization](./humanization.md)** — Natural behavior patterns
+**[← Back to Hub](./index.md)** | **[Config Guide](./config.md)**

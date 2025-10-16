@@ -1,32 +1,24 @@
-# 🔍 Diagnostics & Error Capture
+# 🔍 Diagnostics
 
-<div align="center">
-
-**🛠️ Automatic error screenshots and HTML snapshots**  
-*Debug smarter with visual evidence*
-
-</div>
+**Auto-capture errors with screenshots and HTML**
 
 ---
 
-## 🎯 What is Diagnostics?
+## 💡 What Is It?
 
-The diagnostics system **automatically captures** error screenshots and HTML snapshots when issues occur during script execution, providing visual evidence for troubleshooting.
+When errors occur, the script automatically saves:
+- 📸 **Screenshots** — Visual error capture
+- 📄 **HTML snapshots** — Page source
 
-### **Key Features**
-- 📸 **Auto-screenshot** — Visual error capture
-- 📄 **HTML snapshots** — Complete page source
-- 🚦 **Rate limiting** — Prevents storage bloat
-- 🗂️ **Auto-cleanup** — Configurable retention
-- 🔒 **Privacy-safe** — Local storage only
+Helps you debug issues without re-running the script.
 
 ---
 
-## ⚙️ Configuration
+## ⚡ Quick Start
 
-### **Basic Setup**
-Add to `src/config.jsonc`:
-```json
+**Already enabled by default!**
+
+```jsonc
 {
   "diagnostics": {
     "enabled": true,
@@ -38,134 +30,42 @@ Add to `src/config.jsonc`:
 }
 ```
 
-### **Configuration Options**
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `enabled` | `true` | Master toggle for diagnostics capture |
-| `saveScreenshot` | `true` | Capture PNG screenshots on errors |
-| `saveHtml` | `true` | Save page HTML content on errors |
-| `maxPerRun` | `2` | Maximum captures per script run |
-| `retentionDays` | `7` | Auto-delete reports older than N days |
-
 ---
 
-## 🚀 How It Works
+## 📁 Where Are Files Saved?
 
-### **Automatic Triggers**
-The system captures when these errors occur:
-- ⏱️ **Page navigation timeouts**
-- 🎯 **Element selector failures**
-- 🔐 **Authentication errors**
-- 🌐 **Network request failures**
-- ⚡ **JavaScript execution errors**
-
-### **Capture Process**
-1. **Error Detection** — Script encounters unhandled error
-2. **Visual Capture** — Screenshot + HTML snapshot
-3. **Safe Storage** — Local `reports/` folder
-4. **Continue Execution** — No blocking or interruption
-
----
-
-## 📁 File Structure
-
-### **Storage Organization**
 ```
 reports/
-├── 2025-01-20/
+├── 2025-10-16/
 │   ├── error_abc123_001.png
 │   ├── error_abc123_001.html
-│   ├── error_def456_002.png
-│   └── error_def456_002.html
-└── 2025-01-21/
+│   └── error_def456_002.png
+└── 2025-10-17/
     └── ...
 ```
 
-> 🔐 Security incidents (login blocks, recovery mismatches) are stored separately under `diagnostics/security-incidents/<timestamp>-slug/` and always include both a screenshot and HTML snapshot for investigation.
-
-### **File Naming Convention**
-```
-error_[runId]_[sequence].[ext]
-```
-- **RunId** — Unique identifier for each script execution
-- **Sequence** — Incremental counter (001, 002, etc.)
-- **Extension** — `.png` for screenshots, `.html` for source
+**Auto-cleanup:** Files older than 7 days are deleted automatically.
 
 ---
 
-## 🧹 Retention Management
+## 🎯 When It Captures
 
-### **Automatic Cleanup**
-- Runs after each script completion
-- Deletes entire date folders older than `retentionDays`
-- Prevents unlimited disk usage growth
-
-### **Manual Cleanup**
-```powershell
-# Remove all diagnostic reports
-Remove-Item -Recurse -Force reports/
-
-# Remove reports older than 3 days  
-Get-ChildItem reports/ | Where-Object {$_.LastWriteTime -lt (Get-Date).AddDays(-3)} | Remove-Item -Recurse -Force
-```
+- ⏱️ **Timeouts** — Page navigation failures
+- 🎯 **Element not found** — Selector errors
+- 🔐 **Login failures** — Authentication issues
+- 🌐 **Network errors** — Request failures
 
 ---
 
-## 📊 Use Cases
+## 🔧 Configuration Options
 
-| Scenario | Benefit |
-|----------|---------|
-| **🐛 Development & Debugging** | Visual confirmation of page state during errors |
-| **🔍 Element Detection Issues** | HTML source analysis for selector problems |
-| **📈 Production Monitoring** | Evidence collection for account issues |
-| **⚡ Performance Analysis** | Timeline reconstruction of automation failures |
-
----
-
-## ⚡ Performance Impact
-
-### **Resource Usage**
-- **Screenshots** — ~100-500KB each
-- **HTML files** — ~50-200KB each  
-- **CPU overhead** — Minimal (only during errors)
-- **Memory impact** — Asynchronous, non-blocking
-
-### **Storage Optimization**
-- Daily cleanup prevents accumulation
-- Rate limiting via `maxPerRun` 
-- Configurable retention period
-
----
-
-## 🎛️ Environment Settings
-
-### **Development Mode**
-```json
-{
-  "diagnostics": {
-    "enabled": true,
-    "maxPerRun": 5,
-    "retentionDays": 14
-  }
-}
-```
-
-### **Production Mode**
-```json
-{
-  "diagnostics": {
-    "enabled": true,
-    "maxPerRun": 2,
-    "retentionDays": 3
-  }
-}
-```
-
-### **Debug Verbose Logging**
-```powershell
-$env:DEBUG_REWARDS_VERBOSE=1; npm start
-```
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | `true` | Enable diagnostics |
+| `saveScreenshot` | `true` | Capture PNG screenshots |
+| `saveHtml` | `true` | Save page HTML |
+| `maxPerRun` | `2` | Max captures per run |
+| `retentionDays` | `7` | Auto-delete after N days |
 
 ---
 
@@ -173,55 +73,31 @@ $env:DEBUG_REWARDS_VERBOSE=1; npm start
 
 | Problem | Solution |
 |---------|----------|
-| **No captures despite errors** | Check `enabled: true`; verify `reports/` write permissions |
-| **Excessive storage usage** | Reduce `maxPerRun`; decrease `retentionDays` |
-| **Missing screenshots** | Verify browser screenshot API; check memory availability |
-| **Cleanup not working** | Ensure script completes successfully for auto-cleanup |
+| **No captures despite errors** | Check `enabled: true` |
+| **Too many files** | Reduce `retentionDays` |
+| **Permission denied** | Check `reports/` write access |
 
-### **Common Capture Locations**
-- **Login issues** — Authentication page screenshots
-- **Activity failures** — Element detection errors  
-- **Network problems** — Timeout and connection errors
-- **Navigation issues** — Page load failures
+### Manual Cleanup
 
----
+```powershell
+# Delete all diagnostic reports
+Remove-Item -Recurse -Force reports/
 
-## 🔗 Integration
-
-### **With Notifications**
-Diagnostics complement [Discord Webhooks](./conclusionwebhook.md) and [NTFY](./ntfy.md):
-- **Webhooks** — Immediate error alerts
-- **Diagnostics** — Visual evidence for investigation
-- **Combined** — Complete error visibility
-
-### **With Development Workflow**
-```bash
-# 1. Run script with diagnostics
-npm start
-
-# 2. Check for captures after errors
-ls reports/$(date +%Y-%m-%d)/
-
-# 3. Analyze screenshots and HTML
-# Open .png files for visual state
-# Review .html files for DOM structure
+# Keep last 3 days only
+Get-ChildItem reports/ | Where-Object {$_.LastWriteTime -lt (Get-Date).AddDays(-3)} | Remove-Item -Recurse
 ```
 
 ---
 
-## 🔒 Privacy & Security
+## 📚 Next Steps
 
-- **Local Only** — All captures stored locally
-- **No Uploads** — Zero external data transmission
-- **Account Info** — May contain sensitive data
-- **Secure Storage** — Use appropriate folder permissions
-- **Regular Cleanup** — Recommended for sensitive environments
+**Need live notifications?**  
+→ **[Discord Webhooks](./conclusionwebhook.md)**  
+→ **[NTFY Push](./ntfy.md)**
+
+**Security issues?**  
+→ **[Security Guide](./security.md)**
 
 ---
 
-## 🔗 Related Guides
-
-- **[Getting Started](./getting-started.md)** — Initial setup and configuration
-- **[Discord Webhooks](./conclusionwebhook.md)** — Error notification alerts
-- **[NTFY Notifications](./ntfy.md)** — Mobile push notifications
-- **[Security](./security.md)** — Privacy and data protection
+**[← Back to Hub](./index.md)** | **[Config Guide](./config.md)**

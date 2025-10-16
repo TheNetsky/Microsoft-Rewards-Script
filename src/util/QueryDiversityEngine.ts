@@ -43,7 +43,7 @@ export class QueryDiversityEngine {
         const queries = await this.getFromSource(sourceName)
         allQueries.push(...queries.slice(0, this.config.maxQueriesPerSource))
       } catch (error) {
-        console.warn(`Failed to fetch from ${sourceName}:`, error instanceof Error ? error.message : error)
+        // Silently fail and try other sources
       }
     }
 
@@ -89,7 +89,8 @@ export class QueryDiversityEngine {
         queries = this.getLocalFallback(20)
         break
       default:
-        console.warn(`Unknown source: ${source}`)
+        // Unknown source, skip silently
+        break
     }
 
     this.cache.set(source, {

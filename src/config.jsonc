@@ -1,54 +1,112 @@
 {
-    // Base URL for Rewards dashboard and APIs (do not change unless you know what you're doing)
+    // ============================================================
+    // 🌐 GENERAL CONFIGURATION
+    // ============================================================
+    
+    // Base URL for Microsoft Rewards dashboard (do not change unless necessary)
     "baseURL": "https://rewards.bing.com",
-    // Where to store sessions (cookies, fingerprints)
+    
+    // Directory to store sessions (cookies, browser fingerprints)
     "sessionPath": "sessions",
     
+    // Dry-run mode: simulate execution without actually running tasks (useful for testing)
+    "dryRun": false,
+    
+    
+    // ============================================================
+    // 🖥️ BROWSER CONFIGURATION
+    // ============================================================
+    
     "browser": {
-        // Keep headless=false so the browser window stays visible by default
+        // false = visible window | true = headless mode (invisible)
         "headless": false,
-        // Max time to wait for common operations (supports ms/s/min: e.g. 30000, "30s", "2min")
+        // Max timeout for operations (supports: 30000, "30s", "2min")
         "globalTimeout": "30s"
     },
     
-    "execution": {
-        // Run desktop+mobile in parallel (needs more resources). If false, runs sequentially.
-        "parallel": false,
-        // If false and there are 0 points available, the run is skipped early to save time.
-        "runOnZeroPoints": false,
-        // Number of account clusters (processes) to run concurrently.
-        "clusters": 1,
-        // Number of passes per invocation (advanced; usually 1).
-        "passesPerRun": 1
-    },
-    
-    "buyMode": {
-        // Manual purchase/redeem mode. Use CLI -buy to enable, or set buyMode.enabled in config.
-        // Session duration cap in minutes.
-        "maxMinutes": 45
-    },
-    
     "fingerprinting": {
-        // Persist browser fingerprints per device type to improve consistency across runs
+        // Persist browser fingerprints to improve consistency across runs
         "saveFingerprint": {
             "mobile": true,
             "desktop": true
         }
     },
     
+    
+    // ============================================================
+    // ⚙️ EXECUTION & PERFORMANCE
+    // ============================================================
+    
+    "execution": {
+        // true = Desktop + Mobile in parallel (faster, more resources)
+        // false = Sequential (slower, fewer resources)
+        "parallel": false,
+        // If false, skip execution when 0 points are available
+        "runOnZeroPoints": false,
+        // Number of account clusters (processes) to run concurrently
+        "clusters": 1,
+        // Number of passes per invocation (usually 1)
+        "passesPerRun": 1
+    },
+    
+    "schedule": {
+        // Built-in scheduler (no cron needed in containers)
+        "enabled": false,
+        // Time format options:
+        // - US style with AM/PM → useAmPm: true and time12 (e.g., "9:00 AM")
+        // - 24-hour style      → useAmPm: false and time24 (e.g., "09:00")
+        "useAmPm": false,
+        "time12": "9:00 AM",
+        "time24": "09:00",
+        // IANA timezone (e.g., "Europe/Paris", "America/New_York" check schedule.md)
+        "timeZone": "Europe/Paris",
+        // If true, run immediately on process start
+        "runImmediatelyOnStart": false
+    },
+    
+    "jobState": {
+        // Save state to avoid duplicate work across restarts
+        "enabled": true,
+        // Custom state directory (empty = defaults to sessionPath/job-state)
+        "dir": ""
+    },
+    
+    
+    // ============================================================
+    // 🎯 TASKS & WORKERS
+    // ============================================================
+    
+    "workers": {
+        // Select which tasks the bot should complete on desktop/mobile
+        "doDailySet": true,              // Daily set tasks
+        "doMorePromotions": true,        // More promotions section
+        "doPunchCards": true,            // Punch cards
+        "doDesktopSearch": true,         // Desktop searches
+        "doMobileSearch": true,          // Mobile searches
+        "doDailyCheckIn": true,          // Daily check-in
+        "doReadToEarn": true,            // Read to earn
+        // If true, run desktop searches right after Daily Set
+        "bundleDailySetWithSearch": true
+    },
+    
+    
+    // ============================================================
+    // 🔍 SEARCH CONFIGURATION
+    // ============================================================
+    
     "search": {
         // Use locale-specific query sources
         "useLocalQueries": true,
         "settings": {
-            // Add geo/locale signal into query selection
+            // Use region-specific queries (at, fr, us, etc.)
             "useGeoLocaleQueries": true,
-            // Randomly scroll search result pages to look more natural
+            // Randomly scroll search result pages (more natural behavior)
             "scrollRandomResults": true,
             // Occasionally click a result (safe targets only)
             "clickRandomResults": true,
-            // Number of times to retry mobile searches if points didn’t progress
+            // Number of retries if mobile searches don't progress
             "retryMobileSearchAmount": 2,
-            // Delay between searches (supports numbers in ms or time strings)
+            // Delay between searches
             "delay": {
                 "min": "1min",
                 "max": "5min"
@@ -56,36 +114,68 @@
         }
     },
     
-    "humanization": {
-        // Global Human Mode switch. true=adds subtle micro-gestures & pauses. false=classic behavior.
+    "queryDiversity": {
+        // Multi-source query generation: Reddit, News, Wikipedia instead of only Google Trends
         "enabled": true,
-        // If true, as soon as a ban is detected on any account, stop processing remaining accounts
-        // (ban detection is based on centralized heuristics and error signals)
+        // Available sources: google-trends, reddit, news, wikipedia, local-fallback
+        "sources": ["google-trends", "reddit", "local-fallback"],
+        // Max queries to fetch per source
+        "maxQueriesPerSource": 10,
+        // Cache duration in minutes (avoids hammering APIs)
+        "cacheMinutes": 30
+    },
+    
+    
+    // ============================================================
+    // 🤖 HUMANIZATION & NATURAL BEHAVIOR
+    // ============================================================
+    
+    "humanization": {
+        // Human Mode: adds subtle micro-gestures & pauses to mimic real users
+        "enabled": true,
+        // If a ban is detected on any account, stop processing remaining accounts
         "stopOnBan": true,
-        // If true, immediately send an alert (webhook/NTFY) when a ban is detected
+        // Immediately send an alert (webhook/NTFY) when a ban is detected
         "immediateBanAlert": true,
-        // Extra random pause between actions (ms or time string e.g., "300ms", "1s")
+        // Extra random pause between actions
         "actionDelay": { 
-            "min": 500, 
-            "max": 2200 
+            "min": 500,      // 0.5 seconds minimum
+            "max": 2200      // 2.2 seconds maximum
         },
-        // Probability (0..1) to move mouse a tiny bit in between actions
+        // Probability (0-1) to move mouse slightly between actions
         "gestureMoveProb": 0.65,
-        // Probability (0..1) to perform a very small scroll
+        // Probability (0-1) to perform a small scroll
         "gestureScrollProb": 0.4,
-        // Optional local-time windows for execution (e.g., ["08:30-11:00", "19:00-22:00"]).
-        // If provided, runs will wait until inside a window before starting.
+        // Optional execution time windows (e.g., ["08:30-11:00", "19:00-22:00"])
+        // If specified, waits until inside a window before starting
         "allowedWindows": []
     },
-
-    // Optional monthly "vacation" block: skip a contiguous range of days to look more human.
-    // This is independent of weekly random off-days. When enabled, each month a random
-    // block between minDays and maxDays is selected (e.g., 2–4 days) and all runs within
-    // that date range are skipped. The chosen block is logged at the start of the month.
+    
     "vacation": {
+        // Monthly "vacation" block: skip a random range of days each month
+        // Each month, a random period between minDays and maxDays is selected
+        // and all runs within that date range are skipped (more human-like behavior)
         "enabled": true,
         "minDays": 2,
         "maxDays": 4
+    },
+    
+    
+    // ============================================================
+    // 🛡️ RISK MANAGEMENT & SECURITY
+    // ============================================================
+    
+    "riskManagement": {
+        // Dynamic delay adjustment based on detected risk signals
+        "enabled": true,
+        // Automatically increase delays when captchas/errors are detected
+        "autoAdjustDelays": true,
+        // Stop execution if risk level reaches critical threshold
+        "stopOnCritical": false,
+        // Enable ML-based ban prediction based on patterns
+        "banPrediction": true,
+        // Risk threshold (0-100). If exceeded, bot pauses or alerts you
+        "riskThreshold": 75
     },
     
     "retryPolicy": {
@@ -97,18 +187,10 @@
         "jitter": 0.2
     },
     
-    "workers": {
-        // Select what the bot should complete on desktop/mobile
-        "doDailySet": true,
-        "doMorePromotions": true,
-        "doPunchCards": true,
-        "doDesktopSearch": true,
-        "doMobileSearch": true,
-        "doDailyCheckIn": true,
-        "doReadToEarn": true,
-        // If true, run a desktop search bundle right after Daily Set
-        "bundleDailySetWithSearch": true
-    },
+    
+    // ============================================================
+    // 🌐 PROXY
+    // ============================================================
     
     "proxy": {
         // Control which outbound calls go through your proxy
@@ -116,13 +198,18 @@
         "proxyBingTerms": true
     },
     
+    
+    // ============================================================
+    // 🔔 NOTIFICATIONS
+    // ============================================================
+    
     "notifications": {
-        // Live logs (Discord or similar). URL is your webhook endpoint.
+        // Live logs webhook (Discord or similar). URL = your webhook endpoint
         "webhook": {
             "enabled": false,
             "url": ""
         },
-        // Rich end-of-run summary (Discord or similar)
+        // Rich end-of-run summary webhook (Discord or similar)
         "conclusionWebhook": {
             "enabled": false,
             "url": ""
@@ -136,9 +223,14 @@
         }
     },
     
+    
+    // ============================================================
+    // 📊 LOGGING & DIAGNOSTICS
+    // ============================================================
+    
     "logging": {
-        // Logging controls (see docs/config.md). Remove redactEmails or set false to show full emails.
-        // Filter out noisy log buckets locally and for any webhook summaries
+        // Logging controls (see docs/config.md)
+        // Filter out noisy log buckets locally and for webhook summaries
         "excludeFunc": [
             "SEARCH-CLOSE-TABS",
             "LOGIN-NO-PROMPT",
@@ -149,12 +241,12 @@
             "LOGIN-NO-PROMPT",
             "FLOW"
         ],
-        // Email redaction toggle (previously logging.live.redactEmails)
+        // Email redaction toggle (true = secure, false = full emails)
         "redactEmails": true
     },
     
     "diagnostics": {
-        // Capture minimal evidence on failures (screenshots/HTML) and prune old runs
+        // Capture minimal evidence on failures (screenshots/HTML)
         "enabled": true,
         "saveScreenshot": true,
         "saveHtml": true,
@@ -162,75 +254,45 @@
         "retentionDays": 7
     },
     
-    
-    
-    "jobState": {
-        // Checkpoint to avoid duplicate work across restarts
-        "enabled": true,
-        // Custom state directory (defaults to sessionPath/job-state if empty)
-        "dir": ""
-    },
-    
-    "schedule": {
-        // Built-in scheduler (no cron needed in container). Uses the IANA time zone below.
-        "enabled": false,
-        // Choose YOUR preferred time format:
-        // - US style with AM/PM → set useAmPm: true and edit time12 (e.g., "9:00 AM")
-        // - 24-hour style      → set useAmPm: false and edit time24 (e.g., "09:00")
-        // Back-compat: if both time12/time24 are empty, the legacy "time" (HH:mm) will be used if present.
-        "useAmPm": false,
-        "time12": "9:00 AM",
-        "time24": "09:00",
-        // IANA timezone for scheduling (set to your region), e.g. "Europe/Paris" or "America/New_York"
-        "timeZone": "America/New_York",
-        // If true, run one pass immediately when the process starts
-        "runImmediatelyOnStart": false
-    },
-    
-    "update": {
-        // Optional post-run auto-update
-        "git": true,
-        "docker": false,
-        // Custom updater script path (relative to repo root)
-        "scriptPath": "setup/update/update.mjs"
-    },
-    
-    // NEW INTELLIGENT FEATURES
-    "riskManagement": {
-        // Risk-Aware Throttling: dynamically adjusts delays based on detected risk signals
-        "enabled": true,
-        // Automatically increase delays when captchas/errors are detected
-        "autoAdjustDelays": true,
-        // Stop execution if risk level reaches critical (score > riskThreshold)
-        "stopOnCritical": false,
-        // Enable ML-style ban prediction based on patterns
-        "banPrediction": true,
-        // Risk threshold (0-100). If exceeded, bot pauses or alerts you.
-        "riskThreshold": 75
-    },
-    
     "analytics": {
-        // Performance Dashboard: track points earned, success rates, execution times
+        // 📈 Performance Dashboard: tracks points earned, success rates, execution times
+        // Useful for monitoring your stats over time. Disable if you don't need it.
+        // WHAT IT DOES:
+        // - Collects daily/weekly/monthly statistics
+        // - Calculates success rates for each activity type
+        // - Tracks average execution times
+        // - Generates trend reports
+        // - Can export to Markdown or send via webhook
         "enabled": true,
         // How long to keep analytics data (days)
         "retentionDays": 30,
         // Generate markdown summary reports
         "exportMarkdown": true,
         // Send analytics summary via webhook
-        "webhookSummary": false
+        "webhookSummary": true
     },
     
-    "queryDiversity": {
-        // Multi-source query generation: use Reddit, News, Wikipedia instead of just Google Trends
-        "enabled": true,
-        // Which sources to use (google-trends, reddit, news, wikipedia, local-fallback)
-        "sources": ["google-trends", "reddit", "local-fallback"],
-        // Max queries to fetch per source
-        "maxQueriesPerSource": 10,
-        // Cache duration in minutes (avoids hammering APIs)
-        "cacheMinutes": 30
+    
+    // ============================================================
+    // 🛒 BUY MODE
+    // ============================================================
+    
+    "buyMode": {
+        // Manual purchase/redeem mode. Use CLI -buy to enable
+        // Session duration cap in minutes
+        "maxMinutes": 45
     },
     
-    // Dry-run mode: simulate execution without actually running tasks (useful for testing config)
-    "dryRun": false
+    
+    // ============================================================
+    // 🔄 UPDATES
+    // ============================================================
+    
+    "update": {
+        // Post-run auto-update settings
+        "git": true,
+        "docker": false,
+        // Custom updater script path (relative to repo root)
+        "scriptPath": "setup/update/update.mjs"
+    }
 }

@@ -40,6 +40,12 @@ export default class BrowserUtil {
         closeButtons: 'button[aria-label*="close" i], button:has-text("Close"), button:has-text("Dismiss"), button:has-text("Got it"), button:has-text("OK"), button:has-text("Ok")'
     } as const
 
+    private static readonly TERMS_UPDATE_SELECTORS = {
+        titleId: '#iTOUTitle',
+        titleText: /we're updating our terms/i,
+        nextButton: 'button[data-testid="primaryButton"]:has-text("Next"), button[type="submit"]:has-text("Next")'
+    } as const
+
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
     }
@@ -57,6 +63,7 @@ export default class BrowserUtil {
         count += await this.dismissStandardButtons(page)
         count += await this.dismissOverlayButtons(page)
         count += await this.dismissStreakDialog(page)
+        count += await this.dismissTermsUpdateDialog(page)
         return count
     }
 
@@ -130,6 +137,35 @@ export default class BrowserUtil {
             await page.keyboard.press('Escape').catch(() => {})
             this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Streak Protection Dialog Escape')
             return 1
+        } catch {
+            return 0
+        }
+    }
+
+    private async dismissTermsUpdateDialog(page: Page): Promise<number> {
+        try {
+            const { titleId, titleText, nextButton } = BrowserUtil.TERMS_UPDATE_SELECTORS
+            
+            // Check if terms update page is present
+            const titleById = page.locator(titleId)
+            const titleByText = page.locator('h1').filter({ hasText: titleText })
+            
+            const hasTitle = await titleById.isVisible({ timeout: 200 }).catch(() => false) ||
+                           await titleByText.first().isVisible({ timeout: 200 }).catch(() => false)
+            
+            if (!hasTitle) return 0
+
+            // Click the Next button
+            const nextBtn = page.locator(nextButton).first()
+            if (await nextBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+                await nextBtn.click({ timeout: 1000 }).catch(() => {})
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Terms Update Dialog (Next)')
+                // Wait a bit for navigation
+                await page.waitForTimeout(1000)
+                return 1
+            }
+
+            return 0
         } catch {
             return 0
         }

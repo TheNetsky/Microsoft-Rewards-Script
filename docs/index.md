@@ -1,62 +1,79 @@
-# 📚 Microsoft Rewards Script V2 Docs
+# 📚 Documentation Hub
 
-<div align="center">
-
-**🎯 Your companion for mastering the automation stack**  
-*Curated guides, verified against the current codebase*
-
-</div>
+**Complete guide to automate Microsoft Rewards**
 
 ---
 
-## 🚀 Quick Navigation
+## 🚀 Start Here (In Order)
 
-### **Essential Setup**
-| Guide | Why you should read it |
-|-------|------------------------|
-| **[🎬 Getting Started](./getting-started.md)** | Install, configure, and run the bot in minutes |
-| **[👤 Accounts & 2FA](./accounts.md)** | Add Microsoft accounts, enable TOTP, and secure logins |
-| **[⚙️ Configuration Reference](./config.md)** | Understand every option in `src/config.jsonc` |
+### For Complete Beginners
 
-### **Run & Operate**
-| Guide | Focus |
-|-------|-------|
-| **[⏰ Scheduling](./schedule.md)** | Cron-style automation and daily cadence |
-| **[🐳 Docker](./docker.md)** | Container deployment with prewired headless settings |
-| **[🛠️ Diagnostics](./diagnostics.md)** | Troubleshooting, log capture, and support checklist |
-| **[🧠 Humanization](./humanization.md)** | Natural browser behavior and ban avoidance |
-| **[🌐 Proxy Setup](./proxy.md)** | Per-account proxy routing and geo-tuning |
-| **[📊 Job State](./jobstate.md)** | How runs persist progress and recover |
-| **[🔄 Auto Update](./update.md)** | Keep the script current without manual pulls |
-| **[🛡️ Security Notes](./security.md)** | Threat model, secrets handling, and best practices |
+1. **[Getting Started](./getting-started.md)** — Install and run in 10 minutes
+2. **[Accounts & 2FA](./accounts.md)** — Add your Microsoft accounts
+3. **[Basic Config](./config.md#quick-start)** — 5 essential options
+4. **[Scheduler](./schedule.md#quick-start)** — Automate daily runs
 
-### **Notifications & Control**
-| Guide | Purpose |
-|-------|---------|
-| **[📱 NTFY Push](./ntfy.md)** | Real-time phone notifications |
-| **[� Discord Webhooks](./conclusionwebhook.md)** | Detailed run summaries in your server |
-
-### **Special Modes**
-| Guide | Purpose |
-|-------|---------|
-| **[💳 Buy Mode](./buy-mode.md)** | Assisted manual redemption and live monitoring |
+**You're all set! 🎉**
 
 ---
 
-## 🧭 Reading Paths
+## 🔥 Popular Features
 
-- **First install:** Getting Started → Accounts & 2FA → Configuration Reference → Scheduling **or** Docker
-- **Docker-first:** Getting Started prerequisites → Docker → Diagnostics → Notifications (NTFY or Webhooks)
-- **Optimizing runs:** Humanization → Schedule tuning → Proxy → Job State → Update
+### Notifications & Monitoring
+- **[Discord Webhooks](./conclusionwebhook.md)** — Get run summaries
+- **[NTFY Push](./ntfy.md)** — Mobile alerts
 
-Each guide now links back to the most relevant follow-up topics so you can jump between setup, operations, and troubleshooting without losing context.
+### Anti-Ban & Privacy
+- **[Humanization](./humanization.md)** — Natural behavior simulation
+- **[Proxy Setup](./proxy.md)** — Change your IP (optional)
+
+### Deployment
+- **[Docker](./docker.md)** — Container deployment
+- **[Diagnostics](./diagnostics.md)** — Troubleshooting
 
 ---
 
-## 🔗 Useful Shortcuts
+## 📖 All Documentation
 
-- Need sample configs? → [Config presets](./config-presets/)
-- Want a scripted environment? → [Scheduler](./schedule.md)
-- Looking to self-audit? → [Diagnostics](./diagnostics.md) + [Security](./security.md)
+### Configuration & Setup
+- [Complete Configuration Reference](./config.md) — All options explained
+- [Scheduler Setup](./schedule.md) — Automated timing
+- [Job State](./jobstate.md) — Progress tracking
+- [Auto-Update](./update.md) — Keep script current
 
-If something feels out of sync with the code, open an issue or ping us on Discord—the docs are maintained to match the current defaults (`src/config.jsonc`, visible browsers by default, Docker headless enforcement via `FORCE_HEADLESS=1`).
+### Advanced Features
+- [Buy Mode](./buy-mode.md) — Manual purchase monitoring
+- [Security Guide](./security.md) — Privacy & incident response
+
+---
+
+## 🆘 Need Help?
+
+**Technical issue?** → [Diagnostics Guide](./diagnostics.md)  
+**Login problem?** → [Accounts & 2FA](./accounts.md#troubleshooting)  
+**Banned?** → [Security Guide](./security.md)
+
+**Join Discord** → [Support Server](https://discord.gg/KRBFxxsU)
+
+---
+
+## 🎯 Quick Links by Use Case
+
+### "I just installed the script"
+→ [Getting Started](./getting-started.md) → [Accounts](./accounts.md) → [Scheduler](./schedule.md)
+
+### "I want daily automation"
+→ [Scheduler Guide](./schedule.md) → [Humanization](./humanization.md)
+
+### "I need notifications"
+→ [Discord Webhooks](./conclusionwebhook.md) or [NTFY](./ntfy.md)
+
+### "I want to use Docker"
+→ [Docker Guide](./docker.md)
+
+### "Something's broken"
+→ [Diagnostics](./diagnostics.md) → [Security](./security.md)
+
+---
+
+**[← Back to README](../README.md)**

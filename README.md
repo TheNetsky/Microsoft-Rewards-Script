@@ -17,7 +17,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/v2.1.5-blue?style=for-the-badge&logo=github&logoColor=white)
+![Version](https://img.shields.io/badge/v2.3.0-blue?style=for-the-badge&logo=github&logoColor=white)
 ![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)
 ![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
 ![Status](https://img.shields.io/badge/Active-00C851?style=for-the-badge)
@@ -466,15 +466,9 @@ See [LICENSE](./LICENSE) for details • [NOTICE](./NOTICE) for disclaimers
 
 ![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=social)
 
-<br><br>
-
-**Made with ❤️ by the open source community**
-
 <br>
 
-![discord-avatar-128-ULDXD](https://github.com/user-attachments/assets/c33b0ee7-c56c-4f14-b177-851627236457)
-
-<br><br>
+**Made with ❤️ by the open source community**
 
 <img src="https://capsule-render.vercel.app/api?type=waving&height=120&color=gradient&customColorList=0,2,2,5,6,8&section=footer" />
 

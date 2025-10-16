@@ -4,9 +4,10 @@ import { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
+import { TIMEOUTS, RETRY_LIMITS, SELECTORS, URLS } from '../constants'
 
-import { Counters, DashboardData, MorePromotion, PromotionalItem } from './../interface/DashboardData'
-import { QuizData } from './../interface/QuizData'
+import { Counters, DashboardData, MorePromotion, PromotionalItem } from '../interface/DashboardData'
+import { QuizData } from '../interface/QuizData'
 import { AppUserData } from '../interface/AppUserData'
 import { EarnablePoints } from '../interface/Points'
 
@@ -34,34 +35,47 @@ export default class BrowserFunc {
 
             await page.goto(this.bot.config.baseURL)
 
-            const maxIterations = 5 // Maximum iterations set to 5
-
-            for (let iteration = 1; iteration <= maxIterations; iteration++) {
-                await this.bot.utils.wait(3000)
+            for (let iteration = 1; iteration <= RETRY_LIMITS.GO_HOME_MAX; iteration++) {
+                await this.bot.utils.wait(TIMEOUTS.LONG)
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
-                // Check if account is suspended (multiple heuristics)
-                const suspendedByHeader = await page.waitForSelector('#suspendedAccountHeader', { state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)
-                let suspendedByText = false
-                if (!suspendedByHeader) {
-                    try {
-                        const text = (await page.textContent('body')) || ''
-                        suspendedByText = /account has been suspended|suspended due to unusual activity/i.test(text)
-                    } catch { /* ignore */ }
-                }
-                if (suspendedByHeader || suspendedByText) {
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'This account appears suspended!', 'error')
-                    throw new Error('Account has been suspended!')
-                }
-
                 try {
-                    // If activities are found, exit the loop
-                    await page.waitForSelector('#more-activities', { timeout: 1000 })
+                    // If activities are found, exit the loop (SUCCESS - account is OK)
+                    await page.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: 1000 })
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
                     break
 
                 } catch (error) {
-                    // Continue if element is not found
+                    // Activities not found yet - check if it's because account is suspended
+                    // Only check suspension if we can't find activities (reduces false positives)
+                    const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 }).then(() => true).catch(() => false)
+                    
+                    if (suspendedByHeader) {
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by header selector (iteration ${iteration})`, 'error')
+                        throw new Error('Account has been suspended!')
+                    }
+                    
+                    // Secondary check: look for suspension text in main content area only
+                    try {
+                        const mainContent = (await page.locator('#contentContainer, #main, .main-content').first().textContent({ timeout: 500 }).catch(() => '')) || ''
+                        const suspensionPatterns = [
+                            /account\s+has\s+been\s+suspended/i,
+                            /suspended\s+due\s+to\s+unusual\s+activity/i,
+                            /your\s+account\s+is\s+temporarily\s+suspended/i
+                        ]
+                        
+                        const isSuspended = suspensionPatterns.some(pattern => pattern.test(mainContent))
+                        if (isSuspended) {
+                            this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by content text (iteration ${iteration})`, 'error')
+                            throw new Error('Account has been suspended!')
+                        }
+                    } catch (e) {
+                        // Ignore errors in text check - not critical
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Suspension text check skipped: ${e}`, 'warn')
+                    }
+                    
+                    // Not suspended, just activities not loaded yet - continue to next iteration
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`, 'warn')
                 }
 
                 // Below runs if the homepage was unable to be visited
@@ -70,14 +84,14 @@ export default class BrowserFunc {
                 if (currentURL.hostname !== dashboardURL.hostname) {
                     await this.bot.browser.utils.tryDismissAllMessages(page)
 
-                    await this.bot.utils.wait(2000)
+                    await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
                     await page.goto(this.bot.config.baseURL)
                 } else {
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
                     break
                 }
 
-                await this.bot.utils.wait(5000)
+                await this.bot.utils.wait(TIMEOUTS.VERY_LONG)
             }
 
         } catch (error) {
@@ -127,6 +141,14 @@ export default class BrowserFunc {
                 }
             }
 
+            // Wait a bit longer for scripts to load, especially on mobile
+            await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
+            
+            // Wait for the more-activities element to ensure page is fully loaded
+            await target.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: TIMEOUTS.DASHBOARD_WAIT }).catch(() => {
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Activities element not found, continuing anyway', 'warn')
+            })
+
             let scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
@@ -135,18 +157,36 @@ export default class BrowserFunc {
             })
 
             if (!scriptContent) {
-                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch(()=>{})
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard script not found on first try, attempting recovery', 'warn')
+                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch((e) => {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
+                })
+                
                 // Force a navigation retry once before failing hard
                 try {
                     await this.goHome(target)
-                    await target.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(()=>{})
-                } catch {/* ignore */}
+                    await target.waitForLoadState('domcontentloaded', { timeout: TIMEOUTS.VERY_LONG }).catch((e) => {
+                        this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Wait for load state failed: ${e}`, 'warn')
+                    })
+                    await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
+                } catch (e) {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Recovery navigation failed: ${e}`, 'warn')
+                }
+                
                 const retryContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
                     const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
                     return targetScript?.innerText ? targetScript.innerText : null
                 }).catch(()=>null)
+                
                 if (!retryContent) {
+                    // Log additional debug info
+                    const scriptsDebug = await target.evaluate(() => {
+                        const scripts = Array.from(document.querySelectorAll('script'))
+                        return scripts.map(s => s.innerText.substring(0, 100)).join(' | ')
+                    }).catch(() => 'Unable to get script debug info')
+                    
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Available scripts preview: ${scriptsDebug}`, 'warn')
                     throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
                 }
                 scriptContent = retryContent
@@ -154,18 +194,37 @@ export default class BrowserFunc {
 
             // Extract the dashboard object from the script content
             const dashboardData = await target.evaluate((scriptContent: string) => {
-                // Extract the dashboard object using regex
-                const regex = /var dashboard = (\{.*?\});/s
-                const match = regex.exec(scriptContent)
+                // Try multiple regex patterns for better compatibility
+                const patterns = [
+                    /var dashboard = (\{.*?\});/s,           // Original pattern
+                    /var dashboard=(\{.*?\});/s,             // No spaces
+                    /var\s+dashboard\s*=\s*(\{.*?\});/s,     // Flexible whitespace
+                    /dashboard\s*=\s*(\{[\s\S]*?\});/        // More permissive
+                ]
 
-                if (match && match[1]) {
-                    return JSON.parse(match[1])
+                for (const regex of patterns) {
+                    const match = regex.exec(scriptContent)
+                    if (match && match[1]) {
+                        try {
+                            return JSON.parse(match[1])
+                        } catch (e) {
+                            // Try next pattern if JSON parsing fails
+                            continue
+                        }
+                    }
                 }
+
+                return null
 
             }, scriptContent)
 
             if (!dashboardData) {
-                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch(()=>{})
+                // Log a snippet of the script content for debugging
+                const scriptPreview = scriptContent.substring(0, 200)
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Script preview: ${scriptPreview}`, 'warn')
+                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch((e) => {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
+                })
                 throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
             }
 
@@ -263,7 +322,7 @@ export default class BrowserFunc {
                 : 'us'
 
             const userDataRequest: AxiosRequestConfig = {
-                url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
+                url: URLS.APP_USER_DATA,
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -319,38 +378,73 @@ export default class BrowserFunc {
     */
     async getQuizData(page: Page): Promise<QuizData> {
         try {
+            // Wait for page to be fully loaded
+            await page.waitForLoadState('domcontentloaded')
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM)
+
             const html = await page.content()
             const $ = load(html)
 
-            const scriptContent = $('script')
-                .toArray()
-                .map(el => $(el).text())
-                .find(t => t.includes('_w.rewardsQuizRenderInfo')) || ''
+            // Try multiple possible variable names
+            const possibleVariables = [
+                '_w.rewardsQuizRenderInfo',
+                'rewardsQuizRenderInfo',
+                '_w.quizRenderInfo',
+                'quizRenderInfo'
+            ]
 
-            if (scriptContent) {
-                const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
+            let scriptContent = ''
+            let foundVariable = ''
+
+            for (const varName of possibleVariables) {
+                scriptContent = $('script')
+                    .toArray()
+                    .map(el => $(el).text())
+                    .find(t => t.includes(varName)) || ''
+
+                if (scriptContent) {
+                    foundVariable = varName
+                    break
+                }
+            }
+
+            if (scriptContent && foundVariable) {
+                // Escape dots in variable name for regex
+                const escapedVar = foundVariable.replace(/\./g, '\\.')
+                const regex = new RegExp(`${escapedVar}\\s*=\\s*({.*?});`, 's')
                 const match = regex.exec(scriptContent)
 
                 if (match && match[1]) {
                     const quizData = JSON.parse(match[1])
+                    this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found quiz data using variable: ${foundVariable}`, 'log')
                     return quizData
                 } else {
-                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
+                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Variable ${foundVariable} found but could not extract JSON data`, 'error')
                 }
             } else {
+                // Log available scripts for debugging
+                const allScripts = $('script')
+                    .toArray()
+                    .map(el => $(el).text())
+                    .filter(t => t.length > 0)
+                    .map(t => t.substring(0, 100))
+                
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Script not found. Tried variables: ${possibleVariables.join(', ')}`, 'error')
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found ${allScripts.length} scripts on page`, 'warn')
+                
                 throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
             }
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred: ' + error, 'error')
         }
 
     }
 
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('span.rqMCredits', { state: 'visible', timeout: 10000 })
-            await this.bot.utils.wait(2000)
+            await page.waitForSelector(SELECTORS.QUIZ_CREDITS, { state: 'visible', timeout: TIMEOUTS.DASHBOARD_WAIT })
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             return true
         } catch (error) {
@@ -361,8 +455,8 @@ export default class BrowserFunc {
 
     async checkQuizCompleted(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#quizCompleteContainer', { state: 'visible', timeout: 2000 })
-            await this.bot.utils.wait(2000)
+            await page.waitForSelector(SELECTORS.QUIZ_COMPLETE, { state: 'visible', timeout: TIMEOUTS.MEDIUM_LONG })
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             return true
         } catch (error) {
@@ -402,7 +496,7 @@ export default class BrowserFunc {
             // Save cookies
             await saveSessionData(this.bot.config.sessionPath, browser, email, this.bot.isMobile)
 
-            await this.bot.utils.wait(2000)
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             // Close browser
             await browser.close()
