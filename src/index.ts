@@ -66,8 +66,7 @@ export class MicrosoftRewardsBot {
     private heartbeatFile?: string
     private heartbeatTimer?: NodeJS.Timeout
 
-    //@ts-expect-error Will be initialized later
-    public axios: Axios
+    public axios!: Axios
 
     constructor(isMobile: boolean) {
         this.isMobile = isMobile
@@ -1203,8 +1202,6 @@ function formatDuration(ms: number): string {
 }
 
 async function main() {
-    // CommunityReporter disabled per project policy
-    // (previously: init + global hooks for uncaughtException/unhandledRejection)
     const rewardsBot = new MicrosoftRewardsBot(false)
 
     const crashState = { restarts: 0 }
@@ -1258,7 +1255,6 @@ async function main() {
 if (require.main === module) {
     main().catch(error => {
         log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
-        // CommunityReporter disabled
         process.exit(1)
     })
 }

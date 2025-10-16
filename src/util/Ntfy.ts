@@ -20,14 +20,8 @@ export async function Ntfy(message: string, type: keyof typeof NOTIFICATION_TYPE
             ...(config.authToken && { Authorization: `Bearer ${config.authToken}` })
         }
 
-        const response = await axios.post(`${config.url}/${config.topic}`, message, { headers })
-        
-        if (response.status === 200) {
-            console.log('NTFY notification successfully sent.')
-        } else {
-            console.error(`NTFY notification failed with status ${response.status}`)
-        }
+        await axios.post(`${config.url}/${config.topic}`, message, { headers })
     } catch (error) {
-        console.error('Failed to send NTFY notification:', error)
+        // Silently fail - NTFY is a non-critical notification service
     }
 }

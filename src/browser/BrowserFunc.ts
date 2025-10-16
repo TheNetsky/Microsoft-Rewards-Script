@@ -4,9 +4,10 @@ import { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
+import { TIMEOUTS, SELECTORS, URLS } from '../constants'
 
-import { Counters, DashboardData, MorePromotion, PromotionalItem } from './../interface/DashboardData'
-import { QuizData } from './../interface/QuizData'
+import { Counters, DashboardData, MorePromotion, PromotionalItem } from '../interface/DashboardData'
+import { QuizData } from '../interface/QuizData'
 import { AppUserData } from '../interface/AppUserData'
 import { EarnablePoints } from '../interface/Points'
 
@@ -34,20 +35,20 @@ export default class BrowserFunc {
 
             await page.goto(this.bot.config.baseURL)
 
-            const maxIterations = 5 // Maximum iterations set to 5
-
-            for (let iteration = 1; iteration <= maxIterations; iteration++) {
-                await this.bot.utils.wait(3000)
+            for (let iteration = 1; iteration <= TIMEOUTS.MEDIUM_LONG; iteration++) {
+                await this.bot.utils.wait(TIMEOUTS.LONG)
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
                 // Check if account is suspended (multiple heuristics)
-                const suspendedByHeader = await page.waitForSelector('#suspendedAccountHeader', { state: 'visible', timeout: 1500 }).then(() => true).catch(() => false)
+                const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: TIMEOUTS.MEDIUM }).then(() => true).catch(() => false)
                 let suspendedByText = false
                 if (!suspendedByHeader) {
                     try {
                         const text = (await page.textContent('body')) || ''
                         suspendedByText = /account has been suspended|suspended due to unusual activity/i.test(text)
-                    } catch { /* ignore */ }
+                    } catch (e) {
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Could not check suspension text: ${e}`, 'warn')
+                    }
                 }
                 if (suspendedByHeader || suspendedByText) {
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'This account appears suspended!', 'error')
@@ -56,7 +57,7 @@ export default class BrowserFunc {
 
                 try {
                     // If activities are found, exit the loop
-                    await page.waitForSelector('#more-activities', { timeout: 1000 })
+                    await page.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: 1000 })
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
                     break
 
@@ -70,14 +71,14 @@ export default class BrowserFunc {
                 if (currentURL.hostname !== dashboardURL.hostname) {
                     await this.bot.browser.utils.tryDismissAllMessages(page)
 
-                    await this.bot.utils.wait(2000)
+                    await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
                     await page.goto(this.bot.config.baseURL)
                 } else {
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
                     break
                 }
 
-                await this.bot.utils.wait(5000)
+                await this.bot.utils.wait(TIMEOUTS.VERY_LONG)
             }
 
         } catch (error) {
@@ -128,10 +129,10 @@ export default class BrowserFunc {
             }
 
             // Wait a bit longer for scripts to load, especially on mobile
-            await this.bot.utils.wait(this.bot.isMobile ? 3000 : 1500)
+            await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
             
             // Wait for the more-activities element to ensure page is fully loaded
-            await target.waitForSelector('#more-activities', { timeout: 10000 }).catch(() => {
+            await target.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: TIMEOUTS.DASHBOARD_WAIT }).catch(() => {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Activities element not found, continuing anyway', 'warn')
             })
 
@@ -144,14 +145,20 @@ export default class BrowserFunc {
 
             if (!scriptContent) {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard script not found on first try, attempting recovery', 'warn')
-                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch(()=>{})
+                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch((e) => {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
+                })
                 
                 // Force a navigation retry once before failing hard
                 try {
                     await this.goHome(target)
-                    await target.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(()=>{})
-                    await this.bot.utils.wait(this.bot.isMobile ? 3000 : 1500)
-                } catch {/* ignore */}
+                    await target.waitForLoadState('domcontentloaded', { timeout: TIMEOUTS.VERY_LONG }).catch((e) => {
+                        this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Wait for load state failed: ${e}`, 'warn')
+                    })
+                    await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
+                } catch (e) {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Recovery navigation failed: ${e}`, 'warn')
+                }
                 
                 const retryContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
@@ -202,7 +209,9 @@ export default class BrowserFunc {
                 // Log a snippet of the script content for debugging
                 const scriptPreview = scriptContent.substring(0, 200)
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Script preview: ${scriptPreview}`, 'warn')
-                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch(()=>{})
+                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch((e) => {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
+                })
                 throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
             }
 
@@ -300,7 +309,7 @@ export default class BrowserFunc {
                 : 'us'
 
             const userDataRequest: AxiosRequestConfig = {
-                url: 'https://prod.rewardsplatform.microsoft.com/dapi/me?channel=SAAndroid&options=613',
+                url: URLS.APP_USER_DATA,
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -358,7 +367,7 @@ export default class BrowserFunc {
         try {
             // Wait for page to be fully loaded
             await page.waitForLoadState('domcontentloaded')
-            await this.bot.utils.wait(1000)
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM)
 
             const html = await page.content()
             const $ = load(html)
@@ -421,8 +430,8 @@ export default class BrowserFunc {
 
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('span.rqMCredits', { state: 'visible', timeout: 10000 })
-            await this.bot.utils.wait(2000)
+            await page.waitForSelector(SELECTORS.QUIZ_CREDITS, { state: 'visible', timeout: TIMEOUTS.DASHBOARD_WAIT })
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             return true
         } catch (error) {
@@ -433,8 +442,8 @@ export default class BrowserFunc {
 
     async checkQuizCompleted(page: Page): Promise<boolean> {
         try {
-            await page.waitForSelector('#quizCompleteContainer', { state: 'visible', timeout: 2000 })
-            await this.bot.utils.wait(2000)
+            await page.waitForSelector(SELECTORS.QUIZ_COMPLETE, { state: 'visible', timeout: TIMEOUTS.MEDIUM_LONG })
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             return true
         } catch (error) {
@@ -474,7 +483,7 @@ export default class BrowserFunc {
             // Save cookies
             await saveSessionData(this.bot.config.sessionPath, browser, email, this.bot.isMobile)
 
-            await this.bot.utils.wait(2000)
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             // Close browser
             await browser.close()

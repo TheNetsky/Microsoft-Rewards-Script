@@ -69,8 +69,9 @@ function stripJsonComments(input: string): string {
 
 // Normalize both legacy (flat) and new (nested) config schemas into the flat Config interface
 function normalizeConfig(raw: unknown): Config {
+    // Using any here is necessary to support both legacy flat config and new nested config structures
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const n: any = (raw as any) || {}
+    const n = (raw || {}) as any
 
     // Browser / execution
     const headless = n.browser?.headless ?? n.headless ?? false

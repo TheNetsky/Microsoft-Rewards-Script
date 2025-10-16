@@ -1,6 +1,7 @@
 import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
+import { TIMEOUTS } from '../../constants'
 
 
 export class Quiz extends Workers {
@@ -10,19 +11,19 @@ export class Quiz extends Workers {
 
         try {
             // Check if the quiz has been started or not
-            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
+            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: TIMEOUTS.MEDIUM_LONG }).then(() => true).catch(() => false)
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {
                 this.bot.log(this.bot.isMobile, 'QUIZ', 'Quiz has already been started, trying to finish it')
             }
 
-            await this.bot.utils.wait(2000)
+            await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
 
             let quizData = await this.bot.browser.func.getQuizData(page)
             
             // Verify quiz is actually loaded before proceeding
-            const firstOptionExists = await page.waitForSelector('#rqAnswerOption0', { state: 'attached', timeout: 5000 }).then(() => true).catch(() => false)
+            const firstOptionExists = await page.waitForSelector('#rqAnswerOption0', { state: 'attached', timeout: TIMEOUTS.VERY_LONG }).then(() => true).catch(() => false)
             if (!firstOptionExists) {
                 this.bot.log(this.bot.isMobile, 'QUIZ', 'Quiz options not found - page may not have loaded correctly. Skipping.', 'warn')
                 await page.close()
@@ -37,7 +38,7 @@ export class Quiz extends Workers {
                     const answers: string[] = []
 
                     for (let i = 0; i < quizData.numberOfOptions; i++) {
-                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: 10000 }).catch(() => null)
+                        const answerSelector = await page.waitForSelector(`#rqAnswerOption${i}`, { state: 'visible', timeout: TIMEOUTS.DASHBOARD_WAIT }).catch(() => null)
                         
                         if (!answerSelector) {
                             this.bot.log(this.bot.isMobile, 'QUIZ', `Option ${i} not found - quiz structure may have changed. Skipping remaining options.`, 'warn')
