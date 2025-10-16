@@ -1,385 +1,194 @@
-<div align="center"><div align="center">
+<div align="center">
 
-
-
-<img src="https://capsule-render.vercel.app/api?type=waving&height=200&color=gradient&customColorList=0,2,2,5,6,8&text=MS%20REWARDS&fontSize=80&fontColor=fff&animation=twinkling&fontAlignY=40" /><!-- Epic Header -->
-
+<!-- Epic Header -->
 <img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&customColorList=0,2,2,5,6,8&text=MICROSOFT%20REWARDS&fontSize=75&fontColor=fff&animation=twinkling&fontAlignY=38&desc=Intelligent%20Browser%20Automation&descSize=24&descAlignY=58" />
-
-<br>
 
 </div>
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-
-![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)<br>
-
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
+<br>
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/v2.2.3-blue?style=for-the-badge)
-
-![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)<!-- Badges modernes -->
-
-![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-
+<!-- Badges modernes -->
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-
-<br>![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
-
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-**Automate Microsoft Rewards daily tasks**  
+<br>
 
-*Searches • Quizzes • Activities — ~150 points/day in 3 minutes*<br>
-
-
-
-</div>![Version](https://img.shields.io/badge/v2.1.5-blue?style=for-the-badge&logo=github&logoColor=white)
-
+![Version](https://img.shields.io/badge/v2.1.5-blue?style=for-the-badge&logo=github&logoColor=white)
 ![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)
-
----![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
-
+![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
 ![Status](https://img.shields.io/badge/Active-00C851?style=for-the-badge)
-
-## ⚡ Quick Start
 
 <br><br>
 
-### **Easiest Way (Recommended)**
-
 <!-- Animated Description -->
-
-```bash<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=650&lines=Automate+Microsoft+Rewards+Daily+Tasks;Human-Like+Behavior+%E2%80%A2+Anti-Detection;Multi-Account+%E2%80%A2+Smart+Scheduling;150-300%2B+Points+Per+Day+Automatically" />
-
-# Windows
-
-setup\setup.bat</div>
-
-
-
-# Linux/macOS<br>
-
-bash setup/setup.sh
-
-``````
-
-╔══════════════════════════════════════════════════════════════════════════════╗
-
-**That's it!** The wizard will:║                          WHAT DOES THIS DO?                                  ║
-
-- ✅ Create your `accounts.json`╚══════════════════════════════════════════════════════════════════════════════╝
-
-- ✅ Install everything```
-
-- ✅ Run your first automation
-
-<div align="center">
-
----
-
-**Automate your Microsoft Rewards daily activities with intelligent browser automation.**  
-
-## 📚 DocumentationComplete searches, quizzes, and promotions automatically while mimicking natural human behavior.
-
-
-
-**New here?** → [Getting Started Guide](./docs/getting-started.md)  <br>
-
-**Docker setup?** → [Docker Guide](./docs/docker.md)  
-
-**All docs** → [Complete Index](./docs/index.md)### **Daily Earnings Breakdown**
-
-
-
-### Popular Guides| 🎯 Activity | 💎 Points | ⏱️ Time |
-
-- [Accounts & 2FA Setup](./docs/accounts.md) — Add Microsoft accounts with TOTP|:-----------|:---------|:--------|
-
-- [Scheduler](./docs/schedule.md) — Automate daily runs| **Desktop Searches** | ~90 pts | 30 sec |
-
-- [Configuration](./docs/config.md) — Customize behavior| **Mobile Searches** | ~60 pts | 20 sec |
-
-- [Notifications](./docs/conclusionwebhook.md) — Discord/NTFY alerts| **Daily Set Tasks** | ~30-50 pts | 1-2 min |
-
-- [Humanization](./docs/humanization.md) — Natural behavior (anti-ban)| **Promotions & Punch Cards** | Variable | 30s-2min |
-
-| **📊 TOTAL AVERAGE** | **150-300+ pts** | **3-5 min** |
-
----
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=650&lines=Automate+Microsoft+Rewards+Daily+Tasks;Human-Like+Behavior+%E2%80%A2+Anti-Detection;Multi-Account+%E2%80%A2+Smart+Scheduling;150-300%2B+Points+Per+Day+Automatically" />
 
 </div>
 
-## 🎯 What It Does
+<br>
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          WHAT DOES THIS DO?                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
+<div align="center">
+
+**Automate your Microsoft Rewards daily activities with intelligent browser automation.**  
+Complete searches, quizzes, and promotions automatically while mimicking natural human behavior.
 
 <br>
 
-| Task | Points | Time |
+### **Daily Earnings Breakdown**
 
-|------|--------|------|```
+| 🎯 Activity | 💎 Points | ⏱️ Time |
+|:-----------|:---------|:--------|
+| **Desktop Searches** | ~90 pts | 30 sec |
+| **Mobile Searches** | ~60 pts | 20 sec |
+| **Daily Set Tasks** | ~30-50 pts | 1-2 min |
+| **Promotions & Punch Cards** | Variable | 30s-2min |
+| **📊 TOTAL AVERAGE** | **150-300+ pts** | **3-5 min** |
 
-| Desktop searches | ~90 pts | 30s |╔══════════════════════════════════════════════════════════════════════════════╗
+</div>
 
-| Mobile searches | ~60 pts | 20s |║                             QUICK START                                      ║
+<br>
 
-| Daily activities | ~30-50 pts | 1-2min |╚══════════════════════════════════════════════════════════════════════════════╝
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                             QUICK START                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
 
-| **Total** | **~150-200 pts** | **~3min** |```
+### **🚀 Automated Setup** (Recommended)
 
+```bash
+# Windows
+setup\setup.bat
 
-
-### Key Features### **🚀 Automated Setup** (Recommended)
-
-- 🤖 **Human-like behavior** — Random delays, mouse movements
-
-- 🔐 **2FA/TOTP support** — Automated login```bash
-
-- 📅 **Built-in scheduler** — Daily automation# Windows
-
-- 🔔 **Notifications** — Discord webhooks, NTFY pushsetup\setup.bat
-
-- 🌐 **Proxy support** — Per-account proxies
-
-- 🐳 **Docker ready** — Container deployment# Linux / macOS / WSL
-
+# Linux / macOS / WSL
 bash setup/setup.sh
 
----
-
 # Universal
+npm run setup
+```
 
-## 🔧 Basic Usagenpm run setup
+**The wizard handles everything:**
+- ✅ Creates `accounts.json` with your credentials
+- ✅ Installs dependencies & builds project
+- ✅ Runs first automation (optional)
 
+<br>
+
+### **🛠️ Manual Setup**
+
+```bash
+# 1. Clone repository
+git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+cd Microsoft-Rewards-Script
+
+# 2. Configure accounts
+cp src/accounts.example.json src/accounts.json
+# Edit accounts.json with your Microsoft credentials
+
+# 3. Install & build
+npm i
+
+# 4. Run automation
+npm start
+```
+
+<br>
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        INTELLIGENT FEATURES                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🛡️ **Risk-Aware System**
+```
+Real-time threat detection
+├─ Monitors captchas & errors
+├─ Dynamic delay adjustment (1x→4x)
+├─ Automatic cool-down periods
+└─ ML-based ban prediction
+```
+
+### 📊 **Performance Analytics**
+```
+Track everything
+├─ Points earned per day
+├─ Success/failure rates
+├─ Historical trends
+└─ Account health monitoring
+```
+
+</td>
+<td width="50%" valign="top">
+
+### 🔍 **Query Diversity Engine**
+```
+Natural search patterns
+├─ Multi-source queries
+├─ Pattern breaking algorithms
+├─ Smart deduplication
+└─ Reduced detection risk
+```
+
+### ✅ **Config Validator**
+```
+Pre-flight checks
+├─ Detects common mistakes
+├─ Security warnings
+├─ Optimization suggestions
+└─ Dry-run test mode
+```
+
+</td>
+</tr>
+</table>
+
+<br>
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          USAGE COMMANDS                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
+# Run automation once
+npm start
 
-# Run once**The wizard handles everything:**
-
-npm start- ✅ Creates `accounts.json` with your credentials
-
-- ✅ Installs dependencies & builds project
-
-# Daily automation- ✅ Runs first automation (optional)
-
+# Daily automated scheduler
 npm run start:schedule
+
+# Manual redemption mode (monitor points while shopping)
+npm start -- -buy your@email.com
+
+# Docker deployment
+docker compose up -d
+
+# Test configuration without executing
+npm start -- --dry-run
+```
 
 <br>
 
-# Docker
-
-docker compose up -d### **🛠️ Manual Setup**
-
-
-
-# Buy mode (manual purchases)```bash
-
-npm start -- -buy your@email.com# 1. Clone repository
-
-```git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
-
-cd Microsoft-Rewards-Script
-
----
-
-# 2. Configure accounts
-
-## ⚙️ Configurationcp src/accounts.example.json src/accounts.json
-
-# Edit accounts.json with your Microsoft credentials
-
-Edit `src/config.jsonc`:
-
-# 3. Install & build
-
-```jsoncnpm i
-
-{
-
-  "humanization": {# 4. Run automation
-
-    "enabled": true  // Natural behavior (recommended)npm start
-
-  },```
-
-  "schedule": {
-
-    "enabled": true,<br>
-
-    "time": "09:00",
-
-    "timeZone": "America/New_York"```
-
-  },╔══════════════════════════════════════════════════════════════════════════════╗
-
-  "workers": {║                        INTELLIGENT FEATURES                                  ║
-
-    "doDailySet": true,╚══════════════════════════════════════════════════════════════════════════════╝
-
-    "doDesktopSearch": true,```
-
-    "doMobileSearch": true
-
-  }<table>
-
-}<tr>
-
-```<td width="50%" valign="top">
-
-
-
-**[Full Config Guide →](./docs/config.md)**### 🛡️ **Risk-Aware System**
-
 ```
-
----Real-time threat detection
-
-├─ Monitors captchas & errors
-
-## ⚠️ Disclaimer├─ Dynamic delay adjustment (1x→4x)
-
-├─ Automatic cool-down periods
-
-**Using automation violates Microsoft's Terms of Service.**  └─ ML-based ban prediction
-
-Your accounts may be suspended or permanently banned.```
-
-
-
-**For educational purposes only.** Use at your own risk.### 📊 **Performance Analytics**
-
-```
-
-### Best PracticesTrack everything
-
-- ✅ Enable humanization├─ Points earned per day
-
-- ✅ Use 2FA/TOTP├─ Success/failure rates
-
-- ✅ Run 1-2x daily max├─ Historical trends
-
-- ✅ Test on secondary accounts└─ Account health monitoring
-
-- ❌ Don't use on main account```
-
-- ❌ Don't run hourly
-
-</td>
-
----<td width="50%" valign="top">
-
-
-
-## 🆘 Support### 🔍 **Query Diversity Engine**
-
-```
-
-**Need help?** [Join Discord](https://discord.gg/KRBFxxsU)  Natural search patterns
-
-**Found a bug?** [GitHub Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)├─ Multi-source queries
-
-├─ Pattern breaking algorithms
-
----├─ Smart deduplication
-
-└─ Reduced detection risk
-
-## 🤝 Contributors```
-
-
-
-<div align="center">### ✅ **Config Validator**
-
-```
-
-<table>Pre-flight checks
-
-<tr>├─ Detects common mistakes
-
-<td align="center">├─ Security warnings
-
-<a href="https://github.com/TheNetsky/">├─ Optimization suggestions
-
-<img src="https://github.com/TheNetsky.png" width="80" /><br />└─ Dry-run test mode
-
-<sub><b>TheNetsky</b></sub>```
-
-</a>
-
-</td></td>
-
-<td align="center"></tr>
-
-<a href="https://github.com/mgrimace"></table>
-
-<img src="https://github.com/mgrimace.png" width="80" /><br />
-
-<sub><b>Mgrimace</b></sub><br>
-
-</a>
-
-</td>```
-
-<td align="center">╔══════════════════════════════════════════════════════════════════════════════╗
-
-<a href="https://github.com/LightZirconite">║                          USAGE COMMANDS                                      ║
-
-<img src="https://github.com/LightZirconite.png" width="80" /><br />╚══════════════════════════════════════════════════════════════════════════════╝
-
-<sub><b>LightZirconite</b></sub>```
-
-</a>
-
-</td>```bash
-
-</tr># Run automation once
-
-</table>npm start
-
-
-
-<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors"># Daily automated scheduler
-
-  <img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" />npm run start:schedule
-
-</a>
-
-# Manual redemption mode (monitor points while shopping)
-
-</div>npm start -- -buy your@email.com
-
-
-
----# Docker deployment
-
-docker compose up -d
-
-## 📄 License
-
-# Test configuration without executing
-
-**ISC License** — Free and open source  npm start -- --dry-run
-
-See [LICENSE](./LICENSE) for details```
-
-
-
-<br><br>
-
-
-
-<div align="center">```
-
 ╔══════════════════════════════════════════════════════════════════════════════╗
-
-<img src="https://capsule-render.vercel.app/api?type=waving&height=100&color=gradient&customColorList=0,2,2,5,6,8&section=footer" />║                           CONFIGURATION                                      ║
-
+║                           CONFIGURATION                                      ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
-
-</div>```
-
+```
 
 Edit `src/config.jsonc` to customize behavior:
 

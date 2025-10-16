@@ -1,136 +1,148 @@
 # 🚀 Getting Started
 
-<div align="center">
-
-**🎯 From zero to earning Microsoft Rewards points in minutes**  
-*Complete setup guide for beginners*
-
-</div>
+**From zero to your first run in 10 minutes**
 
 ---
 
 ## ✅ Requirements
 
-- **Node.js 18+** (22 recommended) — [Download here](https://nodejs.org/)
+- **Node.js 20+** → [Download here](https://nodejs.org/)
 - **Microsoft accounts** with email + password
-- **Optional:** Docker for containerized deployment
+- *Optional:* Docker for containers
 
 ---
 
 ## ⚡ Quick Setup (Recommended)
 
-<div align="center">
-
-### **🎬 One Command, Total Automation**
-
-</div>
-
-```bash
-# 🪟 Windows
-setup/setup.bat
-
-# 🐧 Linux/macOS/WSL  
-bash setup/setup.sh
-
-# 🌍 Any platform
-npm run setup
+### Windows
+```powershell
+setup\setup.bat
 ```
 
-**That's it!** The wizard will:
-- ✅ Help you create `src/accounts.json` with your Microsoft credentials
-- ✅ Install all dependencies automatically  
-- ✅ Build the TypeScript project
-- ✅ Start earning points immediately
+### Linux / macOS
+```bash
+bash setup/setup.sh
+```
+
+### What Does It Do?
+
+1. ✅ Asks for your Microsoft credentials
+2. ✅ Creates `accounts.json` automatically
+3. ✅ Installs dependencies
+4. ✅ Builds the project
+5. ✅ Runs your first automation (optional)
+
+**That's it! 🎉**
 
 ---
 
-## 🛠️ Manual Setup
+## 🎯 After Installation
+
+### 1️⃣ Enable Scheduler (Recommended)
+
+Run automatically once per day:
+
+**Edit** `src/config.jsonc`:
+```jsonc
+{
+  "schedule": {
+    "enabled": true,
+    "time": "09:00",
+    "timeZone": "America/New_York"
+  }
+}
+```
+
+**Start scheduler:**
+```bash
+npm run start:schedule
+```
+
+→ **[Full Scheduler Guide](./schedule.md)**
+
+---
+
+### 2️⃣ Add Notifications (Optional)
+
+Get a summary after each run:
+
+```jsonc
+{
+  "conclusionWebhook": {
+    "enabled": true,
+    "url": "https://discord.com/api/webhooks/YOUR_WEBHOOK_URL"
+  }
+}
+```
+
+→ **[Discord Setup](./conclusionwebhook.md)** | **[NTFY Setup](./ntfy.md)**
+
+---
+
+### 3️⃣ Enable Humanization (Anti-Ban)
+
+More natural behavior:
+
+```jsonc
+{
+  "humanization": {
+    "enabled": true
+  }
+}
+```
+
+→ **[Humanization Guide](./humanization.md)**
+
+---
+
+## 🛠️ Common Issues
+
+| Problem | Solution |
+|---------|----------|
+| **"Node.js not found"** | Install Node.js 20+ and restart terminal |
+| **"accounts.json missing"** | Run `setup/setup.bat` or create manually |
+| **"Login failed"** | Check email/password in `accounts.json` |
+| **"2FA prompt"** | Add TOTP secret → [2FA Guide](./accounts.md) |
+| **Script crashes** | Check [Diagnostics Guide](./diagnostics.md) |
+
+---
+
+## 🔧 Manual Setup (Advanced)
 
 <details>
-<summary><strong>📖 Prefer step-by-step? Click here</strong></summary>
+<summary><strong>Click to expand</strong></summary>
 
-### 1️⃣ **Configure Your Accounts**
 ```bash
+# 1. Configure accounts
 cp src/accounts.example.json src/accounts.json
-# Edit accounts.json with your Microsoft credentials
-```
+# Edit accounts.json with your credentials
 
-### 2️⃣ **Install Dependencies & Build**
-```bash
+# 2. Install & build
 npm install
 npm run build
-```
 
-### 3️⃣ **Choose Your Mode**
-```bash
-# Single run (test it works)
+# 3. Run
 npm start
-
-# Automated daily scheduler (set and forget)
-npm run start:schedule
 ```
 
 </details>
 
 ---
 
-## 🎯 What Happens Next?
+## 📚 Next Steps
 
-The script will automatically:
-- 🔍 **Search Bing** for points (desktop + mobile)
-- 📅 **Complete daily sets** (quizzes, polls, activities)  
-- 🎁 **Grab promotions** and bonus opportunities
-- 🃏 **Work on punch cards** (multi-day challenges)
-- ✅ **Daily check-ins** for easy points
-- 📚 **Read articles** for additional rewards
+**Everything works?**  
+→ **[Setup Scheduler](./schedule.md)** for daily automation
 
-**All while looking completely natural to Microsoft!** 🤖
+**Need 2FA?**  
+→ **[Accounts & TOTP Guide](./accounts.md)**
 
----
+**Want Docker?**  
+→ **[Docker Guide](./docker.md)**
 
-## 🐳 Docker Alternative
-
-If you prefer containers:
-
-```bash
-# Ensure accounts.json and config.jsonc exist
-docker compose up -d
-
-# Follow logs
-docker logs -f microsoft-rewards-script
-```
-
-**[Full Docker Guide →](./docker.md)**
+**Having issues?**  
+→ **[Diagnostics](./diagnostics.md)**
 
 ---
 
-## 🔧 Next Steps
-
-Once running, explore these guides:
-
-| Priority | Guide | Why Important |
-|----------|-------|---------------|
-| **High** | **[Accounts & 2FA](./accounts.md)** | Set up TOTP for secure automation |
-| **High** | **[Scheduling](./schedule.md)** | Configure automated daily runs |
-| **Medium** | **[Notifications](./ntfy.md)** | Get alerts on your phone |
-| **Low** | **[Humanization](./humanization.md)** | Advanced anti-detection |
-
----
-
-## 🆘 Need Help?
-
-**Script not starting?** → [Troubleshooting Guide](./diagnostics.md)  
-**Login issues?** → [Accounts & 2FA Setup](./accounts.md)  
-**Want Docker?** → [Container Guide](./docker.md)  
-
-**Found a bug?** [Report it here](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)  
-**Need support?** [Join our Discord](https://discord.gg/KRBFxxsU)
-
----
-
-## 🔗 Related Guides
-
-- **[Accounts & 2FA](./accounts.md)** — Add Microsoft accounts with TOTP
-- **[Docker](./docker.md)** — Deploy with containers  
-- **[Scheduler](./schedule.md)** — Automate daily execution
-- **[Discord Webhooks](./conclusionwebhook.md)** — Get run summaries
+**[← Back to Hub](./index.md)** | **[All Docs](./index.md)**
