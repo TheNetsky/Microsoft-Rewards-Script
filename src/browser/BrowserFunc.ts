@@ -356,30 +356,65 @@ export default class BrowserFunc {
     */
     async getQuizData(page: Page): Promise<QuizData> {
         try {
+            // Wait for page to be fully loaded
+            await page.waitForLoadState('domcontentloaded')
+            await this.bot.utils.wait(1000)
+
             const html = await page.content()
             const $ = load(html)
 
-            const scriptContent = $('script')
-                .toArray()
-                .map(el => $(el).text())
-                .find(t => t.includes('_w.rewardsQuizRenderInfo')) || ''
+            // Try multiple possible variable names
+            const possibleVariables = [
+                '_w.rewardsQuizRenderInfo',
+                'rewardsQuizRenderInfo',
+                '_w.quizRenderInfo',
+                'quizRenderInfo'
+            ]
 
-            if (scriptContent) {
-                const regex = /_w\.rewardsQuizRenderInfo\s*=\s*({.*?});/s
+            let scriptContent = ''
+            let foundVariable = ''
+
+            for (const varName of possibleVariables) {
+                scriptContent = $('script')
+                    .toArray()
+                    .map(el => $(el).text())
+                    .find(t => t.includes(varName)) || ''
+
+                if (scriptContent) {
+                    foundVariable = varName
+                    break
+                }
+            }
+
+            if (scriptContent && foundVariable) {
+                // Escape dots in variable name for regex
+                const escapedVar = foundVariable.replace(/\./g, '\\.')
+                const regex = new RegExp(`${escapedVar}\\s*=\\s*({.*?});`, 's')
                 const match = regex.exec(scriptContent)
 
                 if (match && match[1]) {
                     const quizData = JSON.parse(match[1])
+                    this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found quiz data using variable: ${foundVariable}`, 'log')
                     return quizData
                 } else {
-                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Quiz data not found within script', 'error')
+                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Variable ${foundVariable} found but could not extract JSON data`, 'error')
                 }
             } else {
+                // Log available scripts for debugging
+                const allScripts = $('script')
+                    .toArray()
+                    .map(el => $(el).text())
+                    .filter(t => t.length > 0)
+                    .map(t => t.substring(0, 100))
+                
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Script not found. Tried variables: ${possibleVariables.join(', ')}`, 'error')
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found ${allScripts.length} scripts on page`, 'warn')
+                
                 throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
             }
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred: ' + error, 'error')
         }
 
     }
