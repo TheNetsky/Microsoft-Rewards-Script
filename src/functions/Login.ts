@@ -202,6 +202,10 @@ export class Login {
   // --------------- 2FA Handling ---------------
   private async handle2FA(page: Page) {
     try {
+      // Dismiss any popups/dialogs before checking 2FA (Terms Update, etc.)
+      await this.bot.browser.utils.tryDismissAllMessages(page)
+      await this.bot.utils.wait(500)
+
       if (this.currentTotpSecret) {
         const totpSelector = await this.ensureTotpInput(page)
         if (totpSelector) {
@@ -273,10 +277,45 @@ export class Login {
       } catch {/* ignore */}
     }
 
-    // Manual prompt
+    // Manual prompt with periodic page check
     this.bot.log(this.bot.isMobile, 'LOGIN', 'Waiting for user 2FA code (SMS / Email / App fallback)')
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    const code: string = await new Promise(res => rl.question('Enter 2FA code:\n', ans => { rl.close(); res(ans.trim()) }))
+    
+    // Monitor page changes while waiting for user input
+    let userInput: string | null = null
+    let checkInterval: NodeJS.Timeout | null = null
+    
+    const inputPromise = new Promise<string>(res => {
+      rl.question('Enter 2FA code:\n', ans => {
+        if (checkInterval) clearInterval(checkInterval)
+        rl.close()
+        res(ans.trim())
+      })
+    })
+
+    // Check every 2 seconds if user manually progressed past the dialog
+    checkInterval = setInterval(async () => {
+      try {
+        await this.bot.browser.utils.tryDismissAllMessages(page)
+        // Check if we're no longer on 2FA page
+        const still2FA = await page.locator('input[name="otc"]').first().isVisible({ timeout: 500 }).catch(() => false)
+        if (!still2FA) {
+          this.bot.log(this.bot.isMobile, 'LOGIN', 'Page changed during 2FA wait (user may have clicked Next)', 'warn')
+          if (checkInterval) clearInterval(checkInterval)
+          rl.close()
+          userInput = 'skip' // Signal to skip submission
+        }
+      } catch {/* ignore */}
+    }, 2000)
+
+    const code = await inputPromise
+    if (checkInterval) clearInterval(checkInterval)
+    
+    if (code === 'skip' || userInput === 'skip') {
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Skipping 2FA code submission (page progressed)')
+      return
+    }
+
     await page.fill('input[name="otc"]', code)
     await page.keyboard.press('Enter')
     this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code submitted')

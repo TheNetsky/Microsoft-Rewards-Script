@@ -58,8 +58,8 @@
         "useAmPm": false,
         "time12": "9:00 AM",
         "time24": "09:00",
-        // IANA timezone (e.g., "Europe/Paris", "America/New_York")
-        "timeZone": "America/New_York",
+        // IANA timezone (e.g., "Europe/Paris", "America/New_York" check schedule.md)
+        "timeZone": "Europe/Paris",
         // If true, run immediately on process start
         "runImmediatelyOnStart": false
     },
@@ -263,13 +263,13 @@
         // - Tracks average execution times
         // - Generates trend reports
         // - Can export to Markdown or send via webhook
-        "enabled": false,
+        "enabled": true,
         // How long to keep analytics data (days)
         "retentionDays": 30,
         // Generate markdown summary reports
-        "exportMarkdown": false,
+        "exportMarkdown": true,
         // Send analytics summary via webhook
-        "webhookSummary": false
+        "webhookSummary": true
     },
     
     
