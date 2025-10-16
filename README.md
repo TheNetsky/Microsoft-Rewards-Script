@@ -17,7 +17,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/v2.1.5-blue?style=for-the-badge&logo=github&logoColor=white)
+![Version](https://img.shields.io/badge/v2.2.7-blue?style=for-the-badge&logo=github&logoColor=white)
 ![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)
 ![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
 ![Status](https://img.shields.io/badge/Active-00C851?style=for-the-badge)
