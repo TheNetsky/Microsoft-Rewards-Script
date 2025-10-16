@@ -127,6 +127,14 @@ export default class BrowserFunc {
                 }
             }
 
+            // Wait a bit longer for scripts to load, especially on mobile
+            await this.bot.utils.wait(this.bot.isMobile ? 3000 : 1500)
+            
+            // Wait for the more-activities element to ensure page is fully loaded
+            await target.waitForSelector('#more-activities', { timeout: 10000 }).catch(() => {
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Activities element not found, continuing anyway', 'warn')
+            })
+
             let scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
@@ -135,18 +143,30 @@ export default class BrowserFunc {
             })
 
             if (!scriptContent) {
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard script not found on first try, attempting recovery', 'warn')
                 await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch(()=>{})
+                
                 // Force a navigation retry once before failing hard
                 try {
                     await this.goHome(target)
                     await target.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(()=>{})
+                    await this.bot.utils.wait(this.bot.isMobile ? 3000 : 1500)
                 } catch {/* ignore */}
+                
                 const retryContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
                     const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
                     return targetScript?.innerText ? targetScript.innerText : null
                 }).catch(()=>null)
+                
                 if (!retryContent) {
+                    // Log additional debug info
+                    const scriptsDebug = await target.evaluate(() => {
+                        const scripts = Array.from(document.querySelectorAll('script'))
+                        return scripts.map(s => s.innerText.substring(0, 100)).join(' | ')
+                    }).catch(() => 'Unable to get script debug info')
+                    
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Available scripts preview: ${scriptsDebug}`, 'warn')
                     throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
                 }
                 scriptContent = retryContent
@@ -154,17 +174,34 @@ export default class BrowserFunc {
 
             // Extract the dashboard object from the script content
             const dashboardData = await target.evaluate((scriptContent: string) => {
-                // Extract the dashboard object using regex
-                const regex = /var dashboard = (\{.*?\});/s
-                const match = regex.exec(scriptContent)
+                // Try multiple regex patterns for better compatibility
+                const patterns = [
+                    /var dashboard = (\{.*?\});/s,           // Original pattern
+                    /var dashboard=(\{.*?\});/s,             // No spaces
+                    /var\s+dashboard\s*=\s*(\{.*?\});/s,     // Flexible whitespace
+                    /dashboard\s*=\s*(\{[\s\S]*?\});/        // More permissive
+                ]
 
-                if (match && match[1]) {
-                    return JSON.parse(match[1])
+                for (const regex of patterns) {
+                    const match = regex.exec(scriptContent)
+                    if (match && match[1]) {
+                        try {
+                            return JSON.parse(match[1])
+                        } catch (e) {
+                            // Try next pattern if JSON parsing fails
+                            continue
+                        }
+                    }
                 }
+
+                return null
 
             }, scriptContent)
 
             if (!dashboardData) {
+                // Log a snippet of the script content for debugging
+                const scriptPreview = scriptContent.substring(0, 200)
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Script preview: ${scriptPreview}`, 'warn')
                 await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch(()=>{})
                 throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
             }
