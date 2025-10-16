@@ -277,8 +277,10 @@ export class Search extends Workers {
             }
 
             const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
-            if (mappedTrendsData.length < 90) {
-                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'Insufficient search queries, falling back to US', 'warn')
+            this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Found ${mappedTrendsData.length} search queries for ${geoLocale}`)
+            
+            if (mappedTrendsData.length < 30 && geoLocale.toUpperCase() !== 'US') {
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Insufficient search queries (${mappedTrendsData.length} < 30), falling back to US`, 'warn')
                 return this.getGoogleTrends()
             }
 
