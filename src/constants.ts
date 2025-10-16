@@ -21,7 +21,8 @@ export const RETRY_LIMITS = {
   MOBILE_SEARCH: 3,
   ABC_MAX: 15,
   POLL_MAX: 15,
-  QUIZ_MAX: 15
+  QUIZ_MAX: 15,
+  GO_HOME_MAX: 5
 } as const
 
 export const DELAYS = {

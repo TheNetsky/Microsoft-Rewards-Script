@@ -4,7 +4,7 @@ import { AxiosRequestConfig } from 'axios'
 
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
-import { TIMEOUTS, SELECTORS, URLS } from '../constants'
+import { TIMEOUTS, RETRY_LIMITS, SELECTORS, URLS } from '../constants'
 
 import { Counters, DashboardData, MorePromotion, PromotionalItem } from '../interface/DashboardData'
 import { QuizData } from '../interface/QuizData'
@@ -35,34 +35,47 @@ export default class BrowserFunc {
 
             await page.goto(this.bot.config.baseURL)
 
-            for (let iteration = 1; iteration <= TIMEOUTS.MEDIUM_LONG; iteration++) {
+            for (let iteration = 1; iteration <= RETRY_LIMITS.GO_HOME_MAX; iteration++) {
                 await this.bot.utils.wait(TIMEOUTS.LONG)
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
-                // Check if account is suspended (multiple heuristics)
-                const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: TIMEOUTS.MEDIUM }).then(() => true).catch(() => false)
-                let suspendedByText = false
-                if (!suspendedByHeader) {
-                    try {
-                        const text = (await page.textContent('body')) || ''
-                        suspendedByText = /account has been suspended|suspended due to unusual activity/i.test(text)
-                    } catch (e) {
-                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Could not check suspension text: ${e}`, 'warn')
-                    }
-                }
-                if (suspendedByHeader || suspendedByText) {
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'This account appears suspended!', 'error')
-                    throw new Error('Account has been suspended!')
-                }
-
                 try {
-                    // If activities are found, exit the loop
+                    // If activities are found, exit the loop (SUCCESS - account is OK)
                     await page.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: 1000 })
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
                     break
 
                 } catch (error) {
-                    // Continue if element is not found
+                    // Activities not found yet - check if it's because account is suspended
+                    // Only check suspension if we can't find activities (reduces false positives)
+                    const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 }).then(() => true).catch(() => false)
+                    
+                    if (suspendedByHeader) {
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by header selector (iteration ${iteration})`, 'error')
+                        throw new Error('Account has been suspended!')
+                    }
+                    
+                    // Secondary check: look for suspension text in main content area only
+                    try {
+                        const mainContent = (await page.locator('#contentContainer, #main, .main-content').first().textContent({ timeout: 500 }).catch(() => '')) || ''
+                        const suspensionPatterns = [
+                            /account\s+has\s+been\s+suspended/i,
+                            /suspended\s+due\s+to\s+unusual\s+activity/i,
+                            /your\s+account\s+is\s+temporarily\s+suspended/i
+                        ]
+                        
+                        const isSuspended = suspensionPatterns.some(pattern => pattern.test(mainContent))
+                        if (isSuspended) {
+                            this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by content text (iteration ${iteration})`, 'error')
+                            throw new Error('Account has been suspended!')
+                        }
+                    } catch (e) {
+                        // Ignore errors in text check - not critical
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Suspension text check skipped: ${e}`, 'warn')
+                    }
+                    
+                    // Not suspended, just activities not loaded yet - continue to next iteration
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`, 'warn')
                 }
 
                 // Below runs if the homepage was unable to be visited
