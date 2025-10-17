@@ -1,19 +1,22 @@
 @echo off
 setlocal
-REM Lightweight wrapper to run setup.mjs without prereq detection (Windows)
-REM Assumes Node is already installed and available in PATH.
+REM Wrapper to run setup via npm (Windows)
+REM Navigates to project root and runs npm run setup
 
 set SCRIPT_DIR=%~dp0
-set SETUP_FILE=%SCRIPT_DIR%update\setup.mjs
+set PROJECT_ROOT=%SCRIPT_DIR%..
 
-if not exist "%SETUP_FILE%" (
-  echo [ERROR] setup.mjs not found in setup/update/ folder.
+if not exist "%PROJECT_ROOT%\package.json" (
+  echo [ERROR] package.json not found in project root.
   pause
   exit /b 1
 )
 
-echo Running setup script...
-node "%SETUP_FILE%"
+echo Navigating to project root...
+cd /d "%PROJECT_ROOT%"
+
+echo Running setup script via npm...
+call npm run setup
 set EXITCODE=%ERRORLEVEL%
 echo.
 echo Setup finished with exit code %EXITCODE%.
