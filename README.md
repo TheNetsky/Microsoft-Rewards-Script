@@ -37,7 +37,7 @@
 
 ### 📌 **Update Notice**
 
-Recent updates changed the structure of `config.jsonc` and `accounts.json/jsonc` files (including extensions).
+Recent updates changed the structure of `config.jsonc` and `accounts.jsonc` files (including extensions).
 
 **If you see Git conflicts during `git pull` on these files:**
 
