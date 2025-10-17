@@ -25,8 +25,8 @@ import { spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Project root = parent of this setup directory
-const PROJECT_ROOT = path.resolve(__dirname, '..');
+// Project root = two levels up from setup/update directory
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const SRC_DIR = path.join(PROJECT_ROOT, 'src');
 
 function log(msg) { console.log(msg); }

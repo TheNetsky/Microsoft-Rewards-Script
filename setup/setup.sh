@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Wrapper to run unified Node setup script (setup/setup.mjs) regardless of CWD.
+# Wrapper to run unified Node setup script (setup/update/setup.mjs) regardless of CWD.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SETUP_FILE="${SCRIPT_DIR}/setup.mjs"
+SETUP_FILE="${SCRIPT_DIR}/update/setup.mjs"
 
 echo "=== Prerequisite Check ==="
 

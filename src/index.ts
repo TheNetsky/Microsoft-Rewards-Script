@@ -437,8 +437,13 @@ export class MicrosoftRewardsBot {
                     try {
                         await this.runAutoUpdate()
                     } catch {/* ignore */}
-                    log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
-                    process.exit(0)
+                    // Only exit if not spawned by scheduler
+                    if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
+                        log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                        process.exit(0)
+                    } else {
+                        log('main', 'MAIN-WORKER', 'All workers destroyed. Scheduler mode: returning control to scheduler.')
+                    }
                 })()
             }
         })
@@ -639,10 +644,8 @@ export class MicrosoftRewardsBot {
             // Cleanup heartbeat timer/file at end of run
             if (this.heartbeatTimer) { try { clearInterval(this.heartbeatTimer) } catch { /* ignore */ } }
             if (this.heartbeatFile) { try { if (fs.existsSync(this.heartbeatFile)) fs.unlinkSync(this.heartbeatFile) } catch { /* ignore */ } }
-            // After conclusion, run optional auto-update (only if not in scheduler mode)
-            if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
-                await this.runAutoUpdate().catch(() => {/* ignore update errors */})
-            }
+            // After conclusion, run optional auto-update
+            await this.runAutoUpdate().catch(() => {/* ignore update errors */})
         }
         // Only exit if not spawned by scheduler
         if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
@@ -1072,8 +1075,14 @@ export class MicrosoftRewardsBot {
         if (upd.docker) args.push('--docker')
         if (args.length === 0) return
 
+        // Pass scheduler flag to update script so it doesn't exit
+        const isSchedulerMode = !!process.env.SCHEDULER_HEARTBEAT_FILE
+        const env = isSchedulerMode 
+            ? { ...process.env, FROM_SCHEDULER: '1' }
+            : process.env
+
         await new Promise<void>((resolve) => {
-            const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit' })
+            const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit', env })
             child.on('close', () => resolve())
             child.on('error', () => resolve())
         })

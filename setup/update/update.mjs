@@ -61,7 +61,17 @@ async function main() {
   if (doDocker && code === 0) {
     code = await updateDocker()
   }
-  process.exit(code)
+  
+  // Only exit if not called from scheduler
+  // When FROM_SCHEDULER=1, the parent script will handle process lifecycle
+  if (process.env.FROM_SCHEDULER !== '1') {
+    process.exit(code)
+  }
 }
 
-main().catch(() => process.exit(1))
+main().catch(() => {
+  // Only exit on error if not called from scheduler
+  if (process.env.FROM_SCHEDULER !== '1') {
+    process.exit(1)
+  }
+})
