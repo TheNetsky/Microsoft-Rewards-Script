@@ -45,8 +45,9 @@
         "runOnZeroPoints": false,
         // Number of account clusters (processes) to run concurrently
         "clusters": 1,
-        // Number of passes per invocation (usually 1)
-        "passesPerRun": 1
+        // How many times to run through all accounts in sequence (1 = process each account once, 2 = twice, etc.)
+        // Higher values can catch missed tasks but increase detection risk
+        "passesPerRun": 3
     },
     
     "schedule": {
