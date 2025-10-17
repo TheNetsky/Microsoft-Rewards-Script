@@ -95,6 +95,8 @@ export interface ConfigUpdate {
     git?: boolean; // if true, run git pull + npm ci + npm run build after completion
     docker?: boolean; // if true, run docker update routine (compose pull/up) after completion
     scriptPath?: string; // optional custom path to update script relative to repo root
+    autoUpdateConfig?: boolean; // if true, allow auto-update of config.jsonc when remote changes it (default: false to preserve user settings)
+    autoUpdateAccounts?: boolean; // if true, allow auto-update of accounts.json when remote changes it (default: false to preserve credentials)
 }
 
 export interface ConfigBuyMode {

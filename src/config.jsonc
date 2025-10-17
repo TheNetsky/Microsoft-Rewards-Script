@@ -293,6 +293,19 @@
         "git": true,
         "docker": false,
         // Custom updater script path (relative to repo root)
-        "scriptPath": "setup/update/update.mjs"
+        "scriptPath": "setup/update/update.mjs",
+        
+        // ⚠️ SMART UPDATE CONTROL
+        // These options control whether auto-update should accept remote changes to your config files.
+        // The update script ALWAYS backs up your files to .update-backup/ for safety.
+        
+        // If false (default), your local config.jsonc is ALWAYS preserved, even if remote has changes
+        // If true, remote changes to config.jsonc will be applied (you may lose custom settings)
+        "autoUpdateConfig": false,
+        
+        // If false (default), your local accounts.json is ALWAYS preserved (keeps your credentials)
+        // If true, remote changes to accounts.json will be applied (you may lose account data)
+        "autoUpdateAccounts": false
     }
 }
+
