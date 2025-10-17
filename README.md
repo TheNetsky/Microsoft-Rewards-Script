@@ -42,15 +42,11 @@
 If you're running an older version (behind by 2+ updates), **we strongly recommend a fresh installation** instead of `git pull`:
 
 ```bash
-# Backup your current configuration
-cp src/accounts.json ~/accounts.backup.json
-cp src/config.jsonc ~/config.backup.jsonc
-
 # Fresh install
 git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 
-# Manually reapply your settings from backups
+# Reimplement your configurations
 ```
 
 **Why this matters:**
