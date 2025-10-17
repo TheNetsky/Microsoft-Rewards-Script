@@ -15,12 +15,29 @@ type WebhookBuffer = {
 
 const webhookBuffers = new Map<string, WebhookBuffer>()
 
+// Periodic cleanup of old/idle webhook buffers to prevent memory leaks
+setInterval(() => {
+    const now = Date.now()
+    const BUFFER_MAX_AGE_MS = 3600000 // 1 hour
+    
+    for (const [url, buf] of webhookBuffers.entries()) {
+        if (!buf.sending && buf.lines.length === 0) {
+            const lastActivity = (buf as unknown as { lastActivity?: number }).lastActivity || 0
+            if (now - lastActivity > BUFFER_MAX_AGE_MS) {
+                webhookBuffers.delete(url)
+            }
+        }
+    }
+}, 600000) // Check every 10 minutes
+
 function getBuffer(url: string): WebhookBuffer {
     let buf = webhookBuffers.get(url)
     if (!buf) {
         buf = { lines: [], sending: false }
         webhookBuffers.set(url, buf)
     }
+    // Track last activity for cleanup
+    (buf as unknown as { lastActivity: number }).lastActivity = Date.now()
     return buf
 }
 

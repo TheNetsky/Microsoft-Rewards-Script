@@ -54,7 +54,8 @@ class Browser {
             const engineName = 'chromium' // current hard-coded engine
             this.bot.log(this.bot.isMobile, 'BROWSER', `Launching ${engineName} (headless=${headless})`) // explicit engine log
             browser = await playwright.chromium.launch({
-                //channel: 'msedge', // Uses Edge instead of chrome
+                // Optional: uncomment to use Edge instead of Chromium
+                // channel: 'msedge',
                 headless,
                 ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
                 args: [
@@ -70,7 +71,7 @@ class Browser {
             const msg = (e instanceof Error ? e.message : String(e))
             // Common missing browser executable guidance
             if (/Executable doesn't exist/i.test(msg)) {
-                this.bot.log(this.bot.isMobile, 'BROWSER', 'Chromium not installed for Playwright. Run: "npx playwright install chromium" (or set AUTO_INSTALL_BROWSERS=1 to auto attempt).', 'error')
+                this.bot.log(this.bot.isMobile, 'BROWSER', 'Chromium not installed for Playwright. Run "npm run pre-build" to install all dependencies (or set AUTO_INSTALL_BROWSERS=1 to auto-attempt).', 'error')
             } else {
                 this.bot.log(this.bot.isMobile, 'BROWSER', 'Failed to launch browser: ' + msg, 'error')
             }

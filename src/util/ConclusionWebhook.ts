@@ -2,6 +2,7 @@ import axios from 'axios'
 import { Config } from '../interface/Config'
 import { Ntfy } from './Ntfy'
 import { DISCORD } from '../constants'
+import { log } from './Logger'
 
 interface DiscordField {
     name: string
@@ -69,7 +70,7 @@ export async function ConclusionWebhook(
                     headers: { 'Content-Type': 'application/json' },
                     timeout: 15000
                 })
-                console.log(`[Webhook:${label}] Notification sent successfully (attempt ${attempt})`)
+                log('main', 'WEBHOOK', `${label} notification sent successfully (attempt ${attempt})`)
                 return
             } catch (error) {
                 lastError = error
@@ -78,7 +79,7 @@ export async function ConclusionWebhook(
                 }
             }
         }
-        console.error(`[Webhook:${label}] Failed after ${maxAttempts} attempts:`, lastError)
+        log('main', 'WEBHOOK', `${label} failed after ${maxAttempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`, 'error')
     }
 
     const urls = new Set<string>()
@@ -96,9 +97,9 @@ export async function ConclusionWebhook(
 
         try {
             await Ntfy(message, ntfyType)
-            console.log('[NTFY] Notification sent successfully')
+            log('main', 'NTFY', 'Notification sent successfully')
         } catch (error) {
-            console.error('[NTFY] Failed to send notification:', error)
+            log('main', 'NTFY', `Failed to send notification: ${error instanceof Error ? error.message : String(error)}`, 'error')
         }
     }
 }

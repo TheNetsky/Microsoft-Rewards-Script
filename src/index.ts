@@ -43,6 +43,9 @@ export class MicrosoftRewardsBot {
     public compromisedModeActive: boolean = false
     public compromisedReason?: string
     public compromisedEmail?: string
+    // Mutex-like flag to prevent parallel execution when config.parallel is accidentally misconfigured
+    private isDesktopRunning: boolean = false
+    private isMobileRunning: boolean = false
 
     private pointsCanCollect: number = 0
     private pointsInitial: number = 0
@@ -250,7 +253,11 @@ export class MicrosoftRewardsBot {
             }
 
             // Save cookies and close monitor; keep main page open for user until they close it themselves
-            try { await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile) } catch { /* ignore */ }
+            try { 
+                await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile) 
+            } catch (e) { 
+                log(false, 'BUY-MODE', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
+            }
             try { if (!monitor.isClosed()) await monitor.close() } catch {/* ignore */}
 
             // Send a final minimal conclusion webhook for this manual session
@@ -307,19 +314,23 @@ export class MicrosoftRewardsBot {
  ╚══════════════════════════════════════════════════════╝
 `
         
+        // Read package version and build banner info
+        const pkgPath = path.join(__dirname, '../', 'package.json')
+        let version = 'unknown'
         try {
-            const pkgPath = path.join(__dirname, '../', 'package.json')
-            let version = 'unknown'
             if (fs.existsSync(pkgPath)) {
                 const raw = fs.readFileSync(pkgPath, 'utf-8')
                 const pkg = JSON.parse(raw)
                 version = pkg.version || version
             }
-            
-            // Show appropriate banner based on mode
-            const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
-            console.log(displayBanner)
-            console.log('='.repeat(80))
+        } catch { 
+            // Ignore version read errors
+        }
+        
+        // Display appropriate banner based on mode
+        const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
+        console.log(displayBanner)
+        console.log('='.repeat(80))
             
             if (this.buyMode.enabled) {
                 console.log(`  Version: ${version} | Process: ${process.pid} | Buy Mode: Active`)
@@ -365,19 +376,9 @@ export class MicrosoftRewardsBot {
                 }
             }
             console.log('='.repeat(80) + '\n')
-        } catch { 
-            const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
-            console.log(displayBanner)
-            console.log('='.repeat(50))
-            if (this.buyMode.enabled) {
-                console.log('  Microsoft Rewards Buy Mode Started')
-                console.log('  See buy-mode.md for details')
-            } else {
-                console.log('  Microsoft Rewards Script Started')
-            }
-            console.log('='.repeat(50) + '\n')
-        }
-    }    // Return summaries (used when clusters==1)
+    }    
+    
+    // Return summaries (used when clusters==1)
     public getSummaries() {
         return this.accountSummaries
     }
@@ -386,8 +387,15 @@ export class MicrosoftRewardsBot {
         log('main', 'MAIN-PRIMARY', 'Primary process started')
 
         const totalAccounts = this.accounts.length
+        
+        // Validate accounts exist
+        if (totalAccounts === 0) {
+            log('main', 'MAIN-PRIMARY', 'No accounts found to process. Exiting.', 'warn')
+            process.exit(0)
+        }
+        
         // If user over-specified clusters (e.g. 10 clusters but only 2 accounts), don't spawn useless idle workers.
-        const workerCount = Math.min(this.config.clusters, totalAccounts || 1)
+        const workerCount = Math.min(this.config.clusters, totalAccounts)
         const accountChunks = this.utils.chunkArray(this.accounts, workerCount)
         // Reset activeWorkers to actual spawn count (constructor used raw clusters)
         this.activeWorkers = workerCount
@@ -395,7 +403,13 @@ export class MicrosoftRewardsBot {
         for (let i = 0; i < workerCount; i++) {
             const worker = cluster.fork()
             const chunk = accountChunks[i] || []
-            ;(worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.({ chunk })
+            
+            // Validate chunk has accounts
+            if (chunk.length === 0) {
+                log('main', 'MAIN-PRIMARY', `Warning: Worker ${i} received empty account chunk`, 'warn')
+            }
+            
+            (worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.({ chunk })
             worker.on('message', (msg: unknown) => {
                 const m = msg as { type?: string; data?: AccountSummary[] }
                 if (m && m.type === 'summary' && Array.isArray(m.data)) {
@@ -540,42 +554,52 @@ export class MicrosoftRewardsBot {
                     mobileCollected = mobileResult.collectedPoints
                 }
             } else {
-                this.isMobile = false
-                const desktopResult = await this.Desktop(account).catch(e => {
-                    const msg = e instanceof Error ? e.message : String(e)
-                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
-                    const bd = detectBanReason(e)
-                    if (bd.status) {
-                        banned.status = true; banned.reason = bd.reason.substring(0,200)
-                        void this.handleImmediateBanAlert(account.email, banned.reason)
-                    }
-                    errors.push(formatFullErr('desktop', e)); return null
-                })
-                if (desktopResult) {
-                    desktopInitial = desktopResult.initialPoints
-                    desktopCollected = desktopResult.collectedPoints
-                }
-
-                // If banned or compromised detected, skip mobile to save time
-                if (!banned.status && !this.compromisedModeActive) {
-                    this.isMobile = true
-                    const mobileResult = await this.Mobile(account).catch(e => {
+                // Sequential execution with safety checks
+                if (this.isDesktopRunning || this.isMobileRunning) {
+                    log('main', 'TASK', `Race condition detected: Desktop=${this.isDesktopRunning}, Mobile=${this.isMobileRunning}. Skipping to prevent conflicts.`, 'error')
+                    errors.push('race-condition-detected')
+                } else {
+                    this.isMobile = false
+                    this.isDesktopRunning = true
+                    const desktopResult = await this.Desktop(account).catch(e => {
                         const msg = e instanceof Error ? e.message : String(e)
-                        log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
+                        log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
                         const bd = detectBanReason(e)
                         if (bd.status) {
                             banned.status = true; banned.reason = bd.reason.substring(0,200)
                             void this.handleImmediateBanAlert(account.email, banned.reason)
                         }
-                        errors.push(formatFullErr('mobile', e)); return null
+                        errors.push(formatFullErr('desktop', e)); return null
                     })
-                    if (mobileResult) {
-                        mobileInitial = mobileResult.initialPoints
-                        mobileCollected = mobileResult.collectedPoints
+                    if (desktopResult) {
+                        desktopInitial = desktopResult.initialPoints
+                        desktopCollected = desktopResult.collectedPoints
                     }
-                } else {
-                    const why = banned.status ? 'banned status' : 'compromised status'
-                    log(true, 'TASK', `Skipping mobile flow for ${account.email} due to ${why}`, 'warn')
+                    this.isDesktopRunning = false
+
+                    // If banned or compromised detected, skip mobile to save time
+                    if (!banned.status && !this.compromisedModeActive) {
+                        this.isMobile = true
+                        this.isMobileRunning = true
+                        const mobileResult = await this.Mobile(account).catch(e => {
+                            const msg = e instanceof Error ? e.message : String(e)
+                            log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
+                            const bd = detectBanReason(e)
+                            if (bd.status) {
+                                banned.status = true; banned.reason = bd.reason.substring(0,200)
+                                void this.handleImmediateBanAlert(account.email, banned.reason)
+                            }
+                            errors.push(formatFullErr('mobile', e)); return null
+                        })
+                        if (mobileResult) {
+                            mobileInitial = mobileResult.initialPoints
+                            mobileCollected = mobileResult.collectedPoints
+                        }
+                        this.isMobileRunning = false
+                    } else {
+                        const why = banned.status ? 'banned status' : 'compromised status'
+                        log(true, 'TASK', `Skipping mobile flow for ${account.email} due to ${why}`, 'warn')
+                    }
                 }
             }
 
@@ -733,7 +757,11 @@ export class MicrosoftRewardsBot {
                 )
             } catch {/* ignore */}
             // Save session for convenience, but do not close the browser
-            try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
+            try { 
+                await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) 
+            } catch (e) {
+                log(this.isMobile, 'SECURITY', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
+            }
             return { initialPoints: 0, collectedPoints: 0 }
         }
 
@@ -832,7 +860,11 @@ export class MicrosoftRewardsBot {
                     0xFFAA00
                 )
             } catch {/* ignore */}
-            try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
+            try { 
+                await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) 
+            } catch (e) {
+                log(this.isMobile, 'SECURITY', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
+            }
             return { initialPoints: 0, collectedPoints: 0 }
         }
         this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email)

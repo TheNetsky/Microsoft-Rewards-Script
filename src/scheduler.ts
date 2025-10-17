@@ -13,6 +13,12 @@ type DateTimeInstance = ReturnType<typeof DateTime.fromJSDate>
 
 function resolveTimeParts(schedule: Config['schedule'] | undefined): { tz: string; hour: number; minute: number } {
   const tz = (schedule?.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
+  
+  // Warn if an invalid timezone was provided
+  if (schedule?.timeZone && !IANAZone.isValidZone(schedule.timeZone)) {
+    void log('main', 'SCHEDULER', `Invalid timezone "${schedule.timeZone}" provided. Falling back to UTC. Valid zones: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones`, 'warn')
+  }
+  
   // Determine source string
   let src = ''
   if (typeof schedule?.useAmPm === 'boolean') {
@@ -114,12 +120,17 @@ async function runOnePassWithWatchdog(): Promise<void> {
   // Heartbeat-aware watchdog configuration
   // If a child is actively updating its heartbeat file, we allow it to run beyond the legacy timeout.
   // Defaults are generous to allow first-day passes to finish searches with delays.
-  const staleHeartbeatMin = Number(
+  const staleHeartbeatMin = Math.max(5, Math.min(1440, Number(
     process.env.SCHEDULER_STALE_HEARTBEAT_MINUTES || process.env.SCHEDULER_PASS_TIMEOUT_MINUTES || 30
-  )
-  const graceMin = Number(process.env.SCHEDULER_HEARTBEAT_GRACE_MINUTES || 15)
-  const hardcapMin = Number(process.env.SCHEDULER_PASS_HARDCAP_MINUTES || 480) // 8 hours
+  )))
+  const graceMin = Math.max(1, Math.min(120, Number(process.env.SCHEDULER_HEARTBEAT_GRACE_MINUTES || 15)))
+  const hardcapMin = Math.max(30, Math.min(1440, Number(process.env.SCHEDULER_PASS_HARDCAP_MINUTES || 480))) // 8 hours default
   const checkEveryMs = 60_000 // check once per minute
+
+  // Validate: stale should be >= grace
+  if (staleHeartbeatMin < graceMin) {
+    await log('main', 'SCHEDULER', `Warning: STALE_HEARTBEAT (${staleHeartbeatMin}m) < GRACE (${graceMin}m). Adjusting stale to ${graceMin}m`, 'warn')
+  }
 
   // Fork per pass: safer because we can terminate a stuck child without killing the scheduler
   const forkPerPass = String(process.env.SCHEDULER_FORK_PER_PASS || 'true').toLowerCase() !== 'false'
@@ -177,9 +188,10 @@ async function runOnePassWithWatchdog(): Promise<void> {
           void killChild('SIGTERM')
           setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
         }
-      } catch {
+      } catch (err) {
         // If file missing after grace, consider stale
-  log('main', 'SCHEDULER', 'Heartbeat file missing after grace. Terminating child...', 'warn')
+        const msg = err instanceof Error ? err.message : String(err)
+        log('main', 'SCHEDULER', `Heartbeat file check failed: ${msg}. Terminating child...`, 'warn')
         void killChild('SIGTERM')
         setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
       }
@@ -373,6 +385,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e)
+  void log('main', 'SCHEDULER', `Fatal error: ${e instanceof Error ? e.message : String(e)}`, 'error')
   process.exit(1)
 })
