@@ -1,8 +1,7 @@
 import axios from 'axios'
 import { Config } from '../interface/Config'
 import { Ntfy } from './Ntfy'
-
-const AVATAR_URL = 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
+import { DISCORD } from '../constants'
 
 interface DiscordField {
     name: string
@@ -56,7 +55,7 @@ export async function ConclusionWebhook(
 
     const payload: WebhookPayload = {
         username: 'Microsoft Rewards',
-        avatar_url: AVATAR_URL,
+        avatar_url: DISCORD.AVATAR_URL,
         embeds: [embed]
     }
 

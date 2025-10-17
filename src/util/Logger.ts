@@ -5,8 +5,6 @@ import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 import { DISCORD } from '../constants'
 
-// Avatar URL for webhook (consistent with ConclusionWebhook)
-const WEBHOOK_AVATAR_URL = 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
 const WEBHOOK_USERNAME = 'MS Rewards - Live Logs'
 
 type WebhookBuffer = {
@@ -49,7 +47,7 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
         // Enhanced webhook payload with embed, username and avatar
         const payload = {
             username: WEBHOOK_USERNAME,
-            avatar_url: WEBHOOK_AVATAR_URL,
+            avatar_url: DISCORD.AVATAR_URL,
             embeds: [{
                 description: `\`\`\`\n${content}\n\`\`\``,
                 color: determineColorFromContent(content),
