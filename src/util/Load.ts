@@ -242,7 +242,10 @@ export function loadAccounts(): Account[] {
                 throw new Error('each account must have email and password strings')
             }
         }
-        return parsed as Account[]
+        // Filter out disabled accounts (enabled: false)
+        const allAccounts = parsed as Account[]
+        const enabledAccounts = allAccounts.filter(acc => acc.enabled !== false)
+        return enabledAccounts
     } catch (error) {
         throw new Error(error as string)
     }

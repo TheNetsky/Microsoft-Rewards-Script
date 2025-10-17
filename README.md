@@ -81,7 +81,7 @@ git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 
 # 2. Configure accounts
-cp src/accounts.example.json src/accounts.json
+cp src/accounts.example.jsonc src/accounts.json
 # Edit accounts.json with your Microsoft credentials
 
 # 3. Install & build
