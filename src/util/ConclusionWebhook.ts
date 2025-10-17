@@ -61,7 +61,7 @@ export async function ConclusionWebhook(
     }
 
     const postWebhook = async (url: string, label: string) => {
-        const maxAttempts = 2
+        const maxAttempts = 3
         let lastError: unknown = null
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -75,7 +75,9 @@ export async function ConclusionWebhook(
             } catch (error) {
                 lastError = error
                 if (attempt < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+                    // Exponential backoff: 1s, 2s, 4s
+                    const delayMs = 1000 * Math.pow(2, attempt - 1)
+                    await new Promise(resolve => setTimeout(resolve, delayMs))
                 }
             }
         }

@@ -544,14 +544,24 @@ export class MicrosoftRewardsBot {
                     }
                     errors.push(formatFullErr('mobile', e)); return null
                 })
-                const [desktopResult, mobileResult] = await Promise.all([desktopPromise, mobilePromise])
-                if (desktopResult) {
-                    desktopInitial = desktopResult.initialPoints
-                    desktopCollected = desktopResult.collectedPoints
+                const [desktopResult, mobileResult] = await Promise.allSettled([desktopPromise, mobilePromise])
+                
+                // Handle desktop result
+                if (desktopResult.status === 'fulfilled' && desktopResult.value) {
+                    desktopInitial = desktopResult.value.initialPoints
+                    desktopCollected = desktopResult.value.collectedPoints
+                } else if (desktopResult.status === 'rejected') {
+                    log(false, 'TASK', `Desktop promise rejected unexpectedly: ${shortErr(desktopResult.reason)}`,'error')
+                    errors.push(formatFullErr('desktop-rejected', desktopResult.reason))
                 }
-                if (mobileResult) {
-                    mobileInitial = mobileResult.initialPoints
-                    mobileCollected = mobileResult.collectedPoints
+                
+                // Handle mobile result
+                if (mobileResult.status === 'fulfilled' && mobileResult.value) {
+                    mobileInitial = mobileResult.value.initialPoints
+                    mobileCollected = mobileResult.value.collectedPoints
+                } else if (mobileResult.status === 'rejected') {
+                    log(true, 'TASK', `Mobile promise rejected unexpectedly: ${shortErr(mobileResult.reason)}`,'error')
+                    errors.push(formatFullErr('mobile-rejected', mobileResult.reason))
                 }
             } else {
                 // Sequential execution with safety checks
@@ -651,10 +661,14 @@ export class MicrosoftRewardsBot {
         // If any account is flagged compromised, do NOT exit; keep the process alive so the browser stays open
         if (this.compromisedModeActive || this.globalStandby.active) {
             log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done. Security check by @Light','warn','yellow')
-            // Periodic heartbeat
-            setInterval(() => {
+            // Periodic heartbeat with cleanup on exit
+            const standbyInterval = setInterval(() => {
                 log('main','SECURITY','Still in standby: session(s) held open for manual recovery / review...','warn','yellow')
             }, 5 * 60 * 1000)
+            
+            // Cleanup on process exit
+            process.once('SIGINT', () => { clearInterval(standbyInterval); process.exit(0) })
+            process.once('SIGTERM', () => { clearInterval(standbyInterval); process.exit(0) })
             return
         }
         // If in worker mode (clusters>1) send summaries to primary
