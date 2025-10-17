@@ -758,12 +758,19 @@ export class Login {
     this.bot.log(this.bot.isMobile,'SECURITY',lines.join(' | '), level)
     try {
       const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
-      await ConclusionWebhook(this.bot.config,'', { embeds:[{ title:`🔐 ${incident.kind}`, description:'Security check by @Light', color: severity==='critical'?0xFF0000:0xFFAA00, fields:[
-        { name:'Account', value: incident.account },
-        ...(incident.details?.length?[{ name:'Details', value: incident.details.join('\n') }]:[]),
-        ...(incident.next?.length?[{ name:'Next steps', value: incident.next.join('\n') }]:[]),
-        ...(incident.docsUrl?[{ name:'Docs', value: incident.docsUrl }]:[])
-      ] }] })
+      const fields = [
+        { name: 'Account', value: incident.account },
+        ...(incident.details?.length ? [{ name: 'Details', value: incident.details.join('\n') }] : []),
+        ...(incident.next?.length ? [{ name: 'Next steps', value: incident.next.join('\n') }] : []),
+        ...(incident.docsUrl ? [{ name: 'Docs', value: incident.docsUrl }] : [])
+      ]
+      await ConclusionWebhook(
+        this.bot.config,
+        `🔐 ${incident.kind}`,
+        '_Security check by @Light_',
+        fields,
+        severity === 'critical' ? 0xFF0000 : 0xFFAA00
+      )
     } catch {/* ignore */}
   }
 

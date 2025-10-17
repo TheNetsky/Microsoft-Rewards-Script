@@ -185,24 +185,13 @@ export class MicrosoftRewardsBot {
             const sendSpendNotice = async (delta: number, nowPts: number, cumulativeSpent: number) => {
                 try {
                     const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                    const title = '💳 Spend detected (Buy Mode)'
-                    const desc = [
-                        `Account: ${account.email}`,
-                        `Spent: -${delta} points`,
-                        `Current: ${nowPts} points`,
-                        `Session spent: ${cumulativeSpent} points`
-                    ].join('\n')
-                    await ConclusionWebhook(this.config, '', {
-                        context: 'spend',
-                        embeds: [
-                            {
-                                title,
-                                description: desc,
-                                // Use warn color so NTFY is sent as warn
-                                color: 0xFFAA00
-                            }
-                        ]
-                    })
+                    await ConclusionWebhook(
+                        this.config,
+                        '💳 Spend Detected',
+                        `**Account:** ${account.email}\n**Spent:** -${delta} points\n**Current:** ${nowPts} points\n**Session spent:** ${cumulativeSpent} points`,
+                        undefined,
+                        0xFFAA00
+                    )
                 } catch (e) {
                     this.log(false, 'BUY-MODE', `Failed to send spend notice: ${e instanceof Error ? e.message : e}`, 'warn')
                 }
@@ -667,17 +656,13 @@ export class MicrosoftRewardsBot {
             const h = this.config?.humanization
             if (!h || h.immediateBanAlert === false) return
             const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-            const title = '🚫 Ban detected'
-            const desc = [`Account: ${email}`, `Reason: ${reason || 'detected by heuristics'}`].join('\n')
-            await ConclusionWebhook(this.config, `${title}\n${desc}`, {
-                embeds: [
-                    {
-                        title,
-                        description: desc,
-                        color: DISCORD.COLOR_RED
-                    }
-                ]
-            })
+            await ConclusionWebhook(
+                this.config,
+                '🚫 Ban Detected',
+                `**Account:** ${email}\n**Reason:** ${reason || 'detected by heuristics'}`,
+                undefined,
+                DISCORD.COLOR_RED
+            )
         } catch (e) {
             log('main','ALERT',`Failed to send ban alert: ${e instanceof Error ? e.message : e}`,'warn')
         }
@@ -736,16 +721,13 @@ export class MicrosoftRewardsBot {
             log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving the browser open and skipping all activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                    await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Logged in successfully; leaving browser open. Security check by @Light`, {
-                        context: 'compromised',
-                        embeds: [
-                            {
-                                title: '🔐 Security alert (post-login)',
-                                description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving browser open; skipping tasks`,
-                                color: 0xFFAA00
-                            }
-                        ]
-                    })
+                await ConclusionWebhook(
+                    this.config,
+                    '🔐 Security Alert (Post-Login)',
+                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving browser open; skipping tasks\n\n_Security check by @Light_`,
+                    undefined,
+                    0xFFAA00
+                )
             } catch {/* ignore */}
             // Save session for convenience, but do not close the browser
             try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
@@ -839,16 +821,13 @@ export class MicrosoftRewardsBot {
             log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                    await ConclusionWebhook(this.config, `Security issue on ${account.email} (${reason}). Mobile flow halted; leaving browser open. Security check by @Light`, {
-                        context: 'compromised',
-                        embeds: [
-                            {
-                                title: '🔐 Security alert (mobile)',
-                                description: `Account: ${account.email}\nReason: ${reason}\nAction: Leaving mobile browser open; skipping tasks`,
-                                color: 0xFFAA00
-                            }
-                        ]
-                    })
+                await ConclusionWebhook(
+                    this.config,
+                    '🔐 Security Alert (Mobile)',
+                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving mobile browser open; skipping tasks\n\n_Security check by @Light_`,
+                    undefined,
+                    0xFFAA00
+                )
             } catch {/* ignore */}
             try { await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) } catch { /* ignore */ }
             return { initialPoints: 0, collectedPoints: 0 }
@@ -986,17 +965,6 @@ export class MicrosoftRewardsBot {
         } catch { /* ignore */ }
 
         // Build clean embed with account details
-        type DiscordField = { name: string; value: string; inline?: boolean }
-        type DiscordEmbed = {
-            title?: string
-            description?: string
-            color?: number
-            fields?: DiscordField[]
-            thumbnail?: { url: string }
-            timestamp?: string
-            footer?: { text: string; icon_url?: string }
-        }
-
         const accountDetails: string[] = []
         for (const s of summaries) {
             const statusIcon = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
@@ -1006,46 +974,25 @@ export class MicrosoftRewardsBot {
             if (s.errors.length > 0) accountDetails.push(`  └ Errors: ${s.errors.slice(0, 2).join(', ')}`)
         }
 
-        const embed: DiscordEmbed = {
-            title: '🎯 Microsoft Rewards - Daily Summary',
-            description: [
-                '**📊 Global Statistics**',
-                `├ Total Points: **${totalInitial}** → **${totalEnd}** (+**${totalCollected}**)`,
-                `├ Accounts: ✅ ${successes} • ${accountsWithErrors > 0 ? `⚠️ ${accountsWithErrors}` : ''} (${totalAccounts} total)`,
-                `├ Average: **${avgPointsPerAccount}pts/account** • **${formatDuration(avgDuration)}/account**`,
-                `└ Runtime: **${formatDuration(totalDuration)}**`,
-                '',
-                '**📈 Account Details**',
-                ...accountDetails
-            ].filter(Boolean).join('\n'),
-            color: accountsWithErrors > 0 ? DISCORD.COLOR_ORANGE : DISCORD.COLOR_GREEN,
-            thumbnail: {
-                url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
-            },
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: `MS Rewards Bot v${version} • Run ${this.runId}`,
-                icon_url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
-            }
-        }
-
-        // NTFY plain text fallback
-        const fallback = [
-            '🎯 Microsoft Rewards Summary',
-            `Accounts: ${totalAccounts} (✅${successes} ${accountsWithErrors > 0 ? `⚠️${accountsWithErrors}` : ''})`,
-            `Total: ${totalInitial}→${totalEnd} (+${totalCollected})`,
-            `Average: ${avgPointsPerAccount}pts/account • ${formatDuration(avgDuration)}`,
-            `Runtime: ${formatDuration(totalDuration)}`,
-            '',
-            ...summaries.map(s => {
-                const st = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
-                return `${st} ${s.email}: +${s.totalCollected}pts (🖥️${s.desktopCollected} 📱${s.mobileCollected})`
-            })
-        ].join('\n')
+        const fields: { name: string; value: string; inline?: boolean }[] = [
+            { name: '📊 Global Statistics', value: [
+                `Total Points: **${totalInitial}** → **${totalEnd}** (+**${totalCollected}**)`,
+                `Accounts: ✅ ${successes}${accountsWithErrors > 0 ? ` • ⚠️ ${accountsWithErrors}` : ''} (${totalAccounts} total)`,
+                `Average: **${avgPointsPerAccount}pts/account** • **${formatDuration(avgDuration)}/account**`,
+                `Runtime: **${formatDuration(totalDuration)}**`
+            ].join('\n'), inline: false },
+            { name: '📈 Account Details', value: accountDetails.join('\n').slice(0, 1024), inline: false }
+        ]
 
         // Send webhook
         if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
-            await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
+            await ConclusionWebhook(
+                cfg,
+                '🎯 Microsoft Rewards - Daily Summary',
+                `**v${version}** • Run ${this.runId}`,
+                fields,
+                accountsWithErrors > 0 ? DISCORD.COLOR_ORANGE : DISCORD.COLOR_GREEN
+            )
         }
 
         // Write local JSON report
@@ -1146,24 +1093,13 @@ export class MicrosoftRewardsBot {
     private async sendGlobalSecurityStandbyAlert(email: string, reason: string): Promise<void> {
         try {
             const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-            const title = '🚨 Global security standby engaged'
-            const desc = [
-                `Account: ${email}`,
-                `Reason: ${reason}`,
-                'Action: Pausing all further accounts. We will not proceed until this is resolved.',
-                'Security check by @Light'
-            ].join('\n')
-            // Mention everyone in content for Discord visibility
-            const content = '@everyone ' + title
-            await ConclusionWebhook(this.config, content, {
-                embeds: [
-                    {
-                        title,
-                        description: desc,
-                        color: DISCORD.COLOR_RED
-                    }
-                ]
-            })
+            await ConclusionWebhook(
+                this.config,
+                '🚨 Global Security Standby Engaged',
+                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** Pausing all further accounts. We will not proceed until this is resolved.\n\n_Security check by @Light_`,
+                undefined,
+                DISCORD.COLOR_RED
+            )
         } catch (e) {
             log('main','ALERT',`Failed to send standby alert: ${e instanceof Error ? e.message : e}`,'warn')
         }
