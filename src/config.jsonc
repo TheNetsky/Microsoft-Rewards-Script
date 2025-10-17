@@ -301,11 +301,11 @@
         
         // If false (default), your local config.jsonc is ALWAYS preserved, even if remote has changes
         // If true, remote changes to config.jsonc will be applied (you may lose custom settings)
-        "autoUpdateConfig": false,
+        "autoUpdateConfig": true,
         
         // If false (default), your local accounts.json is ALWAYS preserved (keeps your credentials)
         // If true, remote changes to accounts.json will be applied (you may lose account data)
-        "autoUpdateAccounts": false
+        "autoUpdateAccounts": true
     }
 }
 
