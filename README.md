@@ -31,7 +31,7 @@
 
 <br>
 
-**"Since the last two updates, there have been major changes—especially in the config and account files. A simple `git pull` won’t be enough this time. I strongly recommend doing a full reinstall: git clone repositories, then reapply your configurations and passwords. It’s the  safe way to avoid conflicts and ensure everything runs smoothly."**
+**Since the last two updates, there have been major changes—especially in the config and account files. A simple `git pull` won’t be enough this time. I strongly recommend doing a full reinstall: git clone repositories, then reapply your configurations and passwords. It’s the  safe way to avoid conflicts and ensure everything runs smoothly.**
 
 <br>
 
