@@ -35,26 +35,24 @@
 
 <div align="center">
 
-### ⚠️ **Important Update Notice**
+### 📌 **Update Notice**
 
-**We apologize for the inconvenience, but recent updates introduced major structural changes to configuration and account files.**
+Recent updates changed the structure of `config.jsonc` and `accounts.json/jsonc` files (including extensions).
 
-If you're running an older version (behind by 2+ updates), **we strongly recommend a fresh installation** instead of `git pull`:
+**If you see Git conflicts during `git pull` on these files:**
 
 ```bash
-# Fresh install
+# Delete and fresh clone
+rm -rf Microsoft-Rewards-Script
 git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 
-# Reimplement your configurations
+# Manually re-enter your settings in the new files
 ```
 
-**Why this matters:**
-- Git merge conflicts can break critical features
-- File structure changes may cause silent failures
-- Fresh install guarantees compatibility
+⚠️ Don't copy old config files directly—structure has changed. Re-enter your credentials and preferences manually.
 
-**Good news:** We're approaching a **stable release** where these migrations won't be necessary. Future updates will preserve your configurations automatically. This is a one-time inconvenience as we finalize the architecture.
+This notice will remain for a few releases. Once we reach stable v2.5+, automatic updates will work smoothly again.
 
 </div>
 
