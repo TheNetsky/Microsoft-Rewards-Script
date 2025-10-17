@@ -31,7 +31,38 @@
 
 <br>
 
-**Since the last two updates, there have been major changes—especially in the config and account files. A simple `git pull` won’t be enough this time. I strongly recommend doing a full reinstall: git clone repositories, then reapply your configurations and passwords. It’s the  safe way to avoid conflicts and ensure everything runs smoothly.**
+---
+
+<div align="center">
+
+### ⚠️ **Important Update Notice**
+
+**We apologize for the inconvenience, but recent updates introduced major structural changes to configuration and account files.**
+
+If you're running an older version (behind by 2+ updates), **we strongly recommend a fresh installation** instead of `git pull`:
+
+```bash
+# Backup your current configuration
+cp src/accounts.json ~/accounts.backup.json
+cp src/config.jsonc ~/config.backup.jsonc
+
+# Fresh install
+git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+cd Microsoft-Rewards-Script
+
+# Manually reapply your settings from backups
+```
+
+**Why this matters:**
+- Git merge conflicts can break critical features
+- File structure changes may cause silent failures
+- Fresh install guarantees compatibility
+
+**Good news:** We're approaching a **stable release** where these migrations won't be necessary. Future updates will preserve your configurations automatically. This is a one-time inconvenience as we finalize the architecture.
+
+</div>
+
+---
 
 <br>
 
