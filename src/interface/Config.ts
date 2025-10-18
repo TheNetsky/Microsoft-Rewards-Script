@@ -67,8 +67,6 @@ export interface ConfigSearchDelay {
 export interface ConfigWebhook {
     enabled: boolean;
     url: string;
-    username?: string; // Optional override for displayed webhook name
-    avatarUrl?: string; // Optional avatar image URL
 }
 
 export interface ConfigNtfy {
