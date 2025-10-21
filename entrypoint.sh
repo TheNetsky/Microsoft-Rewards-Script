@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Ensure Playwright uses preinstalled browsers
-export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+export PLAYWRIGHT_BROWSERS_PATH=0
 
 # 1. Timezone: default to UTC if not provided
 : "${TZ:=UTC}"
