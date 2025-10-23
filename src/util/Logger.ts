@@ -5,9 +5,7 @@ import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 import { DISCORD } from '../constants'
 
-// Avatar URL for webhook (consistent with ConclusionWebhook)
-const WEBHOOK_AVATAR_URL = 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
-const WEBHOOK_USERNAME = 'MS Rewards - Live Logs'
+const DEFAULT_LIVE_LOG_USERNAME = 'MS Rewards - Live Logs'
 
 type WebhookBuffer = {
     lines: string[]
@@ -17,18 +15,41 @@ type WebhookBuffer = {
 
 const webhookBuffers = new Map<string, WebhookBuffer>()
 
+// Periodic cleanup of old/idle webhook buffers to prevent memory leaks
+setInterval(() => {
+    const now = Date.now()
+    const BUFFER_MAX_AGE_MS = 3600000 // 1 hour
+    
+    for (const [url, buf] of webhookBuffers.entries()) {
+        if (!buf.sending && buf.lines.length === 0) {
+            const lastActivity = (buf as unknown as { lastActivity?: number }).lastActivity || 0
+            if (now - lastActivity > BUFFER_MAX_AGE_MS) {
+                webhookBuffers.delete(url)
+            }
+        }
+    }
+}, 600000) // Check every 10 minutes
+
 function getBuffer(url: string): WebhookBuffer {
     let buf = webhookBuffers.get(url)
     if (!buf) {
         buf = { lines: [], sending: false }
         webhookBuffers.set(url, buf)
     }
+    // Track last activity for cleanup
+    (buf as unknown as { lastActivity: number }).lastActivity = Date.now()
     return buf
 }
 
 async function sendBatch(url: string, buf: WebhookBuffer) {
     if (buf.sending) return
     buf.sending = true
+    
+    // Load config to get webhook settings
+    const configData = loadConfig()
+    const webhookUsername = configData.webhook?.username || DEFAULT_LIVE_LOG_USERNAME
+    const webhookAvatarUrl = configData.webhook?.avatarUrl || DISCORD.AVATAR_URL
+    
     while (buf.lines.length > 0) {
         const chunk: string[] = []
         let currentLength = 0
@@ -48,8 +69,8 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
 
         // Enhanced webhook payload with embed, username and avatar
         const payload = {
-            username: WEBHOOK_USERNAME,
-            avatar_url: WEBHOOK_AVATAR_URL,
+            username: webhookUsername,
+            avatar_url: webhookAvatarUrl,
             embeds: [{
                 description: `\`\`\`\n${content}\n\`\`\``,
                 color: determineColorFromContent(content),

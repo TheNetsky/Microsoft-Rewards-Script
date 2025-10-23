@@ -215,12 +215,18 @@ export function loadAccounts(): Account[] {
             raw = fs.readFileSync(full, 'utf-8')
         } else {
             // Try multiple locations to support both root mounts and dist mounts
+            // Support both .json and .jsonc extensions
             const candidates = [
                 path.join(__dirname, '../', file),               // root/accounts.json (preferred)
+                path.join(__dirname, '../', file + 'c'),         // root/accounts.jsonc
                 path.join(__dirname, '../src', file),            // fallback: file kept inside src/
+                path.join(__dirname, '../src', file + 'c'),      // src/accounts.jsonc
                 path.join(process.cwd(), file),                  // cwd override
+                path.join(process.cwd(), file + 'c'),            // cwd/accounts.jsonc
                 path.join(process.cwd(), 'src', file),           // cwd/src/accounts.json
-                path.join(__dirname, file)                       // dist/accounts.json (legacy)
+                path.join(process.cwd(), 'src', file + 'c'),     // cwd/src/accounts.jsonc
+                path.join(__dirname, file),                      // dist/accounts.json (legacy)
+                path.join(__dirname, file + 'c')                 // dist/accounts.jsonc
             ]
             let chosen: string | null = null
             for (const p of candidates) {
@@ -242,7 +248,10 @@ export function loadAccounts(): Account[] {
                 throw new Error('each account must have email and password strings')
             }
         }
-        return parsed as Account[]
+        // Filter out disabled accounts (enabled: false)
+        const allAccounts = parsed as Account[]
+        const enabledAccounts = allAccounts.filter(acc => acc.enabled !== false)
+        return enabledAccounts
     } catch (error) {
         throw new Error(error as string)
     }
