@@ -470,7 +470,6 @@ export class ConfigValidator {
 
   /**
    * Print validation results to console with color
-   * Note: This method intentionally uses console.log for CLI output formatting
    */
   static printResults(result: ValidationResult): void {
     if (result.valid) {

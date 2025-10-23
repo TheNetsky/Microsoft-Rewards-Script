@@ -13,12 +13,6 @@ type DateTimeInstance = ReturnType<typeof DateTime.fromJSDate>
 
 function resolveTimeParts(schedule: Config['schedule'] | undefined): { tz: string; hour: number; minute: number } {
   const tz = (schedule?.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
-  
-  // Warn if an invalid timezone was provided
-  if (schedule?.timeZone && !IANAZone.isValidZone(schedule.timeZone)) {
-    void log('main', 'SCHEDULER', `Invalid timezone "${schedule.timeZone}" provided. Falling back to UTC. Valid zones: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones`, 'warn')
-  }
-  
   // Determine source string
   let src = ''
   if (typeof schedule?.useAmPm === 'boolean') {
@@ -120,27 +114,12 @@ async function runOnePassWithWatchdog(): Promise<void> {
   // Heartbeat-aware watchdog configuration
   // If a child is actively updating its heartbeat file, we allow it to run beyond the legacy timeout.
   // Defaults are generous to allow first-day passes to finish searches with delays.
-  const parseEnvNumber = (key: string, fallback: number, min: number, max: number): number => {
-    const val = Number(process.env[key] || fallback)
-    if (isNaN(val) || val < min || val > max) {
-      void log('main', 'SCHEDULER', `Invalid ${key}="${process.env[key]}". Using default ${fallback}`, 'warn')
-      return fallback
-    }
-    return val
-  }
-  
-  const staleHeartbeatMin = parseEnvNumber(
-    process.env.SCHEDULER_STALE_HEARTBEAT_MINUTES ? 'SCHEDULER_STALE_HEARTBEAT_MINUTES' : 'SCHEDULER_PASS_TIMEOUT_MINUTES',
-    30, 5, 1440
+  const staleHeartbeatMin = Number(
+    process.env.SCHEDULER_STALE_HEARTBEAT_MINUTES || process.env.SCHEDULER_PASS_TIMEOUT_MINUTES || 30
   )
-  const graceMin = parseEnvNumber('SCHEDULER_HEARTBEAT_GRACE_MINUTES', 15, 1, 120)
-  const hardcapMin = parseEnvNumber('SCHEDULER_PASS_HARDCAP_MINUTES', 480, 30, 1440)
+  const graceMin = Number(process.env.SCHEDULER_HEARTBEAT_GRACE_MINUTES || 15)
+  const hardcapMin = Number(process.env.SCHEDULER_PASS_HARDCAP_MINUTES || 480) // 8 hours
   const checkEveryMs = 60_000 // check once per minute
-
-  // Validate: stale should be >= grace
-  if (staleHeartbeatMin < graceMin) {
-    await log('main', 'SCHEDULER', `Warning: STALE_HEARTBEAT (${staleHeartbeatMin}m) < GRACE (${graceMin}m). Adjusting stale to ${graceMin}m`, 'warn')
-  }
 
   // Fork per pass: safer because we can terminate a stuck child without killing the scheduler
   const forkPerPass = String(process.env.SCHEDULER_FORK_PER_PASS || 'true').toLowerCase() !== 'false'
@@ -168,8 +147,6 @@ async function runOnePassWithWatchdog(): Promise<void> {
     let finished = false
     const startedAt = Date.now()
 
-    let killTimeout: NodeJS.Timeout | undefined
-    
     const killChild = async (signal: NodeJS.Signals) => {
       try {
         await log('main', 'SCHEDULER', `Sending ${signal} to stuck child PID ${child.pid}`,'warn')
@@ -185,8 +162,7 @@ async function runOnePassWithWatchdog(): Promise<void> {
       if (runtimeMin >= hardcapMin) {
         log('main', 'SCHEDULER', `Pass exceeded hard cap of ${hardcapMin} minutes; terminating...`, 'warn')
         void killChild('SIGTERM')
-        if (killTimeout) clearTimeout(killTimeout)
-        killTimeout = setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
+        setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
         return
       }
       // Before grace, don't judge
@@ -199,23 +175,19 @@ async function runOnePassWithWatchdog(): Promise<void> {
         if (ageMin >= staleHeartbeatMin) {
           log('main', 'SCHEDULER', `Heartbeat stale for ${ageMin}m (>=${staleHeartbeatMin}m). Terminating child...`, 'warn')
           void killChild('SIGTERM')
-          if (killTimeout) clearTimeout(killTimeout)
-          killTimeout = setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
+          setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
         }
-      } catch (err) {
+      } catch {
         // If file missing after grace, consider stale
-        const msg = err instanceof Error ? err.message : String(err)
-        log('main', 'SCHEDULER', `Heartbeat file check failed: ${msg}. Terminating child...`, 'warn')
+  log('main', 'SCHEDULER', 'Heartbeat file missing after grace. Terminating child...', 'warn')
         void killChild('SIGTERM')
-        if (killTimeout) clearTimeout(killTimeout)
-        killTimeout = setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
+        setTimeout(() => { try { child.kill('SIGKILL') } catch { /* ignore */ } }, 10_000)
       }
     }, checkEveryMs)
 
     child.on('exit', async (code, signal) => {
       finished = true
       clearInterval(timer)
-      if (killTimeout) clearTimeout(killTimeout)
       // Cleanup heartbeat file
       try { if (fs.existsSync(hbFile)) fs.unlinkSync(hbFile) } catch { /* ignore */ }
       if (signal) {
@@ -231,7 +203,6 @@ async function runOnePassWithWatchdog(): Promise<void> {
     child.on('error', async (err) => {
       finished = true
       clearInterval(timer)
-      if (killTimeout) clearTimeout(killTimeout)
       try { if (fs.existsSync(hbFile)) fs.unlinkSync(hbFile) } catch { /* ignore */ }
       await log('main', 'SCHEDULER', `Failed to spawn child: ${err instanceof Error ? err.message : String(err)}`, 'error')
       resolve()
@@ -315,21 +286,9 @@ async function main() {
   let running = false
 
   // Optional initial jitter before the first run (to vary start time)
-  const parseJitter = (minKey: string, maxKey: string, fallbackMin: string, fallbackMax: string): [number, number] => {
-    const minVal = Number(process.env[minKey] || process.env[fallbackMin] || 0)
-    const maxVal = Number(process.env[maxKey] || process.env[fallbackMax] || 0)
-    if (isNaN(minVal) || minVal < 0) {
-      void log('main', 'SCHEDULER', `Invalid ${minKey}="${process.env[minKey]}". Using 0`, 'warn')
-      return [0, isNaN(maxVal) || maxVal < 0 ? 0 : maxVal]
-    }
-    if (isNaN(maxVal) || maxVal < 0) {
-      void log('main', 'SCHEDULER', `Invalid ${maxKey}="${process.env[maxKey]}". Using 0`, 'warn')
-      return [minVal, 0]
-    }
-    return [minVal, maxVal]
-  }
-  
-  const initialJitterBounds = parseJitter('SCHEDULER_INITIAL_JITTER_MINUTES_MIN', 'SCHEDULER_INITIAL_JITTER_MINUTES_MAX', 'SCHEDULER_INITIAL_JITTER_MIN', 'SCHEDULER_INITIAL_JITTER_MAX')
+  const initJitterMin = Number(process.env.SCHEDULER_INITIAL_JITTER_MINUTES_MIN || process.env.SCHEDULER_INITIAL_JITTER_MIN || 0)
+  const initJitterMax = Number(process.env.SCHEDULER_INITIAL_JITTER_MINUTES_MAX || process.env.SCHEDULER_INITIAL_JITTER_MAX || 0)
+  const initialJitterBounds: [number, number] = [isFinite(initJitterMin) ? initJitterMin : 0, isFinite(initJitterMax) ? initJitterMax : 0]
   const applyInitialJitter = (initialJitterBounds[0] > 0 || initialJitterBounds[1] > 0)
 
   if (runImmediate && !running) {
@@ -368,9 +327,10 @@ async function main() {
     // Optional daily jitter to further randomize the exact start time each day
     let extraMs = 0
     if (cronExpressions.length === 0) {
-      const dailyJitterBounds = parseJitter('SCHEDULER_DAILY_JITTER_MINUTES_MIN', 'SCHEDULER_DAILY_JITTER_MINUTES_MAX', 'SCHEDULER_DAILY_JITTER_MIN', 'SCHEDULER_DAILY_JITTER_MAX')
-      const djMin = dailyJitterBounds[0]
-      const djMax = dailyJitterBounds[1]
+      const dailyJitterMin = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MIN || process.env.SCHEDULER_DAILY_JITTER_MIN || 0)
+      const dailyJitterMax = Number(process.env.SCHEDULER_DAILY_JITTER_MINUTES_MAX || process.env.SCHEDULER_DAILY_JITTER_MAX || 0)
+      const djMin = isFinite(dailyJitterMin) ? dailyJitterMin : 0
+      const djMax = isFinite(dailyJitterMax) ? dailyJitterMax : 0
       if (djMin > 0 || djMax > 0) {
         const mn = Math.max(0, Math.min(djMin, djMax))
         const mx = Math.max(0, Math.max(djMin, djMax))
@@ -413,6 +373,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  void log('main', 'SCHEDULER', `Fatal error: ${e instanceof Error ? e.message : String(e)}`, 'error')
+  console.error(e)
   process.exit(1)
 })
