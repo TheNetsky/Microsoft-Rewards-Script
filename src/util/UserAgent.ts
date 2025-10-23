@@ -172,10 +172,9 @@ async function fetchEdgeVersionsOnce(isMobile: boolean): Promise<EdgeVersionResu
 }
 
 async function tryNativeFetchFallback(isMobile: boolean): Promise<EdgeVersionResult | null> {
-    let timeoutHandle: NodeJS.Timeout | undefined
     try {
         const controller = new AbortController()
-        timeoutHandle = setTimeout(() => controller.abort(), 10000)
+        const timeout = setTimeout(() => controller.abort(), 10000)
         const response = await fetch(EDGE_VERSION_URL, {
             headers: {
                 'Content-Type': 'application/json',
@@ -183,15 +182,13 @@ async function tryNativeFetchFallback(isMobile: boolean): Promise<EdgeVersionRes
             },
             signal: controller.signal
         })
-        clearTimeout(timeoutHandle)
-        timeoutHandle = undefined
+        clearTimeout(timeout)
         if (!response.ok) {
             throw new Error('HTTP ' + response.status)
         }
         const data = await response.json() as EdgeVersion[]
         return mapEdgeVersions(data)
     } catch (error) {
-        if (timeoutHandle) clearTimeout(timeoutHandle)
         log(isMobile, 'USERAGENT-EDGE-VERSION', 'Native fetch fallback failed: ' + formatEdgeError(error), 'warn')
         return null
     }

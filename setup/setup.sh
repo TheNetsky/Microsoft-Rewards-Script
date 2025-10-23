@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Wrapper to run setup via npm (Linux/macOS)
+# Wrapper to run unified Node setup script (setup/setup.mjs) regardless of CWD.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SETUP_FILE="${SCRIPT_DIR}/setup.mjs"
 
 echo "=== Prerequisite Check ==="
 
-if command -v npm >/dev/null 2>&1; then
-  NPM_VERSION="$(npm -v 2>/dev/null || true)"
-  echo "npm detected: ${NPM_VERSION}"
+if command -v node >/dev/null 2>&1; then
+  NODE_VERSION="$(node -v 2>/dev/null || true)"
+  echo "Node detected: ${NODE_VERSION}"
 else
-  echo "[ERROR] npm not detected."
-  echo "  Install Node.js and npm from nodejs.org or your package manager"
-  exit 1
+  echo "[WARN] Node.js not detected."
+  echo "  Install (Linux): use your package manager (e.g. 'sudo apt install nodejs npm' or install from nodejs.org for latest)."
 fi
 
 if command -v git >/dev/null 2>&1; then
@@ -24,12 +23,19 @@ else
   echo "  Install (Linux): e.g. 'sudo apt install git' (or your distro equivalent)."
 fi
 
-if [ ! -f "${PROJECT_ROOT}/package.json" ]; then
-  echo "[ERROR] package.json not found at ${PROJECT_ROOT}" >&2
+if [ -z "${NODE_VERSION:-}" ]; then
+  read -r -p "Continue anyway? (yes/no) : " CONTINUE
+  case "${CONTINUE,,}" in
+    yes|y) ;;
+    *) echo "Aborting. Install prerequisites then re-run."; exit 1;;
+  esac
+fi
+
+if [ ! -f "${SETUP_FILE}" ]; then
+  echo "[ERROR] setup.mjs not found at ${SETUP_FILE}" >&2
   exit 1
 fi
 
 echo
-echo "=== Running setup script via npm ==="
-cd "${PROJECT_ROOT}"
-exec npm run setup
+echo "=== Running setup script ==="
+exec node "${SETUP_FILE}"

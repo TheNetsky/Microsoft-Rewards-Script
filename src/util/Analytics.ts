@@ -202,11 +202,6 @@ export class Analytics {
       )
     }
 
-    // Optional community info footer (only in markdown exports)
-    lines.push('')
-    lines.push('---')
-    lines.push('*Looking for faster updates, advanced features, and better anti-detection? Join our community for enhanced versions and support.*')
-
     return lines.join('\n')
   }
 
