@@ -3,7 +3,7 @@
  * Unified cross-platform setup script for Microsoft Rewards Script V2.
  * 
  * Features:
- *  - Renames accounts.example.json -> accounts.json (idempotent)
+ *  - Renames accounts.example.jsonc -> accounts.json (idempotent)
  *  - Guides user through account configuration (email, password, TOTP, proxy)
  *  - Explains config.jsonc structure and key settings
  *  - Installs dependencies (npm install)
@@ -25,8 +25,8 @@ import { spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Project root = parent of this setup directory
-const PROJECT_ROOT = path.resolve(__dirname, '..');
+// Project root = two levels up from setup/update directory
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const SRC_DIR = path.join(PROJECT_ROOT, 'src');
 
 function log(msg) { console.log(msg); }
@@ -35,16 +35,16 @@ function error(msg) { console.error(msg); }
 
 function renameAccountsIfNeeded() {
   const accounts = path.join(SRC_DIR, 'accounts.json');
-  const example = path.join(SRC_DIR, 'accounts.example.json');
+  const example = path.join(SRC_DIR, 'accounts.example.jsonc');
   if (fs.existsSync(accounts)) {
     log('accounts.json already exists - skipping rename.');
     return;
   }
   if (fs.existsSync(example)) {
-    log('Renaming accounts.example.json to accounts.json...');
+    log('Renaming accounts.example.jsonc to accounts.json...');
     fs.renameSync(example, accounts);
   } else {
-    warn('Neither accounts.json nor accounts.example.json found.');
+    warn('Neither accounts.json nor accounts.example.jsonc found.');
   }
 }
 
