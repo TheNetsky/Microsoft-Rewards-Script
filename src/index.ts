@@ -1175,19 +1175,6 @@ function shortErr(e: unknown): string {
     return s.substring(0, 120)
 }
 
-function formatDuration(ms: number): string {
-    if (!ms || ms < 1000) return `${ms}ms`
-    const sec = Math.floor(ms / 1000)
-    const h = Math.floor(sec / 3600)
-    const m = Math.floor((sec % 3600) / 60)
-    const s = sec % 60
-    const parts: string[] = []
-    if (h) parts.push(`${h}h`)
-    if (m) parts.push(`${m}m`)
-    if (s) parts.push(`${s}s`)
-    return parts.join(' ') || `${ms}ms`
-}
-
 async function main() {
     const rewardsBot = new MicrosoftRewardsBot(false)
 
