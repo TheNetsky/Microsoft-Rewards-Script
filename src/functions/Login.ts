@@ -28,7 +28,14 @@ const SELECTORS = {
 const LOGIN_TARGET = { host: 'rewards.bing.com', path: '/' }
 
 const DEFAULT_TIMEOUTS = {
-  loginMaxMs: Number(process.env.LOGIN_MAX_WAIT_MS || 180000), // 3 min
+  loginMaxMs: (() => {
+    const val = Number(process.env.LOGIN_MAX_WAIT_MS || 180000)
+    if (isNaN(val) || val < 10000 || val > 600000) {
+      console.warn(`[Login] Invalid LOGIN_MAX_WAIT_MS: ${process.env.LOGIN_MAX_WAIT_MS}. Using default 180000ms`)
+      return 180000
+    }
+    return val
+  })(),
   short: 500,
   medium: 1500,
   long: 3000
@@ -71,6 +78,12 @@ export class Login {
   // --------------- Public API ---------------
   async login(page: Page, email: string, password: string, totpSecret?: string) {
     try {
+      // Clear any existing intervals from previous runs
+      if (this.compromisedInterval) {
+        clearInterval(this.compromisedInterval)
+        this.compromisedInterval = undefined
+      }
+      
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process')
       this.currentTotpSecret = (totpSecret && totpSecret.trim()) || undefined
 
@@ -285,40 +298,45 @@ export class Login {
     let userInput: string | null = null
     let checkInterval: NodeJS.Timeout | null = null
     
-    const inputPromise = new Promise<string>(res => {
-      rl.question('Enter 2FA code:\n', ans => {
-        if (checkInterval) clearInterval(checkInterval)
-        rl.close()
-        res(ans.trim())
-      })
-    })
-
-    // Check every 2 seconds if user manually progressed past the dialog
-    checkInterval = setInterval(async () => {
-      try {
-        await this.bot.browser.utils.tryDismissAllMessages(page)
-        // Check if we're no longer on 2FA page
-        const still2FA = await page.locator('input[name="otc"]').first().isVisible({ timeout: 500 }).catch(() => false)
-        if (!still2FA) {
-          this.bot.log(this.bot.isMobile, 'LOGIN', 'Page changed during 2FA wait (user may have clicked Next)', 'warn')
+    try {
+      const inputPromise = new Promise<string>(res => {
+        rl.question('Enter 2FA code:\n', ans => {
           if (checkInterval) clearInterval(checkInterval)
           rl.close()
-          userInput = 'skip' // Signal to skip submission
-        }
-      } catch {/* ignore */}
-    }, 2000)
+          res(ans.trim())
+        })
+      })
 
-    const code = await inputPromise
-    if (checkInterval) clearInterval(checkInterval)
-    
-    if (code === 'skip' || userInput === 'skip') {
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Skipping 2FA code submission (page progressed)')
-      return
+      // Check every 2 seconds if user manually progressed past the dialog
+      checkInterval = setInterval(async () => {
+        try {
+          await this.bot.browser.utils.tryDismissAllMessages(page)
+          // Check if we're no longer on 2FA page
+          const still2FA = await page.locator('input[name="otc"]').first().isVisible({ timeout: 500 }).catch(() => false)
+          if (!still2FA) {
+            this.bot.log(this.bot.isMobile, 'LOGIN', 'Page changed during 2FA wait (user may have clicked Next)', 'warn')
+            if (checkInterval) clearInterval(checkInterval)
+            rl.close()
+            userInput = 'skip' // Signal to skip submission
+          }
+        } catch {/* ignore */}
+      }, 2000)
+
+      const code = await inputPromise
+      
+      if (code === 'skip' || userInput === 'skip') {
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'Skipping 2FA code submission (page progressed)')
+        return
+      }
+
+      await page.fill('input[name="otc"]', code)
+      await page.keyboard.press('Enter')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code submitted')
+    } finally {
+      // Ensure cleanup happens even if errors occur
+      if (checkInterval) clearInterval(checkInterval)
+      try { rl.close() } catch {/* ignore */}
     }
-
-    await page.fill('input[name="otc"]', code)
-    await page.keyboard.press('Enter')
-    this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code submitted')
   }
 
   private async ensureTotpInput(page: Page): Promise<string | null> {
@@ -758,12 +776,19 @@ export class Login {
     this.bot.log(this.bot.isMobile,'SECURITY',lines.join(' | '), level)
     try {
       const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
-      await ConclusionWebhook(this.bot.config,'', { embeds:[{ title:`🔐 ${incident.kind}`, description:'Security check by @Light', color: severity==='critical'?0xFF0000:0xFFAA00, fields:[
-        { name:'Account', value: incident.account },
-        ...(incident.details?.length?[{ name:'Details', value: incident.details.join('\n') }]:[]),
-        ...(incident.next?.length?[{ name:'Next steps', value: incident.next.join('\n') }]:[]),
-        ...(incident.docsUrl?[{ name:'Docs', value: incident.docsUrl }]:[])
-      ] }] })
+      const fields = [
+        { name: 'Account', value: incident.account },
+        ...(incident.details?.length ? [{ name: 'Details', value: incident.details.join('\n') }] : []),
+        ...(incident.next?.length ? [{ name: 'Next steps', value: incident.next.join('\n') }] : []),
+        ...(incident.docsUrl ? [{ name: 'Docs', value: incident.docsUrl }] : [])
+      ]
+      await ConclusionWebhook(
+        this.bot.config,
+        `🔐 ${incident.kind}`,
+        '_Security check by @Light_',
+        fields,
+        severity === 'critical' ? 0xFF0000 : 0xFFAA00
+      )
     } catch {/* ignore */}
   }
 

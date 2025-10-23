@@ -1,0 +1,151 @@
+{
+  // ============================================================
+  // 📧 MICROSOFT ACCOUNTS CONFIGURATION
+  // ============================================================
+  
+  // ⚠️ IMPORTANT SECURITY NOTICE
+  // This file contains sensitive credentials. Never commit the real accounts.jsonc to version control.
+  // The .gitignore is configured to exclude accounts.jsonc but you should verify it's not tracked.
+  
+  // 📊 MICROSOFT ACCOUNT LIMITS (Unofficial Guidelines)
+  // - New accounts per IP per day: ~3 (official soft limit)
+  // - Recommended active accounts per household IP: ~5 (to avoid suspicion)
+  // - Creating too many accounts quickly may trigger verification (phone, OTP, captcha)
+  // - Unusual activity can result in temporary blocks or account restrictions
+  
+  "accounts": [
+    {
+      // ============================================================
+      // 👤 ACCOUNT 1
+      // ============================================================
+      
+      // Enable or disable this account (true = active, false = skip)
+      "enabled": true,
+      
+      // Microsoft account email address
+      "email": "email_1@outlook.com",
+      
+      // Account password
+      "password": "password_1",
+      
+      // Two-Factor Authentication (2FA) TOTP secret (optional but HIGHLY recommended for security)
+      // Get this from your authenticator app (e.g., Microsoft Authenticator, Google Authenticator)
+      // Format: base32 secret key (e.g., "JBSWY3DPEHPK3PXP")
+      // Leave empty "" if 2FA is not enabled
+      "totp": "",
+      
+      // ⚠️ REQUIRED: Recovery email address associated with this Microsoft account
+      // During login, Microsoft shows the first 2 characters and the domain of the recovery email (e.g., "ab***@example.com")
+      // This field is MANDATORY to detect account compromise or bans:
+      // - The script compares what Microsoft displays with this configured recovery email
+      // - If they don't match, it alerts you that the account may be compromised or the recovery email was changed
+      // - This security check helps identify hijacked accounts before they cause issues
+      // Format: Full recovery email address (e.g., "backup@gmail.com")
+      "recoveryEmail": "your_email@domain.com",
+      
+      // ============================================================
+      // 🌐 PROXY CONFIGURATION (Optional)
+      // ============================================================
+      
+      "proxy": {
+        // Enable proxy for HTTP requests (axios/API calls)
+        // If false, proxy is only used for browser automation
+        "proxyAxios": true,
+        
+        // Proxy server URL (without protocol)
+        // Examples: "proxy.example.com", "123.45.67.89"
+        // Leave empty "" to disable proxy for this account
+        "url": "",
+        
+        // Proxy port number
+        "port": 0,
+        
+        // Proxy authentication username (leave empty if no auth required)
+        "username": "",
+        
+        // Proxy authentication password (leave empty if no auth required)
+        "password": ""
+      }
+    },
+    
+    {
+      // ============================================================
+      // 👤 ACCOUNT 2
+      // ============================================================
+      
+      "enabled": false,
+      "email": "email_2@outlook.com",
+      "password": "password_2",
+      "totp": "",
+      "recoveryEmail": "your_email@domain.com",
+      
+      "proxy": {
+        "proxyAxios": true,
+        "url": "",
+        "port": 0,
+        "username": "",
+        "password": ""
+      }
+    },
+    
+    {
+      // ============================================================
+      // 👤 ACCOUNT 3
+      // ============================================================
+      
+      "enabled": false,
+      "email": "email_3@outlook.com",
+      "password": "password_3",
+      "totp": "",
+      "recoveryEmail": "your_email@domain.com",
+      
+      "proxy": {
+        "proxyAxios": true,
+        "url": "",
+        "port": 0,
+        "username": "",
+        "password": ""
+      }
+    },
+    
+    {
+      // ============================================================
+      // 👤 ACCOUNT 4
+      // ============================================================
+      
+      "enabled": false,
+      "email": "email_4@outlook.com",
+      "password": "password_4",
+      "totp": "",
+      "recoveryEmail": "your_email@domain.com",
+      
+      "proxy": {
+        "proxyAxios": true,
+        "url": "",
+        "port": 0,
+        "username": "",
+        "password": ""
+      }
+    },
+    
+    {
+      // ============================================================
+      // 👤 ACCOUNT 5
+      // ============================================================
+      
+      "enabled": false,
+      "email": "email_5@outlook.com",
+      "password": "password_5",
+      "totp": "",
+      "recoveryEmail": "your_email@domain.com",
+      
+      "proxy": {
+        "proxyAxios": true,
+        "url": "",
+        "port": 0,
+        "username": "",
+        "password": ""
+      }
+    }
+  ]
+}

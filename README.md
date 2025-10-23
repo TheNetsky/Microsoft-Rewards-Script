@@ -17,7 +17,7 @@
 
 <br>
 
-![Version](https://img.shields.io/badge/v2.3.0-blue?style=for-the-badge&logo=github&logoColor=white)
+![Version](https://img.shields.io/badge/v2.4.0-blue?style=for-the-badge&logo=github&logoColor=white)
 ![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)
 ![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
 ![Status](https://img.shields.io/badge/Active-00C851?style=for-the-badge)
@@ -31,13 +31,36 @@
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                          WHAT DOES THIS DO?                                  ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+---
 
 <div align="center">
+
+### 📌 **Update Notice**
+
+Recent updates changed the structure of `config.jsonc` and `accounts.jsonc` files (including extensions).
+
+**If you see Git conflicts during `git pull` on these files:**
+
+```bash
+# Delete and fresh clone
+rm -rf Microsoft-Rewards-Script
+git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+cd Microsoft-Rewards-Script
+
+# Manually re-enter your settings in the new files
+```
+
+⚠️ Don't copy old config files directly—structure has changed. Re-enter your credentials and preferences manually.
+
+This notice will remain for a few releases. Once we reach stable v2.5+, automatic updates will work smoothly again.
+
+</div>
+
+---
+
+<br>
+
+## What Does This Do?
 
 **Automate your Microsoft Rewards daily activities with intelligent browser automation.**  
 Complete searches, quizzes, and promotions automatically while mimicking natural human behavior.
@@ -53,16 +76,11 @@ Complete searches, quizzes, and promotions automatically while mimicking natural
 | **Daily Set Tasks** | ~30-50 pts | 1-2 min |
 | **Promotions & Punch Cards** | Variable | 30s-2min |
 | **📊 TOTAL AVERAGE** | **150-300+ pts** | **3-5 min** |
-
 </div>
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                             QUICK START                                      ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Quick Start
 
 ### **🚀 Automated Setup** (Recommended)
 
@@ -92,7 +110,7 @@ git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 
 # 2. Configure accounts
-cp src/accounts.example.json src/accounts.json
+cp src/accounts.example.jsonc src/accounts.json
 # Edit accounts.json with your Microsoft credentials
 
 # 3. Install & build
@@ -104,11 +122,7 @@ npm start
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                        INTELLIGENT FEATURES                                  ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Intelligent Features
 
 <table>
 <tr>
@@ -159,11 +173,7 @@ Pre-flight checks
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                          USAGE COMMANDS                                      ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Usage Commands
 
 ```bash
 # Run automation once
@@ -184,11 +194,7 @@ npm start -- --dry-run
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                           CONFIGURATION                                      ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Configuration
 
 Edit `src/config.jsonc` to customize behavior:
 
@@ -220,11 +226,7 @@ Edit `src/config.jsonc` to customize behavior:
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                           CORE FEATURES                                      ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Core Features
 
 <div align="center">
 
@@ -269,11 +271,7 @@ Edit `src/config.jsonc` to customize behavior:
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                           DOCUMENTATION                                      ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Documentation
 
 <div align="center">
 
@@ -290,11 +288,7 @@ Edit `src/config.jsonc` to customize behavior:
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                       TECHNICAL ARCHITECTURE                                 ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Technical Architecture
 
 <div align="center">
 
@@ -327,11 +321,7 @@ Edit `src/config.jsonc` to customize behavior:
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                      IMPORTANT DISCLAIMERS                                   ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Important Disclaimers
 
 <div align="center">
 
@@ -365,11 +355,7 @@ This project is for **educational purposes only**.
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                         CONTRIBUTORS                                         ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Contributors
 
 <div align="center">
 
@@ -413,11 +399,7 @@ This project is for **educational purposes only**.
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                      COMMUNITY & SUPPORT                                     ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+## Community & Support
 
 <div align="center">
 
@@ -442,11 +424,13 @@ GitHub Issues are also available for documentation and tracking.
 
 <br>
 
-```
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                             LICENSE                                          ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-```
+> 💡 **Looking for enhanced builds?** Community-maintained versions with faster updates and advanced features may be available. Ask in our Discord for more info.
+
+</div>
+
+<br>
+
+## License
 
 <div align="center">
 
