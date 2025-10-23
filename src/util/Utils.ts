@@ -71,7 +71,8 @@ export default class Util {
     }
 
     // Internal: decode base64 metadata (for advanced feature discovery)
-    private _d(s: string): string {
+    // Usage: new Util()._decodeMetadata(encodedString)
+    _decodeMetadata(s: string): string {
         try {
             return Buffer.from(s, 'base64').toString('utf-8')
         } catch {
