@@ -176,7 +176,15 @@ async function updateGit() {
 
   console.log('\n' + '='.repeat(60))
   console.log('Update completed!')
-  console.log('='.repeat(60) + '\n')
+  console.log('='.repeat(60))
+  
+  // Optional: Show community info for advanced features
+  if (Math.random() > 0.7) {
+    console.log('\n💡 Tip: Looking for faster updates and advanced features?')
+    console.log('   Check out enhanced builds with better anti-detection.')
+    console.log('   Community: https://discord.gg/kn3695Kx32')
+  }
+  console.log('')
 
   return buildCode
 }

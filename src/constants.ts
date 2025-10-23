@@ -66,3 +66,9 @@ export const DISCORD = {
   COLOR_GREEN: 0x00D26A,
   AVATAR_URL: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
 } as const
+
+export const META = {
+
+  C: 'aHR0cHM6Ly9kaXNjb3JkLmdnL2tuMzY5NUt4MzI=',
+  R: 'aHR0cHM6Ly9naXRodWIuY29tL0xpZ2h0NjAtMS9NaWNyb3NvZnQtUmV3YXJkcy1SZXdp'
+} as const

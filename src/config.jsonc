@@ -208,12 +208,18 @@
         // Live logs webhook (Discord or similar). URL = your webhook endpoint
         "webhook": {
             "enabled": false,
-            "url": ""
+            "url": "",
+            // Optional: Customize webhook appearance
+            "username": "Live Logs",
+            "avatarUrl": "https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png"
         },
         // Rich end-of-run summary webhook (Discord or similar)
         "conclusionWebhook": {
             "enabled": false,
-            "url": ""
+            "url": "",
+            // Optional: Customize webhook appearance (overrides webhook settings for conclusion messages)
+            "username": "Microsoft Rewards",
+            "avatarUrl": "https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png"
         },
         // NTFY push notifications (plain text)
         "ntfy": {

@@ -972,7 +972,7 @@ export class MicrosoftRewardsBot {
     }
 
     private async sendConclusion(summaries: AccountSummary[]) {
-        const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+        const { ConclusionWebhookEnhanced } = await import('./util/ConclusionWebhook')
         const cfg = this.config
 
     const conclusionWebhookEnabled = !!(cfg.conclusionWebhook && cfg.conclusionWebhook.enabled)
@@ -987,6 +987,7 @@ export class MicrosoftRewardsBot {
         let totalEnd = 0
         let totalDuration = 0
         let accountsWithErrors = 0
+        let accountsBanned = 0
         let successes = 0
 
         // Calculate summary statistics
@@ -995,8 +996,9 @@ export class MicrosoftRewardsBot {
             totalInitial += s.initialTotal
             totalEnd += s.endTotal
             totalDuration += s.durationMs
+            if (s.banned?.status) accountsBanned++
             if (s.errors.length) accountsWithErrors++
-            else successes++
+            if (!s.banned?.status && !s.errors.length) successes++
         }
 
         const avgDuration = totalDuration / totalAccounts
@@ -1013,35 +1015,23 @@ export class MicrosoftRewardsBot {
             }
         } catch { /* ignore */ }
 
-        // Build clean embed with account details
-        const accountDetails: string[] = []
-        for (const s of summaries) {
-            const statusIcon = s.banned?.status ? '🚫' : (s.errors.length ? '⚠️' : '✅')
-            const line = `${statusIcon} **${s.email}** → +${s.totalCollected}pts (🖥️${s.desktopCollected} 📱${s.mobileCollected}) • ${formatDuration(s.durationMs)}`
-            accountDetails.push(line)
-            if (s.banned?.status) accountDetails.push(`  └ Banned: ${s.banned.reason || 'detected'}`)
-            if (s.errors.length > 0) accountDetails.push(`  └ Errors: ${s.errors.slice(0, 2).join(', ')}`)
-        }
-
-        const fields: { name: string; value: string; inline?: boolean }[] = [
-            { name: '📊 Global Statistics', value: [
-                `Total Points: **${totalInitial}** → **${totalEnd}** (+**${totalCollected}**)`,
-                `Accounts: ✅ ${successes}${accountsWithErrors > 0 ? ` • ⚠️ ${accountsWithErrors}` : ''} (${totalAccounts} total)`,
-                `Average: **${avgPointsPerAccount}pts/account** • **${formatDuration(avgDuration)}/account**`,
-                `Runtime: **${formatDuration(totalDuration)}**`
-            ].join('\n'), inline: false },
-            { name: '📈 Account Details', value: accountDetails.join('\n').slice(0, 1024), inline: false }
-        ]
-
-        // Send webhook
+        // Send enhanced webhook
         if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
-            await ConclusionWebhook(
-                cfg,
-                '🎯 Microsoft Rewards - Daily Summary',
-                `**v${version}** • Run ${this.runId}`,
-                fields,
-                accountsWithErrors > 0 ? DISCORD.COLOR_ORANGE : DISCORD.COLOR_GREEN
-            )
+            await ConclusionWebhookEnhanced(cfg, {
+                version,
+                runId: this.runId,
+                totalAccounts,
+                successes,
+                accountsWithErrors,
+                accountsBanned,
+                totalCollected,
+                totalInitial,
+                totalEnd,
+                avgPointsPerAccount,
+                totalDuration,
+                avgDuration,
+                summaries
+            })
         }
 
         // Write local JSON report
@@ -1073,6 +1063,11 @@ export class MicrosoftRewardsBot {
             }
         } catch (e) {
             log('main','REPORT',`Failed diagnostics cleanup: ${e instanceof Error ? e.message : e}`,'warn')
+        }
+
+        // Optional community notice (shown randomly in ~15% of successful runs)
+        if (Math.random() > 0.85 && successes > 0 && accountsWithErrors === 0) {
+            log('main','INFO','Want faster updates & enhanced anti-detection? Community builds available: https://discord.gg/kn3695Kx32')
         }
 
     }

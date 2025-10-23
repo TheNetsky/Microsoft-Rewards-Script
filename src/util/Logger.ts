@@ -5,7 +5,7 @@ import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 import { DISCORD } from '../constants'
 
-const WEBHOOK_USERNAME = 'MS Rewards - Live Logs'
+const DEFAULT_LIVE_LOG_USERNAME = 'MS Rewards - Live Logs'
 
 type WebhookBuffer = {
     lines: string[]
@@ -44,6 +44,12 @@ function getBuffer(url: string): WebhookBuffer {
 async function sendBatch(url: string, buf: WebhookBuffer) {
     if (buf.sending) return
     buf.sending = true
+    
+    // Load config to get webhook settings
+    const configData = loadConfig()
+    const webhookUsername = configData.webhook?.username || DEFAULT_LIVE_LOG_USERNAME
+    const webhookAvatarUrl = configData.webhook?.avatarUrl || DISCORD.AVATAR_URL
+    
     while (buf.lines.length > 0) {
         const chunk: string[] = []
         let currentLength = 0
@@ -63,8 +69,8 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
 
         // Enhanced webhook payload with embed, username and avatar
         const payload = {
-            username: WEBHOOK_USERNAME,
-            avatar_url: DISCORD.AVATAR_URL,
+            username: webhookUsername,
+            avatar_url: webhookAvatarUrl,
             embeds: [{
                 description: `\`\`\`\n${content}\n\`\`\``,
                 color: determineColorFromContent(content),

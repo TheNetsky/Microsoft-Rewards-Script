@@ -424,6 +424,12 @@ GitHub Issues are also available for documentation and tracking.
 
 <br>
 
+> 💡 **Looking for enhanced builds?** Community-maintained versions with faster updates and advanced features may be available. Ask in our Discord for more info.
+
+</div>
+
+<br>
+
 ## License
 
 <div align="center">

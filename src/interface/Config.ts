@@ -67,6 +67,8 @@ export interface ConfigSearchDelay {
 export interface ConfigWebhook {
     enabled: boolean;
     url: string;
+    username?: string; // Custom webhook username (default: "Microsoft Rewards")
+    avatarUrl?: string; // Custom webhook avatar URL
 }
 
 export interface ConfigNtfy {
