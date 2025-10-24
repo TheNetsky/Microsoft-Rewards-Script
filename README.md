@@ -188,6 +188,16 @@ Edit `src/config.json` to customize behavior.
 | `conclusionWebhook.enabled` |         Summary-only webhook | `false` |
 | `conclusionWebhook.url`     |          Summary webhook URL |  `null` |
 
+### NTFY Settings
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `ntfy.enabled` | Enable NTFY push notifications | `false` |
+| `ntfy.url` | NTFY URL | `null` |
+| `ntfy.topic` | Set NTFY topic | `rewards` |
+| `ntfy.authToken` | NTFY authorization token | `null` |
+
+>NTFY customization: To customize the emojis used in the notifications, edit the tags in `Ntfy.sh`. Visit NTFY's emoji customization [guide](https://docs.ntfy.sh/emojis) for available options. To customize which keywords trigger notifications, add or customize the keywords in `Logger.ts`.
+
 ---
 
 # ✨ Features <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
