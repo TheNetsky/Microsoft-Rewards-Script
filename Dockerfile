@@ -13,6 +13,10 @@ COPY package.json package-lock.json tsconfig.json ./
 # Install all dependencies required to build the script
 RUN npm ci --ignore-scripts
 
+# Install Chromium Headless Shell, and cleanup
+RUN npx playwright install --with-deps --only-shell chromium \
+    && rm -rf /root/.cache /tmp/* /var/tmp/*
+
 # Copy source and build
 COPY . .
 RUN npm run build
@@ -22,9 +26,7 @@ RUN rm -rf node_modules \
     && npm ci --omit=dev --ignore-scripts \
     && npm cache clean --force
 
-# Install Chromium Headless Shell, and cleanup
-RUN npx playwright install --with-deps --only-shell chromium \
-    && rm -rf /root/.cache /tmp/* /var/tmp/*
+
 
 ###############################################################################
 # Stage 2: Runtime
