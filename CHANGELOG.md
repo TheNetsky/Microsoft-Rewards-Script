@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.50.5] - Current Release
 
-### 📚 Documentation
+### � Migration Notice
+
+This version represents a **major migration** from [Light60-1/Microsoft-Rewards-Rewi](https://github.com/Light60-1/Microsoft-Rewards-Rewi).
+
+**Important:** Clean installation recommended. See README for migration instructions.
+
+### �📚 Documentation
 
 - **Redesigned README.md** for better clarity and structure
   - Added project logo and improved visual presentation
@@ -35,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced feature descriptions
 - Better quick start guide
 - Improved Docker setup instructions
+- Migration notice added for users upgrading from previous repository
+
+### 📜 License Update
+
+- Changed from PROPRIETARY to Non-Commercial Personal Use License
+- Clarified usage rights and restrictions
 
 ### AND MOREEEEE++
 

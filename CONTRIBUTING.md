@@ -328,7 +328,13 @@ Contributors will be:
 
 ## 📄 License
 
-By contributing, you agree that your contributions will be licensed under the same [PROPRIETARY LICENSE](LICENSE) as the project.
+---
+
+## 📄 License
+
+By contributing, you agree that your contributions will be licensed under the same [Non-Commercial Personal Use License](LICENSE) as the project.
+
+---
 
 ---
 

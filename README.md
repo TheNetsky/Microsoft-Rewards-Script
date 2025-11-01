@@ -220,12 +220,23 @@ All while maintaining **natural behavior patterns** to minimize detection risk.
 
 ## 📄 License
 
-This project is licensed under a **PROPRIETARY** license. See [LICENSE](LICENSE) for complete terms and conditions.
+This project is licensed under a **Non-Commercial Personal Use License**. You may:
+- ✅ Use the software for personal, non-commercial purposes
+- ✅ Modify the code for your own personal use
+- ✅ Submit improvements via pull requests
+
+You may NOT:
+- ❌ Use this software for commercial purposes
+- ❌ Redistribute or sell this software
+- ❌ Publish modified versions publicly
+
+See [LICENSE](LICENSE) for complete terms and conditions.
 
 ---
 
 ## 🙏 Acknowledgments
 
+- **Originally forked from:** [Light60-1/Microsoft-Rewards-Rewi](https://github.com/Light60-1/Microsoft-Rewards-Rewi)
 - Built with [Playwright](https://playwright.dev/) and [ReBrowser](https://github.com/rebrowser/rebrowser-playwright)
 - Thanks to all [contributors](https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors)
 - Inspired by the Microsoft Rewards automation community
