@@ -309,7 +309,7 @@ See [Configuration Guide](config.md#risk-management--security).
 
 ## Still Have Questions?
 
-- 💬 **[Join our Discord](https://discord.gg/kn3695Kx32)** — Ask the community
+- 💬 **[Join our Discord](https://discord.gg/h6Z69ZPPCz)** — Ask the community
 - 📖 **[Documentation Hub](index.md)** — Browse all guides
 - 🐛 **[GitHub Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)** — Report problems
 - 📧 **[Diagnostics Guide](diagnostics.md)** — Debug issues
@@ -318,7 +318,7 @@ See [Configuration Guide](config.md#risk-management--security).
 
 <div align="center">
 
-**Didn't find your answer?** [Ask on Discord](https://discord.gg/kn3695Kx32) or [open an issue](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)!
+**Didn't find your answer?** [Ask on Discord](https://discord.gg/h6Z69ZPPCz) or [open an issue](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)!
 
 [← Back to Documentation](index.md)
 

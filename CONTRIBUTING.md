@@ -284,7 +284,7 @@ When debugging issues:
 
 ## 💬 Getting Help
 
-- **Discord:** [Join our community](https://discord.gg/kn3695Kx32)
+- **Discord:** [Join our community](https://discord.gg/h6Z69ZPPCz)
 - **GitHub Issues:** Ask questions or report problems
 - **Documentation:** Check the [docs folder](docs/index.md)
 
@@ -342,6 +342,6 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 **Thank you for contributing!** 🎉
 
-[Back to README](README.md) • [Documentation](docs/index.md) • [Discord](https://discord.gg/kn3695Kx32)
+[Back to README](README.md) • [Documentation](docs/index.md) • [Discord](https://discord.gg/h6Z69ZPPCz)
 
 </div>

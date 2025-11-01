@@ -6,7 +6,7 @@
 
 **Automate your Microsoft Rewards points collection effortlessly**
 
-[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/kn3695Kx32) 
+[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/h6Z69ZPPCz) 
 [![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
 [![Version](https://img.shields.io/badge/version-2.51.0-blue?style=for-the-badge)](https://github.com/TheNetsky/Microsoft-Rewards-Script/releases)
 
@@ -194,7 +194,7 @@ All while maintaining **natural behavior patterns** to minimize detection risk.
 
 ## 🆘 Getting Help
 
-- 💬 **[Join our Discord](https://discord.gg/kn3695Kx32)** — Community support and updates
+- 💬 **[Join our Discord](https://discord.gg/h6Z69ZPPCz)** — Community support and updates
 - 📖 **[Documentation Hub](docs/index.md)** — Complete guides and references
 - 🐛 **[Report Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)** — Bug reports and feature requests
 - 📧 **[Diagnostics Guide](docs/diagnostics.md)** — Troubleshooting steps
@@ -259,6 +259,6 @@ If you find this project helpful:
 
 **Made with ❤️ by the community**
 
-[Documentation](docs/index.md) • [Discord](https://discord.gg/kn3695Kx32) • [Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
+[Documentation](docs/index.md) • [Discord](https://discord.gg/h6Z69ZPPCz) • [Issues](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
 
 </div>

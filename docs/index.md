@@ -64,7 +64,7 @@
 **Banned?** → [Security Guide](./security.md)  
 **Want to contribute?** → [Contributing Guide](../CONTRIBUTING.md)
 
-**Join Discord** → [Support Server](https://discord.gg/kn3695Kx32)
+**Join Discord** → [Support Server](https://discord.gg/h6Z69ZPPCz)
 
 ---
 

@@ -98,6 +98,6 @@ All docs use **Markdown** format with:
 
 **[Start Reading →](index.md)**
 
-Need help? [Join our Discord](https://discord.gg/kn3695Kx32)
+Need help? [Join our Discord](https://discord.gg/h6Z69ZPPCz)
 
 </div>
