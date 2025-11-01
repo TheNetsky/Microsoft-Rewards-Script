@@ -51,7 +51,7 @@ export async function ConclusionWebhook(
         color: color || 0x0078D4,
         timestamp: new Date().toISOString(),
         thumbnail: {
-            url: 'https://media.discordapp.net/attachments/1430643658788438144/1430644205344133290/rewi-v1.png'
+            url: 'https://media.discordapp.net/attachments/1421163952972369931/1434299121098952958/v2.50.5.png?ex=6907d2a6&is=69068126&hm=1a11362e2c2c40fc9f8b67762abf17e5bae72e4b70567d4331de195a880ba043&=&format=png&quality=lossless&width=1024&height=1076'
         }
     }
 
@@ -60,8 +60,8 @@ export async function ConclusionWebhook(
     }
 
     const payload: WebhookPayload = {
-        username: 'MS Rewi 🎮',
-        avatar_url: 'https://media.discordapp.net/attachments/1430643658788438144/1430644205344133290/rewi-v1.png',
+        username: 'MS Rewi',
+        avatar_url: 'https://media.discordapp.net/attachments/1421163952972369931/1434299121098952958/v2.50.5.png?ex=6907d2a6&is=69068126&hm=1a11362e2c2c40fc9f8b67762abf17e5bae72e4b70567d4331de195a880ba043&=&format=png&quality=lossless&width=1024&height=1076',
         embeds: [embed]
     }
 
