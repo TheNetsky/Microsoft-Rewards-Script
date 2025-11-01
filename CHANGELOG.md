@@ -7,15 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.50.5] - Current Release
+## [2.51.0] - 2025-11-01
 
-### � Migration Notice
+### 🔄 Major Migration Release
 
-This version represents a **major migration** from [Light60-1/Microsoft-Rewards-Rewi](https://github.com/Light60-1/Microsoft-Rewards-Rewi).
+This version represents a **complete migration** from [Light60-1/Microsoft-Rewards-Rewi](https://github.com/Light60-1/Microsoft-Rewards-Rewi) to [TheNetsky/Microsoft-Rewards-Script](https://github.com/TheNetsky/Microsoft-Rewards-Script).
 
-**Important:** Clean installation recommended. See README for migration instructions.
+**⚠️ Breaking Changes:** Clean installation required. See README for migration instructions.
 
-### �📚 Documentation
+### � Documentation
 
 - **Redesigned README.md** for better clarity and structure
   - Added project logo and improved visual presentation
@@ -45,18 +45,26 @@ This version represents a **major migration** from [Light60-1/Microsoft-Rewards-
 
 ### 📜 License Update
 
-- Changed from PROPRIETARY to Non-Commercial Personal Use License
+- Changed from PROPRIETARY to **Non-Commercial Personal Use License**
 - Clarified usage rights and restrictions
+- Added attribution to original repository
+
+### 🔗 Repository Updates
+
+- Updated all repository URLs to new location
+- Updated author information to TheNetsky
+- Updated package name to `microsoft-rewards-script`
+- Fixed all internal documentation links
 
 ### AND MOREEEEE++
 
 ---
 
-## Previous Releases
+## Previous Releases (v2.50.x and earlier)
 
 For the full history of changes, please refer to the [GitHub Releases](https://github.com/TheNetsky/Microsoft-Rewards-Script/releases) page.
 
-### Notable Features in v2.50.x
+### Notable Features in v2.50.x and earlier
 
 - Advanced humanization system with natural behavior patterns
 - Risk management with ML-based ban prediction

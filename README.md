@@ -8,7 +8,7 @@
 
 [![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/kn3695Kx32) 
 [![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
-[![Version](https://img.shields.io/badge/version-2.50.5-blue?style=for-the-badge)](https://github.com/TheNetsky/Microsoft-Rewards-Script/releases)
+[![Version](https://img.shields.io/badge/version-2.51.0-blue?style=for-the-badge)](https://github.com/TheNetsky/Microsoft-Rewards-Script/releases)
 
 </div>
 
