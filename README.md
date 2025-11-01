@@ -1,459 +1,353 @@
-<div align="center">
+# Microsoft-Rewards-Rewi
 
-<!-- Epic Header -->
-<img src="https://capsule-render.vercel.app/api?type=waving&height=300&color=gradient&customColorList=0,2,2,5,6,8&text=MICROSOFT%20REWARDS&fontSize=75&fontColor=fff&animation=twinkling&fontAlignY=38&desc=Intelligent%20Browser%20Automation&descSize=24&descAlignY=58" />
-
-</div>
-
-<br>
-
-<div align="center">
-
-<!-- Badges modernes -->
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-
-<br>
-
-![Version](https://img.shields.io/badge/v2.4.0-blue?style=for-the-badge&logo=github&logoColor=white)
-![License](https://img.shields.io/badge/ISC-00D9FF?style=for-the-badge)
-![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=for-the-badge&color=blue)
-![Status](https://img.shields.io/badge/Active-00C851?style=for-the-badge)
-
-<br><br>
-
-<!-- Animated Description -->
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=650&lines=Automate+Microsoft+Rewards+Daily+Tasks;Human-Like+Behavior+%E2%80%A2+Anti-Detection;Multi-Account+%E2%80%A2+Smart+Scheduling;150-300%2B+Points+Per+Day+Automatically" />
-
-</div>
-
-<br>
+[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge&logo=discord)](https://discord.gg/kn3695Kx32) 
+[![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge&logo=github)](https://github.com/LightZirconite/Microsoft-Rewards-Rewi)
 
 ---
 
-<div align="center">
+# 🚀 Quick Setup (Recommended)
 
-### 📌 **Update Notice**
+**Easiest way to get started — download and run:**
 
-Recent updates changed the structure of `config.jsonc` and `accounts.jsonc` files (including extensions).
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/LightZirconite/Microsoft-Rewards-Rewi.git
+   cd Microsoft-Rewards-Rewi
+   ```
 
-**If you see Git conflicts during `git pull` on these files:**
+2. **Run the setup script:**
 
-```bash
-# Delete and fresh clone
-rm -rf Microsoft-Rewards-Script
-git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
-cd Microsoft-Rewards-Script
+   * **Windows:** double-click `setup/setup.bat` or run it from a command prompt
+   * **Linux / macOS / WSL:**
+     ```bash
+     bash setup/setup.sh
+     ```
+   * **Alternative (any platform):**
+     ```bash
+     npm run setup
+     ```
 
-# Manually re-enter your settings in the new files
-```
+3. **Follow the setup prompts.** The script will:
+   * Rename `accounts.example.jsonc` → `accounts.jsonc`
+   * Ask for Microsoft account credentials
+   * Remind you to review `config.jsonc`
+   * Install dependencies (`npm install`)
+   * Build the project (`npm run build`)
+   * Optionally start the script
 
-⚠️ Don't copy old config files directly—structure has changed. Re-enter your credentials and preferences manually.
-
-This notice will remain for a few releases. Once we reach stable v2.5+, automatic updates will work smoothly again.
-
-</div>
+**That's it — the setup script handles the rest.**
 
 ---
 
-<br>
+# ⚙️ Advanced Setup Options
 
-## What Does This Do?
+### Nix Users
 
-**Automate your Microsoft Rewards daily activities with intelligent browser automation.**  
-Complete searches, quizzes, and promotions automatically while mimicking natural human behavior.
+1. Install Nix from [https://nixos.org/](https://nixos.org/)
+2. Run:
+   ```bash
+   ./run.sh
+   ```
 
-<br>
+### Manual Setup (if setup script fails)
 
-### **Daily Earnings Breakdown**
+1. Copy `src/accounts.example.jsonc` → `src/accounts.jsonc` and add your accounts.
+2. Edit `src/config.jsonc` as needed.
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Build:
+   ```bash
+   npm run build
+   ```
+5. Start:
+   ```bash
+   npm run start
+   ```
 
-| 🎯 Activity | 💎 Points | ⏱️ Time |
-|:-----------|:---------|:--------|
-| **Desktop Searches** | ~90 pts | 30 sec |
-| **Mobile Searches** | ~60 pts | 20 sec |
-| **Daily Set Tasks** | ~30-50 pts | 1-2 min |
-| **Promotions & Punch Cards** | Variable | 30s-2min |
-| **📊 TOTAL AVERAGE** | **150-300+ pts** | **3-5 min** |
-</div>
+---
 
-<br>
+# 🐳 Docker Setup (Experimental)
 
-## Quick Start
+**Before starting:**
 
-### **🚀 Automated Setup** (Recommended)
+* Remove local `/node_modules` and `/dist` if you previously built.
+* Remove old Docker volumes when upgrading from older versions.
+* You can reuse older `accounts.jsonc`.
 
-```bash
-# Windows
-setup\setup.bat
+**Quick Docker (recommended for scheduling):**
 
-# Linux / macOS / WSL
-bash setup/setup.sh
+1. Clone the repository and configure `accounts.jsonc` (or rename from `accounts.example.jsonc`).
+2. Ensure `config.jsonc` has `"headless": true` in browser settings.
+3. Edit `compose.yaml`:
+   * Set `TZ` (timezone)
+   * **Choose scheduling mode:**
+     * **Option A (default):** Built-in scheduler — configure `schedule` in `config.jsonc`
+     * **Option B (cron):** Uncomment `USE_CRON: "true"` and set `CRON_SCHEDULE`
+   * Optional: `RUN_ON_START=true` (runs once immediately on container start)
+4. Start:
+   ```bash
+   docker compose up -d
+   ```
+5. Monitor:
+   ```bash
+   docker logs -f microsoft-rewards-script
+   ```
 
-# Universal
-npm run setup
+### Scheduling Options
+
+**Built-in Scheduler (Default):**
+```yaml
+# In docker-compose.yml - no cron variables needed
+environment:
+  TZ: "Europe/Paris"
 ```
-
-**The wizard handles everything:**
-- ✅ Creates `accounts.json` with your credentials
-- ✅ Installs dependencies & builds project
-- ✅ Runs first automation (optional)
-
-<br>
-
-### **🛠️ Manual Setup**
-
-```bash
-# 1. Clone repository
-git clone -b v2 https://github.com/TheNetsky/Microsoft-Rewards-Script.git
-cd Microsoft-Rewards-Script
-
-# 2. Configure accounts
-cp src/accounts.example.jsonc src/accounts.json
-# Edit accounts.json with your Microsoft credentials
-
-# 3. Install & build
-npm i
-
-# 4. Run automation
-npm start
-```
-
-<br>
-
-## Intelligent Features
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🛡️ **Risk-Aware System**
-```
-Real-time threat detection
-├─ Monitors captchas & errors
-├─ Dynamic delay adjustment (1x→4x)
-├─ Automatic cool-down periods
-└─ ML-based ban prediction
-```
-
-### 📊 **Performance Analytics**
-```
-Track everything
-├─ Points earned per day
-├─ Success/failure rates
-├─ Historical trends
-└─ Account health monitoring
-```
-
-</td>
-<td width="50%" valign="top">
-
-### 🔍 **Query Diversity Engine**
-```
-Natural search patterns
-├─ Multi-source queries
-├─ Pattern breaking algorithms
-├─ Smart deduplication
-└─ Reduced detection risk
-```
-
-### ✅ **Config Validator**
-```
-Pre-flight checks
-├─ Detects common mistakes
-├─ Security warnings
-├─ Optimization suggestions
-└─ Dry-run test mode
-```
-
-</td>
-</tr>
-</table>
-
-<br>
-
-## Usage Commands
-
-```bash
-# Run automation once
-npm start
-
-# Daily automated scheduler
-npm run start:schedule
-
-# Manual redemption mode (monitor points while shopping)
-npm start -- -buy your@email.com
-
-# Docker deployment
-docker compose up -d
-
-# Test configuration without executing
-npm start -- --dry-run
-```
-
-<br>
-
-## Configuration
-
-Edit `src/config.jsonc` to customize behavior:
-
 ```jsonc
+// In config.jsonc
 {
-  "browser": {
-    "headless": false  // Set true for background operation
-  },
-  "execution": {
-    "parallel": false,           // Run desktop + mobile simultaneously
-    "runOnZeroPoints": false,    // Skip when no points available
-    "clusters": 1                // Parallel account processes
-  },
-  "workers": {
-    "doDailySet": true,
-    "doDesktopSearch": true,
-    "doMobileSearch": true,
-    "doPunchCards": true
-  },
-  "humanization": {
-    "enabled": true,             // Natural human-like delays
-    "actionDelay": { "min": 500, "max": 2200 },
-    "randomOffDaysPerWeek": 1    // Skip random days naturally
+  "schedule": {
+    "enabled": true,
+    "time24": "09:00",
+    "timeZone": "Europe/Paris"
   }
 }
 ```
 
-**[📖 Complete Configuration Guide →](./docs/config.md)**
+**Native Cron (Traditional):**
+```yaml
+# In docker-compose.yml
+environment:
+  TZ: "Europe/Paris"
+  USE_CRON: "true"
+  CRON_SCHEDULE: "0 9,16,21 * * *"  # 9 AM, 4 PM, 9 PM
+  RUN_ON_START: "true"
+```
 
-<br>
+Use [crontab.guru](https://crontab.guru) for cron syntax help.
 
-## Core Features
-
-<div align="center">
-
-<table>
-<tr>
-<td align="center" width="33%">
-<img src="https://img.icons8.com/fluency/96/bot.png" width="80"/><br>
-<b>Human-Like Behavior</b><br>
-<sub>Randomized delays • Mouse movements<br>Natural scrolling patterns</sub>
-</td>
-<td align="center" width="33%">
-<img src="https://img.icons8.com/fluency/96/security-checked.png" width="80"/><br>
-<b>Anti-Detection</b><br>
-<sub>Session persistence • Fingerprinting<br>Proxy support</sub>
-</td>
-<td align="center" width="33%">
-<img src="https://img.icons8.com/fluency/96/user-group-man-man.png" width="80"/><br>
-<b>Multi-Account</b><br>
-<sub>Parallel execution • 2FA/TOTP<br>Per-account proxies</sub>
-</td>
-</tr>
-<tr>
-<td align="center" width="33%">
-<img src="https://img.icons8.com/fluency/96/artificial-intelligence.png" width="80"/><br>
-<b>Smart Quiz Solver</b><br>
-<sub>Polls • ABC Quiz • This or That<br>4/8-option quizzes</sub>
-</td>
-<td align="center" width="33%">
-<img src="https://img.icons8.com/fluency/96/clock.png" width="80"/><br>
-<b>Built-in Scheduler</b><br>
-<sub>Daily automation<br>No external cron needed</sub>
-</td>
-<td align="center" width="33%">
-<img src="https://img.icons8.com/fluency/96/alarm.png" width="80"/><br>
-<b>Notifications</b><br>
-<sub>Discord webhooks • NTFY<br>Real-time alerts</sub>
-</td>
-</tr>
-</table>
-
-</div>
-
-<br>
-
-## Documentation
-
-<div align="center">
-
-| 📖 Getting Started | ⚙️ Configuration | 🔔 Monitoring |
-|:------------------|:----------------|:-------------|
-| [Installation & Setup](./docs/getting-started.md) | [Config Guide](./docs/config.md) | [Notifications](./docs/ntfy.md) |
-| [Accounts Setup](./docs/accounts.md) | [Scheduler](./docs/schedule.md) | [Diagnostics](./docs/diagnostics.md) |
-| [Docker Deployment](./docs/docker.md) | [Humanization](./docs/humanization.md) | [Buy Mode](./docs/buy-mode.md) |
-| | [Proxy Configuration](./docs/proxy.md) | |
-
-**[📚 Complete Documentation Index →](./docs/index.md)**
-
-</div>
-
-<br>
-
-## Technical Architecture
-
-<div align="center">
-
-**Built with Modern Technologies**
-
-<br>
-
-<img src="https://skillicons.dev/icons?i=ts,nodejs,playwright,docker&theme=light&perline=4" />
-
-</div>
-
-<br>
-
-**Core Modules:**
-
-| Module | Purpose |
-|--------|---------|
-| `Login.ts` | Microsoft authentication flow with 2FA/TOTP support |
-| `Workers.ts` | Completes Daily Set, Promotions, and Punch Cards |
-| `Search.ts` | Desktop/mobile Bing searches with natural query variations |
-| `Activities.ts` | Routes to specific activity handlers (Quiz, Poll, etc.) |
-| `activities/*.ts` | Individual handlers for each reward type |
-
-**Key Technologies:**
-- [Playwright](https://playwright.dev/) — Browser automation framework
-- [Rebrowser](https://github.com/rebrowser/rebrowser-playwright) — Anti-fingerprinting extensions
-- [fingerprint-generator](https://www.npmjs.com/package/fingerprint-generator) — Device consistency
-- [Cheerio](https://cheerio.js.org/) — Fast HTML parsing
-- [Luxon](https://moment.github.io/luxon/) — Modern date/time handling
-
-<br>
-
-## Important Disclaimers
-
-<div align="center">
-
-### ⚠️ **USE AT YOUR OWN RISK** ⚠️
-
-**Using automation violates Microsoft's Terms of Service.**  
-Accounts may be **suspended or permanently banned**.
-
-This project is for **educational purposes only**.
-
-</div>
-
-<br>
-
-**Best Practices:**
-
-✅ **DO:**
-- Use 2FA/TOTP for security
-- Enable humanization features
-- Schedule 1-2x daily maximum
-- Set `runOnZeroPoints: false`
-- Test on secondary accounts first
-- Monitor diagnostics regularly
-
-❌ **DON'T:**
-- Run on your main account
-- Schedule hourly runs
-- Ignore security warnings
-- Use shared proxies
-- Skip configuration validation
-
-<br>
-
-## Contributors
-
-<div align="center">
-
-### **Core Development Team**
-
-<table>
-<tr>
-<td align="center">
-<a href="https://github.com/TheNetsky/">
-<img src="https://github.com/TheNetsky.png" width="100" style="border-radius: 50%;" /><br />
-<sub><b>TheNetsky</b></sub><br>
-<sub>🏗️ Foundation Architect</sub>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/mgrimace">
-<img src="https://github.com/mgrimace.png" width="100" style="border-radius: 50%;" /><br />
-<sub><b>Mgrimace</b></sub><br>
-<sub>💻 Active Developer</sub>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/LightZirconite">
-<img src="https://github.com/LightZirconite.png" width="100" style="border-radius: 50%;" /><br />
-<sub><b>LightZirconite</b></sub><br>
-<sub>🔐 V2+</sub>
-</a>
-</td>
-</tr>
-</table>
-
-<br>
-
-### **All Contributors**
-
-<a href="https://github.com/TheNetsky/Microsoft-Rewards-Script/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=TheNetsky/Microsoft-Rewards-Script" />
-</a>
-
-</div>
-
-<br>
-
-## Community & Support
-
-<div align="center">
-
-### **Need Help? Found a Bug?**
-
-**Join our Discord community — we're here to help!**
-
-<br>
-
-[![Discord](https://img.shields.io/badge/Join_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KRBFxxsU)
-
-<br>
-
-**For bug reports and feature requests, please use Discord first.**  
-GitHub Issues are also available for documentation and tracking.
-
-<br>
-
-[![GitHub Issues](https://img.shields.io/badge/GitHub_Issues-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TheNetsky/Microsoft-Rewards-Script/issues)
-
-</div>
-
-<br>
-
-> 💡 **Looking for enhanced builds?** Community-maintained versions with faster updates and advanced features may be available. Ask in our Discord for more info.
-
-</div>
-
-<br>
-
-## License
-
-<div align="center">
-
-**ISC License** — Free and open source
-
-See [LICENSE](./LICENSE) for details • [NOTICE](./NOTICE) for disclaimers
-
-<br>
+**See [Docker Documentation](docs/docker.md) for detailed setup and troubleshooting.**
 
 ---
 
-<br>
+# 📋 Usage Notes
 
-**⭐ Star this repo if you found it useful! ⭐**
+* **Headless=false cleanup:** If you stop the script without closing browser windows, use Task Manager or run `npm run kill-chrome-win` (Windows) to close leftover instances.
+* **Scheduling advice:** Run at least once or twice daily. Use `"runOnZeroPoints": false` in config to skip runs when no points are available.
+* **Multiple accounts:** Use `clusters` in `config.jsonc` to run accounts in parallel.
+* **Built-in scheduler:** Enable `schedule.enabled` in `config.jsonc` to run automatically without external cron jobs.
 
-<br>
+---
 
-![Stars](https://img.shields.io/github/stars/TheNetsky/Microsoft-Rewards-Script?style=social)
+# ⚙️ Configuration Reference
 
-<br>
+Edit `src/config.jsonc` to customize behavior. See the [full configuration documentation](docs/config.md) for detailed explanations.
 
-**Made with ❤️ by the open source community**
+<details>
+<summary><b>Core Settings</b></summary>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&height=120&color=gradient&customColorList=0,2,2,5,6,8&section=footer" />
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `baseURL` | Microsoft Rewards URL | `https://rewards.bing.com` |
+| `sessionPath` | Session/fingerprint storage | `sessions` |
+| `browser.headless` | Run browser in background | `false` |
+| `browser.globalTimeout` | Max timeout for operations | `30s` |
+| `execution.parallel` | Run mobile/desktop tasks at once | `false` |
+| `execution.runOnZeroPoints` | Run when no points available | `false` |
+| `execution.clusters` | Concurrent account instances | `1` |
+| `execution.passesPerRun` | How many times to process each account | `3` |
 
-</div>
+</details>
+
+<details>
+<summary><b>Fingerprint Settings</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `fingerprinting.saveFingerprint.mobile` | Reuse mobile fingerprint | `true` |
+| `fingerprinting.saveFingerprint.desktop` | Reuse desktop fingerprint | `true` |
+
+</details>
+
+<details>
+<summary><b>Task Settings</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `workers.doDailySet` | Complete daily set | `true` |
+| `workers.doMorePromotions` | Complete promotional offers | `true` |
+| `workers.doPunchCards` | Complete punchcard tasks | `true` |
+| `workers.doDesktopSearch` | Perform desktop searches | `true` |
+| `workers.doMobileSearch` | Perform mobile searches | `true` |
+| `workers.doDailyCheckIn` | Complete daily check-in | `true` |
+| `workers.doReadToEarn` | Complete read-to-earn tasks | `true` |
+| `workers.bundleDailySetWithSearch` | Run desktop searches after Daily Set | `true` |
+
+</details>
+
+<details>
+<summary><b>Search Settings</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `search.useLocalQueries` | Use locale-specific query sources | `true` |
+| `search.settings.useGeoLocaleQueries` | Use region-specific queries | `true` |
+| `search.settings.scrollRandomResults` | Random scrolling on results | `true` |
+| `search.settings.clickRandomResults` | Random link clicks | `true` |
+| `search.settings.retryMobileSearchAmount` | Mobile retry attempts | `2` |
+| `search.settings.delay.min` | Minimum delay between searches | `1min` |
+| `search.settings.delay.max` | Maximum delay between searches | `5min` |
+
+</details>
+
+<details>
+<summary><b>Query Diversity Engine</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `queryDiversity.enabled` | Multi-source query generation | `true` |
+| `queryDiversity.sources` | Available query sources | `["google-trends", "reddit", "local-fallback"]` |
+| `queryDiversity.maxQueriesPerSource` | Max queries per source | `10` |
+| `queryDiversity.cacheMinutes` | Cache duration in minutes | `30` |
+
+</details>
+
+<details>
+<summary><b>Humanization & Natural Behavior</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `humanization.enabled` | Enable human-like behavior patterns | `true` |
+| `humanization.stopOnBan` | Stop processing accounts on ban detection | `true` |
+| `humanization.immediateBanAlert` | Send immediate alert on ban | `true` |
+| `humanization.actionDelay.min` | Minimum action delay (ms) | `500` |
+| `humanization.actionDelay.max` | Maximum action delay (ms) | `2200` |
+| `humanization.gestureMoveProb` | Mouse gesture probability | `0.65` |
+| `humanization.gestureScrollProb` | Scroll gesture probability | `0.4` |
+| `vacation.enabled` | Monthly vacation mode | `true` |
+| `vacation.minDays` | Minimum vacation days per month | `2` |
+| `vacation.maxDays` | Maximum vacation days per month | `4` |
+
+</details>
+
+<details>
+<summary><b>Risk Management & Security</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `riskManagement.enabled` | Dynamic delay adjustment | `true` |
+| `riskManagement.autoAdjustDelays` | Auto-adjust delays on risk detection | `true` |
+| `riskManagement.stopOnCritical` | Stop on critical risk level | `false` |
+| `riskManagement.banPrediction` | ML-based ban prediction | `true` |
+| `riskManagement.riskThreshold` | Risk threshold (0-100) | `75` |
+
+</details>
+
+<details>
+<summary><b>Scheduling (Built-in)</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `schedule.enabled` | Enable built-in scheduler | `false` |
+| `schedule.useAmPm` | Use 12-hour time format | `false` |
+| `schedule.time12` | Time in 12-hour format | `9:00 AM` |
+| `schedule.time24` | Time in 24-hour format | `09:00` |
+| `schedule.timeZone` | IANA timezone | `Europe/Paris` |
+| `schedule.runImmediatelyOnStart` | Run on process start | `false` |
+
+</details>
+
+<details>
+<summary><b>Job State Management</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `jobState.enabled` | Save state to avoid duplicate work | `true` |
+| `jobState.dir` | Custom state directory | `""` |
+
+</details>
+
+<details>
+<summary><b>Proxy Settings</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
+| `proxy.proxyBingTerms` | Proxy Bing Terms requests | `true` |
+
+</details>
+
+<details>
+<summary><b>Notification Settings</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `webhook.enabled` | Enable Discord webhook | `false` |
+| `webhook.url` | Discord webhook URL | `""` |
+| `conclusionWebhook.enabled` | Summary-only webhook | `false` |
+| `conclusionWebhook.url` | Summary webhook URL | `""` |
+| `ntfy.enabled` | Enable NTFY notifications | `false` |
+| `ntfy.url` | NTFY server URL | `""` |
+| `ntfy.topic` | NTFY topic | `rewards` |
+| `ntfy.authToken` | NTFY auth token | `""` |
+
+</details>
+
+<details>
+<summary><b>Logging & Diagnostics</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `logging.excludeFunc` | Exclude log categories | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
+| `logging.webhookExcludeFunc` | Exclude from webhook logs | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
+| `logging.redactEmails` | Redact email addresses in logs | `true` |
+| `diagnostics.enabled` | Capture diagnostic data | `true` |
+| `diagnostics.saveScreenshot` | Save screenshots on failure | `true` |
+| `diagnostics.saveHtml` | Save HTML on failure | `true` |
+| `diagnostics.maxPerRun` | Max diagnostics per run | `2` |
+| `diagnostics.retentionDays` | Days to keep diagnostics | `7` |
+
+</details>
+
+<details>
+<summary><b>Analytics</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `analytics.enabled` | Performance dashboard tracking | `true` |
+| `analytics.retentionDays` | Data retention period | `30` |
+| `analytics.exportMarkdown` | Generate markdown reports | `true` |
+| `analytics.webhookSummary` | Send analytics via webhook | `true` |
+
+</details>
+
+<details>
+<summary><b>Update Settings</b></summary>
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `update.git` | Enable git auto-update | `true` |
+| `update.docker` | Enable docker auto-update | `false` |
+| `update.scriptPath` | Custom updater script path | `setup/update/update.mjs` |
+| `update.autoUpdateConfig` | Auto-merge config changes | `true` |
+| `update.autoUpdateAccounts` | Auto-merge account changes | `true` |
+
+</details>
+
+---
+
+# 📚 Documentation
+
+For detailed information about configuration, features, and advanced usage, please refer to the documentation in the `docs/` folder. Start with `docs/index.md` for an overview and navigation to specific topics.
+
+---
+
+# ⚠️ Disclaimer
+
+**Use at your own risk.** Automation may violate Microsoft's Terms of Service and can result in suspension or permanent banning of your Microsoft Rewards account. This project is provided **for educational purposes only**. The developer is **not responsible** for any actions taken by Microsoft against your account.
+
+---
+
+# 📄 License
+
+This project is licensed under a **PROPRIETARY** license. See [LICENSE](LICENSE) for details.

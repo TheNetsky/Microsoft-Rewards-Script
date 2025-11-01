@@ -76,5 +76,12 @@ COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
-# Run the scheduled rewards script
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Use entrypoint that supports both scheduler and cron
+ENTRYPOINT ["docker-entrypoint.sh"]
+
+# Default: use built-in scheduler
 CMD ["npm", "run", "start:schedule"]

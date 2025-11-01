@@ -23,6 +23,12 @@ import path from 'path'
 import { spawn } from 'child_process'
 import Humanizer from './util/Humanizer'
 import { detectBanReason } from './util/BanDetector'
+import { RiskManager, RiskMetrics, RiskEvent } from './util/RiskManager'
+import { BanPredictor } from './util/BanPredictor'
+import { Analytics } from './util/Analytics'
+import { QueryDiversityEngine } from './util/QueryDiversityEngine'
+import JobState from './util/JobState'
+import { StartupValidator } from './util/StartupValidator'
 
 
 // Main bot class
@@ -40,6 +46,7 @@ export class MicrosoftRewardsBot {
     public homePage!: Page
     public currentAccountEmail?: string
     public currentAccountRecoveryEmail?: string
+    public queryEngine?: QueryDiversityEngine
     public compromisedModeActive: boolean = false
     public compromisedReason?: string
     public compromisedEmail?: string
@@ -69,6 +76,13 @@ export class MicrosoftRewardsBot {
     // Scheduler heartbeat integration
     private heartbeatFile?: string
     private heartbeatTimer?: NodeJS.Timeout
+    private riskManager?: RiskManager
+    private lastRiskMetrics?: RiskMetrics
+    private riskThresholdTriggered: boolean = false
+    private banPredictor?: BanPredictor
+    private analytics?: Analytics
+    private accountJobState?: JobState
+    private accountRunCounts: Map<string, number> = new Map()
 
     public axios!: Axios
 
@@ -79,6 +93,9 @@ export class MicrosoftRewardsBot {
         this.accounts = []
         this.utils = new Util()
         this.config = loadConfig()
+        if (this.config.jobState?.enabled !== false) {
+            this.accountJobState = new JobState(this.config)
+        }
         this.browser = {
             func: new BrowserFunc(this),
             utils: new BrowserUtil(this)
@@ -87,6 +104,25 @@ export class MicrosoftRewardsBot {
         this.humanizer = new Humanizer(this.utils, this.config.humanization)
         this.activeWorkers = this.config.clusters
         this.mobileRetryAttempts = 0
+
+        if (this.config.queryDiversity?.enabled) {
+            this.queryEngine = new QueryDiversityEngine({
+                sources: this.config.queryDiversity.sources,
+                maxQueriesPerSource: this.config.queryDiversity.maxQueriesPerSource,
+                cacheMinutes: this.config.queryDiversity.cacheMinutes
+            })
+        }
+
+        if (this.config.analytics?.enabled) {
+            this.analytics = new Analytics()
+        }
+
+        if (this.config.riskManagement?.enabled) {
+            this.riskManager = new RiskManager()
+            if (this.config.riskManagement.banPrediction) {
+                this.banPredictor = new BanPredictor(this.riskManager)
+            }
+        }
         
         // Buy mode: CLI args take precedence over config
         const idx = process.argv.indexOf('-buy')
@@ -114,6 +150,99 @@ export class MicrosoftRewardsBot {
 
     async initialize() {
         this.accounts = loadAccounts()
+        
+        // Run comprehensive startup validation
+        const validator = new StartupValidator()
+        await validator.validate(this.config, this.accounts)
+        
+        // Always continue - validation is informative, not blocking
+        // This allows users to proceed even with warnings or minor issues
+        
+        // Initialize job state
+        if (this.config.jobState?.enabled !== false) {
+            this.accountJobState = new JobState(this.config)
+        }
+    }
+
+    private resetRiskTracking(): void {
+        if (this.riskManager) {
+            this.riskManager.reset()
+        }
+        this.lastRiskMetrics = undefined
+        this.riskThresholdTriggered = false
+    }
+
+    private recordRiskEvent(type: RiskEvent['type'], severity: number, context?: string): void {
+        if (!this.riskManager || this.config.riskManagement?.enabled !== true) return
+        this.riskManager.recordEvent(type, severity, context)
+        const metrics = this.riskManager.assessRisk()
+        this.lastRiskMetrics = metrics
+
+        const threshold = this.config.riskManagement?.riskThreshold
+        if (typeof threshold === 'number' && metrics.score >= threshold && !this.riskThresholdTriggered) {
+            this.riskThresholdTriggered = true
+            log('main', 'RISK', `Risk score ${metrics.score} exceeded threshold ${threshold} (level=${metrics.level})`, 'warn', 'yellow')
+        }
+
+        if (this.config.riskManagement?.stopOnCritical && metrics.level === 'critical') {
+            void this.engageGlobalStandby('risk-critical', this.currentAccountEmail)
+        }
+    }
+
+    public getRiskDelayMultiplier(): number {
+        if (!this.config.riskManagement?.enabled || this.config.riskManagement.autoAdjustDelays === false) return 1
+        return this.lastRiskMetrics?.delayMultiplier ?? 1
+    }
+
+    private trackAnalytics(summary: AccountSummary, riskScore?: number): void {
+        if (!this.analytics || this.config.analytics?.enabled !== true) return
+        const today = new Date().toISOString().slice(0, 10)
+        try {
+            this.analytics.recordRun({
+                date: today,
+                email: summary.email,
+                pointsEarned: summary.totalCollected,
+                pointsInitial: summary.initialTotal,
+                pointsEnd: summary.endTotal,
+                desktopPoints: summary.desktopCollected,
+                mobilePoints: summary.mobileCollected,
+                executionTimeMs: summary.durationMs,
+                successRate: summary.errors.length ? 0 : 1,
+                errorsCount: summary.errors.length,
+                banned: !!summary.banned?.status,
+                riskScore
+            })
+        } catch (e) {
+            log('main', 'ANALYTICS', `Failed to record analytics for ${summary.email}: ${e instanceof Error ? e.message : e}`, 'warn')
+        }
+    }
+
+    private shouldSkipAccount(email: string, dayKey: string): boolean {
+        if (!this.accountJobState) return false
+        if (this.config.jobState?.skipCompletedAccounts === false) return false
+        if ((this.config.passesPerRun ?? 1) > 1) return false
+        if (this.isAccountSkipOverride()) return false
+        return this.accountJobState.isAccountComplete(email, dayKey)
+    }
+
+    private persistAccountCompletion(email: string, dayKey: string, summary: AccountSummary): void {
+        if (!this.accountJobState) return
+        if (this.config.jobState?.skipCompletedAccounts === false) return
+        if ((this.config.passesPerRun ?? 1) > 1) return
+        if (this.isAccountSkipOverride()) return
+        this.accountJobState.markAccountComplete(email, dayKey, {
+            runId: this.runId,
+            totalCollected: summary.totalCollected,
+            banned: summary.banned?.status === true,
+            errors: summary.errors.length
+        })
+    }
+
+    private isAccountSkipOverride(): boolean {
+        const value = process.env.REWARDS_DISABLE_ACCOUNT_SKIP
+        if (!value) return false
+        const lower = value.toLowerCase()
+        return value === '1' || lower === 'true' || lower === 'yes'
     }
 
     async run() {
@@ -285,29 +414,29 @@ export class MicrosoftRewardsBot {
         if (this.config.clusters > 1 && !cluster.isPrimary) return
         
         const banner = `
- ╔═══════════════════════════════════════════════════════════════════════════╗
- ║                                                                           ║
- ║  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗  ║
- ║  ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝  ║
- ║  ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗  ║
- ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║  ║
- ║  ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║  ║
- ║  ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝  ║
- ║                                                                           ║
- ║          TypeScript • Playwright • Intelligent Automation                ║
- ║                                                                           ║
- ╚═══════════════════════════════════════════════════════════════════════════╝
+ ╔═══════════════════════════════════════════════════════════════════════╗
+ ║                                                                       ║
+ ║  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗██╗                 ║
+ ║  ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██║                 ║
+ ║  ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║██║                 ║
+ ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██║                 ║
+ ║  ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║                 ║
+ ║  ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝                 ║
+ ║                                                                       ║
+ ║          TypeScript • Playwright • Intelligent Automation             ║
+ ║                                                                       ║
+ ╚═══════════════════════════════════════════════════════════════════════╝
 `
 
         const buyModeBanner = `
  ╔══════════════════════════════════════════════════════╗
  ║                                                      ║
- ║  ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗  ║
- ║  ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝  ║
- ║  ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝   ║
- ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝    ║
- ║  ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║     ║
- ║  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝     ║
+ ║  ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗   ║
+ ║  ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝   ║
+ ║  ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝    ║
+ ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝     ║
+ ║  ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║      ║
+ ║  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝      ║
  ║                                                      ║
  ║      Manual Purchase Mode • Passive Monitoring       ║
  ║                                                      ║
@@ -400,6 +529,9 @@ export class MicrosoftRewardsBot {
         // Reset activeWorkers to actual spawn count (constructor used raw clusters)
         this.activeWorkers = workerCount
 
+        // Store worker-to-chunk mapping for crash recovery
+        const workerChunkMap = new Map<number, Account[]>()
+
         for (let i = 0; i < workerCount; i++) {
             const worker = cluster.fork()
             const chunk = accountChunks[i] || []
@@ -407,6 +539,11 @@ export class MicrosoftRewardsBot {
             // Validate chunk has accounts
             if (chunk.length === 0) {
                 log('main', 'MAIN-PRIMARY', `Warning: Worker ${i} received empty account chunk`, 'warn')
+            }
+            
+            // Store chunk mapping for crash recovery
+            if (worker.id) {
+                workerChunkMap.set(worker.id, chunk)
             }
             
             (worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.({ chunk })
@@ -426,20 +563,36 @@ export class MicrosoftRewardsBot {
             // Optional: restart crashed worker (basic heuristic) if crashRecovery allows
             try {
                 const cr = this.config.crashRecovery
-                if (cr?.restartFailedWorker && code !== 0) {
+                if (cr?.restartFailedWorker && code !== 0 && worker.id) {
                     const attempts = (worker as unknown as { _restartAttempts?: number })._restartAttempts || 0
                     if (attempts < (cr.restartFailedWorkerAttempts ?? 1)) {
                         (worker as unknown as { _restartAttempts?: number })._restartAttempts = attempts + 1
                         log('main','CRASH-RECOVERY',`Respawning worker (attempt ${attempts + 1})`, 'warn','yellow')
+                        
+                        // CRITICAL FIX: Re-send the original chunk to the new worker
+                        const originalChunk = workerChunkMap.get(worker.id)
                         const newW = cluster.fork()
-                        // NOTE: account chunk re-assignment simplistic: unused; real mapping improvement todo
+                        
+                        if (originalChunk && originalChunk.length > 0 && newW.id) {
+                            // Send the accounts to the new worker
+                            (newW as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.({ chunk: originalChunk })
+                            // Update mapping with new worker ID
+                            workerChunkMap.set(newW.id, originalChunk)
+                            workerChunkMap.delete(worker.id)
+                            log('main','CRASH-RECOVERY',`Assigned ${originalChunk.length} account(s) to respawned worker`, 'log', 'green')
+                        } else {
+                            log('main','CRASH-RECOVERY','Warning: Could not reassign accounts to respawned worker (chunk not found)', 'warn', 'yellow')
+                        }
+                        
                         newW.on('message', (msg: unknown) => {
                             const m = msg as { type?: string; data?: AccountSummary[] }
                             if (m && m.type === 'summary' && Array.isArray(m.data)) this.accountSummaries.push(...m.data)
                         })
                     }
                 }
-            } catch { /* ignore */ }
+            } catch (e) {
+                log('main','CRASH-RECOVERY',`Failed to respawn worker: ${e instanceof Error ? e.message : e}`, 'error')
+            }
 
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
@@ -483,10 +636,17 @@ export class MicrosoftRewardsBot {
                 log('main','TASK',`Stopping remaining accounts due to ban on ${this.bannedTriggered.email}: ${this.bannedTriggered.reason}`,'warn')
                 break
             }
+            const accountDayKey = this.utils.getFormattedDate()
+            if (this.shouldSkipAccount(account.email, accountDayKey)) {
+                log('main','TASK',`Skipping account ${account.email}: already completed on ${accountDayKey} (job-state resume)`, 'warn')
+                continue
+            }
             // Reset compromised state per account
             this.compromisedModeActive = false
             this.compromisedReason = undefined
             this.compromisedEmail = undefined
+            this.resetRiskTracking()
+            
             // If humanization allowed windows are configured, wait until within a window
             try {
                 const windows: string[] | undefined = this.config?.humanization?.allowedWindows
@@ -500,6 +660,8 @@ export class MicrosoftRewardsBot {
             } catch {/* ignore */}
             this.currentAccountEmail = account.email
             this.currentAccountRecoveryEmail = account.recoveryEmail
+            const runNumber = (this.accountRunCounts.get(account.email) ?? 0) + 1
+            this.accountRunCounts.set(account.email, runNumber)
             log('main', 'MAIN-WORKER', `Started tasks for account ${account.email}`)
 
             const accountStart = Date.now()
@@ -520,26 +682,51 @@ export class MicrosoftRewardsBot {
                 return `${label}:${base}`
             }
 
+            if (this.config.dryRun) {
+                log('main', 'DRY-RUN', `Dry run: skipping automation for ${account.email}`)
+                const summary: AccountSummary = {
+                    email: account.email,
+                    durationMs: 0,
+                    desktopCollected: 0,
+                    mobileCollected: 0,
+                    totalCollected: 0,
+                    initialTotal: 0,
+                    endTotal: 0,
+                    errors: [],
+                    banned,
+                    riskScore: 0,
+                    riskLevel: 'safe'
+                }
+                this.accountSummaries.push(summary)
+                this.trackAnalytics(summary, summary.riskScore)
+                this.persistAccountCompletion(account.email, accountDayKey, summary)
+                continue
+            }
+
             if (this.config.parallel) {
                 const mobileInstance = new MicrosoftRewardsBot(true)
                 mobileInstance.axios = this.axios
                 // Run both and capture results with detailed logging
-                const desktopPromise = this.Desktop(account).catch(e => {
+                const desktopPromise = this.Desktop(account).catch((e: unknown) => {
                     const msg = e instanceof Error ? e.message : String(e)
+                    this.recordRiskEvent('error', 6, `desktop:${msg}`)
                     log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
                     const bd = detectBanReason(e)
                     if (bd.status) {
                         banned.status = true; banned.reason = bd.reason.substring(0,200)
+                        this.recordRiskEvent('ban_hint', 9, bd.reason)
                         void this.handleImmediateBanAlert(account.email, banned.reason)
                     }
                     errors.push(formatFullErr('desktop', e)); return null
                 })
-                const mobilePromise = mobileInstance.Mobile(account).catch(e => {
+                const mobilePromise = mobileInstance.Mobile(account).catch((e: unknown) => {
                     const msg = e instanceof Error ? e.message : String(e)
+                    this.recordRiskEvent('error', 6, `mobile:${msg}`)
                     log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
                     const bd = detectBanReason(e)
                     if (bd.status) {
                         banned.status = true; banned.reason = bd.reason.substring(0,200)
+                        this.recordRiskEvent('ban_hint', 9, bd.reason)
                         void this.handleImmediateBanAlert(account.email, banned.reason)
                     }
                     errors.push(formatFullErr('mobile', e)); return null
@@ -552,6 +739,7 @@ export class MicrosoftRewardsBot {
                     desktopCollected = desktopResult.value.collectedPoints
                 } else if (desktopResult.status === 'rejected') {
                     log(false, 'TASK', `Desktop promise rejected unexpectedly: ${shortErr(desktopResult.reason)}`,'error')
+                    this.recordRiskEvent('error', 6, `desktop-rejected:${shortErr(desktopResult.reason)}`)
                     errors.push(formatFullErr('desktop-rejected', desktopResult.reason))
                 }
                 
@@ -561,6 +749,7 @@ export class MicrosoftRewardsBot {
                     mobileCollected = mobileResult.value.collectedPoints
                 } else if (mobileResult.status === 'rejected') {
                     log(true, 'TASK', `Mobile promise rejected unexpectedly: ${shortErr(mobileResult.reason)}`,'error')
+                    this.recordRiskEvent('error', 6, `mobile-rejected:${shortErr(mobileResult.reason)}`)
                     errors.push(formatFullErr('mobile-rejected', mobileResult.reason))
                 }
             } else {
@@ -573,10 +762,12 @@ export class MicrosoftRewardsBot {
                     this.isDesktopRunning = true
                     const desktopResult = await this.Desktop(account).catch(e => {
                         const msg = e instanceof Error ? e.message : String(e)
+                        this.recordRiskEvent('error', 6, `desktop:${msg}`)
                         log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
                         const bd = detectBanReason(e)
                         if (bd.status) {
                             banned.status = true; banned.reason = bd.reason.substring(0,200)
+                            this.recordRiskEvent('ban_hint', 9, bd.reason)
                             void this.handleImmediateBanAlert(account.email, banned.reason)
                         }
                         errors.push(formatFullErr('desktop', e)); return null
@@ -591,12 +782,14 @@ export class MicrosoftRewardsBot {
                     if (!banned.status && !this.compromisedModeActive) {
                         this.isMobile = true
                         this.isMobileRunning = true
-                        const mobileResult = await this.Mobile(account).catch(e => {
+                        const mobileResult = await this.Mobile(account).catch((e: unknown) => {
                             const msg = e instanceof Error ? e.message : String(e)
+                            this.recordRiskEvent('error', 6, `mobile:${msg}`)
                             log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
                             const bd = detectBanReason(e)
                             if (bd.status) {
                                 banned.status = true; banned.reason = bd.reason.substring(0,200)
+                                this.recordRiskEvent('ban_hint', 9, bd.reason)
                                 void this.handleImmediateBanAlert(account.email, banned.reason)
                             }
                             errors.push(formatFullErr('mobile', e)); return null
@@ -616,20 +809,53 @@ export class MicrosoftRewardsBot {
             const accountEnd = Date.now()
             const durationMs = accountEnd - accountStart
             const totalCollected = desktopCollected + mobileCollected
-            // Correct initial points (previous version double counted desktop+mobile baselines)
-            // Strategy: pick the lowest non-zero baseline (desktopInitial or mobileInitial) as true start.
-            // Sequential flow: desktopInitial < mobileInitial after gain -> min = original baseline.
-            // Parallel flow: both baselines equal -> min is fine.
-            const baselines: number[] = []
-            if (desktopInitial) baselines.push(desktopInitial)
-            if (mobileInitial) baselines.push(mobileInitial)
+            
+            // Calculate initial total: use the lower value between desktop and mobile initial points
+            // to avoid double-counting. In sequential mode, mobile starts with desktop's earned points.
+            // In parallel mode, both should start from the same baseline.
             let initialTotal = 0
-            if (baselines.length === 1) initialTotal = baselines[0]!
-            else if (baselines.length === 2) initialTotal = Math.min(baselines[0]!, baselines[1]!)
-            // Fallback if both missing
-            if (initialTotal === 0 && (desktopInitial || mobileInitial)) initialTotal = desktopInitial || mobileInitial || 0
+            if (desktopInitial > 0 && mobileInitial > 0) {
+                // Both flows completed: take minimum (true baseline before any earning)
+                initialTotal = Math.min(desktopInitial, mobileInitial)
+            } else if (desktopInitial > 0) {
+                // Only desktop completed
+                initialTotal = desktopInitial
+            } else if (mobileInitial > 0) {
+                // Only mobile completed
+                initialTotal = mobileInitial
+            }
+            
             const endTotal = initialTotal + totalCollected
-            this.accountSummaries.push({
+            if (!banned.status) {
+                this.recordRiskEvent('success', 1, 'account-complete')
+            }
+
+            const riskMetrics = this.lastRiskMetrics
+            let riskScore = riskMetrics?.score
+            const riskLevel = riskMetrics?.level
+            let banPredictionScore: number | undefined
+            let banLikelihood: string | undefined
+
+            if (this.banPredictor && this.config.riskManagement?.banPrediction) {
+                const prediction = this.banPredictor.predictBanRisk(account.email, runNumber, runNumber)
+                banPredictionScore = prediction.riskScore
+                banLikelihood = prediction.likelihood
+                riskScore = prediction.riskScore
+                if (prediction.likelihood === 'high' || prediction.likelihood === 'critical') {
+                    log('main', 'RISK', `Ban predictor warning for ${account.email}: likelihood=${prediction.likelihood} score=${prediction.riskScore}`, 'warn', 'yellow')
+                }
+                if (banned.status) {
+                    this.banPredictor.recordBan(account.email, runNumber, runNumber)
+                } else {
+                    this.banPredictor.recordSuccess(account.email, runNumber, runNumber)
+                }
+            } else if (banned.status && this.banPredictor) {
+                this.banPredictor.recordBan(account.email, runNumber, runNumber)
+            } else if (this.banPredictor && !banned.status) {
+                this.banPredictor.recordSuccess(account.email, runNumber, runNumber)
+            }
+
+            const summary: AccountSummary = {
                 email: account.email,
                 durationMs,
                 desktopCollected,
@@ -638,13 +864,22 @@ export class MicrosoftRewardsBot {
                 initialTotal,
                 endTotal,
                 errors,
-                banned
-            })
+                banned,
+                riskScore,
+                riskLevel,
+                banPredictionScore,
+                banLikelihood
+            }
+
+            this.accountSummaries.push(summary)
+            this.trackAnalytics(summary, riskScore)
+            this.persistAccountCompletion(account.email, accountDayKey, summary)
 
             if (banned.status) {
                 this.bannedTriggered = { email: account.email, reason: banned.reason }
                 // Enter global standby: do not proceed to next accounts
                 this.globalStandby = { active: true, reason: `banned:${banned.reason}` }
+                this.recordRiskEvent('ban_hint', 9, `final-ban:${banned.reason}`)
                 await this.sendGlobalSecurityStandbyAlert(account.email, `Ban detected: ${banned.reason || 'unknown'}`)
             }
 
@@ -745,7 +980,6 @@ export class MicrosoftRewardsBot {
         return 0
     }
 
-    // Desktop
     async Desktop(account: Account) {
         log(false,'FLOW','Desktop() invoked')
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
@@ -754,7 +988,7 @@ export class MicrosoftRewardsBot {
         log(this.isMobile, 'MAIN', 'Starting browser')
 
         // Login into MS Rewards, then optionally stop if compromised
-    await this.login.login(this.homePage, account.email, account.password, account.totp)
+        await this.login.login(this.homePage, account.email, account.password, account.totp)
 
         if (this.compromisedModeActive) {
             // User wants the page to remain open for manual recovery. Do not proceed to tasks.
@@ -783,8 +1017,8 @@ export class MicrosoftRewardsBot {
 
         const data = await this.browser.func.getDashboardData()
 
-    this.pointsInitial = data.userStatus.availablePoints
-    const initial = this.pointsInitial
+        this.pointsInitial = data.userStatus.availablePoints
+        const initial = this.pointsInitial
 
         log(this.isMobile, 'MAIN-POINTS', `Current point count: ${this.pointsInitial}`)
 
@@ -809,7 +1043,7 @@ export class MicrosoftRewardsBot {
 
             // Close desktop browser
             await this.browser.func.closeBrowser(browser, account.email)
-            return
+            return { initialPoints: initial, collectedPoints: 0 }
         }
 
         // Open a new tab to where the tasks are going to be completed
@@ -851,8 +1085,7 @@ export class MicrosoftRewardsBot {
         }
     }
 
-    // Mobile
-    async Mobile(account: Account) {
+    async Mobile(account: Account): Promise<{ initialPoints: number; collectedPoints: number }> {
         log(true,'FLOW','Mobile() invoked')
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
@@ -860,7 +1093,7 @@ export class MicrosoftRewardsBot {
         log(this.isMobile, 'MAIN', 'Starting browser')
 
         // Login into MS Rewards, then respect compromised mode
-    await this.login.login(this.homePage, account.email, account.password, account.totp)
+        await this.login.login(this.homePage, account.email, account.password, account.totp)
         if (this.compromisedModeActive) {
             const reason = this.compromisedReason || 'security-issue'
             log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
@@ -881,12 +1114,11 @@ export class MicrosoftRewardsBot {
             }
             return { initialPoints: 0, collectedPoints: 0 }
         }
-        this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email)
-
+        this.accessToken = await this.login.getMobileAccessToken(this.homePage, account.email, account.totp)
         await this.browser.func.goHome(this.homePage)
 
-    const data = await this.browser.func.getDashboardData()
-    const initialPoints = data.userStatus.availablePoints || this.pointsInitial || 0
+        const data = await this.browser.func.getDashboardData()
+        const initialPoints = data.userStatus.availablePoints || this.pointsInitial || 0
 
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
         const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken)
@@ -951,8 +1183,7 @@ export class MicrosoftRewardsBot {
                     await this.browser.func.closeBrowser(browser, account.email)
 
                     // Create a new browser and try
-                    await this.Mobile(account)
-                    return
+                    return await this.Mobile(account)
                 }
             } else {
                 log(this.isMobile, 'MAIN', 'Unable to fetch search points, your account is most likely too "new" for this! Try again later!', 'warn')
@@ -972,7 +1203,7 @@ export class MicrosoftRewardsBot {
     }
 
     private async sendConclusion(summaries: AccountSummary[]) {
-        const { ConclusionWebhookEnhanced } = await import('./util/ConclusionWebhook')
+        const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
         const cfg = this.config
 
     const conclusionWebhookEnabled = !!(cfg.conclusionWebhook && cfg.conclusionWebhook.enabled)
@@ -987,7 +1218,6 @@ export class MicrosoftRewardsBot {
         let totalEnd = 0
         let totalDuration = 0
         let accountsWithErrors = 0
-        let accountsBanned = 0
         let successes = 0
 
         // Calculate summary statistics
@@ -996,9 +1226,8 @@ export class MicrosoftRewardsBot {
             totalInitial += s.initialTotal
             totalEnd += s.endTotal
             totalDuration += s.durationMs
-            if (s.banned?.status) accountsBanned++
             if (s.errors.length) accountsWithErrors++
-            if (!s.banned?.status && !s.errors.length) successes++
+            else successes++
         }
 
         const avgDuration = totalDuration / totalAccounts
@@ -1015,23 +1244,96 @@ export class MicrosoftRewardsBot {
             }
         } catch { /* ignore */ }
 
-        // Send enhanced webhook
-        if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
-            await ConclusionWebhookEnhanced(cfg, {
-                version,
-                runId: this.runId,
-                totalAccounts,
-                successes,
-                accountsWithErrors,
-                accountsBanned,
-                totalCollected,
-                totalInitial,
-                totalEnd,
-                avgPointsPerAccount,
-                totalDuration,
-                avgDuration,
-                summaries
+        const formatNumber = (value: number) => value.toLocaleString()
+        const formatSigned = (value: number) => `${value >= 0 ? '+' : ''}${formatNumber(value)}`
+        const padText = (value: string, length: number) => {
+            if (value.length >= length) {
+                if (length <= 1) return value.slice(0, length)
+                return value.length === length ? value : `${value.slice(0, length - 1)}…`
+            }
+            return value + ' '.repeat(length - value.length)
+        }
+        const buildAccountLine = (summary: AccountSummary): string => {
+            const statusIcon = summary.banned?.status ? '🚫' : (summary.errors.length ? '⚠️' : '✅')
+            const email = padText(summary.email, 24)
+            const total = padText(`${formatSigned(summary.totalCollected)} pts`, 13)
+            const desktop = padText(`D:${formatSigned(summary.desktopCollected)}`, 13)
+            const mobile = padText(`M:${formatSigned(summary.mobileCollected)}`, 13)
+            const totals = padText(`${formatNumber(summary.initialTotal)}→${formatNumber(summary.endTotal)}`, 21)
+            const duration = padText(formatDuration(summary.durationMs), 10)
+            const extras: string[] = []
+            if (summary.banned?.status) extras.push(`BAN:${summary.banned.reason || 'detected'}`)
+            if (summary.errors.length) extras.push(`ERR:${summary.errors.slice(0, 1).join(' | ')}`)
+            if (summary.riskLevel) {
+                const scoreLabel = summary.riskScore != null ? `(${summary.riskScore})` : ''
+                extras.push(`RISK:${summary.riskLevel}${scoreLabel}`)
+            }
+            if (summary.banLikelihood) {
+                const predLabel = summary.banPredictionScore != null ? `(${summary.banPredictionScore})` : ''
+                extras.push(`PRED:${summary.banLikelihood}${predLabel}`)
+            }
+            const tail = extras.length ? ` | ${extras.join(' • ')}` : ''
+            return `${statusIcon} ${email} ${total} ${desktop}${mobile} ${totals} ${duration}${tail}`
+        }
+        const chunkLines = (lines: string[], maxLen = 900): string[][] => {
+            const chunks: string[][] = []
+            let current: string[] = []
+            let currentLen = 0
+            for (const line of lines) {
+                const nextLen = line.length + 1
+                if (current.length > 0 && currentLen + nextLen > maxLen) {
+                    chunks.push(current)
+                    current = []
+                    currentLen = 0
+                }
+                current.push(line)
+                currentLen += nextLen
+            }
+            if (current.length) chunks.push(current)
+            return chunks
+        }
+
+        const accountLines = summaries.map(buildAccountLine)
+        const accountChunks = chunkLines(accountLines)
+
+        const riskSamples = summaries.filter(s => typeof s.riskScore === 'number' && !Number.isNaN(s.riskScore as number))
+        const globalLines = [
+            `Total points: **${formatNumber(totalInitial)}** → **${formatNumber(totalEnd)}** (${formatSigned(totalCollected)} pts)`,
+            `Accounts: ✅ ${successes}${accountsWithErrors > 0 ? ` • ⚠️ ${accountsWithErrors}` : ''} (${totalAccounts} total)`,
+            `Average per account: **${formatSigned(avgPointsPerAccount)} pts** • **${formatDuration(avgDuration)}**`,
+            `Runtime: **${formatDuration(totalDuration)}**`
+        ]
+
+        if (riskSamples.length > 0) {
+            const avgRiskScore = riskSamples.reduce((sum, s) => sum + (s.riskScore ?? 0), 0) / riskSamples.length
+            const highestRisk = riskSamples.reduce((prev, curr) => ((curr.riskScore ?? 0) > (prev.riskScore ?? 0) ? curr : prev))
+            globalLines.push(`Risk avg: **${avgRiskScore.toFixed(1)}** • Highest: ${highestRisk.email} (${highestRisk.riskScore ?? 0})`)
+        }
+
+        const globalStatsValue = globalLines.join('\n')
+
+        const fields: { name: string; value: string; inline?: boolean }[] = [
+            { name: '📊 Run Totals', value: globalStatsValue, inline: false }
+        ]
+
+        if (accountChunks.length === 0) {
+            fields.push({ name: '🧾 Account Overview', value: '_No account results recorded_', inline: false })
+        } else {
+            accountChunks.forEach((chunk, index) => {
+                const name = accountChunks.length === 1 ? '🧾 Account Overview' : `🧾 Account Overview (part ${index + 1})`
+                fields.push({ name, value: ['```', ...chunk, '```'].join('\n'), inline: false })
             })
+        }
+
+        // Send webhook
+        if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
+            await ConclusionWebhook(
+                cfg,
+                '🎯 MS Rewi - Daily Summary',
+                `**v${version}** • Run ${this.runId}`,
+                fields,
+                accountsWithErrors > 0 ? DISCORD.COLOR_ORANGE : DISCORD.COLOR_GREEN
+            )
         }
 
         // Write local JSON report
@@ -1065,10 +1367,9 @@ export class MicrosoftRewardsBot {
             log('main','REPORT',`Failed diagnostics cleanup: ${e instanceof Error ? e.message : e}`,'warn')
         }
 
-        // Optional community notice (shown randomly in ~15% of successful runs)
-        if (Math.random() > 0.85 && successes > 0 && accountsWithErrors === 0) {
-            log('main','INFO','Want faster updates & enhanced anti-detection? Community builds available: https://discord.gg/kn3695Kx32')
-        }
+        await this.publishAnalyticsArtifacts().catch(e => {
+            log('main','ANALYTICS',`Failed analytics post-processing: ${e instanceof Error ? e.message : e}`,'warn')
+        })
 
     }
 
@@ -1102,6 +1403,39 @@ export class MicrosoftRewardsBot {
         }
     }
 
+    private async publishAnalyticsArtifacts(): Promise<void> {
+        if (!this.analytics || this.config.analytics?.enabled !== true) return
+
+        const retention = this.config.analytics.retentionDays
+        if (typeof retention === 'number' && retention > 0) {
+            this.analytics.cleanup(retention)
+        }
+
+        if (this.config.analytics.exportMarkdown || this.config.analytics.webhookSummary) {
+            const markdown = this.analytics.exportMarkdown(30)
+            if (this.config.analytics.exportMarkdown) {
+                const now = new Date()
+                const day = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+                const baseDir = path.join(process.cwd(), 'reports', day)
+                if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true })
+                const mdPath = path.join(baseDir, `analytics_${this.runId}.md`)
+                fs.writeFileSync(mdPath, markdown, 'utf-8')
+                log('main','ANALYTICS',`Saved analytics summary to ${mdPath}`)
+            }
+
+            if (this.config.analytics.webhookSummary) {
+                const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+                await ConclusionWebhook(
+                    this.config,
+                    '📈 Analytics Snapshot',
+                    ['```markdown', markdown, '```'].join('\n'),
+                    undefined,
+                    DISCORD.COLOR_BLUE
+                )
+            }
+        }
+    }
+
     // Run optional auto-update script based on configuration flags.
     private async runAutoUpdate(): Promise<void> {
         const upd = this.config.update
@@ -1116,14 +1450,9 @@ export class MicrosoftRewardsBot {
         if (upd.docker) args.push('--docker')
         if (args.length === 0) return
 
-        // Pass scheduler flag to update script so it doesn't exit
-        const isSchedulerMode = !!process.env.SCHEDULER_HEARTBEAT_FILE
-        const env = isSchedulerMode 
-            ? { ...process.env, FROM_SCHEDULER: '1' }
-            : process.env
-
+        // Run update script as a child process - it will handle its own exit
         await new Promise<void>((resolve) => {
-            const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit', env })
+            const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit' })
             child.on('close', () => resolve())
             child.on('error', () => resolve())
         })
@@ -1166,6 +1495,10 @@ interface AccountSummary {
     endTotal: number
     errors: string[]
     banned?: { status: boolean; reason: string }
+    riskScore?: number
+    riskLevel?: string
+    banPredictionScore?: number
+    banLikelihood?: string
 }
 
 function shortErr(e: unknown): string {
@@ -1175,18 +1508,49 @@ function shortErr(e: unknown): string {
     return s.substring(0, 120)
 }
 
+function formatDuration(ms: number): string {
+    if (!ms || ms < 1000) return `${ms}ms`
+    const sec = Math.floor(ms / 1000)
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = sec % 60
+    const parts: string[] = []
+    if (h) parts.push(`${h}h`)
+    if (m) parts.push(`${m}m`)
+    if (s) parts.push(`${s}s`)
+    return parts.join(' ') || `${ms}ms`
+}
+
 async function main() {
+    const initialConfig = loadConfig()
+    const scheduleEnabled = initialConfig?.schedule?.enabled === true
+    const skipScheduler = process.argv.some((arg: string) => arg === '--no-scheduler' || arg === '--single-run')
+        || process.env.REWARDS_FORCE_SINGLE_RUN === '1'
+    const buyModeRequested = process.argv.includes('-buy')
+    const invokedByScheduler = !!process.env.SCHEDULER_HEARTBEAT_FILE
+
+    if (scheduleEnabled && !skipScheduler && !buyModeRequested && !invokedByScheduler) {
+        log('main', 'SCHEDULER', 'Schedule enabled → handing off to in-process scheduler. Use --no-scheduler for a single pass.', 'log', 'green')
+        try {
+            await import('./scheduler')
+            return
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err)
+            log('main', 'SCHEDULER', `Failed to start scheduler inline: ${message}. Continuing with single-run fallback.`, 'warn', 'yellow')
+        }
+    }
+
     const rewardsBot = new MicrosoftRewardsBot(false)
 
     const crashState = { restarts: 0 }
     const config = rewardsBot.config
 
     const attachHandlers = () => {
-        process.on('unhandledRejection', (reason) => {
+        process.on('unhandledRejection', (reason: unknown) => {
             log('main','FATAL','UnhandledRejection: ' + (reason instanceof Error ? reason.message : String(reason)), 'error')
             gracefulExit(1)
         })
-        process.on('uncaughtException', (err) => {
+        process.on('uncaughtException', (err: Error) => {
             log('main','FATAL','UncaughtException: ' + err.message, 'error')
             gracefulExit(1)
         })

@@ -95,7 +95,9 @@ export default class BrowserFunc {
             }
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GO-HOME', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GO-HOME', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Go home failed: ' + errorMessage)
         }
     }
 
@@ -114,7 +116,8 @@ export default class BrowserFunc {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
                 await this.goHome(target)
             }
-                let lastError: unknown = null
+            
+            let lastError: unknown = null
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     // Reload the page to get new data
@@ -136,9 +139,15 @@ export default class BrowserFunc {
                             break
                         }
                     }
-                    if (attempt === 2 && lastError) throw lastError
-                    await this.bot.utils.wait(1000)
+                    if (attempt === 2) {
+                        await this.bot.utils.wait(1000)
+                    }
                 }
+            }
+            
+            // If reload failed after all attempts, throw the last error
+            if (lastError) {
+                throw lastError
             }
 
             // Wait a bit longer for scripts to load, especially on mobile
@@ -151,7 +160,12 @@ export default class BrowserFunc {
 
             let scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
-                const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
+                // Try multiple patterns for better compatibility
+                const targetScript = scripts.find(script => 
+                    script.innerText.includes('var dashboard') ||
+                    script.innerText.includes('dashboard=') ||
+                    script.innerText.includes('dashboard :')
+                )
 
                 return targetScript?.innerText ? targetScript.innerText : null
             })
@@ -175,7 +189,11 @@ export default class BrowserFunc {
                 
                 const retryContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
-                    const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
+                    const targetScript = scripts.find(script => 
+                        script.innerText.includes('var dashboard') ||
+                        script.innerText.includes('dashboard=') ||
+                        script.innerText.includes('dashboard :')
+                    )
                     return targetScript?.innerText ? targetScript.innerText : null
                 }).catch(()=>null)
                 
@@ -187,7 +205,8 @@ export default class BrowserFunc {
                     }).catch(() => 'Unable to get script debug info')
                     
                     this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Available scripts preview: ${scriptsDebug}`, 'warn')
-                    throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
+                    throw new Error('Dashboard data not found within script - check page structure')
                 }
                 scriptContent = retryContent
             }
@@ -225,13 +244,16 @@ export default class BrowserFunc {
                 await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch((e) => {
                     this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
                 })
-                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
+                throw new Error('Unable to parse dashboard script - check diagnostics')
             }
 
             return dashboardData
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Error fetching dashboard data: ${error}`, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Error fetching dashboard data: ${errorMessage}`, 'error')
+            throw new Error('Get dashboard data failed: ' + errorMessage)
         }
 
     }
@@ -292,7 +314,9 @@ export default class BrowserFunc {
                 totalEarnablePoints
             }
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-BROWSER-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GET-BROWSER-EARNABLE-POINTS', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Get browser earnable points failed: ' + errorMessage)
         }
     }
 
@@ -337,13 +361,15 @@ export default class BrowserFunc {
 
             for (const item of eligibleActivities) {
                 if (item.attributes.type === 'msnreadearn') {
-                    points.readToEarn = parseInt(item.attributes.pointmax ?? '') - parseInt(item.attributes.pointprogress ?? '')
+                    points.readToEarn = parseInt(item.attributes.pointmax ?? '', 10) - parseInt(item.attributes.pointprogress ?? '', 10)
                     break
                 } else if (item.attributes.type === 'checkin') {
-                    const checkInDay = parseInt(item.attributes.progress ?? '') % 7
-
-                    if (checkInDay < 6 && (new Date()).getDate() != (new Date(item.attributes.last_updated ?? '')).getDate()) {
-                        points.checkIn = parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '')
+                    const checkInDay = parseInt(item.attributes.progress ?? '', 10) % 7
+                    const today = new Date()
+                    const lastUpdated = new Date(item.attributes.last_updated ?? '')
+                    
+                    if (checkInDay < 6 && today.getDate() !== lastUpdated.getDate()) {
+                        points.checkIn = parseInt(item.attributes['day_' + (checkInDay + 1) + '_points'] ?? '', 10)
                     }
                     break
                 }
@@ -353,7 +379,9 @@ export default class BrowserFunc {
 
             return points
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GET-APP-EARNABLE-POINTS', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Get app earnable points failed: ' + errorMessage)
         }
     }
 
@@ -367,7 +395,9 @@ export default class BrowserFunc {
 
             return data.userStatus.availablePoints
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-CURRENT-POINTS', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GET-CURRENT-POINTS', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Get current points failed: ' + errorMessage)
         }
     }
 
@@ -419,7 +449,8 @@ export default class BrowserFunc {
                     this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found quiz data using variable: ${foundVariable}`, 'log')
                     return quizData
                 } else {
-                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Variable ${foundVariable} found but could not extract JSON data`, 'error')
+                    this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Variable ${foundVariable} found but could not extract JSON data`, 'error')
+                    throw new Error(`Quiz data variable ${foundVariable} found but JSON extraction failed`)
                 }
             } else {
                 // Log available scripts for debugging
@@ -432,11 +463,14 @@ export default class BrowserFunc {
                 this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Script not found. Tried variables: ${possibleVariables.join(', ')}`, 'error')
                 this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found ${allScripts.length} scripts on page`, 'warn')
                 
-                throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
+                throw new Error('Script containing quiz data not found - check page structure')
             }
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred: ' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Get quiz data failed: ' + errorMessage)
         }
 
     }
@@ -502,7 +536,9 @@ export default class BrowserFunc {
             await browser.close()
             this.bot.log(this.bot.isMobile, 'CLOSE-BROWSER', 'Browser closed cleanly!')
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'CLOSE-BROWSER', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'CLOSE-BROWSER', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Close browser failed: ' + errorMessage)
         }
     }
 }

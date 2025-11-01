@@ -1,15 +1,43 @@
-ISC License
+PROPRIETARY LICENSE
 
-Copyright (c) 2024-2025 TheNetsky and Contributors
+Copyright (c) 2024-2025 LightZirconite and Contributors
 
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
+All rights reserved.
 
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+TERMS AND CONDITIONS:
+
+1. PERMITTED USE:
+   - You may download and use this software for personal, non-commercial purposes.
+   - You may modify the source code for your own personal use.
+   - You may submit pull requests (PRs) to the official repository to propose improvements.
+
+2. PROHIBITED ACTIONS:
+   - You may NOT redistribute this software, modified or unmodified, in any form.
+   - You may NOT share, publish, or distribute your modifications publicly.
+   - You may NOT use this software for commercial purposes.
+   - You may NOT sublicense, sell, rent, or lease this software.
+   - You may NOT create derivative works for public distribution.
+   - You may NOT remove or modify this license or copyright notices.
+
+3. CONTRIBUTIONS:
+   - By submitting a pull request, you grant the copyright holder the right to use,
+     modify, and distribute your contributions under this license.
+   - You retain no rights to your contributions once merged into the official repository.
+
+4. DISCLAIMER:
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+   HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+5. TERMINATION:
+   This license is effective until terminated. Your rights under this license will
+   terminate automatically without notice if you fail to comply with any term herein.
+
+6. GOVERNING LAW:
+   This license shall be governed by and construed in accordance with applicable laws,
+   without regard to its conflict of law provisions.
+
+For permissions beyond the scope of this license, please contact the copyright holder.

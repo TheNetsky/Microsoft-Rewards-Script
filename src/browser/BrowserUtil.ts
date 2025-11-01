@@ -183,9 +183,12 @@ export default class BrowserUtil {
                 return newTab
             }
 
-            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'Unable to get latest tab', 'error')
+            this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'Unable to get latest tab', 'error')
+            throw new Error('Unable to get latest tab - no pages found in browser context')
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'GET-NEW-TAB', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Get new tab failed: ' + errorMessage)
         }
     }
 
@@ -202,7 +205,9 @@ export default class BrowserUtil {
             }
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            this.bot.log(this.bot.isMobile, 'RELOAD-BAD-PAGE', 'An error occurred: ' + errorMessage, 'error')
+            throw new Error('Reload bad page failed: ' + errorMessage)
         }
     }
 

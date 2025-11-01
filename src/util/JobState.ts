@@ -2,8 +2,18 @@ import fs from 'fs'
 import path from 'path'
 import type { Config } from '../interface/Config'
 
+type AccountCompletionMeta = {
+  runId?: string
+  completedAt: string
+  totalCollected?: number
+  banned?: boolean
+  errors?: number
+}
+
 type DayState = {
   doneOfferIds: string[]
+  accountCompleted?: boolean
+  accountMeta?: AccountCompletionMeta
 }
 
 type FileState = {
@@ -52,6 +62,42 @@ export class JobState {
     const d = st.days[day]
     if (!d.doneOfferIds.includes(offerId)) d.doneOfferIds.push(offerId)
     this.save(email, st)
+  }
+
+  isAccountComplete(email: string, day: string): boolean {
+    const st = this.load(email)
+    const d = st.days[day]
+    return d?.accountCompleted === true
+  }
+
+  markAccountComplete(
+    email: string,
+    day: string,
+    meta?: { runId?: string; totalCollected?: number; banned?: boolean; errors?: number }
+  ): void {
+    const st = this.load(email)
+    if (!st.days[day]) st.days[day] = { doneOfferIds: [] }
+    const d = st.days[day]
+    d.accountCompleted = true
+    d.accountMeta = {
+      completedAt: new Date().toISOString(),
+      runId: meta?.runId,
+      totalCollected: meta?.totalCollected,
+      banned: meta?.banned ?? false,
+      errors: meta?.errors ?? 0
+    }
+    this.save(email, st)
+  }
+
+  clearAccountComplete(email: string, day: string): void {
+    const st = this.load(email)
+    const d = st.days[day]
+    if (!d) return
+    if (d.accountCompleted || d.accountMeta) {
+      delete d.accountCompleted
+      delete d.accountMeta
+      this.save(email, st)
+    }
   }
 }
 

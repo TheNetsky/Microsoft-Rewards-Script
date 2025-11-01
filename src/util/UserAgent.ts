@@ -10,6 +10,12 @@ const NOT_A_BRAND_VERSION = '99'
 const EDGE_VERSION_URL = 'https://edgeupdates.microsoft.com/api/products'
 const EDGE_VERSION_CACHE_TTL_MS = 1000 * 60 * 60
 
+// Static fallback versions (updated periodically, valid as of October 2024)
+const FALLBACK_EDGE_VERSIONS: EdgeVersionResult = {
+    android: '130.0.2849.66',
+    windows: '130.0.2849.68'
+}
+
 type EdgeVersionResult = {
     android?: string
     windows?: string
@@ -71,37 +77,47 @@ export async function getChromeVersion(isMobile: boolean): Promise<string> {
     }
 }
 
-export async function getEdgeVersions(isMobile: boolean) {
+export async function getEdgeVersions(isMobile: boolean): Promise<EdgeVersionResult> {
     const now = Date.now()
+    
+    // Return cached version if still valid
     if (edgeVersionCache && edgeVersionCache.expiresAt > now) {
         return edgeVersionCache.data
     }
 
+    // Wait for in-flight request if one exists
     if (edgeVersionInFlight) {
         try {
             return await edgeVersionInFlight
         } catch (error) {
             if (edgeVersionCache) {
-                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Using cached Edge versions after in-flight failure: ' + formatEdgeError(error), 'warn')
+                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Using cached Edge versions after in-flight failure', 'warn')
                 return edgeVersionCache.data
             }
-            throw error
+            // Fall through to fetch attempt below
         }
     }
 
+    // Attempt to fetch fresh versions
     const fetchPromise = fetchEdgeVersionsWithRetry(isMobile)
         .then(result => {
             edgeVersionCache = { data: result, expiresAt: Date.now() + EDGE_VERSION_CACHE_TTL_MS }
             edgeVersionInFlight = null
             return result
         })
-        .catch(error => {
+        .catch(() => {
             edgeVersionInFlight = null
+            
+            // Try stale cache first
             if (edgeVersionCache) {
-                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Falling back to cached Edge versions: ' + formatEdgeError(error), 'warn')
+                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Using stale cached Edge versions due to fetch failure', 'warn')
                 return edgeVersionCache.data
             }
-            throw log(isMobile, 'USERAGENT-EDGE-VERSION', 'Failed to fetch Edge versions: ' + formatEdgeError(error), 'error')
+            
+            // Fall back to static versions
+            log(isMobile, 'USERAGENT-EDGE-VERSION', 'Using static fallback Edge versions (API unavailable)', 'warn')
+            edgeVersionCache = { data: FALLBACK_EDGE_VERSIONS, expiresAt: Date.now() + EDGE_VERSION_CACHE_TTL_MS }
+            return FALLBACK_EDGE_VERSIONS
         })
 
     edgeVersionInFlight = fetchPromise
@@ -149,108 +165,117 @@ async function fetchEdgeVersionsWithRetry(isMobile: boolean): Promise<EdgeVersio
 }
 
 async function fetchEdgeVersionsOnce(isMobile: boolean): Promise<EdgeVersionResult> {
+    let lastError: unknown = null
+    
+    // Try axios first
     try {
         const response = await axios<EdgeVersion[]>({
             url: EDGE_VERSION_URL,
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (compatible; rewards-bot/2.1)' // Provide UA to avoid stricter servers
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
-            timeout: 10000
+            timeout: 10000,
+            validateStatus: (status) => status === 200
         })
+        
+        if (!response.data || !Array.isArray(response.data)) {
+            throw new Error('Invalid response format from Edge API')
+        }
+        
         return mapEdgeVersions(response.data)
+    } catch (axiosError) {
+        lastError = axiosError
+        // Continue to fallback
+    }
 
-    } catch (primaryError) {
-        const fallback = await tryNativeFetchFallback(isMobile)
+    // Try native fetch as fallback
+    try {
+        const fallback = await tryNativeFetchFallback()
         if (fallback) {
-            log(isMobile, 'USERAGENT-EDGE-VERSION', 'Axios failed, native fetch succeeded: ' + formatEdgeError(primaryError), 'warn')
+            log(isMobile, 'USERAGENT-EDGE-VERSION', 'Axios failed, using native fetch fallback', 'warn')
             return fallback
         }
-        throw primaryError
+    } catch (fetchError) {
+        lastError = fetchError
     }
+    
+    // Both methods failed
+    const errorMsg = lastError instanceof Error ? lastError.message : String(lastError)
+    throw new Error(`Failed to fetch Edge versions: ${errorMsg}`)
 }
 
-async function tryNativeFetchFallback(isMobile: boolean): Promise<EdgeVersionResult | null> {
+async function tryNativeFetchFallback(): Promise<EdgeVersionResult | null> {
     let timeoutHandle: NodeJS.Timeout | undefined
     try {
         const controller = new AbortController()
         timeoutHandle = setTimeout(() => controller.abort(), 10000)
+        
         const response = await fetch(EDGE_VERSION_URL, {
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (compatible; rewards-bot/2.1)'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
             signal: controller.signal
         })
+        
         clearTimeout(timeoutHandle)
         timeoutHandle = undefined
+        
         if (!response.ok) {
-            throw new Error('HTTP ' + response.status)
+            throw new Error(`HTTP ${response.status}`)
         }
+        
         const data = await response.json() as EdgeVersion[]
+        
+        if (!Array.isArray(data)) {
+            throw new Error('Invalid response format')
+        }
+        
         return mapEdgeVersions(data)
     } catch (error) {
         if (timeoutHandle) clearTimeout(timeoutHandle)
-        log(isMobile, 'USERAGENT-EDGE-VERSION', 'Native fetch fallback failed: ' + formatEdgeError(error), 'warn')
         return null
     }
 }
 
 function mapEdgeVersions(data: EdgeVersion[]): EdgeVersionResult {
-    const stable = data.find(entry => entry.Product.toLowerCase() === 'stable')
-        ?? data.find(entry => /stable/i.test(entry.Product))
-    if (!stable) {
-        throw new Error('Stable Edge channel not found in response payload')
+    if (!Array.isArray(data) || data.length === 0) {
+        throw new Error('Edge API returned empty or invalid data')
+    }
+    
+    const stable = data.find(entry => entry?.Product?.toLowerCase() === 'stable')
+        ?? data.find(entry => entry?.Product && /stable/i.test(entry.Product))
+    
+    if (!stable || !stable.Releases || !Array.isArray(stable.Releases)) {
+        throw new Error('Stable Edge channel not found or invalid format')
     }
 
-    const androidRelease = stable.Releases.find(release => release.Platform === Platform.Android)
-    const windowsRelease = stable.Releases.find(release => release.Platform === Platform.Windows && release.Architecture === Architecture.X64)
-        ?? stable.Releases.find(release => release.Platform === Platform.Windows)
+    const androidRelease = stable.Releases.find(release => 
+        release?.Platform === Platform.Android && release?.ProductVersion
+    )
+    
+    const windowsRelease = stable.Releases.find(release => 
+        release?.Platform === Platform.Windows && 
+        release?.Architecture === Architecture.X64 && 
+        release?.ProductVersion
+    ) ?? stable.Releases.find(release => 
+        release?.Platform === Platform.Windows && 
+        release?.ProductVersion
+    )
 
-    return {
+    const result: EdgeVersionResult = {
         android: androidRelease?.ProductVersion,
         windows: windowsRelease?.ProductVersion
     }
-}
-
-function formatEdgeError(error: unknown): string {
-    if (isAggregateErrorLike(error)) {
-        const inner = error.errors
-            .map(innerErr => formatEdgeError(innerErr))
-            .filter(Boolean)
-            .join('; ')
-        const message = error.message || 'AggregateError'
-        return inner ? `${message} | causes: ${inner}` : message
+    
+    // Validate at least one version was found
+    if (!result.android && !result.windows) {
+        throw new Error('No valid Edge versions found in API response')
     }
 
-    if (error instanceof Error) {
-        const parts = [`${error.name}: ${error.message}`]
-        const cause = getErrorCause(error)
-        if (cause) {
-            parts.push('cause => ' + formatEdgeError(cause))
-        }
-        return parts.join(' | ')
-    }
-
-    return String(error)
-}
-
-type AggregateErrorLike = { message?: string; errors: unknown[] }
-
-function isAggregateErrorLike(error: unknown): error is AggregateErrorLike {
-    if (!error || typeof error !== 'object') {
-        return false
-    }
-    const candidate = error as { errors?: unknown }
-    return Array.isArray(candidate.errors)
-}
-
-function getErrorCause(error: { cause?: unknown } | Error): unknown {
-    if (typeof (error as { cause?: unknown }).cause === 'undefined') {
-        return undefined
-    }
-    return (error as { cause?: unknown }).cause
+    return result
 }
 
 export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprintWithHeaders, isMobile: boolean): Promise<BrowserFingerprintWithHeaders> {
@@ -266,17 +291,10 @@ export async function updateFingerprintUserAgent(fingerprint: BrowserFingerprint
         fingerprint.headers['sec-ch-ua'] = `"Microsoft Edge";v="${componentData.edge_major_version}", "Not=A?Brand";v="${componentData.not_a_brand_major_version}", "Chromium";v="${componentData.chrome_major_version}"`
         fingerprint.headers['sec-ch-ua-full-version-list'] = `"Microsoft Edge";v="${componentData.edge_version}", "Not=A?Brand";v="${componentData.not_a_brand_version}", "Chromium";v="${componentData.chrome_version}"`
 
-        /*
-        Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36 EdgA/129.0.0.0
-        sec-ch-ua-full-version-list: "Microsoft Edge";v="129.0.2792.84", "Not=A?Brand";v="8.0.0.0", "Chromium";v="129.0.6668.90"
-        sec-ch-ua: "Microsoft Edge";v="129", "Not=A?Brand";v="8", "Chromium";v="129"
-
-        Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36
-        "Google Chrome";v="129.0.6668.90", "Not=A?Brand";v="8.0.0.0", "Chromium";v="129.0.6668.90"
-        */
-
         return fingerprint
     } catch (error) {
-        throw log(isMobile, 'USER-AGENT-UPDATE', 'An error occurred:' + error, 'error')
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        log(isMobile, 'USER-AGENT-UPDATE', `Failed to update fingerprint: ${errorMsg}`, 'error')
+        throw new Error(`User-Agent update failed: ${errorMsg}`)
     }
 }

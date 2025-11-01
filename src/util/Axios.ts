@@ -21,18 +21,63 @@ class AxiosClient {
     }
 
     private getAgentForProxy(proxyConfig: AccountProxy): HttpProxyAgent<string> | HttpsProxyAgent<string> | SocksProxyAgent {
-        const { url, port } = proxyConfig
+        const { proxyUrl, protocol } = this.buildProxyUrl(proxyConfig)
+        const normalized = protocol.replace(/:$/, '')
 
-        switch (true) {
-            case proxyConfig.url.startsWith('http://'):
-                return new HttpProxyAgent(`${url}:${port}`)
-            case proxyConfig.url.startsWith('https://'):
-                return new HttpsProxyAgent(`${url}:${port}`)
-            case proxyConfig.url.startsWith('socks://') || proxyConfig.url.startsWith('socks4://') || proxyConfig.url.startsWith('socks5://'):
-                return new SocksProxyAgent(`${url}:${port}`)
+        switch (normalized) {
+            case 'http':
+                return new HttpProxyAgent(proxyUrl)
+            case 'https':
+                return new HttpsProxyAgent(proxyUrl)
+            case 'socks':
+            case 'socks4':
+            case 'socks5':
+                return new SocksProxyAgent(proxyUrl)
             default:
-                throw new Error(`Unsupported proxy protocol in "${url}". Supported: http://, https://, socks://, socks4://, socks5://`)
+                throw new Error(`Unsupported proxy protocol in "${proxyConfig.url}". Supported: http://, https://, socks://, socks4://, socks5://`)
         }
+    }
+
+    private buildProxyUrl(proxyConfig: AccountProxy): { proxyUrl: string; protocol: string } {
+        const { url, port, username, password } = proxyConfig
+
+        if (!url) {
+            throw new Error('Proxy URL is required when proxyAxios is enabled.')
+        }
+
+        const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)
+        const candidate = hasScheme ? url : `http://${url}`
+
+        let parsedUrl: URL
+        try {
+            parsedUrl = new URL(candidate)
+        } catch (err) {
+            throw new Error(`Invalid proxy URL "${url}": ${(err as Error).message}`)
+        }
+
+        const protocol = parsedUrl.protocol.replace(/:$/, '')
+        const allowed = new Set(['http', 'https', 'socks', 'socks4', 'socks5'])
+        if (!allowed.has(protocol)) {
+            throw new Error(`Unsupported proxy protocol in "${url}". Supported: http://, https://, socks://, socks4://, socks5://`)
+        }
+
+        if (!parsedUrl.port) {
+            if (port) {
+                parsedUrl.port = String(port)
+            } else {
+                throw new Error(`Proxy port missing for "${url}". Provide a port value.`)
+            }
+        }
+
+        if (username) {
+            parsedUrl.username = encodeURIComponent(username)
+        }
+
+        if (password) {
+            parsedUrl.password = encodeURIComponent(password)
+        }
+
+        return { proxyUrl: parsedUrl.toString(), protocol: parsedUrl.protocol }
     }
 
     // Generic method to make any Axios request

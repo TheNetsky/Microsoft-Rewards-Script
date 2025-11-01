@@ -51,6 +51,19 @@ export class Search extends Workers {
             }
         }
 
+        if (this.bot.config.queryDiversity?.enabled && this.bot.queryEngine) {
+            try {
+                const targetCount = Math.max(20, missingPoints * 2)
+                const extraTerms = await this.bot.queryEngine.fetchQueries(targetCount)
+                if (extraTerms.length) {
+                    this.bot.log(this.bot.isMobile, 'SEARCH-BING', `Query diversity enabled — adding ${extraTerms.length} mixed-source terms`)
+                    googleSearchQueries.push(...extraTerms.map(term => ({ topic: term, related: [] })))
+                }
+            } catch (err) {
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `Query diversity error: ${err instanceof Error ? err.message : err}`, 'warn')
+            }
+        }
+
         googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
         // Deduplicate topics
         const seen = new Set<string>()

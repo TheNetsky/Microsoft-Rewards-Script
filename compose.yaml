@@ -6,8 +6,8 @@ services:
 
     # Volume mounts: Specify a location where you want to save the files on your local machine.
     volumes:
-      - ./src/accounts.json:/usr/src/microsoft-rewards-script/accounts.json:ro
-      - ./src/config.jsonc:/usr/src/microsoft-rewards-script/config.json:ro
+      - ./src/accounts.jsonc:/usr/src/microsoft-rewards-script/src/accounts.jsonc:ro
+      - ./src/config.jsonc:/usr/src/microsoft-rewards-script/src/config.jsonc:ro
       - ./sessions:/usr/src/microsoft-rewards-script/sessions # Optional, saves your login session
 
     environment:
@@ -15,16 +15,28 @@ services:
       NODE_ENV: "production"
       # Force headless when running in Docker (uses Chromium Headless Shell only)
       FORCE_HEADLESS: "1"
+      
+      # ============================================================
+      # SCHEDULING MODE: Choose one
+      # ============================================================
+      # Option 1: Built-in JavaScript Scheduler (default, recommended)
+      # - No additional setup needed
+      # - Uses config.jsonc schedule settings
+      # - Lighter resource usage
       #SCHEDULER_DAILY_JITTER_MINUTES_MIN: "2"
       #SCHEDULER_DAILY_JITTER_MINUTES_MAX: "10"
-      # Watchdog timeout per pass (minutes, default 180)
       #SCHEDULER_PASS_TIMEOUT_MINUTES: "180"
-      # Run pass in child process (default true). Set to "false" to disable for debugging.
       #SCHEDULER_FORK_PER_PASS: "true"
+      
+      # Option 2: Native Cron (for users who prefer traditional cron)
+      # Uncomment these lines to enable cron instead:
+      #USE_CRON: "true"
+      #CRON_SCHEDULE: "0 9 * * *"  # Daily at 9 AM (see https://crontab.guru)
+      #RUN_ON_START: "true"         # Run once immediately on container start
 
     # Security hardening
     security_opt:
       - no-new-privileges:true
 
-    # Use the built-in scheduler by default; override with `command:` for one-shot runs
+    # Default: use built-in scheduler (entrypoint handles mode selection)
     command: ["npm", "run", "start:schedule"]

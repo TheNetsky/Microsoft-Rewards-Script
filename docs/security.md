@@ -82,9 +82,15 @@ Your accounts **may be banned**. Use at your own risk.
 ```
 
 - ✅ **Unique passwords** per account
-- ✅ **TOTP enabled** for all accounts
+- ✅ **TOTP enabled** for all accounts (see below)
 - ✅ **Strong passwords** (16+ characters)
 - 🔄 **Rotate every 90 days**
+
+**How to enable TOTP:**
+- Go to https://account.live.com/proofs/Manage/additional and turn on two-step verification.
+- Choose **"Set up a different authenticator app"**, then click **"I can't scan the bar code"** to reveal the Base32 secret.
+- Scan the QR with an authenticator you control (Google Authenticator recommended) and copy the secret into `totp`.
+- Enter the app-generated code once to finish pairing. The same secret powers both your app and the bot.
 
 ### File Permissions
 

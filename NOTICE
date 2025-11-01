@@ -18,23 +18,22 @@ Microsoft Rewards explicitly prohibits:
 
 ---
 
-## 🏢 Commercial Use Prohibited
+## 🏢 Proprietary License - Restricted Use
 
-This software is licensed for **PERSONAL, NON-COMMERCIAL USE ONLY**.
-
-### ❌ Prohibited Activities:
-- Selling this software or modifications
-- Offering it as a paid service
-- Using it for business purposes
-- Creating commercial automation services
-- Bulk account management for profit
-- Integration into commercial platforms
+This software is licensed under a **PROPRIETARY LICENSE** with strict restrictions.
 
 ### ✅ Permitted Activities:
-- Personal use for your own accounts
-- Educational purposes and learning
-- Private modifications for personal use
-- Sharing with family/friends (non-commercial)
+- Download and use for personal, non-commercial purposes
+- Modify the source code for your own personal use
+- Submit pull requests to the official repository
+
+### ❌ Prohibited Activities:
+- Redistributing this software (modified or unmodified)
+- Sharing or publishing your modifications publicly
+- Using this software for commercial purposes
+- Selling, renting, or leasing this software
+- Creating derivative works for public distribution
+- Removing or modifying license or copyright notices
 
 ---
 
@@ -112,13 +111,13 @@ Microsoft Rewards availability and terms vary by region:
 ## 📞 Contact & Reporting
 
 **Questions about licensing?**  
-Open an issue at: https://github.com/TheNetsky/Microsoft-Rewards-Script/issues
+Open an issue at: https://github.com/LightZirconite/Microsoft-Rewards-Rewi/issues
 
 **Found a security issue?**  
 See: SECURITY.md
 
 **General discussion?**  
-Join Discord: https://discord.gg/KRBFxxsU
+Join Discord: https://discord.gg/kn3695Kx32
 
 ---
 

@@ -28,10 +28,14 @@
       // Account password
       "password": "password_1",
       
-      // Two-Factor Authentication (2FA) TOTP secret (optional but HIGHLY recommended for security)
-      // Get this from your authenticator app (e.g., Microsoft Authenticator, Google Authenticator)
-      // Format: base32 secret key (e.g., "JBSWY3DPEHPK3PXP")
-      // Leave empty "" if 2FA is not enabled
+  // Two-Factor Authentication (2FA) TOTP secret (optional but HIGHLY recommended for security)
+  // Steps:
+  //   1. Visit https://account.live.com/proofs/Manage/additional and enable two-step verification.
+  //   2. When the wizard appears, click the blue link "Set up a different authenticator app".
+  //   3. On the next page click "I can't scan the bar code" to reveal the Base32 secret (letters + numbers).
+  //   4. Scan the QR with your authenticator (Google Authenticator recommended) AND copy the secret shown.
+  //   5. Paste the secret here. The same secret can stay in your app and power the bot simultaneously.
+  // Format: Base32 secret key (e.g., "JBSWY3DPEHPK3PXP"). Leave empty "" if 2FA is not enabled.
       "totp": "",
       
       // ⚠️ REQUIRED: Recovery email address associated with this Microsoft account
@@ -52,8 +56,8 @@
         // If false, proxy is only used for browser automation
         "proxyAxios": true,
         
-        // Proxy server URL (without protocol)
-        // Examples: "proxy.example.com", "123.45.67.89"
+  // Proxy server URL (protocol optional)
+  // Examples: "proxy.example.com", "http://proxy.example.com", "socks5://proxy.example.com"
         // Leave empty "" to disable proxy for this account
         "url": "",
         

@@ -37,7 +37,7 @@ export class DailyCheckIn extends Workers {
             }
 
             const claimResponse = await this.bot.axios.request(claimRequest)
-            const claimedPoint = parseInt((await claimResponse.data).response?.activity?.p) ?? 0
+            const claimedPoint = parseInt((await claimResponse.data).response?.activity?.p, 10) ?? 0
 
             this.bot.log(this.bot.isMobile, 'DAILY-CHECK-IN', claimedPoint > 0 ? `Claimed ${claimedPoint} points` : 'Already claimed today')
         } catch (error) {

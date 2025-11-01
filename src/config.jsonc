@@ -62,7 +62,7 @@
         // IANA timezone (e.g., "Europe/Paris", "America/New_York" check schedule.md)
         "timeZone": "Europe/Paris",
         // If true, run immediately on process start
-        "runImmediatelyOnStart": false
+        "runImmediatelyOnStart": true
     },
     
     "jobState": {
@@ -109,8 +109,8 @@
             "retryMobileSearchAmount": 2,
             // Delay between searches
             "delay": {
-                "min": "1min",
-                "max": "5min"
+                "min": "40sec",
+                "max": "1min"
             }
         }
     },
@@ -204,30 +204,24 @@
     // 🔔 NOTIFICATIONS
     // ============================================================
     
-    "notifications": {
-        // Live logs webhook (Discord or similar). URL = your webhook endpoint
-        "webhook": {
-            "enabled": false,
-            "url": "",
-            // Optional: Customize webhook appearance
-            "username": "Live Logs",
-            "avatarUrl": "https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png"
-        },
-        // Rich end-of-run summary webhook (Discord or similar)
-        "conclusionWebhook": {
-            "enabled": false,
-            "url": "",
-            // Optional: Customize webhook appearance (overrides webhook settings for conclusion messages)
-            "username": "Microsoft Rewards",
-            "avatarUrl": "https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png"
-        },
-        // NTFY push notifications (plain text)
-        "ntfy": {
-            "enabled": false,
-            "url": "",
-            "topic": "rewards",
-            "authToken": ""
-        }
+    // Live logs webhook (Discord or similar). URL = your webhook endpoint
+    "webhook": {
+        "enabled": false,
+        "url": ""
+    },
+    
+    // Rich end-of-run summary webhook (Discord or similar)
+    "conclusionWebhook": {
+        "enabled": false,
+        "url": ""
+    },
+    
+    // NTFY push notifications (plain text)
+    "ntfy": {
+        "enabled": false,
+        "url": "",
+        "topic": "rewards",
+        "authToken": ""
     },
     
     
@@ -337,7 +331,7 @@
         // Apply remote updates to accounts.json via git merge
         // true = accept new fields (like "region", "totpSecret") while keeping credentials (RECOMMENDED)
         // false = always keep your local accounts file (safest but may miss new optional fields)
-        "autoUpdateAccounts": true
+        "autoUpdateAccounts": false
     }
 }
 

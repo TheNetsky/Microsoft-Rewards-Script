@@ -14,11 +14,14 @@
   "accounts": [
     {
       "email": "your@email.com",
-      "password": "your_password"
+      "password": "your_password",
+      "recoveryEmail": "backup@email.com"
     }
   ]
 }
 ```
+
+> ℹ️ `recoveryEmail` is **mandatory**. It lets the bot verify Microsoft’s masked hint during login and alert you if the recovery address ever changes.
 
 **That's it!** Run `npm start` to test.
 
@@ -33,12 +36,14 @@
 
 ### How to Get Your TOTP Secret
 
-1. **Open Microsoft Account** → Security → Advanced security options
-2. **Add authenticator app** → Click "Set up"
-3. **Choose "I want to use a different app"**
-4. Microsoft shows a **QR code** + **secret key**
-5. **Copy the secret key** (starts with letters/numbers)
-6. **Add to** `accounts.json`:
+1. **Open** https://account.live.com/proofs/Manage/additional (Security → Advanced security options → Additional security).
+2. Enable two-step verification and click **Next** until you see the setup wizard.
+3. Click the blue link **"Set up a different authenticator app"**.
+4. On the next screen click **"I can't scan the bar code"** to reveal the Base32 secret.
+5. Scan the QR with your preferred authenticator (Google Authenticator recommended to keep data separate from Microsoft) **and** copy the secret:
+  - The same secret can stay in your app and be saved in this file (multiple authenticators can share it).
+6. Enter the 6-digit code in Microsoft’s wizard to finish pairing.
+7. **Add the secret to** `accounts.json`:
 
 ```json
 {
@@ -46,6 +51,7 @@
     {
       "email": "your@email.com",
       "password": "your_password",
+      "recoveryEmail": "backup@email.com",
       "totp": "JBSWY3DPEHPK3PXP"
     }
   ]
@@ -62,11 +68,13 @@
     {
       "email": "account1@email.com",
       "password": "password1",
+      "recoveryEmail": "backup1@email.com",
       "totp": "SECRET1"
     },
     {
       "email": "account2@email.com",
       "password": "password2",
+      "recoveryEmail": "backup2@email.com",
       "totp": "SECRET2"
     }
   ]
@@ -83,6 +91,7 @@
     {
       "email": "your@email.com",
       "password": "password",
+      "recoveryEmail": "backup@email.com",
       "totp": "",
       "proxy": {
         "proxyAxios": true,

@@ -3,8 +3,8 @@ dist/
 node_modules/
 .vscode/
 .github/
-diagnostic/
-report/
+diagnostics/
+reports/
 accounts.json
 accounts.jsonc
 notes
@@ -14,3 +14,5 @@ accounts.main.json
 accounts.main.jsonc
 .DS_Store
 .playwright-chromium-installed
+*.log
+.update-backup/

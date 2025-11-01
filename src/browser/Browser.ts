@@ -53,11 +53,13 @@ class Browser {
 
             const engineName = 'chromium' // current hard-coded engine
             this.bot.log(this.bot.isMobile, 'BROWSER', `Launching ${engineName} (headless=${headless})`) // explicit engine log
+            const proxyConfig = this.buildPlaywrightProxy(proxy)
+
             browser = await playwright.chromium.launch({
                 // Optional: uncomment to use Edge instead of Chromium
                 // channel: 'msedge',
                 headless,
-                ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
+                ...(proxyConfig && { proxy: proxyConfig }),
                 args: [
                     '--no-sandbox',
                     '--mute-audio',
@@ -138,6 +140,40 @@ class Browser {
         this.bot.log(this.bot.isMobile, 'BROWSER', `Created browser with User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`)
 
         return context as BrowserContext
+    }
+
+    private buildPlaywrightProxy(proxy: AccountProxy): { server: string; username?: string; password?: string } | undefined {
+        const { url, port, username, password } = proxy
+        if (!url) return undefined
+
+        const trimmed = url.trim()
+        const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)
+        const candidate = hasScheme ? trimmed : `http://${trimmed}`
+
+        let parsed: URL
+        try {
+            parsed = new URL(candidate)
+        } catch (err) {
+            this.bot.log(this.bot.isMobile, 'BROWSER', `Invalid proxy URL "${url}": ${err instanceof Error ? err.message : String(err)}`, 'error')
+            return undefined
+        }
+
+        if (!parsed.port) {
+            if (port) {
+                parsed.port = String(port)
+            } else {
+                this.bot.log(this.bot.isMobile, 'BROWSER', `Proxy port missing for "${url}"`, 'error')
+                return undefined
+            }
+        }
+
+        const server = `${parsed.protocol}//${parsed.hostname}${parsed.port ? `:${parsed.port}` : ''}`
+
+        const auth: { username?: string; password?: string } = {}
+        if (username) auth.username = username
+        if (password) auth.password = password
+
+        return { server, ...auth }
     }
 
     async generateFingerprint() {

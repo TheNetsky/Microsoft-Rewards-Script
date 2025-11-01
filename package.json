@@ -1,6 +1,6 @@
 {
-  "name": "microsoft-rewards-script",
-  "version": "2.4.0",
+  "name": "microsoft-rewards-rewi",
+  "version": "2.50.5",
   "description": "Automatically do tasks for Microsoft Rewards but in TS!",
   "private": true,
   "main": "index.js",
@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/TheNetsky/Microsoft-Rewards-Script.git"
+    "url": "https://github.com/Light60-1/Microsoft-Rewards-Rewi.git"
   },
   "bugs": {
-    "url": "https://github.com/TheNetsky/Microsoft-Rewards-Script/issues"
+    "url": "https://github.com/Light60-1/Microsoft-Rewards-Rewi/issues"
   },
-  "homepage": "https://github.com/TheNetsky/Microsoft-Rewards-Script#readme",
+  "homepage": "https://github.com/Light60-1/Microsoft-Rewards-Rewi#readme",
   "scripts": {
     "clean": "rimraf dist",
     "pre-build": "npm i && npm run clean && node -e \"process.exit(process.env.SKIP_PLAYWRIGHT_INSTALL?0:1)\" || npx playwright install chromium",
@@ -29,7 +29,7 @@
     "prepare": "npm run build",
     "setup": "node ./setup/update/setup.mjs",
     "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",
-    "create-docker": "docker build -t microsoft-rewards-script-docker ."
+    "create-docker": "docker build -t microsoft-rewards-rewi-docker ."
   },
   "keywords": [
     "Bing Rewards",
@@ -40,21 +40,18 @@
     "Playwright",
     "Cheerio"
   ],
-  "author": "Netsky",
+  "author": "Light60-1",
   "contributors": [
-    "TheNetsky (https://github.com/TheNetsky)",
-    "LightZirconite (https://github.com/LightZirconite)",
-    "Mgrimace (https://github.com/mgrimace)",
-    "hmcdat (https://github.com/hmcdat)"
+    "Microsoft-Rewards-Rewi (https://github.com/Light60-1/Microsoft-Rewards-Rewi)"
   ],
-  "license": "ISC",
+  "license": "PROPRIETARY",
   "funding": {
     "type": "github",
-    "url": "https://github.com/sponsors/TheNetsky"
+    "url": "https://github.com/sponsors/Light60-1"
   },
   "devDependencies": {
-  "@types/node": "^20.14.11",
     "@types/ms": "^0.7.34",
+    "@types/node": "^20.19.24",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "eslint": "^8.57.0",
     "eslint-plugin-modules-newline": "^0.0.6",
@@ -63,15 +60,15 @@
   },
   "dependencies": {
     "axios": "^1.8.4",
-  "cron-parser": "^4.9.0",
     "chalk": "^4.1.2",
     "cheerio": "^1.0.0",
+    "cron-parser": "^4.9.0",
     "fingerprint-generator": "^2.1.66",
     "fingerprint-injector": "^2.1.66",
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6",
-    "ms": "^2.1.3",
     "luxon": "^3.5.0",
+    "ms": "^2.1.3",
     "playwright": "1.52.0",
     "rebrowser-playwright": "1.52.0",
     "socks-proxy-agent": "^8.0.5",

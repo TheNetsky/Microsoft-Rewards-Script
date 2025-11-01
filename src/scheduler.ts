@@ -310,8 +310,6 @@ async function main() {
 
   const tz = (schedule.timeZone && IANAZone.isValidZone(schedule.timeZone)) ? schedule.timeZone : 'UTC'
   const cronExpressions = normalizeCronExpressions(schedule, tz)
-  // Default to false to avoid unexpected immediate runs
-  const runImmediate = schedule.runImmediatelyOnStart === true
   let running = false
 
   // Optional initial jitter before the first run (to vary start time)
@@ -332,27 +330,30 @@ async function main() {
   const initialJitterBounds = parseJitter('SCHEDULER_INITIAL_JITTER_MINUTES_MIN', 'SCHEDULER_INITIAL_JITTER_MINUTES_MAX', 'SCHEDULER_INITIAL_JITTER_MIN', 'SCHEDULER_INITIAL_JITTER_MAX')
   const applyInitialJitter = (initialJitterBounds[0] > 0 || initialJitterBounds[1] > 0)
 
+  // Check if immediate run is enabled (default to false to avoid unexpected runs)
+  const runImmediate = schedule.runImmediatelyOnStart === true
+  
   if (runImmediate && !running) {
     running = true
     if (applyInitialJitter) {
-  const min = Math.max(0, Math.min(initialJitterBounds[0], initialJitterBounds[1]))
-  const max = Math.max(0, Math.max(initialJitterBounds[0], initialJitterBounds[1]))
+      const min = Math.max(0, Math.min(initialJitterBounds[0], initialJitterBounds[1]))
+      const max = Math.max(min, initialJitterBounds[0], initialJitterBounds[1])
       const jitterSec = (min === max) ? min * 60 : (min * 60 + Math.floor(Math.random() * ((max - min) * 60)))
       if (jitterSec > 0) {
         await log('main', 'SCHEDULER', `Initial jitter: delaying first run by ${Math.round(jitterSec / 60)} minute(s) (${jitterSec}s)`, 'warn')
         await new Promise((r) => setTimeout(r, jitterSec * 1000))
       }
     }
-  const nowDT = DateTime.local().setZone(tz)
+    const nowDT = DateTime.local().setZone(tz)
     await chooseVacationRange(nowDT)
     await refreshOffDays(nowDT)
-  const todayIso = nowDT.toFormat('yyyy-LL-dd')
-  const vr = vacRange as { start: string; end: string } | null
-  const isVacationToday = !!(vr && todayIso >= vr.start && todayIso <= vr.end)
+    const todayIso = nowDT.toFormat('yyyy-LL-dd')
+    const vr = vacRange as { start: string; end: string } | null
+    const isVacationToday = !!(vr && todayIso >= vr.start && todayIso <= vr.end)
     if (isVacationToday) {
       await log('main','SCHEDULER',`Skipping immediate run: vacation day (${todayIso})`,'warn')
     } else if (offDays.includes(nowDT.weekday)) {
-  await log('main','SCHEDULER',`Skipping immediate run: humanization off-day (ISO weekday ${nowDT.weekday}). Set humanization.randomOffDaysPerWeek=0 to disable.`,'warn')
+      await log('main','SCHEDULER',`Skipping immediate run: humanization off-day (ISO weekday ${nowDT.weekday}). Set humanization.randomOffDaysPerWeek=0 to disable.`,'warn')
     } else {
       await runPasses(passes)
     }
@@ -360,10 +361,10 @@ async function main() {
   }
 
   for (;;) {
-  const nowDT = DateTime.local().setZone(tz)
-  const nextInfo = computeNextRun(nowDT, schedule, cronExpressions)
-  const next = nextInfo.next
-  let ms = Math.max(0, next.toMillis() - nowDT.toMillis())
+    const nowDT = DateTime.local().setZone(tz)
+    const nextInfo = computeNextRun(nowDT, schedule, cronExpressions)
+    const next = nextInfo.next
+    let ms = Math.max(0, next.toMillis() - nowDT.toMillis())
 
     // Optional daily jitter to further randomize the exact start time each day
     let extraMs = 0
@@ -373,7 +374,7 @@ async function main() {
       const djMax = dailyJitterBounds[1]
       if (djMin > 0 || djMax > 0) {
         const mn = Math.max(0, Math.min(djMin, djMax))
-        const mx = Math.max(0, Math.max(djMin, djMax))
+        const mx = Math.max(mn, djMin, djMax)
         const jitterSec = (mn === mx) ? mn * 60 : (mn * 60 + Math.floor(Math.random() * ((mx - mn) * 60)))
         extraMs = jitterSec * 1000
         ms += extraMs
@@ -384,16 +385,16 @@ async function main() {
     const totalSec = Math.round(ms / 1000)
     const jitterMsg = extraMs > 0 ? ` plus daily jitter (+${Math.round(extraMs/60000)}m)` : ''
     const sourceMsg = nextInfo.source === 'cron' ? ` [cron: ${nextInfo.detail}]` : ''
-    await log('main', 'SCHEDULER', `Next run at ${human}${jitterMsg}${sourceMsg} (in ${totalSec}s)`) 
+    await log('main', 'SCHEDULER', `Next run at ${human}${jitterMsg}${sourceMsg} (in ${totalSec}s)`)
 
     await new Promise((resolve) => setTimeout(resolve, ms))
 
   const nowRun = DateTime.local().setZone(tz)
     await chooseVacationRange(nowRun)
     await refreshOffDays(nowRun)
-  const todayIso2 = nowRun.toFormat('yyyy-LL-dd')
-  const vr2 = vacRange as { start: string; end: string } | null
-  const isVacation = !!(vr2 && todayIso2 >= vr2.start && todayIso2 <= vr2.end)
+    const todayIso2 = nowRun.toFormat('yyyy-LL-dd')
+    const vr2 = vacRange as { start: string; end: string } | null
+    const isVacation = !!(vr2 && todayIso2 >= vr2.start && todayIso2 <= vr2.end)
     if (isVacation) {
       await log('main','SCHEDULER',`Skipping scheduled run: vacation day (${todayIso2})`,'warn')
       continue

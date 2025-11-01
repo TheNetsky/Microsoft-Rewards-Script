@@ -8,6 +8,8 @@
 
 Saves progress after each completed task. If script crashes or stops, it resumes exactly where it left off.
 
+🔁 **New:** Completed accounts are tracked per day. When you restart the bot after a failure, it skips accounts already finished and jumps directly to the remaining ones.
+
 **Already enabled by default!**
 
 ---
@@ -51,6 +53,7 @@ sessions/job-state/
 {
   "jobState": {
     "enabled": true,
+    "skipCompletedAccounts": true, // Skip accounts already finished today
     "dir": ""  // Empty = use default location
   }
 }
@@ -61,10 +64,13 @@ sessions/job-state/
 {
   "jobState": {
     "enabled": true,
+    "skipCompletedAccounts": true,
     "dir": "/custom/path/job-state"
   }
 }
 ```
+
+> ℹ️ Set `skipCompletedAccounts` to `false` (or export `REWARDS_DISABLE_ACCOUNT_SKIP=1`/`true`) if you need to force every pass to run all accounts—for example when using `passesPerRun` > 1 or when intentionally repeating the whole rotation in the same day.
 
 ---
 

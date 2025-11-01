@@ -67,8 +67,6 @@ export interface ConfigSearchDelay {
 export interface ConfigWebhook {
     enabled: boolean;
     url: string;
-    username?: string; // Custom webhook username (default: "Microsoft Rewards")
-    avatarUrl?: string; // Custom webhook avatar URL
 }
 
 export interface ConfigNtfy {
@@ -175,6 +173,7 @@ export interface ConfigRetryPolicy {
 export interface ConfigJobState {
     enabled?: boolean; // default true
     dir?: string; // base directory; defaults to <sessionPath>/job-state
+    skipCompletedAccounts?: boolean; // if true (default), skip accounts already completed for the day
 }
 
 // Live logging configuration

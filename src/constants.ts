@@ -3,6 +3,27 @@
  * Defines timeouts, retry limits, and other magic numbers used throughout the application
  */
 
+/**
+ * Safe environment variable parsing with validation
+ */
+function parseEnvNumber(key: string, defaultValue: number, min: number, max: number): number {
+  const raw = process.env[key]
+  if (!raw) return defaultValue
+  
+  const parsed = Number(raw)
+  if (isNaN(parsed)) {
+    console.warn(`[Constants] Invalid ${key}="${raw}". Using default ${defaultValue}`)
+    return defaultValue
+  }
+  
+  if (parsed < min || parsed > max) {
+    console.warn(`[Constants] ${key}=${parsed} out of range [${min}, ${max}]. Using default ${defaultValue}`)
+    return defaultValue
+  }
+  
+  return parsed
+}
+
 export const TIMEOUTS = {
   SHORT: 500,
   MEDIUM: 1500,
@@ -11,7 +32,7 @@ export const TIMEOUTS = {
   VERY_LONG: 5000,
   EXTRA_LONG: 10000,
   DASHBOARD_WAIT: 10000,
-  LOGIN_MAX: 180000, // 3 minutes
+  LOGIN_MAX: parseEnvNumber('LOGIN_MAX_WAIT_MS', 180000, 30000, 600000),
   NETWORK_IDLE: 5000
 } as const
 
@@ -64,11 +85,5 @@ export const DISCORD = {
   COLOR_ORANGE: 0xFFA500,
   COLOR_BLUE: 0x3498DB,
   COLOR_GREEN: 0x00D26A,
-  AVATAR_URL: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
-} as const
-
-export const META = {
-
-  C: 'aHR0cHM6Ly9kaXNjb3JkLmdnL2tuMzY5NUt4MzI=',
-  R: 'aHR0cHM6Ly9naXRodWIuY29tL0xpZ2h0NjAtMS9NaWNyb3NvZnQtUmV3YXJkcy1SZXdp'
+  AVATAR_URL: 'https://media.discordapp.net/attachments/1430643658788438144/1430644205344133290/rewi-v1.png?ex=68fbd83e&is=68fa86be&hm=ccddee9430de1fff90c1c3750907c13a60d1da29f13617a5dbbdc642f243f5b9&=&format=png&quality=lossless&width=968&height=968'
 } as const
