@@ -167,9 +167,9 @@ cp src/accounts.json ~/backup-accounts.json
 
 # Nuclear option: fresh clone
 cd ..
-rm -rf Microsoft-Rewards-Rewi
-git clone https://github.com/Light60-1/Microsoft-Rewards-Rewi.git
-cd Microsoft-Rewards-Rewi
+rm -rf Microsoft-Rewards-Script
+git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+cd Microsoft-Rewards-Script
 
 # Restore your files
 cp ~/backup-config.jsonc src/config.jsonc

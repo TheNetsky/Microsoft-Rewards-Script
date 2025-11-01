@@ -1256,7 +1256,7 @@ export class Login {
   }
 
   private getDocsUrl(anchor?: string) {
-    const base = process.env.DOCS_BASE?.trim() || 'https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/blob/v2/docs/security.md'
+    const base = process.env.DOCS_BASE?.trim() || 'https://github.com/TheNetsky/Microsoft-Rewards-Script/blob/main/docs/security.md'
     const map: Record<string,string> = {
       'recovery-email-mismatch':'#recovery-email-mismatch',
       'we-cant-sign-you-in':'#we-cant-sign-you-in-blocked'

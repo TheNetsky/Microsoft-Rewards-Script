@@ -1,6 +1,8 @@
-# 🚀 Getting Started
-
 <div align="center">
+
+<img src="../assets/logo.png" alt="Microsoft Rewards Script Logo" width="120"/>
+
+# 🚀 Getting Started
 
 **🎯 From zero to earning Microsoft Rewards points in minutes**  
 *Complete setup guide for beginners*

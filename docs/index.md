@@ -1,6 +1,14 @@
+<div align="center">
+
+<img src="../assets/logo.png" alt="Microsoft Rewards Script Logo" width="150"/>
+
 # 📚 Documentation Hub
 
 **Complete guide to automate Microsoft Rewards**
+
+[← Back to README](../README.md)
+
+</div>
 
 ---
 
@@ -34,6 +42,9 @@
 
 ## 📖 All Documentation
 
+### Quick References
+- [❓ FAQ (Frequently Asked Questions)](./FAQ.md) — Quick answers to common questions
+
 ### Configuration & Setup
 - [Complete Configuration Reference](./config.md) — All options explained
 - [Scheduler Setup](./schedule.md) — Automated timing
@@ -50,7 +61,8 @@
 
 **Technical issue?** → [Diagnostics Guide](./diagnostics.md)  
 **Login problem?** → [Accounts & 2FA](./accounts.md#troubleshooting)  
-**Banned?** → [Security Guide](./security.md)
+**Banned?** → [Security Guide](./security.md)  
+**Want to contribute?** → [Contributing Guide](../CONTRIBUTING.md)
 
 **Join Discord** → [Support Server](https://discord.gg/kn3695Kx32)
 
