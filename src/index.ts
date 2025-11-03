@@ -89,7 +89,6 @@ export class MicrosoftRewardsBot {
     }
 
     async run() {
-        this.printBanner()
         log('main', 'MAIN', `Bot started with ${this.config.clusters} clusters`)
 
 
@@ -106,54 +105,6 @@ export class MicrosoftRewardsBot {
         }
     }
 
-    private printBanner() {
-        // Only print once (primary process or single cluster execution)
-        if (this.config.clusters > 1 && !cluster.isPrimary) return
-        
-        const banner = `
- ╔═══════════════════════════════════════════════════════════════════════════╗
- ║                                                                           ║
- ║  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗  ║
- ║  ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝  ║
- ║  ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗  ║
- ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║  ║
- ║  ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║  ║
- ║  ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝  ║
- ║                                                                           ║
- ║          TypeScript • Playwright • Intelligent Automation                ║
- ║                                                                           ║
- ╚═══════════════════════════════════════════════════════════════════════════╝
-`
-
-
-        // Read package version and build banner info
-        const pkgPath = path.join(__dirname, '../', 'package.json')
-        let version = 'unknown'
-        try {
-            if (fs.existsSync(pkgPath)) {
-                const raw = fs.readFileSync(pkgPath, 'utf-8')
-                const pkg = JSON.parse(raw)
-                version = pkg.version || version
-            }
-        } catch {
-            // Ignore version read errors
-        }
-
-        console.log(banner)
-        console.log('='.repeat(80))
-        console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
-        // Replace visibility/parallel with concise enabled feature status
-        const upd = this.config.update || {}
-        const updTargets: string[] = []
-        if (upd.git !== false) updTargets.push('Git')
-        if (upd.docker) updTargets.push('Docker')
-        if (updTargets.length > 0) {
-            console.log(`  Update: ${updTargets.join(', ')}`)
-        }
-
-        console.log('='.repeat(80) + '\n')
-    }    
-    
     // Return summaries (used when clusters==1)
     public getSummaries() {
         return this.accountSummaries
