@@ -1,28 +1,10 @@
-# ⚡ Microsoft Rewards Script v2 – Beta Release <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+[![Discord](https://img.shields.io/badge/Join%20Our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8BxYbV4pkj)
 
-The **v2 version is currently in Beta**.  
-You can try it now, but expect bugs or unexpected behavior — your feedback helps stabilize the release.
-
-**Branch (v2) repository:** [V2 Here](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v2)
-
-**To clone the v2 branch (recommended):**
-
-```bash
-git clone -b v2 --single-branch https://github.com/TheNetsky/Microsoft-Rewards-Script.git
-````
-
-👉 **Support & feedback (V2 only):**
-Our **Discord server is reserved for v2-related issues and contributions**. Please use it only to report problems, request help, or discuss improvements *for v2*. The old stable branch (v1 / 1.5.3) is **not** supported on this server.
-
-**Join here:** [https://discord.gg/h6Z69ZPPCz](https://discord.gg/h6Z69ZPPCz)
-
----
-
-# 🚀 Quick Setup (Recommended) <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Quick Setup (Recommended)
 
 **Easiest way to get started — download and run:**
 
-1. **Clone the v2 branch** (see command above) or download the zip.
+1. **Clone the branch** or download the zip.
 2. **Run the setup script:**
 
    * **Windows:** double-click `setup/setup.bat` or run it from a command prompt
@@ -49,7 +31,7 @@ Our **Discord server is reserved for v2-related issues and contributions**. Plea
 
 ---
 
-# ⚙️ Advanced Setup Options <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Advanced Setup Options
 
 ### Nix Users
 
@@ -84,7 +66,7 @@ npm run start
 
 ---
 
-# 🐳 Docker Setup (Experimental) <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Docker Setup (Experimental)
 
 **Before starting**
 
@@ -117,7 +99,7 @@ docker logs microsoft-rewards-script
 
 ---
 
-# 📋 Usage Notes <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Usage Notes
 
 * **Headless=false cleanup:** If you stop the script without closing browser windows, use Task Manager / `npm run kill-chrome-win` to close leftover instances.
 * **Scheduling advice:** Run at least twice daily. Use `"runOnZeroPoints": false` in config to skip runs with no points.
@@ -125,7 +107,7 @@ docker logs microsoft-rewards-script
 
 ---
 
-# ⚙️ Configuration Reference <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Configuration Reference
 
 Edit `src/config.json` to customize behavior.
 
@@ -190,7 +172,7 @@ Edit `src/config.json` to customize behavior.
 
 ---
 
-# ✨ Features <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Features
 
 **Account & Session**
 
@@ -222,18 +204,6 @@ Edit `src/config.json` to customize behavior.
 
 ---
 
-# ⚠️ Disclaimer <img src="https://github.com/user-attachments/assets/1272cb81-e773-49ac-9023-cfea4d90c8d6" width="45" align="right" alt="Animated Discord Icon" />
+# Disclaimer
 
 **Use at your own risk.** Automation may cause suspension or banning of Microsoft Rewards accounts. This project is provided for educational purposes only. The maintainers are **not** responsible for account actions taken by Microsoft.
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome, but please keep changes compatible with the existing configuration system. This repository is primarily for v2 development — coordinate on Discord (v2 server) for feature work and bug reports.
-
-[![Discord](https://img.shields.io/badge/💬_Join_Discord-7289DA?style=for-the-badge\&logo=discord)](https://discord.gg/h6Z69ZPPCz) [![GitHub](https://img.shields.io/badge/⭐_Star_Project-yellow?style=for-the-badge\&logo=github)](https://github.com/TheNetsky/Microsoft-Rewards-Script)
-
-<div align="center" style="margin-top:18px;">
-  <img src="https://github.com/user-attachments/assets/d81e6298-8b68-4a6e-b56c-2adf525a572f" alt="Microsoft Rewards Script Logo" width="250">
-</div>
