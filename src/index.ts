@@ -57,8 +57,6 @@ export class MicrosoftRewardsBot {
     private workers: Workers
     private login = new Login(this)
     private accessToken: string = ''
-    // Buy mode (manual spending) tracking
-    private buyMode: { enabled: boolean; email?: string } = { enabled: false }
 
     // Summary collection (per process)
     private accountSummaries: AccountSummary[] = []
@@ -86,30 +84,8 @@ export class MicrosoftRewardsBot {
         this.humanizer = new Humanizer(this.utils, this.config.humanization)
         this.activeWorkers = this.config.clusters
         this.mobileRetryAttempts = 0
-        
-        // Buy mode: CLI args take precedence over config
-        const idx = process.argv.indexOf('-buy')
-        if (idx >= 0) {
-            const target = process.argv[idx + 1]
-            this.buyMode = target && /@/.test(target) 
-                ? { enabled: true, email: target }
-                : { enabled: true }
-        } else {
-            // Fallback to config if no CLI flag
-            const buyModeConfig = this.config.buyMode as { enabled?: boolean } | undefined
-            if (buyModeConfig?.enabled === true) {
-                this.buyMode.enabled = true
-            }
-        }
     }
 
-    public isBuyModeEnabled(): boolean {
-        return this.buyMode.enabled === true
-    }
-
-    public getBuyModeTarget(): string | undefined {
-        return this.buyMode.email
-    }
 
     async initialize() {
         this.accounts = loadAccounts()
@@ -133,14 +109,6 @@ export class MicrosoftRewardsBot {
             } catch { /* ignore */ }
         }
 
-        // If buy mode is enabled, run single-account interactive session without automation
-        if (this.buyMode.enabled) {
-            const targetInfo = this.buyMode.email ? ` for ${this.buyMode.email}` : ''
-            log('main', 'BUY-MODE', `Buy mode ENABLED${targetInfo}. We'll open 2 tabs: (1) a monitor tab that auto-refreshes to track points, (2) your browsing tab to redeem/purchase freely.`, 'log', 'green')
-            log('main', 'BUY-MODE', 'The monitor tab may refresh every ~10s. Use the other tab for your actions; monitoring is passive and non-intrusive.', 'log', 'yellow')
-            await this.runBuyMode()
-            return
-        }
 
         // Only cluster when there's more than 1 cluster demanded
         if (this.config.clusters > 1) {
@@ -151,131 +119,6 @@ export class MicrosoftRewardsBot {
             }
         } else {
             await this.runTasks(this.accounts)
-        }
-    }
-
-    /** Manual spending session: login, then leave control to user while we passively monitor points. */
-    private async runBuyMode() {
-        try {
-            await this.initialize()
-            const email = this.buyMode.email || (this.accounts[0]?.email)
-            const account = this.accounts.find(a => a.email === email) || this.accounts[0]
-            if (!account) throw new Error('No account available for buy mode')
-
-            this.isMobile = false
-            this.axios = new Axios(account.proxy)
-            const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
-            // Open the monitor tab FIRST so auto-refresh happens out of the way
-            let monitor = await browser.newPage()
-            await this.login.login(monitor, account.email, account.password, account.totp)
-            await this.browser.func.goHome(monitor)
-            this.log(false, 'BUY-MODE', 'Opened MONITOR tab (auto-refreshes to track points).', 'log', 'yellow')
-
-            // Then open the user free-browsing tab SECOND so users don’t see the refreshes
-            const page = await browser.newPage()
-            await this.browser.func.goHome(page)
-            this.log(false, 'BUY-MODE', 'Opened USER tab (use this one to redeem/purchase freely).', 'log', 'green')
-
-            // Helper to recreate monitor tab if the user closes it
-            const recreateMonitor = async () => {
-                try { if (!monitor.isClosed()) await monitor.close() } catch { /* ignore */ }
-                monitor = await browser.newPage()
-                await this.browser.func.goHome(monitor)
-            }
-
-            // Helper to send an immediate spend notice via webhooks/NTFY
-            const sendSpendNotice = async (delta: number, nowPts: number, cumulativeSpent: number) => {
-                try {
-                    const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                    await ConclusionWebhook(
-                        this.config,
-                        '💳 Spend Detected',
-                        `**Account:** ${account.email}\n**Spent:** -${delta} points\n**Current:** ${nowPts} points\n**Session spent:** ${cumulativeSpent} points`,
-                        undefined,
-                        0xFFAA00
-                    )
-                } catch (e) {
-                    this.log(false, 'BUY-MODE', `Failed to send spend notice: ${e instanceof Error ? e.message : e}`, 'warn')
-                }
-            }
-            let initial = 0
-            try {
-                const data = await this.browser.func.getDashboardData(monitor)
-                initial = data.userStatus.availablePoints || 0
-            } catch {/* ignore */}
-
-            this.log(false, 'BUY-MODE', `Logged in as ${account.email}. Buy mode is active: monitor tab auto-refreshes; user tab is free for your actions. We'll observe points passively.`)
-
-            // Passive watcher: poll points periodically without clicking.
-            const start = Date.now()
-            let last = initial
-            let spent = 0
-
-            const buyModeConfig = this.config.buyMode as { maxMinutes?: number } | undefined
-            const maxMinutes = Math.max(10, buyModeConfig?.maxMinutes ?? 45)
-            const endAt = start + maxMinutes * 60 * 1000
-
-            while (Date.now() < endAt) {
-                await this.utils.wait(10000)
-
-                // If monitor tab was closed by user, recreate it quietly
-                try {
-                    if (monitor.isClosed()) {
-                        this.log(false, 'BUY-MODE', 'Monitor tab was closed; reopening in background...', 'warn')
-                        await recreateMonitor()
-                    }
-                } catch { /* ignore */ }
-
-                try {
-                    const data = await this.browser.func.getDashboardData(monitor)
-                    const nowPts = data.userStatus.availablePoints || 0
-                    if (nowPts < last) {
-                        // Points decreased -> likely spent
-                        const delta = last - nowPts
-                        spent += delta
-                        last = nowPts
-                        this.log(false, 'BUY-MODE', `Detected spend: -${delta} points (current: ${nowPts})`)
-                        // Immediate spend notice
-                        await sendSpendNotice(delta, nowPts, spent)
-                    } else if (nowPts > last) {
-                        last = nowPts
-                    }
-                } catch (err) {
-                    // If we lost the page context, recreate the monitor tab and continue
-                    const msg = err instanceof Error ? err.message : String(err)
-                    if (/Target closed|page has been closed|browser has been closed/i.test(msg)) {
-                        this.log(false, 'BUY-MODE', 'Monitor page closed or lost; recreating...', 'warn')
-                        try { await recreateMonitor() } catch { /* ignore */ }
-                    }
-                    // Swallow other errors to avoid disrupting the user
-                }
-            }
-
-            // Save cookies and close monitor; keep main page open for user until they close it themselves
-            try { 
-                await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile) 
-            } catch (e) { 
-                log(false, 'BUY-MODE', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
-            }
-            try { if (!monitor.isClosed()) await monitor.close() } catch {/* ignore */}
-
-            // Send a final minimal conclusion webhook for this manual session
-            const summary: AccountSummary = {
-                email: account.email,
-                durationMs: Date.now() - start,
-                desktopCollected: 0,
-                mobileCollected: 0,
-                totalCollected: -spent, // negative indicates spend
-                initialTotal: initial,
-                endTotal: last,
-                errors: [],
-                banned: { status: false, reason: '' }
-            }
-            await this.sendConclusion([summary])
-
-            this.log(false, 'BUY-MODE', 'Buy mode session finished (monitoring period ended). You can close the browser when done.')
-        } catch (e) {
-            this.log(false, 'BUY-MODE', `Error in buy mode: ${e instanceof Error ? e.message : e}`, 'error')
         }
     }
 
@@ -298,21 +141,7 @@ export class MicrosoftRewardsBot {
  ╚═══════════════════════════════════════════════════════════════════════════╝
 `
 
-        const buyModeBanner = `
- ╔══════════════════════════════════════════════════════╗
- ║                                                      ║
- ║  ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗  ║
- ║  ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝  ║
- ║  ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝   ║
- ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝    ║
- ║  ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║     ║
- ║  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝     ║
- ║                                                      ║
- ║      Manual Purchase Mode • Passive Monitoring       ║
- ║                                                      ║
- ╚══════════════════════════════════════════════════════╝
-`
-        
+
         // Read package version and build banner info
         const pkgPath = path.join(__dirname, '../', 'package.json')
         let version = 'unknown'
@@ -322,59 +151,51 @@ export class MicrosoftRewardsBot {
                 const pkg = JSON.parse(raw)
                 version = pkg.version || version
             }
-        } catch { 
+        } catch {
             // Ignore version read errors
         }
-        
-        // Display appropriate banner based on mode
-        const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
-        console.log(displayBanner)
+
+        console.log(banner)
         console.log('='.repeat(80))
-            
-            if (this.buyMode.enabled) {
-                console.log(`  Version: ${version} | Process: ${process.pid} | Buy Mode: Active`)
-                console.log(`  Target: ${this.buyMode.email || 'First account'} | Documentation: buy-mode.md`)
+        console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
+        // Replace visibility/parallel with concise enabled feature status
+        const upd = this.config.update || {}
+        const updTargets: string[] = []
+        if (upd.git !== false) updTargets.push('Git')
+        if (upd.docker) updTargets.push('Docker')
+        if (updTargets.length > 0) {
+            console.log(`  Update: ${updTargets.join(', ')}`)
+        }
+
+        const sched = this.config.schedule || {}
+        const schedEnabled = !!sched.enabled
+        if (!schedEnabled) {
+            console.log('  Schedule: OFF')
+        } else {
+            // Determine active format + time string to display
+            const tz = sched.timeZone || 'UTC'
+            let formatName = ''
+            let timeShown = ''
+            const srec: Record<string, unknown> = sched as unknown as Record<string, unknown>
+            const useAmPmVal = typeof srec['useAmPm'] === 'boolean' ? (srec['useAmPm'] as boolean) : undefined
+            const time12Val = typeof srec['time12'] === 'string' ? String(srec['time12']) : undefined
+            const time24Val = typeof srec['time24'] === 'string' ? String(srec['time24']) : undefined
+
+            if (useAmPmVal === true) {
+                formatName = 'AM/PM'
+                timeShown = time12Val || sched.time || '9:00 AM'
+            } else if (useAmPmVal === false) {
+                formatName = '24h'
+                timeShown = time24Val || sched.time || '09:00'
             } else {
-                console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
-                // Replace visibility/parallel with concise enabled feature status
-                const upd = this.config.update || {}
-                const updTargets: string[] = []
-                if (upd.git !== false) updTargets.push('Git')
-                if (upd.docker) updTargets.push('Docker')
-                if (updTargets.length > 0) {
-                    console.log(`  Update: ${updTargets.join(', ')}`)
-                }
-
-                const sched = this.config.schedule || {}
-                const schedEnabled = !!sched.enabled
-                if (!schedEnabled) {
-                    console.log('  Schedule: OFF')
-                } else {
-                    // Determine active format + time string to display
-                    const tz = sched.timeZone || 'UTC'
-                    let formatName = ''
-                    let timeShown = ''
-                    const srec: Record<string, unknown> = sched as unknown as Record<string, unknown>
-                    const useAmPmVal = typeof srec['useAmPm'] === 'boolean' ? (srec['useAmPm'] as boolean) : undefined
-                    const time12Val = typeof srec['time12'] === 'string' ? String(srec['time12']) : undefined
-                    const time24Val = typeof srec['time24'] === 'string' ? String(srec['time24']) : undefined
-
-                    if (useAmPmVal === true) {
-                        formatName = 'AM/PM'
-                        timeShown = time12Val || sched.time || '9:00 AM'
-                    } else if (useAmPmVal === false) {
-                        formatName = '24h'
-                        timeShown = time24Val || sched.time || '09:00'
-                    } else {
-                        // Back-compat: infer from provided fields if possible
-                        if (time24Val && time24Val.trim()) { formatName = '24h'; timeShown = time24Val }
-                        else if (time12Val && time12Val.trim()) { formatName = 'AM/PM'; timeShown = time12Val }
-                        else { formatName = 'legacy'; timeShown = sched.time || '09:00' }
-                    }
-                    console.log(`  Schedule: ON — ${formatName} • ${timeShown} • TZ=${tz}`)
-                }
+                // Back-compat: infer from provided fields if possible
+                if (time24Val && time24Val.trim()) { formatName = '24h'; timeShown = time24Val }
+                else if (time12Val && time12Val.trim()) { formatName = 'AM/PM'; timeShown = time12Val }
+                else { formatName = 'legacy'; timeShown = sched.time || '09:00' }
             }
-            console.log('='.repeat(80) + '\n')
+            console.log(`  Schedule: ON — ${formatName} • ${timeShown} • TZ=${tz}`)
+        }
+        console.log('='.repeat(80) + '\n')
     }    
     
     // Return summaries (used when clusters==1)

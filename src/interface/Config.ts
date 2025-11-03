@@ -25,7 +25,6 @@ export interface Config {
     update?: ConfigUpdate;
     schedule?: ConfigSchedule;
     passesPerRun?: number;
-    buyMode?: ConfigBuyMode; // Optional manual spending mode
     vacation?: ConfigVacation; // Optional monthly contiguous off-days
     crashRecovery?: ConfigCrashRecovery; // Automatic restart / graceful shutdown
     riskManagement?: ConfigRiskManagement; // NEW: Risk-aware throttling and ban prediction
@@ -90,10 +89,6 @@ export interface ConfigUpdate {
     autoUpdateAccounts?: boolean; // if true, allow auto-update of accounts.json when remote changes it (default: false to preserve credentials)
 }
 
-export interface ConfigBuyMode {
-    enabled?: boolean; // if true, force buy mode session
-    maxMinutes?: number; // session duration cap
-}
 
 export interface ConfigSchedule {
     enabled?: boolean;

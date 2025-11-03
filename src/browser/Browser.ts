@@ -42,13 +42,6 @@ class Browser {
             const legacyHeadless = (this.bot.config as { headless?: boolean }).headless
             const nestedHeadless = (this.bot.config.browser as { headless?: boolean } | undefined)?.headless
             let headlessValue = envForceHeadless ? true : (legacyHeadless ?? nestedHeadless ?? false)
-            if (this.bot.isBuyModeEnabled() && !envForceHeadless) {
-                if (headlessValue !== false) {
-                    const target = this.bot.getBuyModeTarget()
-                    this.bot.log(this.bot.isMobile, 'BROWSER', `Buy mode detected${target ? ` for ${target}` : ''}; forcing headless=false so captchas and manual flows remain interactive.`, 'warn')
-                }
-                headlessValue = false
-            }
             const headless: boolean = Boolean(headlessValue)
 
             const engineName = 'chromium' // current hard-coded engine
