@@ -252,25 +252,6 @@
         "redactEmails": true
     },
     
-    "analytics": {
-        // 📈 Performance Dashboard: tracks points earned, success rates, execution times
-        // Useful for monitoring your stats over time. Disable if you don't need it.
-        // WHAT IT DOES:
-        // - Collects daily/weekly/monthly statistics
-        // - Calculates success rates for each activity type
-        // - Tracks average execution times
-        // - Generates trend reports
-        // - Can export to Markdown or send via webhook
-        "enabled": true,
-        // How long to keep analytics data (days)
-        "retentionDays": 30,
-        // Generate markdown summary reports
-        "exportMarkdown": true,
-        // Send analytics summary via webhook
-        "webhookSummary": true
-    },
-    
-    
     // ============================================================
     // 🛒 BUY MODE
     // ============================================================
