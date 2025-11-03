@@ -22,7 +22,6 @@ export interface Config {
     webhook: ConfigWebhook;
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
     ntfy: ConfigNtfy;
-    update?: ConfigUpdate;
     passesPerRun?: number;
     vacation?: ConfigVacation; // Optional monthly contiguous off-days
     crashRecovery?: ConfigCrashRecovery; // Automatic restart / graceful shutdown
@@ -78,17 +77,6 @@ export interface ConfigProxy {
     proxyGoogleTrends: boolean;
     proxyBingTerms: boolean;
 }
-
-
-export interface ConfigUpdate {
-    git?: boolean; // if true, run git pull + npm ci + npm run build after completion
-    docker?: boolean; // if true, run docker update routine (compose pull/up) after completion
-    scriptPath?: string; // optional custom path to update script relative to repo root
-    autoUpdateConfig?: boolean; // if true, allow auto-update of config.jsonc when remote changes it (default: false to preserve user settings)
-    autoUpdateAccounts?: boolean; // if true, allow auto-update of accounts.json when remote changes it (default: false to preserve credentials)
-}
-
-
 
 export interface ConfigVacation {
     enabled?: boolean; // default false

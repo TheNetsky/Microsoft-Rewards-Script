@@ -176,7 +176,6 @@ function normalizeConfig(raw: unknown): Config {
         webhook,
         conclusionWebhook,
         ntfy,
-        update: n.update,
     passesPerRun: passesPerRun,
         vacation: n.vacation,
         crashRecovery: n.crashRecovery || {}

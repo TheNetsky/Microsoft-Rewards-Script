@@ -236,55 +236,6 @@
         ],
         // Email redaction toggle (true = secure, false = full emails)
         "redactEmails": true
-    },
-    
-    // ============================================================
-    // 🔄 UPDATES
-    // ============================================================
-    
-    "update": {
-        // Post-run auto-update settings
-        "git": true,
-        "docker": false,
-        // Custom updater script path (relative to repo root)
-        "scriptPath": "setup/update/update.mjs",
-        
-        // ⚠️ SMART UPDATE CONTROL - How It Really Works:
-        //
-        // BACKUP: Your files are ALWAYS backed up to .update-backup/ before any update
-        //
-        // UPDATE PROCESS:
-        // 1. Script checks if remote modified config.jsonc or accounts.json
-        // 2. Runs "git pull --rebase" to merge remote changes
-        // 3. Git intelligently merges:
-        //    ✅ NEW FIELDS ADDED (new config options, new account properties)
-        //       → Your existing values are PRESERVED, new fields are added alongside
-        //       → This is 95% of updates - works perfectly without conflicts
-        //    
-        //    ⚠️ MAJOR RESTRUCTURING (fields renamed, sections reordered, format changed)
-        //       → Git may choose one version over the other
-        //       → Risk of losing your custom values in restructured sections
-        //
-        // WHAT THE OPTIONS DO:
-        // - true: ACCEPT git merge result (keeps new features + your settings in most cases)
-        // - false: REJECT remote changes, RESTORE your local file from backup (stay on old version)
-        //
-        // RECOMMENDED: Keep both TRUE
-        // Why? Because we rarely restructure files. Most updates just ADD new optional fields.
-        // Your passwords, emails, and custom settings survive addition-only updates.
-        // Only risk: major file restructuring (rare, usually announced in release notes).
-        //
-        // SAFETY NET: Check .update-backup/ folder after updates to compare if worried.
-        
-        // Apply remote updates to config.jsonc via git merge
-        // true = accept new features + intelligent merge (RECOMMENDED for most users)
-        // false = always keep your local version (miss new config options)
-        "autoUpdateConfig": true,
-        
-        // Apply remote updates to accounts.json via git merge
-        // true = accept new fields (like "region", "totpSecret") while keeping credentials (RECOMMENDED)
-        // false = always keep your local accounts file (safest but may miss new optional fields)
-        "autoUpdateAccounts": true
     }
 }
 

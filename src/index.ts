@@ -20,7 +20,6 @@ import { Account } from './interface/Account'
 import Axios from './util/Axios'
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import Humanizer from './util/Humanizer'
 import { detectBanReason } from './util/BanDetector'
 
@@ -170,13 +169,10 @@ export class MicrosoftRewardsBot {
 
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
-                // All workers done -> send conclusion (if enabled), run optional auto-update, then exit
+                // All workers done
                 (async () => {
                     try {
                         await this.sendConclusion(this.accountSummaries)
-                    } catch {/* ignore */}
-                    try {
-                        await this.runAutoUpdate()
                     } catch {/* ignore */}
                     log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
                     process.exit(0)
@@ -398,9 +394,7 @@ export class MicrosoftRewardsBot {
                 process.send({ type: 'summary', data: this.accountSummaries })
             }
         } else {
-            // Single process mode -> build and send conclusion directly
-            // After conclusion, run optional auto-update
-            await this.runAutoUpdate().catch(() => {/* ignore update errors */})
+            // Single process mode
         }
         process.exit()
     }
@@ -778,28 +772,6 @@ export class MicrosoftRewardsBot {
     }
 
 
-    // Run optional auto-update script based on configuration flags.
-    private async runAutoUpdate(): Promise<void> {
-        const upd = this.config.update
-        if (!upd) return
-        const scriptRel = upd.scriptPath || 'setup/update/update.mjs'
-        const scriptAbs = path.join(process.cwd(), scriptRel)
-        if (!fs.existsSync(scriptAbs)) return
-
-        const args: string[] = []
-        // Git update is enabled by default (unless explicitly set to false)
-        if (upd.git !== false) args.push('--git')
-        if (upd.docker) args.push('--docker')
-        if (args.length === 0) return
-
-        const env = process.env
-
-        await new Promise<void>((resolve) => {
-            const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit', env })
-            child.on('close', () => resolve())
-            child.on('error', () => resolve())
-        })
-    }
 
     /** Public entry-point to engage global security standby from other modules (idempotent). */
     public async engageGlobalStandby(reason: string, email?: string): Promise<void> {
