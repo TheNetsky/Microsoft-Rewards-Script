@@ -50,20 +50,6 @@
         "passesPerRun": 3
     },
     
-    "schedule": {
-        // Built-in scheduler (no cron needed in containers)
-        "enabled": false,
-        // Time format options:
-        // - US style with AM/PM → useAmPm: true and time12 (e.g., "9:00 AM")
-        // - 24-hour style      → useAmPm: false and time24 (e.g., "09:00")
-        "useAmPm": false,
-        "time12": "9:00 AM",
-        "time24": "09:00",
-        // IANA timezone (e.g., "Europe/Paris", "America/New_York" check schedule.md)
-        "timeZone": "Europe/Paris",
-        // If true, run immediately on process start
-        "runImmediatelyOnStart": false
-    },
     
     "jobState": {
         // Save state to avoid duplicate work across restarts

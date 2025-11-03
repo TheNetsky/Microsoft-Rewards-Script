@@ -23,7 +23,6 @@ export interface Config {
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
     ntfy: ConfigNtfy;
     update?: ConfigUpdate;
-    schedule?: ConfigSchedule;
     passesPerRun?: number;
     vacation?: ConfigVacation; // Optional monthly contiguous off-days
     crashRecovery?: ConfigCrashRecovery; // Automatic restart / graceful shutdown
@@ -90,17 +89,6 @@ export interface ConfigUpdate {
 }
 
 
-export interface ConfigSchedule {
-    enabled?: boolean;
-    time?: string; // Back-compat: accepts "HH:mm" or "h:mm AM/PM"
-    // New optional explicit times
-    time12?: string; // e.g., "9:00 AM"
-    time24?: string; // e.g., "09:00"
-    timeZone?: string; // IANA TZ e.g., "America/New_York"
-    useAmPm?: boolean; // If true, prefer time12 + AM/PM style; if false, prefer time24. If undefined, back-compat behavior.
-    runImmediatelyOnStart?: boolean; // if true, run once immediately when process starts
-    cron?: string | string[]; // Optional cron expression(s) (standard 5-field or 6-field) for advanced scheduling
-}
 
 export interface ConfigVacation {
     enabled?: boolean; // default false

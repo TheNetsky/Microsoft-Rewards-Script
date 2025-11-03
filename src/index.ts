@@ -63,9 +63,6 @@ export class MicrosoftRewardsBot {
     private runId: string = Math.random().toString(36).slice(2)
     private bannedTriggered: { email: string; reason: string } | null = null
     private globalStandby: { active: boolean; reason?: string } = { active: false }
-    // Scheduler heartbeat integration
-    private heartbeatFile?: string
-    private heartbeatTimer?: NodeJS.Timeout
 
     public axios!: Axios
 
@@ -95,19 +92,6 @@ export class MicrosoftRewardsBot {
         this.printBanner()
         log('main', 'MAIN', `Bot started with ${this.config.clusters} clusters`)
 
-        // If scheduler provided a heartbeat file, update it periodically to signal liveness
-        const hbFile = process.env.SCHEDULER_HEARTBEAT_FILE
-        if (hbFile) {
-            try {
-                const dir = path.dirname(hbFile)
-                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-                fs.writeFileSync(hbFile, String(Date.now()))
-                this.heartbeatFile = hbFile
-                this.heartbeatTimer = setInterval(() => {
-                    try { fs.writeFileSync(hbFile, String(Date.now())) } catch { /* ignore */ }
-                }, 60_000)
-            } catch { /* ignore */ }
-        }
 
 
         // Only cluster when there's more than 1 cluster demanded
@@ -167,34 +151,6 @@ export class MicrosoftRewardsBot {
             console.log(`  Update: ${updTargets.join(', ')}`)
         }
 
-        const sched = this.config.schedule || {}
-        const schedEnabled = !!sched.enabled
-        if (!schedEnabled) {
-            console.log('  Schedule: OFF')
-        } else {
-            // Determine active format + time string to display
-            const tz = sched.timeZone || 'UTC'
-            let formatName = ''
-            let timeShown = ''
-            const srec: Record<string, unknown> = sched as unknown as Record<string, unknown>
-            const useAmPmVal = typeof srec['useAmPm'] === 'boolean' ? (srec['useAmPm'] as boolean) : undefined
-            const time12Val = typeof srec['time12'] === 'string' ? String(srec['time12']) : undefined
-            const time24Val = typeof srec['time24'] === 'string' ? String(srec['time24']) : undefined
-
-            if (useAmPmVal === true) {
-                formatName = 'AM/PM'
-                timeShown = time12Val || sched.time || '9:00 AM'
-            } else if (useAmPmVal === false) {
-                formatName = '24h'
-                timeShown = time24Val || sched.time || '09:00'
-            } else {
-                // Back-compat: infer from provided fields if possible
-                if (time24Val && time24Val.trim()) { formatName = '24h'; timeShown = time24Val }
-                else if (time12Val && time12Val.trim()) { formatName = 'AM/PM'; timeShown = time12Val }
-                else { formatName = 'legacy'; timeShown = sched.time || '09:00' }
-            }
-            console.log(`  Schedule: ON — ${formatName} • ${timeShown} • TZ=${tz}`)
-        }
         console.log('='.repeat(80) + '\n')
     }    
     
@@ -271,13 +227,8 @@ export class MicrosoftRewardsBot {
                     try {
                         await this.runAutoUpdate()
                     } catch {/* ignore */}
-                    // Only exit if not spawned by scheduler
-                    if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
-                        log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
-                        process.exit(0)
-                    } else {
-                        log('main', 'MAIN-WORKER', 'All workers destroyed. Scheduler mode: returning control to scheduler.')
-                    }
+                    log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                    process.exit(0)
                 })()
             }
         })
@@ -481,7 +432,6 @@ export class MicrosoftRewardsBot {
         // If any account is flagged compromised, do NOT exit; keep the process alive so the browser stays open
         if (this.compromisedModeActive || this.globalStandby.active) {
             log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done. Security check by @Light','warn','yellow')
-            // Periodic heartbeat with cleanup on exit
             const standbyInterval = setInterval(() => {
                 log('main','SECURITY','Still in standby: session(s) held open for manual recovery / review...','warn','yellow')
             }, 5 * 60 * 1000)
@@ -498,17 +448,10 @@ export class MicrosoftRewardsBot {
             }
         } else {
             // Single process mode -> build and send conclusion directly
-            await this.sendConclusion(this.accountSummaries)
-            // Cleanup heartbeat timer/file at end of run
-            if (this.heartbeatTimer) { try { clearInterval(this.heartbeatTimer) } catch { /* ignore */ } }
-            if (this.heartbeatFile) { try { if (fs.existsSync(this.heartbeatFile)) fs.unlinkSync(this.heartbeatFile) } catch { /* ignore */ } }
             // After conclusion, run optional auto-update
             await this.runAutoUpdate().catch(() => {/* ignore update errors */})
         }
-        // Only exit if not spawned by scheduler
-        if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
-            process.exit()
-        }
+        process.exit()
     }
 
     /** Send immediate ban alert if configured. */
@@ -898,11 +841,7 @@ export class MicrosoftRewardsBot {
         if (upd.docker) args.push('--docker')
         if (args.length === 0) return
 
-        // Pass scheduler flag to update script so it doesn't exit
-        const isSchedulerMode = !!process.env.SCHEDULER_HEARTBEAT_FILE
-        const env = isSchedulerMode 
-            ? { ...process.env, FROM_SCHEDULER: '1' }
-            : process.env
+        const env = process.env
 
         await new Promise<void>((resolve) => {
             const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit', env })
@@ -977,7 +916,6 @@ async function main() {
     }
 
     const gracefulExit = (code: number) => {
-        try { rewardsBot['heartbeatTimer'] && clearInterval(rewardsBot['heartbeatTimer']) } catch { /* ignore */ }
         if (config?.crashRecovery?.autoRestart && code !== 0) {
             const max = config.crashRecovery.maxRestarts ?? 2
             if (crashState.restarts < max) {
