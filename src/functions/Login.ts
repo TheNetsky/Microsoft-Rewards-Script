@@ -197,6 +197,25 @@ export class Login {
     if (!passwordField) {
       const blocked = await this.detectSignInBlocked(page)
       if (blocked) return
+
+      // Log that we're handling the "Get a code to sign in" flow
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Attempting to handle "Get a code to sign in" flow')
+
+      // Try to handle "Other ways to sign in" flow first
+      const otherWaysHandled = await this.handleOtherWaysToSignIn(page)
+      if (otherWaysHandled) {
+        // Try to find password field again after clicking "Other ways"
+        const passwordFieldAfter = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 3000 }).catch(()=>null)
+        if (passwordFieldAfter) {
+          this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field found after "Other ways" flow')
+          await page.fill(SELECTORS.passwordInput, '')
+          await page.fill(SELECTORS.passwordInput, password)
+          const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
+          if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
+          return
+        }
+      }
+
       // If still no password field -> likely 2FA (approvals) first
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field absent — invoking 2FA handler', 'warn')
       await this.handle2FA(page)
@@ -210,6 +229,64 @@ export class Login {
     await page.fill(SELECTORS.passwordInput, password)
     const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
     if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
+  }
+
+
+  // --------------- Other Ways to Sign In Handling ---------------
+  private async handleOtherWaysToSignIn(page: Page): Promise<boolean> {
+    try {
+      // Look for "Other ways to sign in" - typically a span with role="button"
+      const otherWaysSelectors = [
+        'span[role="button"]:has-text("Other ways to sign in")',
+        'span:has-text("Other ways to sign in")',
+        'button:has-text("Other ways to sign in")',
+        'a:has-text("Other ways to sign in")',
+        'div[role="button"]:has-text("Other ways to sign in")'
+      ]
+
+      let clicked = false
+      for (const selector of otherWaysSelectors) {
+        const element = await page.waitForSelector(selector, { timeout: 1000 }).catch(() => null)
+        if (element && await element.isVisible().catch(() => false)) {
+          await element.click().catch(() => {})
+          this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Other ways to sign in"')
+          await this.bot.utils.wait(2000) // Wait for options to appear
+          clicked = true
+          break
+        }
+      }
+
+      if (!clicked) {
+        return false
+      }
+
+      // Now look for "Use your password" option
+      const usePasswordSelectors = [
+        'span[role="button"]:has-text("Use your password")',
+        'span:has-text("Use your password")',
+        'button:has-text("Use your password")',
+        'button:has-text("Password")',
+        'a:has-text("Use your password")',
+        'div[role="button"]:has-text("Use your password")',
+        'div[role="button"]:has-text("Password")'
+      ]
+
+      for (const selector of usePasswordSelectors) {
+        const element = await page.waitForSelector(selector, { timeout: 1500 }).catch(() => null)
+        if (element && await element.isVisible().catch(() => false)) {
+          await element.click().catch(() => {})
+          this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Use your password"')
+          await this.bot.utils.wait(2000) // Wait for password field to appear
+          return true
+        }
+      }
+
+      return false
+
+    } catch (error) {
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Error in handleOtherWaysToSignIn: ' + error, 'warn')
+      return false
+    }
   }
 
   // --------------- 2FA Handling ---------------
