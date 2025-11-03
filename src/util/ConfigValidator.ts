@@ -197,36 +197,6 @@ export class ConfigValidator {
       }
     }
 
-    // Check schedule
-    if (config.schedule?.enabled) {
-      if (!config.schedule.timeZone) {
-        issues.push({
-          severity: 'warning',
-          field: 'schedule.timeZone',
-          message: 'No timeZone specified, defaulting to UTC',
-          suggestion: 'Set your local timezone (e.g., America/New_York)'
-        })
-      }
-
-      const useAmPm = config.schedule.useAmPm
-      const time12 = (config.schedule as unknown as Record<string, unknown>)['time12']
-      const time24 = (config.schedule as unknown as Record<string, unknown>)['time24']
-
-      if (useAmPm === true && (!time12 || (typeof time12 === 'string' && time12.trim() === ''))) {
-        issues.push({
-          severity: 'error',
-          field: 'schedule.time12',
-          message: 'useAmPm is true but time12 is empty'
-        })
-      }
-      if (useAmPm === false && (!time24 || (typeof time24 === 'string' && time24.trim() === ''))) {
-        issues.push({
-          severity: 'error',
-          field: 'schedule.time24',
-          message: 'useAmPm is false but time24 is empty'
-        })
-      }
-    }
 
     // Check workers
     if (config.workers) {
@@ -248,26 +218,6 @@ export class ConfigValidator {
       }
     }
 
-    // Check diagnostics
-    if (config.diagnostics?.enabled) {
-      const maxPerRun = config.diagnostics.maxPerRun || 2
-      if (maxPerRun > 20) {
-        issues.push({
-          severity: 'warning',
-          field: 'diagnostics.maxPerRun',
-          message: 'Very high maxPerRun may fill disk quickly'
-        })
-      }
-
-      const retention = config.diagnostics.retentionDays || 7
-      if (retention > 90) {
-        issues.push({
-          severity: 'info',
-          field: 'diagnostics.retentionDays',
-          message: 'Long retention period - monitor disk usage'
-        })
-      }
-    }
 
     const valid = !issues.some(i => i.severity === 'error')
     return { valid, issues }

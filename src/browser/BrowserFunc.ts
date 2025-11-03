@@ -158,9 +158,6 @@ export default class BrowserFunc {
 
             if (!scriptContent) {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard script not found on first try, attempting recovery', 'warn')
-                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-missing').catch((e) => {
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
-                })
                 
                 // Force a navigation retry once before failing hard
                 try {
@@ -222,9 +219,6 @@ export default class BrowserFunc {
                 // Log a snippet of the script content for debugging
                 const scriptPreview = scriptContent.substring(0, 200)
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Script preview: ${scriptPreview}`, 'warn')
-                await this.bot.browser.utils.captureDiagnostics(target, 'dashboard-data-parse').catch((e) => {
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Failed to capture diagnostics: ${e}`, 'warn')
-                })
                 throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
             }
 

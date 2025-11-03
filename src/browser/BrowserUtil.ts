@@ -2,7 +2,6 @@ import { Page } from 'rebrowser-playwright'
 import { load } from 'cheerio'
 
 import { MicrosoftRewardsBot } from '../index'
-import { captureDiagnostics as captureSharedDiagnostics } from '../util/Diagnostics'
 
 type DismissButton = { selector: string; label: string; isXPath?: boolean }
 
@@ -215,14 +214,6 @@ export default class BrowserUtil {
             await this.bot.humanizer.microGestures(page)
             await this.bot.humanizer.actionPause()
         } catch { /* swallow */ }
-    }
-
-    /**
-     * Capture minimal diagnostics for a page: screenshot + HTML content.
-     * Files are written under ./reports/<date>/ with a safe label.
-     */
-    async captureDiagnostics(page: Page, label: string): Promise<void> {
-        await captureSharedDiagnostics(this.bot, page, label)
     }
 
 }

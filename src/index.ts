@@ -20,7 +20,6 @@ import { Account } from './interface/Account'
 import Axios from './util/Axios'
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import Humanizer from './util/Humanizer'
 import { detectBanReason } from './util/BanDetector'
 
@@ -57,18 +56,12 @@ export class MicrosoftRewardsBot {
     private workers: Workers
     private login = new Login(this)
     private accessToken: string = ''
-    // Buy mode (manual spending) tracking
-    private buyMode: { enabled: boolean; email?: string } = { enabled: false }
 
     // Summary collection (per process)
     private accountSummaries: AccountSummary[] = []
     private runId: string = Math.random().toString(36).slice(2)
-    private diagCount: number = 0
     private bannedTriggered: { email: string; reason: string } | null = null
     private globalStandby: { active: boolean; reason?: string } = { active: false }
-    // Scheduler heartbeat integration
-    private heartbeatFile?: string
-    private heartbeatTimer?: NodeJS.Timeout
 
     public axios!: Axios
 
@@ -87,61 +80,17 @@ export class MicrosoftRewardsBot {
         this.humanizer = new Humanizer(this.utils, this.config.humanization)
         this.activeWorkers = this.config.clusters
         this.mobileRetryAttempts = 0
-        
-        // Buy mode: CLI args take precedence over config
-        const idx = process.argv.indexOf('-buy')
-        if (idx >= 0) {
-            const target = process.argv[idx + 1]
-            this.buyMode = target && /@/.test(target) 
-                ? { enabled: true, email: target }
-                : { enabled: true }
-        } else {
-            // Fallback to config if no CLI flag
-            const buyModeConfig = this.config.buyMode as { enabled?: boolean } | undefined
-            if (buyModeConfig?.enabled === true) {
-                this.buyMode.enabled = true
-            }
-        }
     }
 
-    public isBuyModeEnabled(): boolean {
-        return this.buyMode.enabled === true
-    }
-
-    public getBuyModeTarget(): string | undefined {
-        return this.buyMode.email
-    }
 
     async initialize() {
         this.accounts = loadAccounts()
     }
 
     async run() {
-        this.printBanner()
         log('main', 'MAIN', `Bot started with ${this.config.clusters} clusters`)
 
-        // If scheduler provided a heartbeat file, update it periodically to signal liveness
-        const hbFile = process.env.SCHEDULER_HEARTBEAT_FILE
-        if (hbFile) {
-            try {
-                const dir = path.dirname(hbFile)
-                if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-                fs.writeFileSync(hbFile, String(Date.now()))
-                this.heartbeatFile = hbFile
-                this.heartbeatTimer = setInterval(() => {
-                    try { fs.writeFileSync(hbFile, String(Date.now())) } catch { /* ignore */ }
-                }, 60_000)
-            } catch { /* ignore */ }
-        }
 
-        // If buy mode is enabled, run single-account interactive session without automation
-        if (this.buyMode.enabled) {
-            const targetInfo = this.buyMode.email ? ` for ${this.buyMode.email}` : ''
-            log('main', 'BUY-MODE', `Buy mode ENABLED${targetInfo}. We'll open 2 tabs: (1) a monitor tab that auto-refreshes to track points, (2) your browsing tab to redeem/purchase freely.`, 'log', 'green')
-            log('main', 'BUY-MODE', 'The monitor tab may refresh every ~10s. Use the other tab for your actions; monitoring is passive and non-intrusive.', 'log', 'yellow')
-            await this.runBuyMode()
-            return
-        }
 
         // Only cluster when there's more than 1 cluster demanded
         if (this.config.clusters > 1) {
@@ -155,229 +104,6 @@ export class MicrosoftRewardsBot {
         }
     }
 
-    /** Manual spending session: login, then leave control to user while we passively monitor points. */
-    private async runBuyMode() {
-        try {
-            await this.initialize()
-            const email = this.buyMode.email || (this.accounts[0]?.email)
-            const account = this.accounts.find(a => a.email === email) || this.accounts[0]
-            if (!account) throw new Error('No account available for buy mode')
-
-            this.isMobile = false
-            this.axios = new Axios(account.proxy)
-            const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
-            // Open the monitor tab FIRST so auto-refresh happens out of the way
-            let monitor = await browser.newPage()
-            await this.login.login(monitor, account.email, account.password, account.totp)
-            await this.browser.func.goHome(monitor)
-            this.log(false, 'BUY-MODE', 'Opened MONITOR tab (auto-refreshes to track points).', 'log', 'yellow')
-
-            // Then open the user free-browsing tab SECOND so users don’t see the refreshes
-            const page = await browser.newPage()
-            await this.browser.func.goHome(page)
-            this.log(false, 'BUY-MODE', 'Opened USER tab (use this one to redeem/purchase freely).', 'log', 'green')
-
-            // Helper to recreate monitor tab if the user closes it
-            const recreateMonitor = async () => {
-                try { if (!monitor.isClosed()) await monitor.close() } catch { /* ignore */ }
-                monitor = await browser.newPage()
-                await this.browser.func.goHome(monitor)
-            }
-
-            // Helper to send an immediate spend notice via webhooks/NTFY
-            const sendSpendNotice = async (delta: number, nowPts: number, cumulativeSpent: number) => {
-                try {
-                    const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
-                    await ConclusionWebhook(
-                        this.config,
-                        '💳 Spend Detected',
-                        `**Account:** ${account.email}\n**Spent:** -${delta} points\n**Current:** ${nowPts} points\n**Session spent:** ${cumulativeSpent} points`,
-                        undefined,
-                        0xFFAA00
-                    )
-                } catch (e) {
-                    this.log(false, 'BUY-MODE', `Failed to send spend notice: ${e instanceof Error ? e.message : e}`, 'warn')
-                }
-            }
-            let initial = 0
-            try {
-                const data = await this.browser.func.getDashboardData(monitor)
-                initial = data.userStatus.availablePoints || 0
-            } catch {/* ignore */}
-
-            this.log(false, 'BUY-MODE', `Logged in as ${account.email}. Buy mode is active: monitor tab auto-refreshes; user tab is free for your actions. We'll observe points passively.`)
-
-            // Passive watcher: poll points periodically without clicking.
-            const start = Date.now()
-            let last = initial
-            let spent = 0
-
-            const buyModeConfig = this.config.buyMode as { maxMinutes?: number } | undefined
-            const maxMinutes = Math.max(10, buyModeConfig?.maxMinutes ?? 45)
-            const endAt = start + maxMinutes * 60 * 1000
-
-            while (Date.now() < endAt) {
-                await this.utils.wait(10000)
-
-                // If monitor tab was closed by user, recreate it quietly
-                try {
-                    if (monitor.isClosed()) {
-                        this.log(false, 'BUY-MODE', 'Monitor tab was closed; reopening in background...', 'warn')
-                        await recreateMonitor()
-                    }
-                } catch { /* ignore */ }
-
-                try {
-                    const data = await this.browser.func.getDashboardData(monitor)
-                    const nowPts = data.userStatus.availablePoints || 0
-                    if (nowPts < last) {
-                        // Points decreased -> likely spent
-                        const delta = last - nowPts
-                        spent += delta
-                        last = nowPts
-                        this.log(false, 'BUY-MODE', `Detected spend: -${delta} points (current: ${nowPts})`)
-                        // Immediate spend notice
-                        await sendSpendNotice(delta, nowPts, spent)
-                    } else if (nowPts > last) {
-                        last = nowPts
-                    }
-                } catch (err) {
-                    // If we lost the page context, recreate the monitor tab and continue
-                    const msg = err instanceof Error ? err.message : String(err)
-                    if (/Target closed|page has been closed|browser has been closed/i.test(msg)) {
-                        this.log(false, 'BUY-MODE', 'Monitor page closed or lost; recreating...', 'warn')
-                        try { await recreateMonitor() } catch { /* ignore */ }
-                    }
-                    // Swallow other errors to avoid disrupting the user
-                }
-            }
-
-            // Save cookies and close monitor; keep main page open for user until they close it themselves
-            try { 
-                await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile) 
-            } catch (e) { 
-                log(false, 'BUY-MODE', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
-            }
-            try { if (!monitor.isClosed()) await monitor.close() } catch {/* ignore */}
-
-            // Send a final minimal conclusion webhook for this manual session
-            const summary: AccountSummary = {
-                email: account.email,
-                durationMs: Date.now() - start,
-                desktopCollected: 0,
-                mobileCollected: 0,
-                totalCollected: -spent, // negative indicates spend
-                initialTotal: initial,
-                endTotal: last,
-                errors: [],
-                banned: { status: false, reason: '' }
-            }
-            await this.sendConclusion([summary])
-
-            this.log(false, 'BUY-MODE', 'Buy mode session finished (monitoring period ended). You can close the browser when done.')
-        } catch (e) {
-            this.log(false, 'BUY-MODE', `Error in buy mode: ${e instanceof Error ? e.message : e}`, 'error')
-        }
-    }
-
-    private printBanner() {
-        // Only print once (primary process or single cluster execution)
-        if (this.config.clusters > 1 && !cluster.isPrimary) return
-        
-        const banner = `
- ╔═══════════════════════════════════════════════════════════════════════════╗
- ║                                                                           ║
- ║  ███╗   ███╗███████╗    ██████╗ ███████╗██╗    ██╗ █████╗ ██████╗ ██████╗ ███████╗  ║
- ║  ████╗ ████║██╔════╝    ██╔══██╗██╔════╝██║    ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝  ║
- ║  ██╔████╔██║███████╗    ██████╔╝█████╗  ██║ █╗ ██║███████║██████╔╝██║  ██║███████╗  ║
- ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██╔══╝  ██║███╗██║██╔══██║██╔══██╗██║  ██║╚════██║  ║
- ║  ██║ ╚═╝ ██║███████║    ██║  ██║███████╗╚███╔███╔╝██║  ██║██║  ██║██████╔╝███████║  ║
- ║  ╚═╝     ╚═╝╚══════╝    ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝  ║
- ║                                                                           ║
- ║          TypeScript • Playwright • Intelligent Automation                ║
- ║                                                                           ║
- ╚═══════════════════════════════════════════════════════════════════════════╝
-`
-
-        const buyModeBanner = `
- ╔══════════════════════════════════════════════════════╗
- ║                                                      ║
- ║  ███╗   ███╗███████╗    ██████╗ ██╗   ██╗██╗   ██╗  ║
- ║  ████╗ ████║██╔════╝    ██╔══██╗██║   ██║╚██╗ ██╔╝  ║
- ║  ██╔████╔██║███████╗    ██████╔╝██║   ██║ ╚████╔╝   ║
- ║  ██║╚██╔╝██║╚════██║    ██╔══██╗██║   ██║  ╚██╔╝    ║
- ║  ██║ ╚═╝ ██║███████║    ██████╔╝╚██████╔╝   ██║     ║
- ║  ╚═╝     ╚═╝╚══════╝    ╚═════╝  ╚═════╝    ╚═╝     ║
- ║                                                      ║
- ║      Manual Purchase Mode • Passive Monitoring       ║
- ║                                                      ║
- ╚══════════════════════════════════════════════════════╝
-`
-        
-        // Read package version and build banner info
-        const pkgPath = path.join(__dirname, '../', 'package.json')
-        let version = 'unknown'
-        try {
-            if (fs.existsSync(pkgPath)) {
-                const raw = fs.readFileSync(pkgPath, 'utf-8')
-                const pkg = JSON.parse(raw)
-                version = pkg.version || version
-            }
-        } catch { 
-            // Ignore version read errors
-        }
-        
-        // Display appropriate banner based on mode
-        const displayBanner = this.buyMode.enabled ? buyModeBanner : banner
-        console.log(displayBanner)
-        console.log('='.repeat(80))
-            
-            if (this.buyMode.enabled) {
-                console.log(`  Version: ${version} | Process: ${process.pid} | Buy Mode: Active`)
-                console.log(`  Target: ${this.buyMode.email || 'First account'} | Documentation: buy-mode.md`)
-            } else {
-                console.log(`  Version: ${version} | Process: ${process.pid} | Clusters: ${this.config.clusters}`)
-                // Replace visibility/parallel with concise enabled feature status
-                const upd = this.config.update || {}
-                const updTargets: string[] = []
-                if (upd.git !== false) updTargets.push('Git')
-                if (upd.docker) updTargets.push('Docker')
-                if (updTargets.length > 0) {
-                    console.log(`  Update: ${updTargets.join(', ')}`)
-                }
-
-                const sched = this.config.schedule || {}
-                const schedEnabled = !!sched.enabled
-                if (!schedEnabled) {
-                    console.log('  Schedule: OFF')
-                } else {
-                    // Determine active format + time string to display
-                    const tz = sched.timeZone || 'UTC'
-                    let formatName = ''
-                    let timeShown = ''
-                    const srec: Record<string, unknown> = sched as unknown as Record<string, unknown>
-                    const useAmPmVal = typeof srec['useAmPm'] === 'boolean' ? (srec['useAmPm'] as boolean) : undefined
-                    const time12Val = typeof srec['time12'] === 'string' ? String(srec['time12']) : undefined
-                    const time24Val = typeof srec['time24'] === 'string' ? String(srec['time24']) : undefined
-
-                    if (useAmPmVal === true) {
-                        formatName = 'AM/PM'
-                        timeShown = time12Val || sched.time || '9:00 AM'
-                    } else if (useAmPmVal === false) {
-                        formatName = '24h'
-                        timeShown = time24Val || sched.time || '09:00'
-                    } else {
-                        // Back-compat: infer from provided fields if possible
-                        if (time24Val && time24Val.trim()) { formatName = '24h'; timeShown = time24Val }
-                        else if (time12Val && time12Val.trim()) { formatName = 'AM/PM'; timeShown = time12Val }
-                        else { formatName = 'legacy'; timeShown = sched.time || '09:00' }
-                    }
-                    console.log(`  Schedule: ON — ${formatName} • ${timeShown} • TZ=${tz}`)
-                }
-            }
-            console.log('='.repeat(80) + '\n')
-    }    
-    
     // Return summaries (used when clusters==1)
     public getSummaries() {
         return this.accountSummaries
@@ -443,21 +169,13 @@ export class MicrosoftRewardsBot {
 
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
-                // All workers done -> send conclusion (if enabled), run optional auto-update, then exit
+                // All workers done
                 (async () => {
                     try {
                         await this.sendConclusion(this.accountSummaries)
                     } catch {/* ignore */}
-                    try {
-                        await this.runAutoUpdate()
-                    } catch {/* ignore */}
-                    // Only exit if not spawned by scheduler
-                    if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
-                        log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
-                        process.exit(0)
-                    } else {
-                        log('main', 'MAIN-WORKER', 'All workers destroyed. Scheduler mode: returning control to scheduler.')
-                    }
+                    log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                    process.exit(0)
                 })()
             }
         })
@@ -661,7 +379,6 @@ export class MicrosoftRewardsBot {
         // If any account is flagged compromised, do NOT exit; keep the process alive so the browser stays open
         if (this.compromisedModeActive || this.globalStandby.active) {
             log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done. Security check by @Light','warn','yellow')
-            // Periodic heartbeat with cleanup on exit
             const standbyInterval = setInterval(() => {
                 log('main','SECURITY','Still in standby: session(s) held open for manual recovery / review...','warn','yellow')
             }, 5 * 60 * 1000)
@@ -677,18 +394,9 @@ export class MicrosoftRewardsBot {
                 process.send({ type: 'summary', data: this.accountSummaries })
             }
         } else {
-            // Single process mode -> build and send conclusion directly
-            await this.sendConclusion(this.accountSummaries)
-            // Cleanup heartbeat timer/file at end of run
-            if (this.heartbeatTimer) { try { clearInterval(this.heartbeatTimer) } catch { /* ignore */ } }
-            if (this.heartbeatFile) { try { if (fs.existsSync(this.heartbeatFile)) fs.unlinkSync(this.heartbeatFile) } catch { /* ignore */ } }
-            // After conclusion, run optional auto-update
-            await this.runAutoUpdate().catch(() => {/* ignore update errors */})
+            // Single process mode
         }
-        // Only exit if not spawned by scheduler
-        if (!process.env.SCHEDULER_HEARTBEAT_FILE) {
-            process.exit()
-        }
+        process.exit()
     }
 
     /** Send immediate ban alert if configured. */
@@ -1055,15 +763,6 @@ export class MicrosoftRewardsBot {
             log('main','REPORT',`Failed to save report: ${e instanceof Error ? e.message : e}`,'warn')
         }
 
-        // Cleanup old diagnostics
-        try {
-            const days = cfg.diagnostics?.retentionDays
-            if (typeof days === 'number' && days > 0) {
-                await this.cleanupOldDiagnostics(days)
-            }
-        } catch (e) {
-            log('main','REPORT',`Failed diagnostics cleanup: ${e instanceof Error ? e.message : e}`,'warn')
-        }
 
         // Optional community notice (shown randomly in ~15% of successful runs)
         if (Math.random() > 0.85 && successes > 0 && accountsWithErrors === 0) {
@@ -1072,62 +771,7 @@ export class MicrosoftRewardsBot {
 
     }
 
-    /** Reserve one diagnostics slot for this run (caps captures). */
-    public tryReserveDiagSlot(maxPerRun: number): boolean {
-        if (this.diagCount >= Math.max(0, maxPerRun || 0)) return false
-        this.diagCount += 1
-        return true
-    }
 
-    /** Delete diagnostics folders older than N days under ./reports */
-    private async cleanupOldDiagnostics(retentionDays: number) {
-        const base = path.join(process.cwd(), 'reports')
-        if (!fs.existsSync(base)) return
-        const entries = fs.readdirSync(base, { withFileTypes: true })
-        const now = Date.now()
-        const keepMs = retentionDays * 24 * 60 * 60 * 1000
-        for (const e of entries) {
-            if (!e.isDirectory()) continue
-            const name = e.name // expect YYYY-MM-DD
-            const parts = name.split('-').map((n: string) => parseInt(n, 10))
-            if (parts.length !== 3 || parts.some(isNaN)) continue
-            const [yy, mm, dd] = parts
-            if (yy === undefined || mm === undefined || dd === undefined) continue
-            const dirDate = new Date(yy, mm - 1, dd).getTime()
-            if (isNaN(dirDate)) continue
-            if (now - dirDate > keepMs) {
-                const dirPath = path.join(base, name)
-                try { fs.rmSync(dirPath, { recursive: true, force: true }) } catch { /* ignore */ }
-            }
-        }
-    }
-
-    // Run optional auto-update script based on configuration flags.
-    private async runAutoUpdate(): Promise<void> {
-        const upd = this.config.update
-        if (!upd) return
-        const scriptRel = upd.scriptPath || 'setup/update/update.mjs'
-        const scriptAbs = path.join(process.cwd(), scriptRel)
-        if (!fs.existsSync(scriptAbs)) return
-
-        const args: string[] = []
-        // Git update is enabled by default (unless explicitly set to false)
-        if (upd.git !== false) args.push('--git')
-        if (upd.docker) args.push('--docker')
-        if (args.length === 0) return
-
-        // Pass scheduler flag to update script so it doesn't exit
-        const isSchedulerMode = !!process.env.SCHEDULER_HEARTBEAT_FILE
-        const env = isSchedulerMode 
-            ? { ...process.env, FROM_SCHEDULER: '1' }
-            : process.env
-
-        await new Promise<void>((resolve) => {
-            const child = spawn(process.execPath, [scriptAbs, ...args], { stdio: 'inherit', env })
-            child.on('close', () => resolve())
-            child.on('error', () => resolve())
-        })
-    }
 
     /** Public entry-point to engage global security standby from other modules (idempotent). */
     public async engageGlobalStandby(reason: string, email?: string): Promise<void> {
@@ -1195,7 +839,6 @@ async function main() {
     }
 
     const gracefulExit = (code: number) => {
-        try { rewardsBot['heartbeatTimer'] && clearInterval(rewardsBot['heartbeatTimer']) } catch { /* ignore */ }
         if (config?.crashRecovery?.autoRestart && code !== 0) {
             const max = config.crashRecovery.maxRestarts ?? 2
             if (crashState.restarts < max) {

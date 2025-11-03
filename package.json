@@ -23,8 +23,6 @@
     "start": "node --enable-source-maps ./dist/index.js",
     "ts-start": "node --loader ts-node/esm ./src/index.ts",
     "dev": "ts-node ./src/index.ts -dev",
-    "ts-schedule": "ts-node ./src/scheduler.ts",
-    "start:schedule": "node --enable-source-maps ./dist/scheduler.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "prepare": "npm run build",
     "setup": "node ./setup/update/setup.mjs",
