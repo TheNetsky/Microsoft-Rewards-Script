@@ -168,7 +168,6 @@ export class Workers {
 
                 await this.applyThrottle(throttle, 1200, 2600)
             } catch (error) {
-                await this.bot.browser.utils.captureDiagnostics(activityPage, `activity_error_${activity.title || activity.offerId}`)
                 this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
                 throttle.record(false)
             }
@@ -227,7 +226,6 @@ export class Workers {
                 await runWithTimeout(this.bot.activities.run(page, activity))
                 throttle.record(true)
             } catch (e) {
-                await this.bot.browser.utils.captureDiagnostics(page, `activity_timeout_${activity.title || activity.offerId}`)
                 throttle.record(false)
                 throw e
             }

@@ -248,26 +248,6 @@ export class ConfigValidator {
       }
     }
 
-    // Check diagnostics
-    if (config.diagnostics?.enabled) {
-      const maxPerRun = config.diagnostics.maxPerRun || 2
-      if (maxPerRun > 20) {
-        issues.push({
-          severity: 'warning',
-          field: 'diagnostics.maxPerRun',
-          message: 'Very high maxPerRun may fill disk quickly'
-        })
-      }
-
-      const retention = config.diagnostics.retentionDays || 7
-      if (retention > 90) {
-        issues.push({
-          severity: 'info',
-          field: 'diagnostics.retentionDays',
-          message: 'Long retention period - monitor disk usage'
-        })
-      }
-    }
 
     const valid = !issues.some(i => i.severity === 'error')
     return { valid, issues }

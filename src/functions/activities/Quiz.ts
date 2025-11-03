@@ -123,7 +123,6 @@ export class Quiz extends Workers {
 
             this.bot.log(this.bot.isMobile, 'QUIZ', 'Completed the quiz successfully')
         } catch (error) {
-            await this.bot.browser.utils.captureDiagnostics(page, 'quiz_error')
             await page.close()
             this.bot.log(this.bot.isMobile, 'QUIZ', 'An error occurred:' + error, 'error')
         }

@@ -22,7 +22,6 @@ export interface Config {
     webhook: ConfigWebhook;
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
     ntfy: ConfigNtfy;
-    diagnostics?: ConfigDiagnostics;
     update?: ConfigUpdate;
     schedule?: ConfigSchedule;
     passesPerRun?: number;
@@ -83,13 +82,6 @@ export interface ConfigProxy {
     proxyBingTerms: boolean;
 }
 
-export interface ConfigDiagnostics {
-    enabled?: boolean; // master toggle
-    saveScreenshot?: boolean; // capture .png
-    saveHtml?: boolean; // capture .html
-    maxPerRun?: number; // cap number of captures per run
-    retentionDays?: number; // delete older diagnostic folders
-}
 
 export interface ConfigUpdate {
     git?: boolean; // if true, run git pull + npm ci + npm run build after completion

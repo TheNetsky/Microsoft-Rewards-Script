@@ -252,15 +252,6 @@
         "redactEmails": true
     },
     
-    "diagnostics": {
-        // Capture minimal evidence on failures (screenshots/HTML)
-        "enabled": true,
-        "saveScreenshot": true,
-        "saveHtml": true,
-        "maxPerRun": 2,
-        "retentionDays": 7
-    },
-    
     "analytics": {
         // 📈 Performance Dashboard: tracks points earned, success rates, execution times
         // Useful for monitoring your stats over time. Disable if you don't need it.

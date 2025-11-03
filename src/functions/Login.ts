@@ -8,7 +8,6 @@ import { AxiosRequestConfig } from 'axios'
 import { generateTOTP } from '../util/Totp'
 import { saveSessionData } from '../util/Load'
 import { MicrosoftRewardsBot } from '../index'
-import { captureDiagnostics } from '../util/Diagnostics'
 import { OAuth } from '../interface/OAuth'
 
 // -------------------------------
@@ -593,8 +592,7 @@ export class Login {
 
       const fallbackSelector = await this.waitForRewardsRoot(page, 6000)
       if (!fallbackSelector) {
-        await this.bot.browser.utils.captureDiagnostics(page, 'login-portal-missing').catch(()=>{})
-        throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation (saved diagnostics to reports/)', 'error')
+        throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation', 'error')
       }
       this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal via fallback (${fallbackSelector})`)
       return
@@ -712,7 +710,6 @@ export class Login {
       this.bot.compromisedReason = 'sign-in-blocked'
       this.startCompromisedInterval()
       await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(()=>{})
-      await this.saveIncidentArtifacts(page,'sign-in-blocked').catch(()=>{})
       // Open security docs for immediate guidance (best-effort)
       await this.openDocsTab(page, docsUrl).catch(()=>{})
       return true
@@ -823,7 +820,6 @@ export class Login {
         this.bot.compromisedReason = 'recovery-mismatch'
         this.startCompromisedInterval()
         await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(()=>{})
-        await this.saveIncidentArtifacts(page,'recovery-mismatch').catch(()=>{})
         await this.openDocsTab(page, docsUrl).catch(()=>{})
       } else {
         const mode = observedPrefix.length === 1 ? 'lenient' : 'strict'
@@ -885,9 +881,6 @@ export class Login {
     }, 5*60*1000)
   }
 
-  private async saveIncidentArtifacts(page: Page, slug: string) {
-    await captureDiagnostics(this.bot, page, slug, { scope: 'security', skipSlot: true, force: true })
-  }
 
   private async openDocsTab(page: Page, url: string) {
     try {

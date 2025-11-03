@@ -180,7 +180,6 @@ function normalizeConfig(raw: unknown): Config {
         webhook,
         conclusionWebhook,
         ntfy,
-        diagnostics: n.diagnostics,
         update: n.update,
         schedule: n.schedule,
     passesPerRun: passesPerRun,
