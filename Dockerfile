@@ -41,6 +41,9 @@ ENV NODE_ENV=production \
 
 # Install minimal system libraries required for Chromium headless to run
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
+    gettext-base \
+    tzdata \
     ca-certificates \
     libglib2.0-0 \
     libdbus-1-3 \
@@ -76,5 +79,11 @@ COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
-# Run the scheduled rewards script
-CMD ["npm", "run", "start"]
+# Copy runtime scripts with proper permissions from the start
+COPY --chmod=755 src/run_daily.sh ./src/run_daily.sh
+COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Entrypoint handles TZ, initial run toggle, cron templating & launch
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
