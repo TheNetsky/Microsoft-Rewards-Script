@@ -27,4 +27,4 @@ services:
       - no-new-privileges:true
 
     # Use the built-in scheduler by default; override with `command:` for one-shot runs
-    command: ["npm", "run", "start:schedule"]
+    command: ["npm", "run", "start"]
