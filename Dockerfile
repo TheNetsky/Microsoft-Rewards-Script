@@ -77,4 +77,4 @@ COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
 # Run the scheduled rewards script
-CMD ["npm", "run", "start:schedule"]
+CMD ["npm", "run", "start"]
