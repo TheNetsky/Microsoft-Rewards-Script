@@ -86,7 +86,7 @@ export class Login {
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process')
       this.currentTotpSecret = (totpSecret && totpSecret.trim()) || undefined
 
-      await page.goto('https://rewards.bing.com/signin')
+      await page.goto('https://www.bing.com/rewards/dashboard')
       await this.disableFido(page)
       await page.waitForLoadState('domcontentloaded').catch(()=>{})
       await this.bot.browser.utils.reloadBadPage(page)
