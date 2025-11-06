@@ -35,7 +35,7 @@ export class Login {
             this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process!')
 
             // Navigate to the Bing login page
-            await page.goto('https://rewards.bing.com/signin')
+            await page.goto('https://www.bing.com/rewards/dashboard')
 
             // Disable FIDO support in login request
             await page.route('**/GetCredentialType.srf*', (route: any) => {
