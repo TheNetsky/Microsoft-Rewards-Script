@@ -15,7 +15,7 @@ export interface ValidationResult {
 }
 
 /**
- * ConfigValidator performs intelligent validation of config.jsonc and accounts.json
+ * ConfigValidator performs intelligent validation of config.json and accounts.json
  * before execution to catch common mistakes, conflicts, and security issues.
  */
 export class ConfigValidator {
@@ -400,7 +400,6 @@ export class ConfigValidator {
       const configRaw = fs.readFileSync(configPath, 'utf-8')
       const accountsRaw = fs.readFileSync(accountsPath, 'utf-8')
 
-      // Remove JSONC comments (basic approach)
       const configJson = configRaw.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
       const config: Config = JSON.parse(configJson)
       const accounts: Account[] = JSON.parse(accountsRaw)

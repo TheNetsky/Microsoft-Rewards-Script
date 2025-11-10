@@ -1,0 +1,121 @@
+{
+    "baseURL": "https://rewards.bing.com",
+    "sessionPath": "sessions",
+    "dryRun": false,
+    "browser": {
+        "headless": false,
+        "globalTimeout": "30s"
+    },
+    "fingerprinting": {
+        "saveFingerprint": {
+            "mobile": true,
+            "desktop": true
+        }
+    },
+    "execution": {
+        "parallel": false,
+        "runOnZeroPoints": false,
+        "clusters": 1
+    },
+    "jobState": {
+        "enabled": true,
+        "dir": ""
+    },
+    "workers": {
+        "doDailySet": true,
+        "doMorePromotions": true,
+        "doPunchCards": true,
+        "doDesktopSearch": true,
+        "doMobileSearch": true,
+        "doDailyCheckIn": true,
+        "doReadToEarn": true,
+        "bundleDailySetWithSearch": true
+    },
+    "search": {
+        "useLocalQueries": true,
+        "settings": {
+            "useGeoLocaleQueries": true,
+            "scrollRandomResults": true,
+            "clickRandomResults": true,
+            "retryMobileSearchAmount": 2,
+            "delay": {
+                "min": "2min",
+                "max": "5min"
+            }
+        }
+    },
+    "queryDiversity": {
+        "enabled": true,
+        "sources": [
+            "google-trends",
+            "reddit",
+            "local-fallback"
+        ],
+        "maxQueriesPerSource": 10,
+        "cacheMinutes": 30
+    },
+    "humanization": {
+        "enabled": true,
+        "stopOnBan": true,
+        "immediateBanAlert": true,
+        "actionDelay": {
+            "min": 500,
+            "max": 2200
+        },
+        "gestureMoveProb": 0.65,
+        "gestureScrollProb": 0.4,
+        "allowedWindows": []
+    },
+    "vacation": {
+        "enabled": true,
+        "minDays": 2,
+        "maxDays": 4
+    },
+    "riskManagement": {
+        "enabled": true,
+        "autoAdjustDelays": true,
+        "stopOnCritical": false,
+        "banPrediction": true,
+        "riskThreshold": 75
+    },
+    "retryPolicy": {
+        "maxAttempts": 3,
+        "baseDelay": 1000,
+        "maxDelay": "30s",
+        "multiplier": 2,
+        "jitter": 0.2
+    },
+    "proxy": {
+        "proxyGoogleTrends": true,
+        "proxyBingTerms": true
+    },
+    "notifications": {
+        "webhook": {
+            "enabled": false,
+            "url": ""
+        },
+        "conclusionWebhook": {
+            "enabled": false,
+            "url": ""
+        },
+        "ntfy": {
+            "enabled": false,
+            "url": "",
+            "topic": "rewards",
+            "authToken": ""
+        }
+    },
+    "logging": {
+        "excludeFunc": [
+            "SEARCH-CLOSE-TABS",
+            "LOGIN-NO-PROMPT",
+            "FLOW"
+        ],
+        "webhookExcludeFunc": [
+            "SEARCH-CLOSE-TABS",
+            "LOGIN-NO-PROMPT",
+            "FLOW"
+        ],
+        "redactEmails": true
+    }
+}

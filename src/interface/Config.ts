@@ -22,7 +22,6 @@ export interface Config {
     webhook: ConfigWebhook;
     conclusionWebhook?: ConfigWebhook; // Optional secondary webhook for final summary
     ntfy: ConfigNtfy;
-    passesPerRun?: number;
     vacation?: ConfigVacation; // Optional monthly contiguous off-days
     crashRecovery?: ConfigCrashRecovery; // Automatic restart / graceful shutdown
     riskManagement?: ConfigRiskManagement; // NEW: Risk-aware throttling and ban prediction

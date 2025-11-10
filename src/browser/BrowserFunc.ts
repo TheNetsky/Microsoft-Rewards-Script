@@ -25,79 +25,133 @@ export default class BrowserFunc {
      * @param {Page} page Playwright page
     */
     async goHome(page: Page) {
+        const navigateHome = async () => {
+            try {
+                await page.goto(this.bot.config.baseURL, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 30000
+                })
+            } catch (e: any) {
+                if (typeof e?.message === 'string' && e.message.includes('ERR_ABORTED')) {
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Navigation aborted, retrying...', 'warn')
+                    await this.bot.utils.wait(1500)
+                    await page.goto(this.bot.config.baseURL, {
+                        waitUntil: 'domcontentloaded',
+                        timeout: 30000
+                    })
+                } else {
+                    throw e
+                }
+            }
+        }
 
         try {
             const dashboardURL = new URL(this.bot.config.baseURL)
 
-            if (page.url() === dashboardURL.href) {
-                return
+            if (new URL(page.url()).hostname !== dashboardURL.hostname) {
+                await navigateHome()
             }
 
-            await page.goto(this.bot.config.baseURL)
+            let success = false
 
             for (let iteration = 1; iteration <= RETRY_LIMITS.GO_HOME_MAX; iteration++) {
                 await this.bot.utils.wait(TIMEOUTS.LONG)
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
                 try {
-                    // If activities are found, exit the loop (SUCCESS - account is OK)
                     await page.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: 1000 })
                     this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
+                    success = true
                     break
+                } catch {
+                    const suspendedByHeader = await page
+                        .waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 })
+                        .then(() => true)
+                        .catch(() => false)
 
-                } catch (error) {
-                    // Activities not found yet - check if it's because account is suspended
-                    // Only check suspension if we can't find activities (reduces false positives)
-                    const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 }).then(() => true).catch(() => false)
-                    
                     if (suspendedByHeader) {
-                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by header selector (iteration ${iteration})`, 'error')
+                        this.bot.log(
+                            this.bot.isMobile,
+                            'GO-HOME',
+                            `Account suspension detected by header selector (iteration ${iteration})`,
+                            'error'
+                        )
                         throw new Error('Account has been suspended!')
                     }
-                    
-                    // Secondary check: look for suspension text in main content area only
+
                     try {
-                        const mainContent = (await page.locator('#contentContainer, #main, .main-content').first().textContent({ timeout: 500 }).catch(() => '')) || ''
+                        const mainContent =
+                            (await page
+                                .locator('#contentContainer, #main, .main-content')
+                                .first()
+                                .textContent({ timeout: 500 })
+                                .catch(() => '')) || ''
+
                         const suspensionPatterns = [
                             /account\s+has\s+been\s+suspended/i,
                             /suspended\s+due\s+to\s+unusual\s+activity/i,
                             /your\s+account\s+is\s+temporarily\s+suspended/i
                         ]
-                        
-                        const isSuspended = suspensionPatterns.some(pattern => pattern.test(mainContent))
+
+                        const isSuspended = suspensionPatterns.some((p) => p.test(mainContent))
                         if (isSuspended) {
-                            this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by content text (iteration ${iteration})`, 'error')
+                            this.bot.log(
+                                this.bot.isMobile,
+                                'GO-HOME',
+                                `Account suspension detected by content text (iteration ${iteration})`,
+                                'error'
+                            )
                             throw new Error('Account has been suspended!')
                         }
                     } catch (e) {
-                        // Ignore errors in text check - not critical
-                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Suspension text check skipped: ${e}`, 'warn')
+                        this.bot.log(
+                            this.bot.isMobile,
+                            'GO-HOME',
+                            `Suspension text check skipped: ${e instanceof Error ? e.message : String(e)}`,
+                            'warn'
+                        )
                     }
-                    
-                    // Not suspended, just activities not loaded yet - continue to next iteration
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`, 'warn')
+
+                    const currentURL = new URL(page.url())
+                    if (currentURL.hostname !== dashboardURL.hostname) {
+                        await this.bot.browser.utils.tryDismissAllMessages(page)
+                        await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
+                        try {
+                            await navigateHome()
+                        } catch (e: any) {
+                            if (typeof e?.message === 'string' && e.message.includes('ERR_ABORTED')) {
+                                this.bot.log(this.bot.isMobile, 'GO-HOME', 'Navigation aborted again; continuing...', 'warn')
+                            } else {
+                                throw e
+                            }
+                        }
+                    } else {
+                        this.bot.log(
+                            this.bot.isMobile,
+                            'GO-HOME',
+                            `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`,
+                            'warn'
+                        )
+                    }
                 }
 
-                // Below runs if the homepage was unable to be visited
-                const currentURL = new URL(page.url())
-
-                if (currentURL.hostname !== dashboardURL.hostname) {
-                    await this.bot.browser.utils.tryDismissAllMessages(page)
-
-                    await this.bot.utils.wait(TIMEOUTS.MEDIUM_LONG)
-                    await page.goto(this.bot.config.baseURL)
-                } else {
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
-                    break
-                }
-
-                await this.bot.utils.wait(TIMEOUTS.VERY_LONG)
+                const backoff = Math.min(TIMEOUTS.VERY_LONG, 1000 + iteration * 500)
+                await this.bot.utils.wait(backoff)
             }
 
+            if (!success) {
+                throw new Error('Failed to reach homepage or find activities within retry limit')
+            }
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GO-HOME', 'An error occurred:' + error, 'error')
+            throw this.bot.log(
+                this.bot.isMobile,
+                'GO-HOME',
+                'An error occurred:' + (error instanceof Error ? ` ${error.message}` : ` ${String(error)}`),
+                'error'
+            )
         }
     }
+
 
     /**
      * Fetch user dashboard data
@@ -114,7 +168,7 @@ export default class BrowserFunc {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
                 await this.goHome(target)
             }
-                let lastError: unknown = null
+            let lastError: unknown = null
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     // Reload the page to get new data
@@ -131,7 +185,7 @@ export default class BrowserFunc {
                             this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Page appears closed; trying one navigation fallback', 'warn')
                             try {
                                 await this.goHome(target)
-                            } catch {/* ignore */}
+                            } catch {/* ignore */ }
                         } else {
                             break
                         }
@@ -143,7 +197,7 @@ export default class BrowserFunc {
 
             // Wait a bit longer for scripts to load, especially on mobile
             await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
-            
+
             // Wait for the more-activities element to ensure page is fully loaded
             await target.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: TIMEOUTS.DASHBOARD_WAIT }).catch(() => {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Activities element not found, continuing anyway', 'warn')
@@ -158,7 +212,7 @@ export default class BrowserFunc {
 
             if (!scriptContent) {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard script not found on first try, attempting recovery', 'warn')
-                
+
                 // Force a navigation retry once before failing hard
                 try {
                     await this.goHome(target)
@@ -169,20 +223,20 @@ export default class BrowserFunc {
                 } catch (e) {
                     this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Recovery navigation failed: ${e}`, 'warn')
                 }
-                
+
                 const retryContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
                     const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
                     return targetScript?.innerText ? targetScript.innerText : null
-                }).catch(()=>null)
-                
+                }).catch(() => null)
+
                 if (!retryContent) {
                     // Log additional debug info
                     const scriptsDebug = await target.evaluate(() => {
                         const scripts = Array.from(document.querySelectorAll('script'))
                         return scripts.map(s => s.innerText.substring(0, 100)).join(' | ')
                     }).catch(() => 'Unable to get script debug info')
-                    
+
                     this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Available scripts preview: ${scriptsDebug}`, 'warn')
                     throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
                 }
@@ -422,10 +476,10 @@ export default class BrowserFunc {
                     .map(el => $(el).text())
                     .filter(t => t.length > 0)
                     .map(t => t.substring(0, 100))
-                
+
                 this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Script not found. Tried variables: ${possibleVariables.join(', ')}`, 'error')
                 this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found ${allScripts.length} scripts on page`, 'warn')
-                
+
                 throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
             }
 
@@ -471,10 +525,10 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-                const element = $('.offer-cta').toArray().find((x: unknown) => {
-                    const el = x as { attribs?: { href?: string } }
-                    return !!el.attribs?.href?.includes(activity.offerId)
-                })
+            const element = $('.offer-cta').toArray().find((x: unknown) => {
+                const el = x as { attribs?: { href?: string } }
+                return !!el.attribs?.href?.includes(activity.offerId)
+            })
             if (element) {
                 selector = `a[href*="${element.attribs.href}"]`
             }

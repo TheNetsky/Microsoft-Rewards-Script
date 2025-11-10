@@ -10,62 +10,6 @@ import { Config, ConfigSaveFingerprint } from '../interface/Config'
 let configCache: Config
 let configSourcePath = ''
 
-// Basic JSON comment stripper (supports // line and /* block */ comments while preserving strings)
-function stripJsonComments(input: string): string {
-    let out = ''
-    let inString = false
-    let stringChar = ''
-    let inLine = false
-    let inBlock = false
-    for (let i = 0; i < input.length; i++) {
-        const ch = input[i]!
-        const next = input[i + 1]
-        if (inLine) {
-            if (ch === '\n' || ch === '\r') {
-                inLine = false
-                out += ch
-            }
-            continue
-        }
-        if (inBlock) {
-            if (ch === '*' && next === '/') {
-                inBlock = false
-                i++
-            }
-            continue
-        }
-        if (inString) {
-            out += ch
-            if (ch === '\\') { // escape next char
-                i++
-                if (i < input.length) out += input[i]
-                continue
-            }
-            if (ch === stringChar) {
-                inString = false
-            }
-            continue
-        }
-        if (ch === '"' || ch === '\'') {
-            inString = true
-            stringChar = ch
-            out += ch
-            continue
-        }
-        if (ch === '/' && next === '/') {
-            inLine = true
-            i++
-            continue
-        }
-        if (ch === '/' && next === '*') {
-            inBlock = true
-            i++
-            continue
-        }
-        out += ch
-    }
-    return out
-}
 
 // Normalize both legacy (flat) and new (nested) config schemas into the flat Config interface
 function normalizeConfig(raw: unknown): Config {
@@ -79,7 +23,6 @@ function normalizeConfig(raw: unknown): Config {
     const parallel = n.execution?.parallel ?? n.parallel ?? false
     const runOnZeroPoints = n.execution?.runOnZeroPoints ?? n.runOnZeroPoints ?? false
     const clusters = n.execution?.clusters ?? n.clusters ?? 1
-    const passesPerRun = n.execution?.passesPerRun ?? n.passesPerRun
 
     // Search
     const useLocalQueries = n.search?.useLocalQueries ?? n.searchOnBingLocalQueries ?? false
@@ -166,17 +109,16 @@ function normalizeConfig(raw: unknown): Config {
         searchOnBingLocalQueries: !!useLocalQueries,
         globalTimeout,
         searchSettings,
-    humanization: n.humanization,
+        humanization: n.humanization,
         retryPolicy: n.retryPolicy,
         jobState: n.jobState,
         logExcludeFunc,
         webhookLogExcludeFunc,
-    logging, // retain full logging object for live webhook usage
-    proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
+        logging, // retain full logging object for live webhook usage
+        proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
         webhook,
         conclusionWebhook,
         ntfy,
-    passesPerRun: passesPerRun,
         vacation: n.vacation,
         crashRecovery: n.crashRecovery || {}
     }
@@ -196,41 +138,35 @@ export function loadAccounts(): Account[] {
         const envJson = process.env.ACCOUNTS_JSON
         const envFile = process.env.ACCOUNTS_FILE
 
-        let raw: string | undefined
+        let json: string | undefined
         if (envJson && envJson.trim().startsWith('[')) {
-            raw = envJson
+            json = envJson
         } else if (envFile && envFile.trim()) {
             const full = path.isAbsolute(envFile) ? envFile : path.join(process.cwd(), envFile)
             if (!fs.existsSync(full)) {
                 throw new Error(`ACCOUNTS_FILE not found: ${full}`)
             }
-            raw = fs.readFileSync(full, 'utf-8')
+            json = fs.readFileSync(full, 'utf-8')
         } else {
             // Try multiple locations to support both root mounts and dist mounts
-            // Support both .json and .jsonc extensions
+            // Support both .json and .json extensions
             const candidates = [
-                path.join(__dirname, '../', file),               // root/accounts.json (preferred)
-                path.join(__dirname, '../', file + 'c'),         // root/accounts.jsonc
-                path.join(__dirname, '../src', file),            // fallback: file kept inside src/
-                path.join(__dirname, '../src', file + 'c'),      // src/accounts.jsonc
-                path.join(process.cwd(), file),                  // cwd override
-                path.join(process.cwd(), file + 'c'),            // cwd/accounts.jsonc
-                path.join(process.cwd(), 'src', file),           // cwd/src/accounts.json
-                path.join(process.cwd(), 'src', file + 'c'),     // cwd/src/accounts.jsonc
-                path.join(__dirname, file),                      // dist/accounts.json (legacy)
-                path.join(__dirname, file + 'c')                 // dist/accounts.jsonc
+                path.join(__dirname, '../', file),
+                path.join(__dirname, '../src', file),
+                path.join(process.cwd(), file),
+                path.join(process.cwd(), 'src', file),
+                path.join(__dirname, file)
             ]
             let chosen: string | null = null
             for (const p of candidates) {
                 try { if (fs.existsSync(p)) { chosen = p; break } } catch { /* ignore */ }
             }
             if (!chosen) throw new Error(`accounts file not found in: ${candidates.join(' | ')}`)
-            raw = fs.readFileSync(chosen, 'utf-8')
+            json = fs.readFileSync(chosen, 'utf-8')
         }
 
         // Support comments in accounts file (same as config)
-        const cleaned = stripJsonComments(raw)
-        const parsedUnknown = JSON.parse(cleaned)
+        const parsedUnknown = JSON.parse(json)
         // Accept either a root array or an object with an `accounts` array, ignore `_note`
         const parsed = Array.isArray(parsedUnknown) ? parsedUnknown : (parsedUnknown && typeof parsedUnknown === 'object' && Array.isArray((parsedUnknown as { accounts?: unknown }).accounts) ? (parsedUnknown as { accounts: unknown[] }).accounts : null)
         if (!Array.isArray(parsed)) throw new Error('accounts must be an array')
@@ -257,8 +193,8 @@ export function loadConfig(): Config {
             return configCache
         }
 
-        // Resolve configuration file from common locations (supports .jsonc and .json)
-        const names = ['config.jsonc', 'config.json']
+        // Resolve configuration file from common locations
+        const names = ['config.json']
         const bases = [
             path.join(__dirname, '../'),       // dist root when compiled
             path.join(__dirname, '../src'),    // fallback: running dist but config still in src
@@ -272,19 +208,19 @@ export function loadConfig(): Config {
                 candidates.push(path.join(base, name))
             }
         }
-    let cfgPath: string | null = null
+        let cfgPath: string | null = null
         for (const p of candidates) {
             try { if (fs.existsSync(p)) { cfgPath = p; break } } catch { /* ignore */ }
         }
         if (!cfgPath) throw new Error(`config.json not found in: ${candidates.join(' | ')}`)
         const config = fs.readFileSync(cfgPath, 'utf-8')
-        const text = config.replace(/^\uFEFF/, '')
-        const raw = JSON.parse(stripJsonComments(text))
-    const normalized = normalizeConfig(raw)
-    configCache = normalized // Set as cache
-    configSourcePath = cfgPath
+        const json = config.replace(/^\uFEFF/, '')
+        const raw = JSON.parse(json)
+        const normalized = normalizeConfig(raw)
+        configCache = normalized // Set as cache
+        configSourcePath = cfgPath
 
-    return normalized
+        return normalized
     } catch (error) {
         throw new Error(error as string)
     }
@@ -357,12 +293,12 @@ export async function saveFingerprintData(sessionPath: string, email: string, is
             await fs.promises.mkdir(sessionDir, { recursive: true })
         }
 
-    // Save fingerprint to files (write both legacy and corrected names for compatibility)
-    const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
-    const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
-    const payload = JSON.stringify(fingerprint)
-    await fs.promises.writeFile(correct, payload)
-    try { await fs.promises.writeFile(legacy, payload) } catch { /* ignore */ }
+        // Save fingerprint to files (write both legacy and corrected names for compatibility)
+        const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+        const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
+        const payload = JSON.stringify(fingerprint)
+        await fs.promises.writeFile(correct, payload)
+        try { await fs.promises.writeFile(legacy, payload) } catch { /* ignore */ }
 
         return sessionDir
     } catch (error) {

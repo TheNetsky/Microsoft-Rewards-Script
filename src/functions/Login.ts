@@ -82,17 +82,17 @@ export class Login {
         clearInterval(this.compromisedInterval)
         this.compromisedInterval = undefined
       }
-      
+
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process')
       this.currentTotpSecret = (totpSecret && totpSecret.trim()) || undefined
 
       await page.goto('https://www.bing.com/rewards/dashboard')
       await this.disableFido(page)
-      await page.waitForLoadState('domcontentloaded').catch(()=>{})
+      await page.waitForLoadState('domcontentloaded').catch(() => { })
       await this.bot.browser.utils.reloadBadPage(page)
       await this.checkAccountLocked(page)
 
-      const already = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 8000 }).then(()=>true).catch(()=>false)
+      const already = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 8000 }).then(() => true).catch(() => false)
       if (!already) {
         await this.performLoginFlow(page, email, password)
       } else {
@@ -145,7 +145,7 @@ export class Login {
     const req: AxiosRequestConfig = { url: this.tokenUrl, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, data: form.toString() }
     const resp = await this.bot.axios.request(req)
     const data: OAuth = resp.data
-    this.bot.log(this.bot.isMobile, 'LOGIN-APP', `Authorized in ${Math.round((Date.now()-start)/1000)}s`)
+    this.bot.log(this.bot.isMobile, 'LOGIN-APP', `Authorized in ${Math.round((Date.now() - start) / 1000)}s`)
     return data.access_token
   }
 
@@ -157,7 +157,7 @@ export class Login {
     await this.bot.utils.wait(500)
     await this.tryRecoveryMismatchCheck(page, email)
     if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'recovery-mismatch') {
-      this.bot.log(this.bot.isMobile,'LOGIN','Recovery mismatch detected – stopping before password entry','warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'Recovery mismatch detected – stopping before password entry', 'warn')
       return
     }
     // Try switching to password if a locale link is present (FR/EN)
@@ -173,26 +173,26 @@ export class Login {
 
   // --------------- Input Steps ---------------
   private async inputEmail(page: Page, email: string) {
-    const field = await page.waitForSelector(SELECTORS.emailInput, { timeout: 5000 }).catch(()=>null)
+    const field = await page.waitForSelector(SELECTORS.emailInput, { timeout: 5000 }).catch(() => null)
     if (!field) { this.bot.log(this.bot.isMobile, 'LOGIN', 'Email field not present', 'warn'); return }
-    const prefilled = await page.waitForSelector('#userDisplayName', { timeout: 1500 }).catch(()=>null)
+    const prefilled = await page.waitForSelector('#userDisplayName', { timeout: 1500 }).catch(() => null)
     if (!prefilled) {
       await page.fill(SELECTORS.emailInput, '')
       await page.fill(SELECTORS.emailInput, email)
     } else {
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Email prefilled')
     }
-    const next = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
-    if (next) { await next.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted email') }
+    const next = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(() => null)
+    if (next) { await next.click().catch(() => { }); this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted email') }
   }
 
   private async inputPasswordOr2FA(page: Page, password: string) {
     // Some flows require switching to password first
-    const switchBtn = await page.waitForSelector('#idA_PWD_SwitchToPassword', { timeout: 1500 }).catch(()=>null)
-    if (switchBtn) { await switchBtn.click().catch(()=>{}); await this.bot.utils.wait(1000) }
+    const switchBtn = await page.waitForSelector('#idA_PWD_SwitchToPassword', { timeout: 1500 }).catch(() => null)
+    if (switchBtn) { await switchBtn.click().catch(() => { }); await this.bot.utils.wait(1000) }
 
     // Rare flow: list of methods -> choose password
-    const passwordField = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 4000 }).catch(()=>null)
+    const passwordField = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 4000 }).catch(() => null)
     if (!passwordField) {
       const blocked = await this.detectSignInBlocked(page)
       if (blocked) return
@@ -204,13 +204,13 @@ export class Login {
       const otherWaysHandled = await this.handleOtherWaysToSignIn(page)
       if (otherWaysHandled) {
         // Try to find password field again after clicking "Other ways"
-        const passwordFieldAfter = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 3000 }).catch(()=>null)
+        const passwordFieldAfter = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 3000 }).catch(() => null)
         if (passwordFieldAfter) {
           this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field found after "Other ways" flow')
           await page.fill(SELECTORS.passwordInput, '')
           await page.fill(SELECTORS.passwordInput, password)
-          const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
-          if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
+          const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(() => null)
+          if (submit) { await submit.click().catch(() => { }); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
           return
         }
       }
@@ -226,8 +226,8 @@ export class Login {
 
     await page.fill(SELECTORS.passwordInput, '')
     await page.fill(SELECTORS.passwordInput, password)
-    const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
-    if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
+    const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(() => null)
+    if (submit) { await submit.click().catch(() => { }); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
   }
 
 
@@ -247,7 +247,7 @@ export class Login {
       for (const selector of otherWaysSelectors) {
         const element = await page.waitForSelector(selector, { timeout: 1000 }).catch(() => null)
         if (element && await element.isVisible().catch(() => false)) {
-          await element.click().catch(() => {})
+          await element.click().catch(() => { })
           this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Other ways to sign in"')
           await this.bot.utils.wait(2000) // Wait for options to appear
           clicked = true
@@ -273,7 +273,7 @@ export class Login {
       for (const selector of usePasswordSelectors) {
         const element = await page.waitForSelector(selector, { timeout: 1500 }).catch(() => null)
         if (element && await element.isVisible().catch(() => false)) {
-          await element.click().catch(() => {})
+          await element.click().catch(() => { })
           this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Use your password"')
           await this.bot.utils.wait(2000) // Wait for password field to appear
           return true
@@ -320,13 +320,13 @@ export class Login {
       if (this.bot.config.parallel) {
         this.bot.log(this.bot.isMobile, 'LOGIN', 'Parallel mode: throttling authenticator push requests', 'log', 'yellow')
         for (let attempts = 0; attempts < 6; attempts++) { // max 6 minutes retry window
-          const resend = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { timeout: 1500 }).catch(()=>null)
+          const resend = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { timeout: 1500 }).catch(() => null)
           if (!resend) break
           await this.bot.utils.wait(60000)
-          await resend.click().catch(()=>{})
+          await resend.click().catch(() => { })
         }
       }
-      await page.click('button[aria-describedby="confirmSendTitle"]').catch(()=>{})
+      await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
       await this.bot.utils.wait(1500)
       try {
         const el = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { timeout: 2000 })
@@ -344,14 +344,14 @@ export class Login {
         return
       } catch {
         this.bot.log(this.bot.isMobile, 'LOGIN', 'Authenticator code expired – refreshing')
-        const retryBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 3000 }).catch(()=>null)
-        if (retryBtn) await retryBtn.click().catch(()=>{})
+        const retryBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 3000 }).catch(() => null)
+        if (retryBtn) await retryBtn.click().catch(() => { })
         const refreshed = await this.fetchAuthenticatorNumber(page)
         if (!refreshed) { this.bot.log(this.bot.isMobile, 'LOGIN', 'Could not refresh authenticator code', 'warn'); return }
         numberToPress = refreshed
       }
     }
-    this.bot.log(this.bot.isMobile,'LOGIN','Authenticator approval loop exited (max cycles reached)','warn')
+    this.bot.log(this.bot.isMobile, 'LOGIN', 'Authenticator approval loop exited (max cycles reached)', 'warn')
   }
 
   private async handleSMSOrTotp(page: Page) {
@@ -363,17 +363,17 @@ export class Login {
           await this.submitTotpCode(page, totpSelector)
           return
         }
-      } catch {/* ignore */}
+      } catch {/* ignore */ }
     }
 
     // Manual prompt with periodic page check
     this.bot.log(this.bot.isMobile, 'LOGIN', 'Waiting for user 2FA code (SMS / Email / App fallback)')
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    
+
     // Monitor page changes while waiting for user input
     let userInput: string | null = null
     let checkInterval: NodeJS.Timeout | null = null
-    
+
     try {
       const inputPromise = new Promise<string>(res => {
         rl.question('Enter 2FA code:\n', ans => {
@@ -395,11 +395,11 @@ export class Login {
             rl.close()
             userInput = 'skip' // Signal to skip submission
           }
-        } catch {/* ignore */}
+        } catch {/* ignore */ }
       }, 2000)
 
       const code = await inputPromise
-      
+
       if (code === 'skip' || userInput === 'skip') {
         this.bot.log(this.bot.isMobile, 'LOGIN', 'Skipping 2FA code submission (page progressed)')
         return
@@ -411,7 +411,7 @@ export class Login {
     } finally {
       // Ensure cleanup happens even if errors occur
       if (checkInterval) clearInterval(checkInterval)
-      try { rl.close() } catch {/* ignore */}
+      try { rl.close() } catch {/* ignore */ }
     }
   }
 
@@ -448,7 +448,7 @@ export class Login {
     try {
       const code = generateTOTP(this.currentTotpSecret!.trim())
       const input = page.locator(selector).first()
-      if (!await input.isVisible().catch(()=>false)) {
+      if (!await input.isVisible().catch(() => false)) {
         this.bot.log(this.bot.isMobile, 'LOGIN', 'TOTP input unexpectedly hidden', 'warn')
         return
       }
@@ -457,9 +457,9 @@ export class Login {
       // Use unified selector system
       const submit = await this.findFirstVisibleLocator(page, Login.TOTP_SELECTORS.submit)
       if (submit) {
-        await submit.click().catch(()=>{})
+        await submit.click().catch(() => { })
       } else {
-        await page.keyboard.press('Enter').catch(()=>{})
+        await page.keyboard.press('Enter').catch(() => { })
       }
       this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP automatically')
     } catch (error) {
@@ -529,7 +529,7 @@ export class Login {
     for (const sel of selectors) {
       const loc = page.locator(sel).first()
       if (await loc.isVisible().catch(() => false)) {
-        await loc.click().catch(()=>{})
+        await loc.click().catch(() => { })
         return true
       }
     }
@@ -560,7 +560,7 @@ export class Login {
     while (Date.now() - start < timeoutMs) {
       for (const sel of selectors) {
         const loc = page.locator(sel).first()
-        if (await loc.isVisible().catch(()=>false)) {
+        if (await loc.isVisible().catch(() => false)) {
           return sel
         }
       }
@@ -588,7 +588,7 @@ export class Login {
     if (!portalSelector) {
       try {
         await this.bot.browser.func.goHome(page)
-      } catch {/* ignore fallback errors */}
+      } catch {/* ignore fallback errors */ }
 
       const fallbackSelector = await this.waitForRewardsRoot(page, 6000)
       if (!fallbackSelector) {
@@ -605,60 +605,60 @@ export class Login {
     try {
       this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing auth context')
       await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
-      for (let i=0;i<5;i++) {
+      for (let i = 0; i < 5; i++) {
         const u = new URL(page.url())
         if (u.hostname === 'www.bing.com' && u.pathname === '/') {
           await this.bot.browser.utils.tryDismissAllMessages(page)
-          const ok = await page.waitForSelector('#id_n', { timeout: 3000 }).then(()=>true).catch(()=>false)
-          if (ok || this.bot.isMobile) { this.bot.log(this.bot.isMobile,'LOGIN-BING','Bing verification passed'); break }
+          const ok = await page.waitForSelector('#id_n', { timeout: 3000 }).then(() => true).catch(() => false)
+          if (ok || this.bot.isMobile) { this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing verification passed'); break }
         }
         await this.bot.utils.wait(1000)
       }
     } catch (e) {
-      this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing verification error: '+e, 'warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing verification error: ' + e, 'warn')
     }
   }
 
   private async checkAccountLocked(page: Page) {
-    const locked = await page.waitForSelector('#serviceAbuseLandingTitle', { timeout: 1200 }).then(()=>true).catch(()=>false)
-    if (locked) throw this.bot.log(this.bot.isMobile,'CHECK-LOCKED','Account locked by Microsoft (serviceAbuseLandingTitle)','error')
+    const locked = await page.waitForSelector('#serviceAbuseLandingTitle', { timeout: 1200 }).then(() => true).catch(() => false)
+    if (locked) throw this.bot.log(this.bot.isMobile, 'CHECK-LOCKED', 'Account locked by Microsoft (serviceAbuseLandingTitle)', 'error')
   }
 
   // --------------- Passkey / Dialog Handling ---------------
   private async handlePasskeyPrompts(page: Page, context: 'main' | 'oauth') {
     let did = false
     // Video heuristic
-    const biometric = await page.waitForSelector(SELECTORS.biometricVideo, { timeout: 500 }).catch(()=>null)
+    const biometric = await page.waitForSelector(SELECTORS.biometricVideo, { timeout: 500 }).catch(() => null)
     if (biometric) {
       const btn = await page.$(SELECTORS.passkeySecondary)
-      if (btn) { await btn.click().catch(()=>{}); did = true; this.logPasskeyOnce('video heuristic') }
+      if (btn) { await btn.click().catch(() => { }); did = true; this.logPasskeyOnce('video heuristic') }
     }
     if (!did) {
-      const titleEl = await page.waitForSelector(SELECTORS.passkeyTitle, { timeout: 500 }).catch(()=>null)
-      const secBtn = await page.waitForSelector(SELECTORS.passkeySecondary, { timeout: 500 }).catch(()=>null)
-      const primBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 500 }).catch(()=>null)
+      const titleEl = await page.waitForSelector(SELECTORS.passkeyTitle, { timeout: 500 }).catch(() => null)
+      const secBtn = await page.waitForSelector(SELECTORS.passkeySecondary, { timeout: 500 }).catch(() => null)
+      const primBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 500 }).catch(() => null)
       const title = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
       const looksLike = /sign in faster|passkey|fingerprint|face|pin/i.test(title)
-      if (looksLike && secBtn) { await secBtn.click().catch(()=>{}); did = true; this.logPasskeyOnce('title heuristic '+title) }
+      if (looksLike && secBtn) { await secBtn.click().catch(() => { }); did = true; this.logPasskeyOnce('title heuristic ' + title) }
       else if (!did && secBtn && primBtn) {
-        const text = (await secBtn.textContent()||'').trim()
-        if (/skip for now/i.test(text)) { await secBtn.click().catch(()=>{}); did = true; this.logPasskeyOnce('secondary button text') }
+        const text = (await secBtn.textContent() || '').trim()
+        if (/skip for now/i.test(text)) { await secBtn.click().catch(() => { }); did = true; this.logPasskeyOnce('secondary button text') }
       }
       if (!did) {
         const textBtn = await page.locator('xpath=//button[contains(normalize-space(.),"Skip for now")]').first()
-        if (await textBtn.isVisible().catch(()=>false)) { await textBtn.click().catch(()=>{}); did = true; this.logPasskeyOnce('text fallback') }
+        if (await textBtn.isVisible().catch(() => false)) { await textBtn.click().catch(() => { }); did = true; this.logPasskeyOnce('text fallback') }
       }
       if (!did) {
         const close = await page.$('#close-button')
-        if (close) { await close.click().catch(()=>{}); did = true; this.logPasskeyOnce('close button') }
+        if (close) { await close.click().catch(() => { }); did = true; this.logPasskeyOnce('close button') }
       }
     }
 
     // KMSI prompt
-    const kmsi = await page.waitForSelector(SELECTORS.kmsiVideo, { timeout: 400 }).catch(()=>null)
+    const kmsi = await page.waitForSelector(SELECTORS.kmsiVideo, { timeout: 400 }).catch(() => null)
     if (kmsi) {
       const yes = await page.$(SELECTORS.passkeyPrimary)
-      if (yes) { await yes.click().catch(()=>{}); did = true; this.bot.log(this.bot.isMobile,'LOGIN-KMSI','Accepted KMSI prompt') }
+      if (yes) { await yes.click().catch(() => { }); did = true; this.bot.log(this.bot.isMobile, 'LOGIN-KMSI', 'Accepted KMSI prompt') }
     }
 
     if (!did && context === 'main') {
@@ -666,7 +666,7 @@ export class Login {
       const now = Date.now()
       if (this.noPromptIterations === 1 || now - this.lastNoPromptLog > 10000) {
         this.lastNoPromptLog = now
-        this.bot.log(this.bot.isMobile,'LOGIN-NO-PROMPT',`No dialogs (x${this.noPromptIterations})`)
+        this.bot.log(this.bot.isMobile, 'LOGIN-NO-PROMPT', `No dialogs (x${this.noPromptIterations})`)
         if (this.noPromptIterations > 50) this.noPromptIterations = 0
       }
     } else if (did) {
@@ -677,7 +677,7 @@ export class Login {
   private logPasskeyOnce(reason: string) {
     if (this.passkeyHandled) return
     this.passkeyHandled = true
-    this.bot.log(this.bot.isMobile,'LOGIN-PASSKEY',`Dismissed passkey prompt (${reason})`)
+    this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', `Dismissed passkey prompt (${reason})`)
   }
 
   // --------------- Security Detection ---------------
@@ -685,11 +685,11 @@ export class Login {
     if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'sign-in-blocked') return true
     try {
       let text = ''
-      for (const sel of ['[data-testid="title"]','h1','div[role="heading"]','div.text-title']) {
-        const el = await page.waitForSelector(sel, { timeout: 600 }).catch(()=>null)
+      for (const sel of ['[data-testid="title"]', 'h1', 'div[role="heading"]', 'div.text-title']) {
+        const el = await page.waitForSelector(sel, { timeout: 600 }).catch(() => null)
         if (el) {
-          const t = (await el.textContent()||'').trim()
-          if (t && t.length < 300) text += ' '+t
+          const t = (await el.textContent() || '').trim()
+          if (t && t.length < 300) text += ' ' + t
         }
       }
       const lower = text.toLowerCase()
@@ -697,57 +697,53 @@ export class Login {
       for (const p of SIGN_IN_BLOCK_PATTERNS) { if (p.re.test(lower)) { matched = p.label; break } }
       if (!matched) return false
       const email = this.bot.currentAccountEmail || 'unknown'
-      const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
       const incident: SecurityIncident = {
         kind: 'We can\'t sign you in (blocked)',
         account: email,
         details: [matched ? `Pattern: ${matched}` : 'Pattern: unknown'],
-        next: ['Manual recovery required before continuing'],
-        docsUrl
+        next: ['Manual recovery required before continuing']
       }
-      await this.sendIncidentAlert(incident,'warn')
+      await this.sendIncidentAlert(incident, 'warn')
       this.bot.compromisedModeActive = true
       this.bot.compromisedReason = 'sign-in-blocked'
       this.startCompromisedInterval()
-      await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(()=>{})
-      // Open security docs for immediate guidance (best-effort)
-      await this.openDocsTab(page, docsUrl).catch(()=>{})
+      await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(() => { })
       return true
     } catch { return false }
   }
 
-  private async tryRecoveryMismatchCheck(page: Page, email: string) { try { await this.detectAndHandleRecoveryMismatch(page, email) } catch {/* ignore */} }
+  private async tryRecoveryMismatchCheck(page: Page, email: string) { try { await this.detectAndHandleRecoveryMismatch(page, email) } catch {/* ignore */ } }
   private async detectAndHandleRecoveryMismatch(page: Page, email: string) {
     try {
       const recoveryEmail: string | undefined = this.bot.currentAccountRecoveryEmail
       if (!recoveryEmail || !/@/.test(recoveryEmail)) return
       const accountEmail = email
-      const parseRef = (val: string) => { const [l,d] = val.split('@'); return { local: l||'', domain:(d||'').toLowerCase(), prefix2:(l||'').slice(0,2).toLowerCase() } }
-      const refs = [parseRef(recoveryEmail), parseRef(accountEmail)].filter(r=>r.domain && r.prefix2)
+      const parseRef = (val: string) => { const [l, d] = val.split('@'); return { local: l || '', domain: (d || '').toLowerCase(), prefix2: (l || '').slice(0, 2).toLowerCase() } }
+      const refs = [parseRef(recoveryEmail), parseRef(accountEmail)].filter(r => r.domain && r.prefix2)
       if (refs.length === 0) return
 
       const candidates: string[] = []
       // Direct selectors (Microsoft variants + French spans)
       const sel = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"], span:has(span.fui-Text)'
-      const el = await page.waitForSelector(sel, { timeout: 1500 }).catch(()=>null)
-      if (el) { const t = (await el.textContent()||'').trim(); if (t) candidates.push(t) }
+      const el = await page.waitForSelector(sel, { timeout: 1500 }).catch(() => null)
+      if (el) { const t = (await el.textContent() || '').trim(); if (t) candidates.push(t) }
 
       // List items
       const li = page.locator('[role="listitem"], li')
-      const liCount = await li.count().catch(()=>0)
-      for (let i=0;i<liCount && i<12;i++) { const t = (await li.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && /@/.test(t)) candidates.push(t) }
+      const liCount = await li.count().catch(() => 0)
+      for (let i = 0; i < liCount && i < 12; i++) { const t = (await li.nth(i).textContent().catch(() => ''))?.trim() || ''; if (t && /@/.test(t)) candidates.push(t) }
 
       // XPath generic masked patterns
       const xp = page.locator('xpath=//*[contains(normalize-space(.), "@") and (contains(normalize-space(.), "*") or contains(normalize-space(.), "•"))]')
-      const xpCount = await xp.count().catch(()=>0)
-      for (let i=0;i<xpCount && i<12;i++) { const t = (await xp.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && t.length<300) candidates.push(t) }
+      const xpCount = await xp.count().catch(() => 0)
+      for (let i = 0; i < xpCount && i < 12; i++) { const t = (await xp.nth(i).textContent().catch(() => ''))?.trim() || ''; if (t && t.length < 300) candidates.push(t) }
 
       // Normalize
       const seen = new Set<string>()
-      const norm = (s:string)=>s.replace(/\s+/g,' ').trim()
-  const uniq = candidates.map(norm).filter(t=>t && !seen.has(t) && seen.add(t))
+      const norm = (s: string) => s.replace(/\s+/g, ' ').trim()
+      const uniq = candidates.map(norm).filter(t => t && !seen.has(t) && seen.add(t))
       // Masked filter
-      let masked = uniq.filter(t=>/@/.test(t) && /[*•]/.test(t))
+      let masked = uniq.filter(t => /@/.test(t) && /[*•]/.test(t))
 
       if (masked.length === 0) {
         // Fallback full HTML scan
@@ -758,14 +754,14 @@ export class Login {
           const found = new Set<string>()
           let m: RegExpExecArray | null
           while ((m = generic.exec(html)) !== null) found.add(m[0])
-          while ((m = frPhrase.exec(html)) !== null) { const raw = m[1]?.replace(/<[^>]+>/g,'').trim(); if (raw) found.add(raw) }
+          while ((m = frPhrase.exec(html)) !== null) { const raw = m[1]?.replace(/<[^>]+>/g, '').trim(); if (raw) found.add(raw) }
           if (found.size > 0) masked = Array.from(found)
-        } catch {/* ignore */}
+        } catch {/* ignore */ }
       }
       if (masked.length === 0) return
 
       // Prefer one mentioning email/adresse
-      const preferred = masked.find(t=>/email|courriel|adresse|mail/i.test(t)) || masked[0]!
+      const preferred = masked.find(t => /email|courriel|adresse|mail/i.test(t)) || masked[0]!
       // Extract the masked email: Microsoft sometimes shows only first 1 char (k*****@domain) or 2 chars (ko*****@domain).
       // We ONLY compare (1 or 2) leading visible alphanumeric chars + full domain (case-insensitive).
       // This avoids false positives when the displayed mask hides the 2nd char.
@@ -776,15 +772,15 @@ export class Login {
       const use = m || loose
       const extracted = use ? use[0] : preferred
       const extractedLower = extracted.toLowerCase()
-  let observedPrefix = ((use && use[1]) ? use[1] : '').toLowerCase()
-  let observedDomain = ((use && use[2]) ? use[2] : '').toLowerCase()
+      let observedPrefix = ((use && use[1]) ? use[1] : '').toLowerCase()
+      let observedDomain = ((use && use[2]) ? use[2] : '').toLowerCase()
       if (!observedDomain && extractedLower.includes('@')) {
         const parts = extractedLower.split('@')
         observedDomain = parts[1] || ''
       }
       if (!observedPrefix && extractedLower.includes('@')) {
         const parts = extractedLower.split('@')
-        observedPrefix = (parts[0] || '').replace(/[^a-z0-9]/gi,'').slice(0,2)
+        observedPrefix = (parts[0] || '').replace(/[^a-z0-9]/gi, '').slice(0, 2)
       }
 
       // Determine if any reference (recoveryEmail or accountEmail) matches observed mask logic
@@ -798,55 +794,52 @@ export class Login {
       })
 
       if (!matchRef) {
-        const docsUrl = this.getDocsUrl('recovery-email-mismatch')
         const incident: SecurityIncident = {
-          kind:'Recovery email mismatch',
+          kind: 'Recovery email mismatch',
           account: email,
-          details:[
+          details: [
             `MaskedShown: ${preferred}`,
             `Extracted: ${extracted}`,
             `Observed => ${observedPrefix || '??'}**@${observedDomain || '??'}`,
-            `Expected => ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(' OR ')}`
+            `Expected => ${refs.map(r => `${r.prefix2}**@${r.domain}`).join(' OR ')}`
           ],
-          next:[
+          next: [
             'Automation halted globally (standby engaged).',
             'Verify account security & recovery email in Microsoft settings.',
             'Update accounts.json if the change was legitimate before restart.'
-          ],
-          docsUrl
+          ]
         }
-        await this.sendIncidentAlert(incident,'critical')
+        await this.sendIncidentAlert(incident, 'critical')
         this.bot.compromisedModeActive = true
         this.bot.compromisedReason = 'recovery-mismatch'
         this.startCompromisedInterval()
-        await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(()=>{})
-        await this.openDocsTab(page, docsUrl).catch(()=>{})
+        await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(() => { })
       } else {
         const mode = observedPrefix.length === 1 ? 'lenient' : 'strict'
-        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Recovery OK (${mode}): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
+        this.bot.log(this.bot.isMobile, 'LOGIN-RECOVERY', `Recovery OK (${mode}): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
       }
-    } catch {/* non-fatal */}
+    } catch {/* non-fatal */ }
   }
 
   private async switchToPasswordLink(page: Page) {
     try {
       const link = await page.locator('xpath=//span[@role="button" and (contains(translate(normalize-space(.),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"use your password") or contains(translate(normalize-space(.),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"utilisez votre mot de passe"))]').first()
-      if (await link.isVisible().catch(()=>false)) {
-        await link.click().catch(()=>{})
+      if (await link.isVisible().catch(() => false)) {
+        await link.click().catch(() => { })
         await this.bot.utils.wait(800)
-        this.bot.log(this.bot.isMobile,'LOGIN','Clicked "Use your password" link')
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Use your password" link')
       }
-    } catch {/* ignore */}
+    } catch {/* ignore */ }
   }
 
   // --------------- Incident Helpers ---------------
-  private async sendIncidentAlert(incident: SecurityIncident, severity: 'warn'|'critical'='warn') {
-    const lines = [ `[Incident] ${incident.kind}`, `Account: ${incident.account}` ]
+  private async sendIncidentAlert(incident: SecurityIncident, severity: 'warn' | 'critical' = 'warn') {
+    const lines = [`[Incident] ${incident.kind}`, `Account: ${incident.account}`]
     if (incident.details?.length) lines.push(`Details: ${incident.details.join(' | ')}`)
     if (incident.next?.length) lines.push(`Next: ${incident.next.join(' -> ')}`)
     if (incident.docsUrl) lines.push(`Docs: ${incident.docsUrl}`)
-    const level: 'warn'|'error' = severity === 'critical' ? 'error' : 'warn'
-    this.bot.log(this.bot.isMobile,'SECURITY',lines.join(' | '), level)
+    const level: 'warn' | 'error' = severity === 'critical' ? 'error' : 'warn'
+    this.bot.log(this.bot.isMobile, 'SECURITY', lines.join(' | '), level)
     try {
       const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
       const fields = [
@@ -858,36 +851,18 @@ export class Login {
       await ConclusionWebhook(
         this.bot.config,
         `🔐 ${incident.kind}`,
-        '_Security check by @Light_',
+        '_Security check',
         fields,
         severity === 'critical' ? 0xFF0000 : 0xFFAA00
       )
-    } catch {/* ignore */}
-  }
-
-  private getDocsUrl(anchor?: string) {
-    const base = process.env.DOCS_BASE?.trim() || 'https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/blob/v2/docs/security.md'
-    const map: Record<string,string> = {
-      'recovery-email-mismatch':'#recovery-email-mismatch',
-      'we-cant-sign-you-in':'#we-cant-sign-you-in-blocked'
-    }
-    return anchor && map[anchor] ? `${base}${map[anchor]}` : base
+    } catch {/* ignore */ }
   }
 
   private startCompromisedInterval() {
     if (this.compromisedInterval) clearInterval(this.compromisedInterval)
-    this.compromisedInterval = setInterval(()=>{
-      try { this.bot.log(this.bot.isMobile,'SECURITY','Account in security standby. Review before proceeding. Security check by @Light','warn') } catch {/* ignore */}
-    }, 5*60*1000)
-  }
-
-
-  private async openDocsTab(page: Page, url: string) {
-    try {
-      const ctx = page.context()
-      const tab = await ctx.newPage()
-      await tab.goto(url, { waitUntil: 'domcontentloaded' })
-    } catch {/* ignore */}
+    this.compromisedInterval = setInterval(() => {
+      try { this.bot.log(this.bot.isMobile, 'SECURITY', 'Account in security standby. Review before proceeding.', 'warn') } catch {/* ignore */ }
+    }, 5 * 60 * 1000)
   }
 
   // --------------- Infrastructure ---------------
@@ -898,6 +873,6 @@ export class Login {
         body.isFidoSupported = false
         route.continue({ postData: JSON.stringify(body) })
       } catch { route.continue() }
-    }).catch(()=>{})
+    }).catch(() => { })
   }
 }

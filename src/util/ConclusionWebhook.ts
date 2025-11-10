@@ -29,12 +29,6 @@ interface DiscordEmbed {
     }
 }
 
-interface WebhookPayload {
-    username: string
-    avatar_url: string
-    embeds: DiscordEmbed[]
-}
-
 interface AccountSummary {
     email: string
     totalCollected: number
@@ -89,26 +83,20 @@ export async function ConclusionWebhook(
         embed.fields = fields
     }
 
-    // Use custom webhook settings if provided, otherwise fall back to defaults
-    const webhookUsername = config.webhook?.username || config.conclusionWebhook?.username || 'Microsoft Rewards'
-    const webhookAvatarUrl = config.webhook?.avatarUrl || config.conclusionWebhook?.avatarUrl || DISCORD.AVATAR_URL
-
-    const payload: WebhookPayload = {
-        username: webhookUsername,
-        avatar_url: webhookAvatarUrl,
-        embeds: [embed]
-    }
-
     const postWebhook = async (url: string, label: string) => {
         const maxAttempts = 3
         let lastError: unknown = null
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                await axios.post(url, payload, {
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 15000
-                })
+                await axios.post(url,
+                    {
+                        embeds: [embed]
+                    },
+                    {
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 15000
+                    })
                 log('main', 'WEBHOOK', `${label} notification sent successfully (attempt ${attempt})`)
                 return
             } catch (error) {
@@ -160,7 +148,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         const hours = Math.floor(totalSeconds / 3600)
         const minutes = Math.floor((totalSeconds % 3600) / 60)
         const seconds = totalSeconds % 60
-        
+
         if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
         if (minutes > 0) return `${minutes}m ${seconds}s`
         return `${seconds}s`
@@ -199,14 +187,14 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
 
     // Build global statistics field
     const globalStats = [
-        `**💎 Total Points Earned**`,
+        '**💎 Total Points Earned**',
         `\`${data.totalInitial.toLocaleString()}\` → \`${data.totalEnd.toLocaleString()}\` **(+${data.totalCollected.toLocaleString()})**`,
         '',
-        `**📊 Accounts Processed**`,
+        '**📊 Accounts Processed**',
         `✅ Success: **${data.successes}** | ⚠️ Errors: **${data.accountsWithErrors}** | 🚫 Banned: **${data.accountsBanned}**`,
         `Total: **${data.totalAccounts}** ${data.totalAccounts === 1 ? 'account' : 'accounts'}`,
         '',
-        `**⚡ Performance**`,
+        '**⚡ Performance**',
         `Average: **${data.avgPointsPerAccount}pts/account** in **${formatDuration(data.avgDuration)}**`,
         `Total Runtime: **${formatDuration(data.totalDuration)}**`
     ].join('\n')
@@ -215,33 +203,33 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
     const accountFields: DiscordField[] = []
     const maxAccountsPerField = 5
     const accountChunks: AccountSummary[][] = []
-    
+
     for (let i = 0; i < data.summaries.length; i += maxAccountsPerField) {
         accountChunks.push(data.summaries.slice(i, i + maxAccountsPerField))
     }
 
     accountChunks.forEach((chunk, chunkIndex) => {
         const accountLines: string[] = []
-        
+
         chunk.forEach((acc) => {
             const statusIcon = acc.banned?.status ? '🚫' : (acc.errors.length > 0 ? '⚠️' : '✅')
             const emailShort = acc.email.length > 25 ? acc.email.substring(0, 22) + '...' : acc.email
-            
+
             accountLines.push(`${statusIcon} **${emailShort}**`)
             accountLines.push(`└ Points: **+${acc.totalCollected}** (🖥️ ${acc.desktopCollected} • 📱 ${acc.mobileCollected})`)
             accountLines.push(`└ Duration: ${formatDuration(acc.durationMs)}`)
-            
+
             if (acc.banned?.status) {
                 accountLines.push(`└ 🚫 **Banned:** ${acc.banned.reason || 'Account suspended'}`)
             } else if (acc.errors.length > 0) {
                 const errorPreview = acc.errors.slice(0, 1).join(', ')
                 accountLines.push(`└ ⚠️ **Error:** ${errorPreview.length > 50 ? errorPreview.substring(0, 47) + '...' : errorPreview}`)
             }
-            
+
             accountLines.push('') // Empty line between accounts
         })
 
-        const fieldName = accountChunks.length > 1 
+        const fieldName = accountChunks.length > 1
             ? `📈 Account Details (${chunkIndex + 1}/${accountChunks.length})`
             : '📈 Account Details'
 
@@ -295,15 +283,6 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         })
     }
 
-    // Use custom webhook settings
-    const webhookUsername = config.conclusionWebhook?.username || config.webhook?.username || 'Microsoft Rewards'
-    const webhookAvatarUrl = config.conclusionWebhook?.avatarUrl || config.webhook?.avatarUrl || DISCORD.AVATAR_URL
-
-    const payload: WebhookPayload = {
-        username: webhookUsername,
-        avatar_url: webhookAvatarUrl,
-        embeds
-    }
 
     const postWebhook = async (url: string, label: string) => {
         const maxAttempts = 3
@@ -311,7 +290,9 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                await axios.post(url, payload, {
+                await axios.post(url, {
+                    embeds: embeds
+                }, {
                     headers: { 'Content-Type': 'application/json' },
                     timeout: 15000
                 })
@@ -339,13 +320,13 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
     // Optional NTFY notification (simplified summary)
     if (config.ntfy?.enabled && config.ntfy.url && config.ntfy.topic) {
         const message = [
-            `🎯 Microsoft Rewards Summary`,
+            '🎯 Microsoft Rewards Summary',
             `Status: ${statusText}`,
             `Points: ${data.totalInitial} → ${data.totalEnd} (+${data.totalCollected})`,
             `Accounts: ${data.successes}/${data.totalAccounts} successful`,
             `Duration: ${formatDuration(data.totalDuration)}`
         ].join('\n')
-        
+
         const ntfyType = embedColor === DISCORD.COLOR_RED ? 'error' : embedColor === DISCORD.COLOR_ORANGE ? 'warn' : 'log'
 
         try {

@@ -378,7 +378,7 @@ export class MicrosoftRewardsBot {
         }
         // If any account is flagged compromised, do NOT exit; keep the process alive so the browser stays open
         if (this.compromisedModeActive || this.globalStandby.active) {
-            log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done. Security check by @Light','warn','yellow')
+            log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done.','warn','yellow')
             const standbyInterval = setInterval(() => {
                 log('main','SECURITY','Still in standby: session(s) held open for manual recovery / review...','warn','yellow')
             }, 5 * 60 * 1000)
@@ -467,13 +467,13 @@ export class MicrosoftRewardsBot {
         if (this.compromisedModeActive) {
             // User wants the page to remain open for manual recovery. Do not proceed to tasks.
             const reason = this.compromisedReason || 'security-issue'
-            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving the browser open and skipping all activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
+            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving the browser open and skipping all activities for ${account.email}.`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
                 await ConclusionWebhook(
                     this.config,
                     '🔐 Security Alert (Post-Login)',
-                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving browser open; skipping tasks\n\n_Security check by @Light_`,
+                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving browser open; skipping tasks`,
                     undefined,
                     0xFFAA00
                 )
@@ -571,13 +571,13 @@ export class MicrosoftRewardsBot {
     await this.login.login(this.homePage, account.email, account.password, account.totp)
         if (this.compromisedModeActive) {
             const reason = this.compromisedReason || 'security-issue'
-            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
+            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}.`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
                 await ConclusionWebhook(
                     this.config,
                     '🔐 Security Alert (Mobile)',
-                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving mobile browser open; skipping tasks\n\n_Security check by @Light_`,
+                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving mobile browser open; skipping tasks`,
                     undefined,
                     0xFFAA00
                 )
@@ -790,7 +790,7 @@ export class MicrosoftRewardsBot {
             await ConclusionWebhook(
                 this.config,
                 '🚨 Global Security Standby Engaged',
-                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** Pausing all further accounts. We will not proceed until this is resolved.\n\n_Security check by @Light_`,
+                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** Pausing all further accounts. We will not proceed until this is resolved.`,
                 undefined,
                 DISCORD.COLOR_RED
             )

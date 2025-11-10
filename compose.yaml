@@ -6,8 +6,8 @@ services:
 
     # Volume mounts: Specify a location where you want to save the files on your local machine.
     volumes:
-      - ./src/accounts.jsonc:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
-      - ./src/config.jsonc:/usr/src/microsoft-rewards-script/dist/config.json:ro
+      - ./src/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
+      - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
 
     environment:

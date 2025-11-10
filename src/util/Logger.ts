@@ -5,8 +5,6 @@ import { Ntfy } from './Ntfy'
 import { loadConfig } from './Load'
 import { DISCORD } from '../constants'
 
-const DEFAULT_LIVE_LOG_USERNAME = 'MS Rewards - Live Logs'
-
 type WebhookBuffer = {
     lines: string[]
     sending: boolean
@@ -19,7 +17,7 @@ const webhookBuffers = new Map<string, WebhookBuffer>()
 setInterval(() => {
     const now = Date.now()
     const BUFFER_MAX_AGE_MS = 3600000 // 1 hour
-    
+
     for (const [url, buf] of webhookBuffers.entries()) {
         if (!buf.sending && buf.lines.length === 0) {
             const lastActivity = (buf as unknown as { lastActivity?: number }).lastActivity || 0
@@ -44,12 +42,7 @@ function getBuffer(url: string): WebhookBuffer {
 async function sendBatch(url: string, buf: WebhookBuffer) {
     if (buf.sending) return
     buf.sending = true
-    
-    // Load config to get webhook settings
-    const configData = loadConfig()
-    const webhookUsername = configData.webhook?.username || DEFAULT_LIVE_LOG_USERNAME
-    const webhookAvatarUrl = configData.webhook?.avatarUrl || DISCORD.AVATAR_URL
-    
+
     while (buf.lines.length > 0) {
         const chunk: string[] = []
         let currentLength = 0
@@ -69,8 +62,6 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
 
         // Enhanced webhook payload with embed, username and avatar
         const payload = {
-            username: webhookUsername,
-            avatar_url: webhookAvatarUrl,
             embeds: [{
                 description: `\`\`\`\n${content}\n\`\`\``,
                 color: determineColorFromContent(content),
@@ -143,13 +134,13 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     const currentTime = new Date().toLocaleString()
     const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP'
-    
+
     // Clean string for notifications (no chalk, structured)
     type LoggingCfg = { excludeFunc?: string[]; webhookExcludeFunc?: string[]; redactEmails?: boolean }
     const loggingCfg: LoggingCfg = (configAny.logging || {}) as LoggingCfg
     const shouldRedact = !!loggingCfg.redactEmails
     const redact = (s: string) => shouldRedact ? s.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig, (m) => {
-        const [u, d] = m.split('@'); return `${(u||'').slice(0,2)}***@${d||''}`
+        const [u, d] = m.split('@'); return `${(u || '').slice(0, 2)}***@${d || ''}`
     }) : s
     const cleanStr = redact(`[${currentTime}] [PID: ${process.pid}] [${type.toUpperCase()}] ${platformText} [${title}] ${message}`)
 
@@ -160,7 +151,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
             message.toLowerCase().includes('press the number'),
             message.toLowerCase().includes('no points to earn')
         ],
-        error: [], 
+        error: [],
         warn: [
             message.toLowerCase().includes('aborting'),
             message.toLowerCase().includes('didn\'t gain')
@@ -179,11 +170,11 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const typeIndicator = type === 'error' ? '✗' : type === 'warn' ? '⚠' : '✓'
     const platformColor = isMobile === 'main' ? chalk.cyan : isMobile ? chalk.blue : chalk.magenta
     const typeColor = type === 'error' ? chalk.red : type === 'warn' ? chalk.yellow : chalk.green
-    
+
     // Add contextual icon based on title/message (ASCII-safe for Windows PowerShell)
     const titleLower = title.toLowerCase()
     const msgLower = message.toLowerCase()
-    
+
     // ASCII-safe icons for Windows PowerShell compatibility
     const iconMap: Array<[RegExp, string]> = [
         [/security|compromised/i, '[SECURITY]'],
@@ -198,7 +189,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
         [/browser/i, '[BROWSER]'],
         [/main/i, '[MAIN]']
     ]
-    
+
     let icon = ''
     for (const [pattern, symbol] of iconMap) {
         if (pattern.test(titleLower) || pattern.test(msgLower)) {
@@ -206,9 +197,9 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
             break
         }
     }
-    
+
     const iconPart = icon ? icon + ' ' : ''
-    
+
     const formattedStr = [
         chalk.gray(`[${currentTime}]`),
         chalk.gray(`[${process.pid}]`),

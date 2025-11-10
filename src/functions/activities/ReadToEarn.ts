@@ -47,7 +47,8 @@ export class ReadToEarn extends Workers {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json',
                         'X-Rewards-Country': geoLocale,
-                        'X-Rewards-Language': 'en'
+                        'X-Rewards-Language': 'en',
+                        'X-Rewards-ismobile': 'true'
                     },
                     data: JSON.stringify(jsonData)
                 }

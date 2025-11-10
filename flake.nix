@@ -24,7 +24,7 @@
             playwright-test
 
             # fixes "waiting until load" issue compared to
-            # setting headless in config.jsonc
+            # setting headless in config.json
             xvfb-run
           ];
 
