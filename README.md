@@ -96,6 +96,8 @@ If using Nix:
 
 This will launch the script headlessly using `xvfb-run`.
 
+---
+
 ## Docker Setup
 
 ### Before Starting
@@ -139,8 +141,7 @@ services:
       - ./src/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
       - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
       - ./sessions:/usr/src/microsoft-rewards-script/dist/sessions
-      # - ./jobstate:/usr/src/microsoft-rewards-script/dist/jobstate
-
+      
     environment:
       TZ: "Europe/Amsterdam"
       NODE_ENV: "production"
@@ -176,157 +177,104 @@ services:
 ## Configuration Reference
 
 Edit `src/config.json` to customize behavior.  
-Below is a summary of key configuration sections.
+Below is a summary of available options (matches the latest version in the repository).
 
 ### Core
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `baseURL` | Microsoft Rewards base URL | `https://rewards.bing.com` |
-| `sessionPath` | Folder to store browser sessions | `sessions` |
-| `dryRun` | Simulate execution without running tasks | `false` |
-
-### Browser
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `browser.headless` | Run browser invisibly | `false` |
-| `browser.globalTimeout` | Timeout for actions | `"30s"` |
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `baseURL` | string | `"https://rewards.bing.com"` | Microsoft Rewards base URL |
+| `sessionPath` | string | `"sessions"` | Directory to store browser sessions |
+| `headless` | boolean | `false` | Run browser invisibly |
+| `parallel` | boolean | `false` | Run desktop and mobile simultaneously |
+| `runOnZeroPoints` | boolean | `false` | Run even when no points are available |
+| `clusters` | number | `1` | Number of concurrent account clusters |
+| `globalTimeout` | string | `"30s"` | Timeout for all actions |
+| `searchOnBingLocalQueries` | boolean | `false` | Use local query list |
 
 ### Fingerprinting
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `fingerprinting.saveFingerprint.mobile` | Reuse mobile fingerprint | `true` |
-| `fingerprinting.saveFingerprint.desktop` | Reuse desktop fingerprint | `true` |
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `saveFingerprint.mobile` | boolean | `false` | Reuse mobile fingerprint |
+| `saveFingerprint.desktop` | boolean | `false` | Reuse desktop fingerprint |
 
-### Execution
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `execution.parallel` | Run desktop and mobile simultaneously | `false` |
-| `execution.runOnZeroPoints` | Run even with zero points | `false` |
-| `execution.clusters` | Number of concurrent account clusters | `1` |
-
-### Job State
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `jobState.enabled` | Save last job state | `true` |
-| `jobState.dir` | Directory for job data | `""` |
-
-### Workers (Tasks)
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `doDailySet` | Complete daily set | `true` |
-| `doMorePromotions` | Complete more promotions | `true` |
-| `doPunchCards` | Complete punchcards | `true` |
-| `doDesktopSearch` | Perform desktop searches | `true` |
-| `doMobileSearch` | Perform mobile searches | `true` |
-| `doDailyCheckIn` | Complete daily check-in | `true` |
-| `doReadToEarn` | Complete Read-to-Earn | `true` |
-| `bundleDailySetWithSearch` | Combine daily set and searches | `true` |
+### Workers
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `doDailySet` | boolean | `true` | Complete daily set |
+| `doMorePromotions` | boolean | `true` | Complete more promotions |
+| `doPunchCards` | boolean | `true` | Complete punchcards |
+| `doDesktopSearch` | boolean | `true` | Perform desktop searches |
+| `doMobileSearch` | boolean | `true` | Perform mobile searches |
+| `doDailyCheckIn` | boolean | `true` | Complete daily check-in |
+| `doReadToEarn` | boolean | `true` | Complete Read-to-Earn |
 
 ### Search
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `search.useLocalQueries` | Use local query list | `true` |
-| `search.settings.useGeoLocaleQueries` | Use region-based queries | `true` |
-| `search.settings.scrollRandomResults` | Random scrolling | `true` |
-| `search.settings.clickRandomResults` | Random link clicking | `true` |
-| `search.settings.retryMobileSearchAmount` | Retry mobile searches | `2` |
-| `search.settings.delay.min` | Minimum delay between searches | `1min` |
-| `search.settings.delay.max` | Maximum delay between searches | `5min` |
-
-### Query Diversity
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `queryDiversity.enabled` | Enable multiple query sources | `true` |
-| `queryDiversity.sources` | Query providers | `["google-trends", "reddit", "local-fallback"]` |
-| `queryDiversity.maxQueriesPerSource` | Limit per source | `10` |
-| `queryDiversity.cacheMinutes` | Cache lifetime | `30` |
-
-### Humanization
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `humanization.enabled` | Enable human behavior | `true` |
-| `stopOnBan` | Stop immediately on ban | `true` |
-| `immediateBanAlert` | Alert instantly if banned | `true` |
-| `actionDelay.min` | Minimum delay per action (ms) | `500` |
-| `actionDelay.max` | Maximum delay per action (ms) | `2200` |
-| `gestureMoveProb` | Chance of random mouse movement | `0.65` |
-| `gestureScrollProb` | Chance of random scrolls | `0.4` |
-
-### Vacation Mode
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `vacation.enabled` | Enable random pauses | `true` |
-| `minDays` | Minimum days off | `2` |
-| `maxDays` | Maximum days off | `4` |
-
-### Risk Management
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `enabled` | Enable risk-based adjustments | `true` |
-| `autoAdjustDelays` | Adapt delays dynamically | `true` |
-| `stopOnCritical` | Stop on critical warning | `false` |
-| `banPrediction` | Predict bans based on signals | `true` |
-| `riskThreshold` | Risk tolerance level | `75` |
-
-### Retry Policy
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `maxAttempts` | Maximum retry attempts | `3` |
-| `baseDelay` | Initial retry delay | `1000` |
-| `maxDelay` | Maximum retry delay | `30s` |
-| `multiplier` | Backoff multiplier | `2` |
-| `jitter` | Random jitter factor | `0.2` |
-
-### Proxy
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
-| `proxy.proxyBingTerms` | Proxy Bing terms requests | `true` |
-
-### Notifications
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `notifications.webhook.enabled` | Enable Discord webhook | `false` |
-| `notifications.webhook.url` | Discord webhook URL | `""` |
-| `notifications.conclusionWebhook.enabled` | Enable summary webhook | `false` |
-| `notifications.conclusionWebhook.url` | Summary webhook URL | `""` |
-| `notifications.ntfy.enabled` | Enable Ntfy push alerts | `false` |
-| `notifications.ntfy.url` | Ntfy server URL | `""` |
-| `notifications.ntfy.topic` | Ntfy topic name | `"rewards"` |
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `searchSettings.useGeoLocaleQueries` | boolean | `false` | Use region-based queries |
+| `searchSettings.scrollRandomResults` | boolean | `true` | Scroll randomly on results |
+| `searchSettings.clickRandomResults` | boolean | `true` | Click random links |
+| `searchSettings.searchDelay.min` | string | `"3min"` | Minimum delay between searches |
+| `searchSettings.searchDelay.max` | string | `"5min"` | Maximum delay between searches |
+| `searchSettings.retryMobileSearchAmount` | number | `2` | Retry mobile searches amount |
 
 ### Logging
-| Setting | Description | Default |
-|----------|-------------|----------|
-| `excludeFunc` | Exclude from console logs | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
-| `webhookExcludeFunc` | Exclude from webhook logs | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
-| `redactEmails` | Hide emails in logs | `true` |
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `logExcludeFunc` | string[] | `["SEARCH-CLOSE-TABS"]` | Exclude from console logs |
+| `webhookLogExcludeFunc` | string[] | `["SEARCH-CLOSE-TABS"]` | Exclude from webhook logs |
+
+### Proxy
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `proxy.proxyGoogleTrends` | boolean | `true` | Proxy Google Trends requests |
+| `proxy.proxyBingTerms` | boolean | `true` | Proxy Bing term requests |
+
+### Webhooks
+| Setting | Type | Default | Description |
+|----------|------|----------|-------------|
+| `webhook.enabled` | boolean | `false` | Enable Discord webhook |
+| `webhook.url` | string | `""` | Webhook URL |
+| `conclusionWebhook.enabled` | boolean | `false` | Enable summary webhook |
+| `conclusionWebhook.url` | string | `""` | Summary webhook URL |
 
 ---
 
 ## Account Configuration
 
-Edit `src/accounts.json`:
+Edit `src/accounts.json` — the file is an **array** of accounts:
 
 ```json
-{
-  "accounts": [
-    {
-      "enabled": true,
-      "email": "email_1@outlook.com",
-      "password": "password_1",
-      "totp": "",
-      "recoveryEmail": "your_email@domain.com",
-      "proxy": {
-        "proxyAxios": true,
-        "url": "",
-        "port": 0,
-        "username": "",
-        "password": ""
-      }
+[
+  {
+    "email": "email_1",
+    "password": "password_1",
+    "proxy": {
+      "proxyAxios": true,
+      "url": "",
+      "port": 0,
+      "username": "",
+      "password": ""
     }
-  ]
-}
+  },
+  {
+    "email": "email_2",
+    "password": "password_2",
+    "proxy": {
+      "proxyAxios": true,
+      "url": "",
+      "port": 0,
+      "username": "",
+      "password": ""
+    }
+  }
+]
 ```
+
+**Notes**
+- The file is a **flat array** — not `{ "accounts": [ ... ] }`.  
+- Only `email`, `password`, and `proxy` are supported.  
+- `proxyAxios` enables Axios-level proxying for API requests.
 
 ---
 
@@ -340,7 +288,7 @@ Edit `src/accounts.json`:
 - Full daily set automation  
 - Mobile and desktop search support  
 - Vacation and risk protection  
-- Webhook and Ntfy notifications  
+- Webhook notifications  
 - Docker scheduling support  
 
 ---
