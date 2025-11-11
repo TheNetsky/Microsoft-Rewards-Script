@@ -1,71 +1,115 @@
 [![Discord](https://img.shields.io/badge/Join%20Our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8BxYbV4pkj)
 
-# Quick Setup (Recommended)
+---
 
-1. Clone this repository or download the latest release ZIP.  
-2. Run the setup script:
-
-   * **Windows:**  
-     Double-click `setup/setup.bat`
-   * **Linux / macOS / WSL:**  
-     ```bash
-     bash setup/setup.sh
-     ```
-   * **Alternative (any platform):**  
-     ```bash
-     npm run setup
-     ```
-
-3. Follow the prompts — the setup script will:
-   * Copy `accounts.example.json` → `accounts.json`
-   * Ask for your Microsoft account credentials
-   * Remind you to review `config.json`
-   * Install dependencies (`npm install`)
-   * Build (`npm run build`)
-   * Optionally start the script
-
-That's it — the setup script handles the rest.
+## Table of Contents
+- [Setup](#setup)
+  - [1. Clone the Repository](#1-clone-the-repository)
+  - [2. Copy Configuration Files](#2-copy-configuration-files)
+  - [3. Install Dependencies and Prepare the Browser](#3-install-dependencies-and-prepare-the-browser)
+  - [4. Build and Run](#4-build-and-run)
+- [Nix Users](#nix-setup)
+- [Docker Setup](#docker-setup)
+  - [Before Starting](#before-starting)
+  - [Quick Start](#quick-start)
+  - [Example compose.yaml](#example-composeyaml)
+- [Configuration Reference](#configuration-reference)
+- [Account Configuration](#account-configuration)
+- [Features Overview](#features-overview)
+- [Disclaimer](#disclaimer)
 
 ---
 
-# Advanced Setup Options
+## Setup
 
-### Nix Users
+**Requirements:** Node.js ≥ 20 and Git  
+Works on Windows, Linux, macOS, and WSL.
+
+---
+
+### 1. Clone the Repository
+**All systems:**
+```bash
+git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+cd Microsoft-Rewards-Script
+```
+Or download the latest release ZIP and extract it.
+
+---
+
+### 2. Copy Configuration Files
+
+**Windows:**
+Rename manually:
+```
+src/accounts.example.json → src/accounts.json
+```
+
+**Linux / macOS / WSL:**
+```bash
+cp src/accounts.example.json src/accounts.json
+```
+
+Then edit:
+- `src/accounts.json` — fill in your Microsoft account credentials.  
+- `src/config.json` — review or customize options.
+
+---
+
+### 3. Install Dependencies and Prepare the Browser
+
+**All systems:**
+```bash
+npm run pre-build
+```
+
+This command:
+- Installs all dependencies  
+- Clears old builds (`dist/`)  
+- Installs Playwright Chromium (required browser)
+
+---
+
+### 4. Build and Run
+
+**All systems:**
+```bash
+npm run build
+npm run start
+```
+
+---
+
+## Nix Setup
+
 If using Nix:
 ```bash
 ./run.sh
 ```
 
-### Manual Setup (if setup script fails)
-1. Copy:
-   ```bash
-   cp src/accounts.example.json src/accounts.json
-   ```
-2. Edit `src/accounts.json` and `src/config.json`.
-3. Install and build:
-   ```bash
-   npm install
-   npm run build
-   npm run start
-   ```
+The script will:
+- Run `npm run pre-build` to install dependencies and Chromium  
+- Then start the script headlessly using `xvfb-run`
 
 ---
 
-# Docker Setup (Recommended for Scheduling)
+## Docker Setup
 
-## Before Starting
-* Remove local `/node_modules` and `/dist` if previously built.
-* Remove old Docker volumes if upgrading from older versions.
-* You can reuse your old `accounts.json`.
+### Before Starting
+- Remove local `/node_modules` and `/dist` if previously built.  
+- Remove old Docker volumes if upgrading from older versions.  
+- You can reuse your existing `accounts.json`.
 
-## Quick Start
-1. Clone v2 and configure `accounts.json`
-2. Ensure `config.json` has `"headless": true`
-3. Edit `compose.yaml`:
-   * Set your timezone (`TZ`)
-   * Set cron schedule (`CRON_SCHEDULE`)
-   * Optional: `RUN_ON_START=true`
-4. Start:
+---
+
+### Quick Start
+1. Clone the repository and configure your `accounts.json`.  
+2. Ensure `config.json` has `"headless": true`.  
+3. Edit `compose.yaml`:  
+   - Set your timezone (`TZ`)  
+   - Set the cron schedule (`CRON_SCHEDULE`)  
+   - Optionally enable `RUN_ON_START=true`  
+4. Start the container:
    ```bash
    docker compose up -d
    ```
@@ -74,9 +118,12 @@ If using Nix:
    docker logs microsoft-rewards-script
    ```
 
-The container randomly delays scheduled runs by approximately 5–50 minutes to appear more natural (configurable, see notes below).
+The container includes a randomized delay (about 5–50 minutes by default)  
+before each scheduled run to appear more natural. This can be configured or disabled via environment variables.
 
-## Example compose.yaml
+---
+
+### Example compose.yaml
 
 ```yaml
 services:
@@ -85,41 +132,21 @@ services:
     container_name: microsoft-rewards-script
     restart: unless-stopped
 
-    # Mount your configuration and persistent session storage
     volumes:
-      # Read-only config files from your working directory into the container
       - ./src/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
       - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
-
-      # Persist browser sessions/fingerprints between runs
       - ./sessions:/usr/src/microsoft-rewards-script/dist/sessions
-
-      # Optional: persist job state directory (if you set jobState.dir to a folder inside dist/)
       # - ./jobstate:/usr/src/microsoft-rewards-script/dist/jobstate
 
     environment:
-      # Timezone for scheduling
       TZ: "Europe/Amsterdam"
-
-      # Node runtime
       NODE_ENV: "production"
-
-      # Cron schedule for automatic runs (UTC inside container)
-      # Example: run at 07:00, 16:00, and 20:00 every day
       CRON_SCHEDULE: "0 7,16,20 * * *"
-
-      # Run immediately on container start (in addition to CRON_SCHEDULE)
       RUN_ON_START: "true"
-
-      # Randomize scheduled start-time between MIN..MAX minutes
-      # Comment these to use defaults (about 5–50 minutes)
       # MIN_SLEEP_MINUTES: "5"
       # MAX_SLEEP_MINUTES: "50"
-
-      # Optional: disable randomization entirely
       # SKIP_RANDOM: "true"
 
-    # Optional: limit resources if desired
     deploy:
       resources:
         limits:
@@ -127,75 +154,60 @@ services:
           memory: "1g"
 ```
 
-### compose.yaml Notes
-- `volumes`  
-  - `accounts.json` and `config.json` are mounted read-only to avoid accidental in-container edits. Edit them on the host.  
-  - `sessions` persists your login sessions and fingerprints across restarts and updates.  
-  - If you enable `jobState.enabled` and set `jobState.dir`, consider mounting that path as a volume too.
-- `CRON_SCHEDULE`  
-  - Standard crontab format. Use a site like crontab.guru to generate expressions.  
-  - The schedule is evaluated inside the container; ensure `TZ` matches your desired timezone.
-- `RUN_ON_START`  
-  - If `"true"`, the script runs once immediately when the container is started, then on the cron schedule.
-- Randomization  
-  - By default, a randomized delay prevents runs from happening at exactly the same time every day.  
-  - You can tune it with `MIN_SLEEP_MINUTES` and `MAX_SLEEP_MINUTES`, or disable with `SKIP_RANDOM`.
+#### compose.yaml Notes
+- **volumes**  
+  - `accounts.json` and `config.json` are mounted read-only to prevent accidental edits.  
+  - `sessions` persists login sessions and fingerprints across runs.  
+  - If `jobState.enabled` is used, mount its directory as a volume.
+- **CRON_SCHEDULE**  
+  - Uses standard crontab syntax (e.g., via [crontab.guru](https://crontab.guru/)).  
+  - Schedule is evaluated inside the container using the configured `TZ`.
+- **RUN_ON_START**  
+  - Runs the script once immediately on startup, then continues on schedule.
+- **Randomization**  
+  - Default delay: 5–50 minutes.  
+  - Adjustable via `MIN_SLEEP_MINUTES` and `MAX_SLEEP_MINUTES`, or disable with `SKIP_RANDOM`.
 
 ---
 
-# Configuration Reference
+## Configuration Reference
 
-Edit `src/config.json` to customize the bot’s behavior.
+Edit `src/config.json` to customize behavior.  
+Below is a summary of key configuration sections.
 
-## Core
-
+### Core
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `baseURL` | Microsoft Rewards base URL | `https://rewards.bing.com` |
 | `sessionPath` | Folder to store browser sessions | `sessions` |
-| `dryRun` | Simulate without running tasks | `false` |
+| `dryRun` | Simulate execution without running tasks | `false` |
 
----
-
-## Browser
-
+### Browser
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `browser.headless` | Run browser invisibly | `false` |
 | `browser.globalTimeout` | Timeout for actions | `"30s"` |
 
----
-
-## Fingerprinting
-
+### Fingerprinting
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `fingerprinting.saveFingerprint.mobile` | Reuse mobile fingerprint | `true` |
 | `fingerprinting.saveFingerprint.desktop` | Reuse desktop fingerprint | `true` |
 
----
-
-## Execution
-
+### Execution
 | Setting | Description | Default |
 |----------|-------------|----------|
-| `execution.parallel` | Run desktop and mobile at once | `false` |
-| `execution.runOnZeroPoints` | Run even with no points | `false` |
-| `execution.clusters` | Concurrent account clusters | `1` |
+| `execution.parallel` | Run desktop and mobile simultaneously | `false` |
+| `execution.runOnZeroPoints` | Run even with zero points | `false` |
+| `execution.clusters` | Number of concurrent account clusters | `1` |
 
----
-
-## Job State
-
+### Job State
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `jobState.enabled` | Save last job state | `true` |
 | `jobState.dir` | Directory for job data | `""` |
 
----
-
-## Workers (Tasks)
-
+### Workers (Tasks)
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `doDailySet` | Complete daily set | `true` |
@@ -207,10 +219,7 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `doReadToEarn` | Complete Read-to-Earn | `true` |
 | `bundleDailySetWithSearch` | Combine daily set and searches | `true` |
 
----
-
-## Search
-
+### Search
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `search.useLocalQueries` | Use local query list | `true` |
@@ -221,10 +230,7 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `search.settings.delay.min` | Minimum delay between searches | `1min` |
 | `search.settings.delay.max` | Maximum delay between searches | `5min` |
 
----
-
-## Query Diversity
-
+### Query Diversity
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `queryDiversity.enabled` | Enable multiple query sources | `true` |
@@ -232,10 +238,7 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `queryDiversity.maxQueriesPerSource` | Limit per source | `10` |
 | `queryDiversity.cacheMinutes` | Cache lifetime | `30` |
 
----
-
-## Humanization
-
+### Humanization
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `humanization.enabled` | Enable human behavior | `true` |
@@ -246,20 +249,14 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `gestureMoveProb` | Chance of random mouse movement | `0.65` |
 | `gestureScrollProb` | Chance of random scrolls | `0.4` |
 
----
-
-## Vacation Mode
-
+### Vacation Mode
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `vacation.enabled` | Enable random pauses | `true` |
 | `minDays` | Minimum days off | `2` |
 | `maxDays` | Maximum days off | `4` |
 
----
-
-## Risk Management
-
+### Risk Management
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `enabled` | Enable risk-based adjustments | `true` |
@@ -268,10 +265,7 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `banPrediction` | Predict bans based on signals | `true` |
 | `riskThreshold` | Risk tolerance level | `75` |
 
----
-
-## Retry Policy
-
+### Retry Policy
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `maxAttempts` | Maximum retry attempts | `3` |
@@ -280,19 +274,13 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `multiplier` | Backoff multiplier | `2` |
 | `jitter` | Random jitter factor | `0.2` |
 
----
-
-## Proxy
-
+### Proxy
 | Setting | Description | Default |
 |----------|-------------|----------|
-| `proxy.proxyGoogleTrends` | Proxy Google Trends | `true` |
-| `proxy.proxyBingTerms` | Proxy Bing Terms | `true` |
+| `proxy.proxyGoogleTrends` | Proxy Google Trends requests | `true` |
+| `proxy.proxyBingTerms` | Proxy Bing terms requests | `true` |
 
----
-
-## Notifications
-
+### Notifications
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `notifications.webhook.enabled` | Enable Discord webhook | `false` |
@@ -303,10 +291,7 @@ Edit `src/config.json` to customize the bot’s behavior.
 | `notifications.ntfy.url` | Ntfy server URL | `""` |
 | `notifications.ntfy.topic` | Ntfy topic name | `"rewards"` |
 
----
-
-## Logging
-
+### Logging
 | Setting | Description | Default |
 |----------|-------------|----------|
 | `excludeFunc` | Exclude from console logs | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
@@ -315,7 +300,7 @@ Edit `src/config.json` to customize the bot’s behavior.
 
 ---
 
-# Account Configuration
+## Account Configuration
 
 Edit `src/accounts.json`:
 
@@ -335,20 +320,6 @@ Edit `src/accounts.json`:
         "username": "",
         "password": ""
       }
-    },
-    {
-      "enabled": false,
-      "email": "email_2@outlook.com",
-      "password": "password_2",
-      "totp": "",
-      "recoveryEmail": "your_email@domain.com",
-      "proxy": {
-        "proxyAxios": true,
-        "url": "",
-        "port": 0,
-        "username": "",
-        "password": ""
-      }
     }
   ]
 }
@@ -356,13 +327,13 @@ Edit `src/accounts.json`:
 
 ---
 
-# Features Overview
+## Features Overview
 
 - Multi-account and session handling  
 - Persistent browser fingerprints  
 - Parallel task execution  
 - Proxy and retry support  
-- Human-like delays and scrolling  
+- Human-like behavior simulation  
 - Full daily set automation  
 - Mobile and desktop search support  
 - Vacation and risk protection  
@@ -371,7 +342,7 @@ Edit `src/accounts.json`:
 
 ---
 
-# Disclaimer
+## Disclaimer
 
 Use at your own risk.  
 Automation of Microsoft Rewards may lead to account suspension or bans.  
