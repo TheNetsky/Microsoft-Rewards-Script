@@ -111,7 +111,8 @@ export async function getEdgeVersions(isMobile: boolean) {
 export function getSystemComponents(mobile: boolean): string {
     if (mobile) {
         const androidVersion = 10 + Math.floor(Math.random() * 5)
-        return `Linux; Android ${androidVersion}; K`
+	// Add real mobile model: Samsung S21 (SM-G991B)
+        return `Linux; Android ${androidVersion}; SM-G991B`
     }
 
     return 'Windows NT 10.0; Win64; x64'
