@@ -1,0 +1,71 @@
+{
+    "baseURL": "https://rewards.bing.com",
+    "sessionPath": "sessions",
+    "headless": false,
+    "runOnZeroPoints": false,
+    "clusters": 1,
+    "errorDiagnostics": true,
+    "saveFingerprint": {
+        "mobile": false,
+        "desktop": false
+    },
+    "workers": {
+        "doDailySet": true,
+        "doMorePromotions": true,
+        "doPunchCards": true,
+        "doAppPromotions": true,
+        "doDesktopSearch": true,
+        "doMobileSearch": true,
+        "doDailyCheckIn": true,
+        "doReadToEarn": true
+    },
+    "searchOnBingLocalQueries": false,
+    "globalTimeout": "30sec",
+    "searchSettings": {
+        "scrollRandomResults": false,
+        "clickRandomResults": false,
+        "parallelSearching": true,
+        "searchResultVisitTime": "10sec",
+        "searchDelay": {
+            "min": "30sec",
+            "max": "1min"
+        },
+        "readDelay": {
+            "min": "30sec",
+            "max": "1min"
+        }
+    },
+    "debugLogs": false,
+    "consoleLogFilter": {
+        "enabled": false,
+        "mode": "whitelist",
+        "levels": ["error", "warn"],
+        "keywords": ["starting account"],
+        "regexPatterns": []
+    },
+    "proxy": {
+        "queryEngine": true
+    },
+    "webhook": {
+        "discord": {
+            "enabled": false,
+            "url": ""
+        },
+        "ntfy": {
+            "enabled": false,
+            "url": "",
+            "topic": "",
+            "token": "",
+            "title": "Microsoft-Rewards-Script",
+            "tags": ["bot", "notify"],
+            "priority": 3
+        },
+        "webhookLogFilter": {
+            "enabled": false,
+            "mode": "whitelist",
+            "levels": ["error"],
+            "keywords": ["starting account", "select number", "collected"],
+            "regexPatterns": []
+        }
+    }
+}
