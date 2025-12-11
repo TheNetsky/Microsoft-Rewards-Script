@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import axiosRetry from 'axios-retry'
 import { HttpProxyAgent } from 'http-proxy-agent'
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import { URL } from 'url'
 import type { AccountProxy } from '../interface/Account'
 
 class AxiosClient {
@@ -15,7 +16,6 @@ class AxiosClient {
             timeout: 20000
         })
 
-        // Configure proxy agent if available
         if (this.account.url && this.account.proxyAxios) {
             const agent = this.getAgentForProxy(this.account)
             this.instance.defaults.httpAgent = agent
@@ -23,11 +23,10 @@ class AxiosClient {
         }
 
         axiosRetry(this.instance, {
-            retries: 5, // Retry 5 times
+            retries: 5,
             retryDelay: axiosRetry.exponentialDelay,
             shouldResetTimeout: true,
             retryCondition: error => {
-                // Retry on: Network errors, 429 (Too Many Requests), 5xx server errors
                 if (axiosRetry.isNetworkError(error)) return true
                 if (!error.response) return true
 
@@ -38,15 +37,38 @@ class AxiosClient {
     }
 
     private getAgentForProxy(proxyConfig: AccountProxy): HttpProxyAgent<string> | HttpsProxyAgent<string> {
-        const { url, port } = proxyConfig
+        const { url: baseUrl, port, username, password } = proxyConfig
 
-        switch (true) {
-            case url.startsWith('http://'):
-                return new HttpProxyAgent(`${url}:${port}`)
-            case url.startsWith('https://'):
-                return new HttpsProxyAgent(`${url}:${port}`)
+        let urlObj: URL
+        try {
+            urlObj = new URL(baseUrl)
+        } catch (e) {
+            try {
+                urlObj = new URL(`http://${baseUrl}`)
+            } catch (error) {
+                throw new Error(`Invalid proxy URL format: ${baseUrl}`)
+            }
+        }
+
+        const protocol = urlObj.protocol.toLowerCase()
+        let proxyUrl: string
+
+        if (username && password) {
+            urlObj.username = encodeURIComponent(username)
+            urlObj.password = encodeURIComponent(password)
+            urlObj.port = port.toString()
+            proxyUrl = urlObj.toString()
+        } else {
+            proxyUrl = `${protocol}//${urlObj.hostname}:${port}`
+        }
+
+        switch (protocol) {
+            case 'http:':
+                return new HttpProxyAgent(proxyUrl)
+            case 'https:':
+                return new HttpsProxyAgent(proxyUrl)
             default:
-                throw new Error(`Unsupported proxy protocol: ${url}, only HTTP(S) is supported!`)
+                throw new Error(`Unsupported proxy protocol: ${protocol}. Only HTTP(S) is supported!`)
         }
     }
 
