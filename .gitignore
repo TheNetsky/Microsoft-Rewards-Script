@@ -1,8 +1,10 @@
 sessions/
 dist/
+.dev/
 node_modules/
-accounts.json
-notes
+src/accounts.json
+src/config.json
+note
 accounts.dev.json
 accounts.main.json
 .DS_Store
