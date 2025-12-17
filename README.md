@@ -4,6 +4,8 @@
 
 TODO
 
+[For installation see the main (v1) or v2 branch (mostly the same)](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/main?tab=readme-ov-file#setup)
+
 ## Disclaimer
 
 Use at your own risk.  
