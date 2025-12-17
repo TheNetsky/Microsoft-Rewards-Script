@@ -47,7 +47,7 @@ export class QueryCore {
                     'SEARCH-GOOGLE-TRENDS',
                     'Insufficient search queries, falling back to US'
                 )
-                return this.getGoogleTrends(geoLocale)
+                return this.getGoogleTrends('US')
             }
 
             for (const [topic, relatedQueries] of mappedTrendsData) {
