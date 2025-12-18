@@ -85,6 +85,7 @@ export class MicrosoftRewardsBot {
     public fingerprint!: BrowserFingerprintWithHeaders
 
     private pointsCanCollect = 0
+    private hasEnabledAccounts = true
 
     private activeWorkers: number
     private browserFactory: Browser = new Browser(this)
@@ -123,9 +124,26 @@ export class MicrosoftRewardsBot {
 
     async initialize(): Promise<void> {
         this.accounts = loadAccounts()
+
+        if (this.accounts.length === 0) {
+            this.logger.warn(
+                'main',
+                'ACCOUNTS',
+                'No enabled accounts found. Set "enabled": true for at least one entry in accounts.json/accounts.dev.json.'
+            )
+            await flushAllWebhooks()
+            this.hasEnabledAccounts = false
+            return
+        }
+
+        this.hasEnabledAccounts = true
     }
 
     async run(): Promise<void> {
+        if (!this.hasEnabledAccounts) {
+            return
+        }
+
         const totalAccounts = this.accounts.length
         const runStartTime = Date.now()
 

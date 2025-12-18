@@ -19,7 +19,10 @@ export function loadAccounts(): Account[] {
         const accountDir = path.join(__dirname, '../', file)
         const accounts = fs.readFileSync(accountDir, 'utf-8')
 
-        return JSON.parse(accounts)
+        const parsedAccounts: Array<Account & { enabled?: boolean }> = JSON.parse(accounts)
+        return parsedAccounts
+            .filter(account => account.enabled ?? true)
+            .map(account => ({ ...account, enabled: account.enabled ?? true }))
     } catch (error) {
         throw new Error(error as string)
     }

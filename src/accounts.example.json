@@ -1,5 +1,6 @@
 [
     {
+        "enabled": true,
         "email": "email_1",
         "password": "password_1",
         "totp": "",
@@ -13,6 +14,7 @@
         }
     },
     {
+        "enabled": false,
         "email": "email_2",
         "password": "password_2",
         "totp": "",

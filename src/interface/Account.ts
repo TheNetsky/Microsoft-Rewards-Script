@@ -1,4 +1,5 @@
 export interface Account {
+    enabled?: boolean
     email: string
     password: string
     totp?: string
