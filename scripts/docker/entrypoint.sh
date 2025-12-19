@@ -17,6 +17,12 @@ if [ -z "${CRON_SCHEDULE:-}" ]; then
   exit 1
 fi
 
+# 2b. Export defaults for runtime tunables so envsubst never writes empty values
+export MIN_SLEEP_MINUTES="${MIN_SLEEP_MINUTES:-5}"
+export MAX_SLEEP_MINUTES="${MAX_SLEEP_MINUTES:-50}"
+export SKIP_RANDOM_SLEEP="${SKIP_RANDOM_SLEEP:-false}"
+export STUCK_PROCESS_TIMEOUT_HOURS="${STUCK_PROCESS_TIMEOUT_HOURS:-8}"
+
 # 3. Initial run without sleep if RUN_ON_START=true
 if [ "${RUN_ON_START:-false}" = "true" ]; then
   echo "[entrypoint] Starting initial run in background at $(date)"
