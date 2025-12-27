@@ -255,12 +255,8 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
                 inline: false
             }
         ],
-        thumbnail: {
-            url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
-        },
         footer: {
-            text: `Microsoft Rewards Bot v${data.version} • Completed at`,
-            icon_url: 'https://media.discordapp.net/attachments/1421163952972369931/1421929950377939125/Gc.png'
+            text: `Microsoft Rewards Bot v${data.version} • Completed at`
         },
         timestamp: new Date().toISOString()
     })
