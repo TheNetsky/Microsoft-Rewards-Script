@@ -35,7 +35,7 @@ class Browser {
         try {
             browser = await rebrowser.chromium.launch({
                 headless: this.bot.config.headless,
-                ...(proxy.url && {
+                ...(proxy?.url && {
                     proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` }
                 }),
                 args: [

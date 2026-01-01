@@ -16,7 +16,7 @@ class AxiosClient {
             timeout: 20000
         })
 
-        if (this.account.url && this.account.proxyAxios) {
+        if (this.account?.url && this.account?.proxyAxios) {
             const agent = this.getAgentForProxy(this.account)
             this.instance.defaults.httpAgent = agent
             this.instance.defaults.httpsAgent = agent
