@@ -11,6 +11,7 @@ import { TotpLogin } from './methods/Totp2FALogin'
 type LoginState =
     | 'EMAIL_INPUT'
     | 'PASSWORD_INPUT'
+	| 'USE_YOUR_PASSWORD'
     | 'SIGN_IN_ANOTHER_WAY'
     | 'PASSKEY_ERROR'
     | 'PASSKEY_VIDEO'
@@ -155,6 +156,7 @@ export class Login {
         const results = await Promise.all([
             check('div[role="alert"]', 'ERROR_ALERT'),
             check('[data-testid="passwordEntry"]', 'PASSWORD_INPUT'),
+			check('text="Use your password"', 'USE_YOUR_PASSWORD'),
             check('input#usernameEntry', 'EMAIL_INPUT'),
             check('[data-testid="kmsiVideo"]', 'KMSI_PROMPT'),
             check('[data-testid="biometricVideo"]', 'PASSKEY_VIDEO'),
@@ -257,6 +259,13 @@ export class Login {
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
                 return true
             }
+
+			case 'USE_YOUR_PASSWORD': {
+				this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Switching to using a password')
+				await this.bot.browser.utils.ghostClick(page, 'text="Use your password"')
+				await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+				return true
+			}
 
             case 'GET_A_CODE': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Attempting to bypass "Get code"')
