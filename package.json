@@ -31,6 +31,7 @@
         "Cheerio"
     ],
     "devDependencies": {
+        "@types/cheerio": "^0.22.35",
         "@types/ms": "^2.1.0",
         "@types/node": "^24.10.1",
         "@typescript-eslint/eslint-plugin": "^8.48.0",

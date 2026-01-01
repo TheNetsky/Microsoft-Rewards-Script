@@ -1,5 +1,5 @@
 import { type Page, type BrowserContext } from 'patchright'
-import { CheerioAPI, load } from 'cheerio'
+import {load} from 'cheerio'
 import { ClickOptions, createCursor } from 'ghost-cursor-playwright-port'
 
 import type { MicrosoftRewardsBot } from '../index'
@@ -205,7 +205,7 @@ export default class BrowserUtils {
         }
     }
 
-    async loadInCheerio(data: Page | string): Promise<CheerioAPI> {
+	async loadInCheerio(data: Page | string): Promise<cheerio.Root> {
         const html: string = typeof data === 'string' ? data : await data.content()
         const $ = load(html)
         return $
