@@ -87,6 +87,7 @@ export class MicrosoftRewardsBot {
     private pointsCanCollect = 0
 
     private activeWorkers: number
+    private exitedWorkers: number[]
     private browserFactory: Browser = new Browser(this)
     private accounts: Account[]
     private workers: Workers
@@ -115,6 +116,7 @@ export class MicrosoftRewardsBot {
         }
         this.config = loadConfig()
         this.activeWorkers = this.config.clusters
+        this.exitedWorkers = []
     }
 
     get isMobile(): boolean {
@@ -182,6 +184,11 @@ export class MicrosoftRewardsBot {
         }
 
         const onWorkerDone = async (label: 'exit' | 'disconnect', worker: Worker, code?: number): Promise<void> => {
+            const { pid } = worker.process;
+
+            if (!pid || this.exitedWorkers.includes(pid)) return;
+            else this.exitedWorkers.push(pid);
+
             this.activeWorkers -= 1
             this.logger.warn(
                 'main',
@@ -226,6 +233,7 @@ export class MicrosoftRewardsBot {
                 if (process.send) {
                     process.send({ __stats: stats })
                 }
+                process.exit()
             } catch (error) {
                 this.logger.error(
                     'main',
