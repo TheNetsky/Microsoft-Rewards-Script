@@ -28,7 +28,7 @@ export default class BrowserFunc {
                 .join('; ')
 
             const request: AxiosRequestConfig = {
-                url: `https://rewards.bing.com/api/getuserinfo?type=1&X-Requested-With=XMLHttpRequest&_=${Date.now()}`,
+                url: 'https://rewards.bing.com/api/getuserinfo?type=1',
                 method: 'GET',
                 headers: {
                     ...(this.bot.fingerprint?.headers ?? {}),

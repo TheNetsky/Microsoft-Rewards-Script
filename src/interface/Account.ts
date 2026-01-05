@@ -1,9 +1,12 @@
 export interface Account {
     email: string
     password: string
-    totp?: string
+    totpSecret?: string
+    recoveryEmail: string
     geoLocale: 'auto' | string
+    langCode: 'en' | string
     proxy: AccountProxy
+    saveFingerprint: ConfigSaveFingerprint
 }
 
 export interface AccountProxy {
@@ -12,4 +15,9 @@ export interface AccountProxy {
     port: number
     password: string
     username: string
+}
+
+export interface ConfigSaveFingerprint {
+    mobile: boolean
+    desktop: boolean
 }

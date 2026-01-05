@@ -76,7 +76,7 @@ export class SearchManager {
 
             this.bot.logger.info('main', 'SEARCH-MANAGER', 'Closing mobile session')
             try {
-                await executionContext.run({ isMobile: true, accountEmail }, async () => {
+                await executionContext.run({ isMobile: true, account }, async () => {
                     await this.bot.browser.func.closeBrowser(mobileSession.context, accountEmail)
                 })
                 this.bot.logger.info('main', 'SEARCH-MANAGER', 'Mobile session closed')
@@ -368,7 +368,7 @@ export class SearchManager {
             `Init | account=${accountEmail} | proxy=${account.proxy ?? 'none'}`
         )
 
-        const session = await this.bot['browserFactory'].createBrowser(account.proxy, accountEmail)
+        const session = await this.bot['browserFactory'].createBrowser(account)
         this.bot.logger.debug('main', 'SEARCH-DESKTOP-LOGIN', 'Browser created, new page')
 
         this.bot.mainDesktopPage = await session.context.newPage()
@@ -377,7 +377,7 @@ export class SearchManager {
         this.bot.logger.info('main', 'SEARCH-DESKTOP-LOGIN', 'Login start')
         this.bot.logger.debug('main', 'SEARCH-DESKTOP-LOGIN', 'Calling login handler')
 
-        await this.bot['login'].login(this.bot.mainDesktopPage, accountEmail, account.password, account.totp)
+        await this.bot['login'].login(this.bot.mainDesktopPage, account)
 
         this.bot.logger.info('main', 'SEARCH-DESKTOP-LOGIN', 'Login passed, verifying')
         this.bot.logger.debug('main', 'SEARCH-DESKTOP-LOGIN', 'verifyBingSession')

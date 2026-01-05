@@ -10,12 +10,18 @@ import { AppReward } from './activities/app/AppReward'
 import { UrlReward } from './activities/api/UrlReward'
 import { Quiz } from './activities/api/Quiz'
 import { FindClippy } from './activities/api/FindClippy'
+import { DoubleSearchPoints } from './activities/api/DoubleSearchPoints'
 
 // Browser
 import { SearchOnBing } from './activities/browser/SearchOnBing'
 import { Search } from './activities/browser/Search'
 
-import type { BasePromotion, DashboardData, FindClippyPromotion } from '../interface/DashboardData'
+import type {
+    BasePromotion,
+    DashboardData,
+    FindClippyPromotion,
+    PurplePromotionalItem
+} from '../interface/DashboardData'
 import type { Promotion } from '../interface/AppDashBoardData'
 
 export default class Activities {
@@ -68,9 +74,14 @@ export default class Activities {
         await quiz.doQuiz(promotion)
     }
 
-    doFindClippy = async (promotions: FindClippyPromotion): Promise<void> => {
-        const urlReward = new FindClippy(this.bot)
-        await urlReward.doFindClippy(promotions)
+    doFindClippy = async (promotion: FindClippyPromotion): Promise<void> => {
+        const findClippy = new FindClippy(this.bot)
+        await findClippy.doFindClippy(promotion)
+    }
+
+    doDoubleSearchPoints = async (promotion: PurplePromotionalItem): Promise<void> => {
+        const doubleSearchPoints = new DoubleSearchPoints(this.bot)
+        await doubleSearchPoints.doDoubleSearchPoints(promotion)
     }
 
     // App Activities

@@ -73,10 +73,10 @@ export class Logger {
         const now = new Date().toLocaleString()
         const formatted = formatMessage(message)
 
+        const userName = this.bot.userData.userName ? this.bot.userData.userName : 'MAIN'
+
         const levelTag = level.toUpperCase()
-        const cleanMsg = `[${now}] [${this.bot.userData.userName}] [${levelTag}] ${platformText(
-            isMobile
-        )} [${title}] ${formatted}`
+        const cleanMsg = `[${now}] [${userName}] [${levelTag}] ${platformText(isMobile)} [${title}] ${formatted}`
 
         const config = this.bot.config
 
@@ -85,7 +85,7 @@ export class Logger {
         }
 
         const badge = platformBadge(isMobile)
-        const consoleStr = `[${now}] [${this.bot.userData.userName}] [${levelTag}] ${badge} [${title}] ${formatted}`
+        const consoleStr = `[${now}] [${userName}] [${levelTag}] ${badge} [${title}] ${formatted}`
 
         let logColor: ColorKey | undefined = color
 

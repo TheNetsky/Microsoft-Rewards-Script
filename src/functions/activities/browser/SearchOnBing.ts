@@ -232,7 +232,7 @@ export class SearchOnBing extends Workers {
             if (this.bot.config.searchOnBingLocalQueries) {
                 this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-QUERY', 'Using local queries config file')
 
-                const data = fs.readFileSync(path.join(__dirname, '../queries.json'), 'utf8')
+                const data = fs.readFileSync(path.join(__dirname, '../bing-search-activity-queries.json'), 'utf8')
                 queries = JSON.parse(data)
 
                 this.bot.logger.debug(
@@ -250,7 +250,7 @@ export class SearchOnBing extends Workers {
                 // Fetch from the repo directly so the user doesn't need to redownload the script for the new activities
                 const response = await this.bot.axios.request({
                     method: 'GET',
-                    url: 'https://raw.githubusercontent.com/TheNetsky/Microsoft-Rewards-Script/refs/heads/v3/src/functions/queries.json'
+                    url: 'https://raw.githubusercontent.com/TheNetsky/Microsoft-Rewards-Script/refs/heads/v3/src/functions/bing-search-activity-queries.json'
                 })
                 queries = response.data
 

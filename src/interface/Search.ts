@@ -94,3 +94,23 @@ export interface BingTrendingImage {
 export interface BingTrendingQuery {
     text: string
 }
+
+export interface WikipediaTopResponse {
+    items: Array<{
+        articles: Array<{
+            article: string
+            views: number
+        }>
+    }>
+}
+
+export interface RedditListing {
+    data: {
+        children: Array<{
+            data: {
+                title: string
+                over_18: boolean
+            }
+        }>
+    }
+}

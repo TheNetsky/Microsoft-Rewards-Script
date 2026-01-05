@@ -40,8 +40,12 @@
         // "noPropertyAccessFromIndexSignature": true,  /* Require undeclared properties from index signatures to use element accesses. */
         /* Module Resolution Options */
         "moduleResolution": "node" /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */,
-        "types": ["node"],
-        "typeRoots": ["./node_modules/@types"],
+        "types": [
+            "node"
+        ],
+        "typeRoots": [
+            "./node_modules/@types"
+        ],
         // Keep explicit typeRoots to ensure resolution in environments that don't auto-detect before full install.
         // "baseUrl": "./",                             /* Base directory to resolve non-absolute module names. */
         // "paths": {},                                 /* A series of entries which re-map imports to lookup locations relative to the 'baseUrl'. */
@@ -65,6 +69,14 @@
         "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */,
         "resolveJsonModule": true
     },
-    "include": ["src/**/*.ts", "src/accounts.json", "src/config.json", "src/functions/queries.json"],
-    "exclude": ["node_modules"]
+    "include": [
+        "src/**/*.ts",
+        "src/accounts.json",
+        "src/config.json",
+        "src/functions/bing-search-activity-queries.json",
+        "src/functions/search-queries.json"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
 }

@@ -1,12 +1,11 @@
 {
     "name": "microsoft-rewards-script",
-    "version": "3.0.1",
+    "version": "3.0.2",
     "description": "Automatically do tasks for Microsoft Rewards but in TS!",
     "author": "Netsky",
     "license": "GPL-3.0-or-later",
-    "main": "dist/index.js",
     "engines": {
-        "node": ">=18.0.0"
+        "node": ">=22.0.0"
     },
     "scripts": {
         "pre-build": "npm i && rimraf dist && npx patchright install chromium",
@@ -18,8 +17,10 @@
         "create-docker": "docker build -t microsoft-rewards-script-docker .",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "clear-sessions": "node ./scripts/clearSessions.js",
-        "clear-diagnostics": "rimraf diagnostics"
+        "clear-diagnostics": "rimraf diagnostics",
+        "clear-sessions": "node ./scripts/main/clearSessions.js",
+        "open-session": "node ./scripts/main/browserSession.js -email",
+        "open-session:dev": "node ./scripts/main/browserSession.js -dev -email ItsNetsky@protonmail.com"
     },
     "keywords": [
         "Bing Rewards",
@@ -33,6 +34,7 @@
     "devDependencies": {
         "@types/ms": "^2.1.0",
         "@types/node": "^24.10.1",
+        "@types/semver": "^7.7.1",
         "@typescript-eslint/eslint-plugin": "^8.48.0",
         "eslint": "^9.39.1",
         "eslint-plugin-modules-newline": "^0.0.6",
@@ -45,8 +47,8 @@
         "axios-retry": "^4.5.0",
         "chalk": "^4.1.2",
         "cheerio": "^1.0.0",
-        "fingerprint-generator": "^2.1.77",
-        "fingerprint-injector": "^2.1.77",
+        "fingerprint-generator": "^2.1.79",
+        "fingerprint-injector": "^2.1.79",
         "ghost-cursor-playwright-port": "^1.4.3",
         "http-proxy-agent": "^7.0.2",
         "https-proxy-agent": "^7.0.6",
@@ -54,6 +56,9 @@
         "otpauth": "^9.4.1",
         "p-queue": "^9.0.1",
         "patchright": "^1.57.0",
-        "ts-node": "^10.9.2"
+        "semver": "^7.7.3",
+        "socks-proxy-agent": "^8.0.5",
+        "ts-node": "^10.9.2",
+        "zod": "^4.3.5"
     }
 }

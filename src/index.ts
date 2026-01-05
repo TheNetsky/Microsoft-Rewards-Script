@@ -12,6 +12,7 @@ import BrowserUtils from './browser/BrowserUtils'
 import { IpcLog, Logger } from './logging/Logger'
 import Utils from './util/Utils'
 import { loadAccounts, loadConfig } from './util/Load'
+import { checkNodeVersion } from './util/Validator'
 
 import { Login } from './browser/auth/Login'
 import { Workers } from './functions/Workers'
@@ -27,7 +28,7 @@ import type { AppDashboardData } from './interface/AppDashBoardData'
 
 interface ExecutionContext {
     isMobile: boolean
-    accountEmail: string
+    account: Account
 }
 
 interface BrowserSession {
@@ -50,7 +51,7 @@ const executionContext = new AsyncLocalStorage<ExecutionContext>()
 export function getCurrentContext(): ExecutionContext {
     const context = executionContext.getStore()
     if (!context) {
-        return { isMobile: false, accountEmail: 'unknown' }
+        return { isMobile: false, account: {} as any }
     }
     return context
 }
@@ -62,6 +63,7 @@ async function flushAllWebhooks(timeoutMs = 5000): Promise<void> {
 interface UserData {
     userName: string
     geoLocale: string
+    langCode: string
     initialPoints: number
     currentPoints: number
     gainedPoints: number
@@ -99,7 +101,8 @@ export class MicrosoftRewardsBot {
     constructor() {
         this.userData = {
             userName: '',
-            geoLocale: '',
+            geoLocale: 'US',
+            langCode: 'en',
             initialPoints: 0,
             currentPoints: 0,
             gainedPoints: 0
@@ -134,7 +137,7 @@ export class MicrosoftRewardsBot {
         this.logger.info(
             'main',
             'RUN-START',
-            `Starting Microsoft Rewards bot| v${pkg.version} | Accounts: ${totalAccounts} | Clusters: ${this.config.clusters}`
+            `Starting Microsoft Rewards Script | v${pkg.version} | Accounts: ${totalAccounts} | Clusters: ${this.config.clusters}`
         )
 
         if (this.config.clusters > 1) {
@@ -185,11 +188,14 @@ export class MicrosoftRewardsBot {
 
         const onWorkerDone = async (label: 'exit' | 'disconnect', worker: Worker, code?: number): Promise<void> => {
             const { pid } = worker.process
-
-            if (!pid || this.exitedWorkers.includes(pid)) return
-            else this.exitedWorkers.push(pid)
-
             this.activeWorkers -= 1
+
+            if (!pid || this.exitedWorkers.includes(pid)) {
+                return
+            } else {
+                this.exitedWorkers.push(pid)
+            }
+
             this.logger.warn(
                 'main',
                 `CLUSTER-WORKER-${label.toUpperCase()}`,
@@ -233,6 +239,7 @@ export class MicrosoftRewardsBot {
                 if (process.send) {
                     process.send({ __stats: stats })
                 }
+
                 process.disconnect()
             } catch (error) {
                 this.logger.error(
@@ -355,14 +362,14 @@ export class MicrosoftRewardsBot {
         let mobileContextClosed = false
 
         try {
-            return await executionContext.run({ isMobile: true, accountEmail }, async () => {
-                mobileSession = await this.browserFactory.createBrowser(account.proxy, accountEmail)
+            return await executionContext.run({ isMobile: true, account }, async () => {
+                mobileSession = await this.browserFactory.createBrowser(account)
                 const initialContext: BrowserContext = mobileSession.context
                 this.mainMobilePage = await initialContext.newPage()
 
                 this.logger.info('main', 'BROWSER', `Mobile Browser started | ${accountEmail}`)
 
-                await this.login.login(this.mainMobilePage, accountEmail, account.password, account.totp)
+                await this.login.login(this.mainMobilePage, account)
 
                 try {
                     this.accessToken = await this.login.getAppAccessToken(this.mainMobilePage, accountEmail)
@@ -410,6 +417,7 @@ export class MicrosoftRewardsBot {
 
                 if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
                 if (this.config.workers.doDailySet) await this.workers.doDailySet(data, this.mainMobilePage)
+                if (this.config.workers.doSpecialPromotions) await this.workers.doSpecialPromotions(data)
                 if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(data, this.mainMobilePage)
                 if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
                 if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
@@ -448,7 +456,7 @@ export class MicrosoftRewardsBot {
         } finally {
             if (mobileSession && !mobileContextClosed) {
                 try {
-                    await executionContext.run({ isMobile: true, accountEmail }, async () => {
+                    await executionContext.run({ isMobile: true, account }, async () => {
                         await this.browser.func.closeBrowser(mobileSession!.context, accountEmail)
                     })
                 } catch {}
@@ -460,6 +468,8 @@ export class MicrosoftRewardsBot {
 export { executionContext }
 
 async function main(): Promise<void> {
+    // Check before doing anything
+    checkNodeVersion()
     const rewardsBot = new MicrosoftRewardsBot()
 
     process.on('beforeExit', () => {

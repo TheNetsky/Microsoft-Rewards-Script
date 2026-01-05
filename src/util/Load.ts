@@ -3,8 +3,9 @@ import type { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 import fs from 'fs'
 import path from 'path'
 
-import type { Account } from '../interface/Account'
-import type { Config, ConfigSaveFingerprint } from '../interface/Config'
+import type { Account, ConfigSaveFingerprint } from '../interface/Account'
+import type { Config } from '../interface/Config'
+import { validateAccounts, validateConfig } from './Validator'
 
 let configCache: Config
 
@@ -18,8 +19,11 @@ export function loadAccounts(): Account[] {
 
         const accountDir = path.join(__dirname, '../', file)
         const accounts = fs.readFileSync(accountDir, 'utf-8')
+        const accountsData = JSON.parse(accounts)
 
-        return JSON.parse(accounts)
+        validateAccounts(accountsData)
+
+        return accountsData
     } catch (error) {
         throw new Error(error as string)
     }
@@ -35,6 +39,8 @@ export function loadConfig(): Config {
         const config = fs.readFileSync(configDir, 'utf-8')
 
         const configData = JSON.parse(config)
+        validateConfig(configData)
+
         configCache = configData
 
         return configData

@@ -5,7 +5,6 @@ export interface Config {
     runOnZeroPoints: boolean
     clusters: number
     errorDiagnostics: boolean
-    saveFingerprint: ConfigSaveFingerprint
     workers: ConfigWorkers
     searchOnBingLocalQueries: boolean
     globalTimeout: number | string
@@ -16,15 +15,13 @@ export interface Config {
     webhook: ConfigWebhook
 }
 
-export interface ConfigSaveFingerprint {
-    mobile: boolean
-    desktop: boolean
-}
+export type QueryEngine = 'google' | 'wikipedia' | 'reddit' | 'local'
 
 export interface ConfigSearchSettings {
     scrollRandomResults: boolean
     clickRandomResults: boolean
     parallelSearching: boolean
+    queryEngines: QueryEngine[]
     searchResultVisitTime: number | string
     searchDelay: ConfigDelay
     readDelay: ConfigDelay
@@ -41,6 +38,7 @@ export interface ConfigProxy {
 
 export interface ConfigWorkers {
     doDailySet: boolean
+    doSpecialPromotions: boolean
     doMorePromotions: boolean
     doPunchCards: boolean
     doAppPromotions: boolean

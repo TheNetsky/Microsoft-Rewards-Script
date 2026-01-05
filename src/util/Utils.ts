@@ -21,10 +21,19 @@ export default class Util {
     }
 
     shuffleArray<T>(array: T[]): T[] {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+
+            const a = array[i]
+            const b = array[j]
+
+            if (a === undefined || b === undefined) continue
+
+            array[i] = b
+            array[j] = a
+        }
+
         return array
-            .map(value => ({ value, sort: Math.random() }))
-            .sort((a, b) => a.sort - b.sort)
-            .map(({ value }) => value)
     }
 
     randomNumber(min: number, max: number): number {

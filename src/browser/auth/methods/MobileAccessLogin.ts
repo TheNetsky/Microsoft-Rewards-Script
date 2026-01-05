@@ -1,7 +1,6 @@
 import type { Page } from 'patchright'
 import { randomBytes } from 'crypto'
 import { URLSearchParams } from 'url'
-import type { AxiosRequestConfig } from 'axios'
 
 import type { MicrosoftRewardsBot } from '../../../index'
 
@@ -29,25 +28,70 @@ export class MobileAccessLogin {
             authorizeUrl.searchParams.append('access_type', 'offline_access')
             authorizeUrl.searchParams.append('login_hint', email)
 
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'LOGIN-APP',
+                `Auth URL constructed: ${authorizeUrl.origin}${authorizeUrl.pathname}`
+            )
+
             await this.bot.browser.utils.disableFido(this.page)
 
-            await this.page.goto(authorizeUrl.href).catch(() => {})
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Navigating to OAuth authorize URL')
+
+            await this.page.goto(authorizeUrl.href).catch(err => {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'LOGIN-APP',
+                    `page.goto() failed: ${err instanceof Error ? err.message : String(err)}`
+                )
+            })
 
             this.bot.logger.info(this.bot.isMobile, 'LOGIN-APP', 'Waiting for mobile OAuth code...')
+
             const start = Date.now()
             let code = ''
+            let lastUrl = ''
 
             while (Date.now() - start < this.maxTimeout) {
-                const url = new URL(this.page.url())
-                if (url.hostname === 'login.live.com' && url.pathname === '/oauth20_desktop.srf') {
-                    code = url.searchParams.get('code') || ''
-                    if (code) break
+                const currentUrl = this.page.url()
+
+                // Log only when URL changes (high signal, no spam)
+                if (currentUrl !== lastUrl) {
+                    this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', `OAuth poll URL changed → ${currentUrl}`)
+                    lastUrl = currentUrl
                 }
+
+                try {
+                    const url = new URL(currentUrl)
+
+                    if (url.hostname === 'login.live.com' && url.pathname === '/oauth20_desktop.srf') {
+                        code = url.searchParams.get('code') || ''
+
+                        if (code) {
+                            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'OAuth code detected in redirect URL')
+                            break
+                        }
+                    }
+                } catch (err) {
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'LOGIN-APP',
+                        `Invalid URL while polling: ${String(currentUrl)}`
+                    )
+                }
+
                 await this.bot.utils.wait(1000)
             }
 
             if (!code) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-APP', 'Timed out waiting for OAuth code')
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'LOGIN-APP',
+                    `Timed out waiting for OAuth code after ${Math.round((Date.now() - start) / 1000)}s`
+                )
+
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', `Final page URL: ${this.page.url()}`)
+
                 return ''
             }
 
@@ -57,18 +101,24 @@ export class MobileAccessLogin {
             data.append('code', code)
             data.append('redirect_uri', this.redirectUrl)
 
-            const request: AxiosRequestConfig = {
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Exchanging OAuth code for access token')
+
+            const response = await this.bot.axios.request({
                 url: this.tokenUrl,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 data: data.toString()
-            }
+            })
 
-            const response = await this.bot.axios.request(request)
             const token = (response?.data?.access_token as string) ?? ''
 
             if (!token) {
                 this.bot.logger.warn(this.bot.isMobile, 'LOGIN-APP', 'No access_token in token response')
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'LOGIN-APP',
+                    `Token response payload: ${JSON.stringify(response?.data)}`
+                )
                 return ''
             }
 
@@ -78,10 +128,11 @@ export class MobileAccessLogin {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `MobileAccess error: ${error instanceof Error ? error.message : String(error)}`
+                `MobileAccess error: ${error instanceof Error ? error.stack || error.message : String(error)}`
             )
             return ''
         } finally {
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Returning to base URL')
             await this.page.goto(this.bot.config.baseURL, { timeout: 10000 }).catch(() => {})
         }
     }

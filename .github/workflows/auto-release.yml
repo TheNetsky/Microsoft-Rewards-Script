@@ -1,0 +1,71 @@
+name: Auto Release on package.json version bump
+
+on:
+    push:
+        branches: [v3]
+        paths:
+            - package.json
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Read current version
+              id: current
+              run: |
+                  VERSION=$(node -p "require('./package.json').version")
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+            - name: Read previous version (from previous commit)
+              id: previous
+              run: |
+                  PREV_VERSION=$(git show HEAD~1:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version" || echo "")
+                  echo "version=$PREV_VERSION" >> "$GITHUB_OUTPUT"
+
+            - name: Check if version increased
+              id: check
+              run: |
+                  CUR="${{ steps.current.outputs.version }}"
+                  PREV="${{ steps.previous.outputs.version }}"
+
+                  echo "Current: $CUR"
+                  echo "Previous: $PREV"
+
+                  # if previous doesn't exist (first commit containing package.json), skip
+                  if [ -z "$PREV" ]; then
+                    echo "should_release=false" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  # Compare semver using node's semver package if available; fallback to simple inequality
+                  node -e "
+                    const cur='${CUR}';
+                    const prev='${PREV}';
+                    let should = cur !== prev;
+                    try {
+                      const semver = require('semver');
+                      should = semver.gt(cur, prev);
+                    } catch (_) {}
+                    console.log('should_release=' + should);
+                  " >> "$GITHUB_OUTPUT"
+
+            - name: Stop if no bump
+              if: steps.check.outputs.should_release != 'true'
+              run: echo "No version increase detected."
+
+            - name: Create tag + GitHub Release
+              if: steps.check.outputs.should_release == 'true'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ steps.current.outputs.version }}
+                  name: v${{ steps.current.outputs.version }}
+                  generate_release_notes: true

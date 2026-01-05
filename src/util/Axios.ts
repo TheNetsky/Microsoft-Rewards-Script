@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import axiosRetry from 'axios-retry'
 import { HttpProxyAgent } from 'http-proxy-agent'
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import { SocksProxyAgent } from 'socks-proxy-agent'
 import { URL } from 'url'
 import type { AccountProxy } from '../interface/Account'
 
@@ -36,7 +37,9 @@ class AxiosClient {
         })
     }
 
-    private getAgentForProxy(proxyConfig: AccountProxy): HttpProxyAgent<string> | HttpsProxyAgent<string> {
+    private getAgentForProxy(
+        proxyConfig: AccountProxy
+    ): HttpProxyAgent<string> | HttpsProxyAgent<string> | SocksProxyAgent {
         const { url: baseUrl, port, username, password } = proxyConfig
 
         let urlObj: URL
@@ -67,8 +70,11 @@ class AxiosClient {
                 return new HttpProxyAgent(proxyUrl)
             case 'https:':
                 return new HttpsProxyAgent(proxyUrl)
+            case 'socks4:':
+            case 'socks5:':
+                return new SocksProxyAgent(proxyUrl)
             default:
-                throw new Error(`Unsupported proxy protocol: ${protocol}. Only HTTP(S) is supported!`)
+                throw new Error(`Unsupported proxy protocol: ${protocol}. Only HTTP(S) and SOCKS4/5 are supported!`)
         }
     }
 

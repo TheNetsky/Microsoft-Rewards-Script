@@ -1,6 +1,12 @@
 import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../index'
-import type { DashboardData, PunchCard, BasePromotion, FindClippyPromotion } from '../interface/DashboardData'
+import type {
+    DashboardData,
+    PunchCard,
+    BasePromotion,
+    FindClippyPromotion,
+    PurplePromotionalItem
+} from '../interface/DashboardData'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
 
 export class Workers {
@@ -38,13 +44,14 @@ export class Workers {
         ]
 
         const activitiesUncompleted: BasePromotion[] =
-            morePromotions?.filter(
-                x =>
-                    !x.complete &&
-                    x.pointProgressMax > 0 &&
-                    x.exclusiveLockedFeatureStatus !== 'locked' &&
-                    x.promotionType
-            ) ?? []
+            morePromotions?.filter(x => {
+                if (x.complete) return false
+                if (x.pointProgressMax <= 0) return false
+                if (x.exclusiveLockedFeatureStatus === 'locked') return false
+                if (!x.promotionType) return false
+
+                return true
+            }) ?? []
 
         if (!activitiesUncompleted.length) {
             this.bot.logger.info(
@@ -67,13 +74,14 @@ export class Workers {
     }
 
     public async doAppPromotions(data: AppDashboardData) {
-        const appRewards = data.response.promotions.filter(
-            x =>
-                x.attributes['complete']?.toLowerCase() === 'false' &&
-                x.attributes['offerid'] &&
-                x.attributes['type'] &&
-                x.attributes['type'] === 'sapphire'
-        )
+        const appRewards = data.response.promotions.filter(x => {
+            if (x.attributes['complete']?.toLowerCase() !== 'false') return false
+            if (!x.attributes['offerid']) return false
+            if (!x.attributes['type']) return false
+            if (x.attributes['type'] !== 'sapphire') return false
+
+            return true
+        })
 
         if (!appRewards.length) {
             this.bot.logger.info(
@@ -91,6 +99,77 @@ export class Workers {
         }
 
         this.bot.logger.info(this.bot.isMobile, 'APP-PROMOTIONS', 'All "App Promotions" items have been completed')
+    }
+
+    public async doSpecialPromotions(data: DashboardData) {
+        const specialPromotions: PurplePromotionalItem[] = [
+            ...new Map(
+                [...(data.promotionalItems ?? [])]
+                    .filter(Boolean)
+                    .map(p => [p.offerId, p as PurplePromotionalItem] as const)
+            ).values()
+        ]
+
+        const supportedPromotions = ['ww_banner_optin_2x']
+
+        const specialPromotionsUncompleted: PurplePromotionalItem[] =
+            specialPromotions?.filter(x => {
+                if (x.complete) return false
+                if (x.exclusiveLockedFeatureStatus === 'locked') return false
+                if (!x.promotionType) return false
+
+                const offerId = (x.offerId ?? '').toLowerCase()
+                return supportedPromotions.some(s => offerId.includes(s))
+            }) ?? []
+
+        for (const activity of specialPromotionsUncompleted) {
+            try {
+                const type = activity.promotionType?.toLowerCase() ?? ''
+                const name = activity.name?.toLowerCase() ?? ''
+                const offerId = (activity as PurplePromotionalItem).offerId
+
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'SPECIAL-ACTIVITY',
+                    `Processing activity | title="${activity.title}" | offerId=${offerId} | type=${type}"`
+                )
+
+                switch (type) {
+                    // UrlReward
+                    case 'urlreward': {
+                        // Special "Double Search Points" activation
+                        if (name.includes('ww_banner_optin_2x')) {
+                            this.bot.logger.info(
+                                this.bot.isMobile,
+                                'ACTIVITY',
+                                `Found activity type "Double Search Points" | title="${activity.title}" | offerId=${offerId}`
+                            )
+
+                            await this.bot.activities.doDoubleSearchPoints(activity)
+                        }
+                        break
+                    }
+
+                    // Unsupported types
+                    default: {
+                        this.bot.logger.warn(
+                            this.bot.isMobile,
+                            'SPECIAL-ACTIVITY',
+                            `Skipped activity "${activity.title}" | offerId=${offerId} | Reason: Unsupported type "${activity.promotionType}"`
+                        )
+                        break
+                    }
+                }
+            } catch (error) {
+                this.bot.logger.error(
+                    this.bot.isMobile,
+                    'SPECIAL-ACTIVITY',
+                    `Error while solving activity "${activity.title}" | message=${error instanceof Error ? error.message : String(error)}`
+                )
+            }
+        }
+
+        this.bot.logger.info(this.bot.isMobile, 'SPECIAL-ACTIVITY', 'All "Special Activites" items have been completed')
     }
 
     private async solveActivities(activities: BasePromotion[], page: Page, punchCard?: PunchCard) {
