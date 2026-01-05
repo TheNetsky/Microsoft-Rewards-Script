@@ -1,2 +1,13 @@
-dist
 node_modules
+dist
+.git
+.gitignore
+.vscode
+.DS_Store
+sessions/
+.dev/
+diagnostics/
+note
+accounts.dev.json
+accounts.main.json
+.playwright-chromium-installed
