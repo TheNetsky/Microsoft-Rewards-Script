@@ -1,7 +1,7 @@
 ###############################################################################
 # Stage 1: Builder
 ###############################################################################
-FROM node:22-slim AS builder
+FROM node:24-slim AS builder
 
 WORKDIR /usr/src/microsoft-rewards-script
 
@@ -29,7 +29,7 @@ RUN npx patchright install --with-deps --only-shell chromium \
 ###############################################################################
 # Stage 2: Runtime
 ###############################################################################
-FROM node:22-slim AS runtime
+FROM node:24-slim AS runtime
 
 WORKDIR /usr/src/microsoft-rewards-script
 
