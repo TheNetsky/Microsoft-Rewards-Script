@@ -5,7 +5,7 @@
     "author": "Netsky",
     "license": "GPL-3.0-or-later",
     "engines": {
-        "node": ">=22.0.0"
+        "node": ">=24.0.0"
     },
     "scripts": {
         "pre-build": "npm i && rimraf dist && npx patchright install chromium",
