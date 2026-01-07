@@ -220,10 +220,29 @@ export default class BrowserUtils {
             )
 
             // Wait for selector to exist before clicking
-            await page.waitForSelector(selector, { timeout: 10000 })
+            const element = await page.waitForSelector(selector, { timeout: 10000 })
 
             const cursor = createCursor(page as any)
-            await cursor.click(selector, options)
+
+            // Add timeout to cursor click with fallback to regular click
+            const clickPromise = cursor.click(selector, options)
+            const timeoutPromise = new Promise<'timeout'>((_, reject) =>
+                setTimeout(() => reject(new Error('Ghost cursor click timeout')), 15000)
+            )
+
+            try {
+                await Promise.race([clickPromise, timeoutPromise])
+            } catch (cursorError) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'GHOST-CLICK',
+                    `Ghost cursor failed, falling back to regular click: ${cursorError instanceof Error ? cursorError.message : String(cursorError)}`
+                )
+                // Fallback to regular playwright click
+                if (element) {
+                    await element.click(options)
+                }
+            }
 
             return true
         } catch (error) {
