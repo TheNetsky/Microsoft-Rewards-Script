@@ -23,9 +23,24 @@ export default class BrowserFunc {
      */
     async getDashboardData(): Promise<DashboardData> {
         try {
-            const cookieHeader = this.bot.cookies.mobile
-                .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
-                .join('; ')
+            const allowedDomains = ['bing.com', 'live.com', 'microsoftonline.com'];
+
+            const cookieHeader = [
+            ...new Map(
+                this.bot.cookies.mobile
+                .filter(
+                    (c: { name: string; value: string; domain?: string }) =>
+                    typeof c.domain === 'string' &&
+                    allowedDomains.some(d =>
+                        c.domain && c.domain.toLowerCase().endsWith(d)
+                    )
+                )
+                .map(c => [c.name, c]) // dedupe by name, keep last
+            ).values()
+            ]
+            .map(c => `${c.name}=${c.value}`)
+            .join('; ');
+
 
             const request: AxiosRequestConfig = {
                 url: 'https://rewards.bing.com/api/getuserinfo?type=1',
