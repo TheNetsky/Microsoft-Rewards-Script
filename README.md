@@ -48,7 +48,7 @@ docker compose up -d
 ```
 
 > [!CAUTION]
-> Set `headless` to `true` in the `config.json` when using docker
+> Set `headless` to `true` in the `config.json` when using docker.
 > Additional docker-specific scheduling options are in the `compose.yaml`
 
 > [!NOTE]
@@ -76,7 +76,7 @@ This will launch the script headlessly using `xvfb-run`.
 ## Configuration Reference
 
 > [!NOTE] 
-> Edit `src/config.json` to customize behavior. Below are all currently available options
+> Edit `src/config.json` to customize behavior. Below are all currently available options.
 > Rebuild the script after all changes.
 
 ### Core
@@ -155,7 +155,7 @@ This will launch the script headlessly using `xvfb-run`.
 
 
 > [!WARNING]
-> **NTFY Users** Set the `webhookLogFilter` to `enabled`, otherwise you will receive push notifications for *all* log lines
+> **NTFY** users set the `webhookLogFilter` to `enabled`, or you will receive push notifications for *all* logs.
 > When enabled, only account start, 2FA codes, and account completion summaries are delivered as push notifcations.
 > Customize which notifications you receive with the `keywords` options.
 
@@ -163,41 +163,58 @@ This will launch the script headlessly using `xvfb-run`.
 
 ## Account Configuration
 
-> [!NOTE]
-> Edit `src/accounts.json`. The file is an **array** of accounts
+> [!WARNING]
+> Edit `src/accounts.json`. The file is a **flat array** of accounts, not `{ "accounts": [ ... ] }`.
 > Rebuild the script after all changes.
 
 ```json
 [
-  {
-    "email": "email_1",
-    "password": "password_1",
-    "proxy": {
-      "proxyAxios": true,
-      "url": "",
-      "port": 0,
-      "username": "",
-      "password": ""
+    {
+        "email": "email_1",
+        "password": "password_1",
+        "totpSecret": "",
+        "recoveryEmail": "",
+        "geoLocale": "auto",
+        "langCode": "en",
+        "proxy": {
+            "proxyAxios": false,
+            "url": "",
+            "port": 0,
+            "username": "",
+            "password": ""
+        },
+        "saveFingerprint": {
+            "mobile": false,
+            "desktop": false
+        }
+    },
+    {
+        "email": "email_2",
+        "password": "password_2",
+        "totpSecret": "",
+        "recoveryEmail": "",
+        "geoLocale": "auto",
+        "langCode": "en",
+        "proxy": {
+            "proxyAxios": false,
+            "url": "",
+            "port": 0,
+            "username": "",
+            "password": ""
+        },
+        "saveFingerprint": {
+            "mobile": false,
+            "desktop": false
+        }
     }
-  },
-  {
-    "email": "email_2",
-    "password": "password_2",
-    "proxy": {
-      "proxyAxios": true,
-      "url": "",
-      "port": 0,
-      "username": "",
-      "password": ""
-    }
-  }
 ]
 ```
 
-**Notes**
-- The file is a **flat array**, not `{ "accounts": [ ... ] }`.  
-- Only `email`, `password`, and `proxy` are supported.  
-- `proxyAxios` enables Axios-level proxying for API requests.
+> [!NOTE]
+> `geoLocale` uses the default locale of your Microsoft profile. You can overwrite it here with a custom locale.
+
+> [!TIP]
+> When using 2FA login, adding your `totpSecret` will enable the script to automatically generate and enter the timed 6 digit code to login. To get your `totpSecret` in your Microsoft Security settings, click 'Manage how you sign in'. Add Authenticator app, when shown the QR code, select 'enter code manually'. Use this code in the `accounts.json`.
 
 ---
 ## Troubleshooting
