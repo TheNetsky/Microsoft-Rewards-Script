@@ -13,7 +13,7 @@
 ---
 ## Quick Setup
 
-**Requirements:** Node.js >= 22 and Git  
+**Requirements:** Node.js >= 24 and Git  
 Works on Windows, Linux, macOS, and WSL.
 
 ### Get the script
