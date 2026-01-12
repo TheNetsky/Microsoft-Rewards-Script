@@ -55,7 +55,7 @@ export class Login {
         totpInput: 'input[name="otc"]',
         totpInputOld: 'form[name="OneTimeCodeViewForm"]',
         identityBanner: '[data-testid="identityBanner"]',
-        viewFooter: '[data-testid="viewFooter"] span[role="button"] >> nth=-1',
+        viewFooter: '[data-testid="viewFooter"] >> [role="button"]',
         bingProfile: '#id_n',
         requestToken: 'input[name="__RequestVerificationToken"]',
         requestTokenMeta: 'meta[name="__RequestVerificationToken"]'

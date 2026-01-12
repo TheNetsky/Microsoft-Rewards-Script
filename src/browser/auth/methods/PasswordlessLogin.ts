@@ -79,13 +79,15 @@ export class PasswordlessLogin {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN-PASSWORDLESS',
-                    `Please approve login and select number: ${displayedNumber}`
+                    `Please approve login and select number: ${displayedNumber}`,
+                    'yellowBright'
                 )
             } else {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN-PASSWORDLESS',
-                    'Please approve login on your authenticator app'
+                    'Please approve login on your authenticator app',
+                    'yellowBright'
                 )
             }
 
