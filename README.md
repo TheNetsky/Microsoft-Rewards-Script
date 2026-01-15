@@ -6,7 +6,7 @@
 - [Quick Setup](#quick-setup)
 - [Nix Setup](#nix-setup)
 - [Configuration Options](#configuration-options)
-- [Account Configuration](#account-configuration)
+- [Account Setup](#account-setup)
 - [Troubleshooting](#troubleshooting)
 - [Disclaimer](#disclaimer)
 
@@ -48,35 +48,24 @@ docker compose up -d
 ```
 
 > [!CAUTION]
-> Set `headless` to `true` in the `config.json` when using docker.
+> Set `headless` to `true` in the `src/config.json` when using Docker.
 > Additional docker-specific scheduling options are in the `compose.yaml`
 
-> [!NOTE]
-> When headless, monitor logs with `docker logs microsoft-rewards-script` (for example, to view 2FA codes), or enable a webhook service
+> [!TIP]
+> When headeless, monitor logs with `docker logs microsoft-rewards-script` (for example, to view passwordless codes), or enable a webhook service in the `src/config.json`.
 ---
 
 ## Nix Setup
 
-If using Nix:
-
-1. Run the pre-build step first:
-   ```bash
-   npm run pre-build
-   ```
-
-2. Then start the script:
-   ```bash
-   ./run.sh
-   ```
-
-This will launch the script headlessly using `xvfb-run`.
+If using Nix: `bash scripts/nix/run.sh`
 
 ---
 
 ## Configuration Reference
 
-> [!NOTE] 
-> Edit `src/config.json` to customize behavior. Below are all currently available options.
+Edit `src/config.json` to customize behavior. Below are all currently available options.
+
+> [!WARNING] 
 > Rebuild the script after all changes.
 
 ### Core
@@ -161,10 +150,12 @@ This will launch the script headlessly using `xvfb-run`.
 
 ---
 
-## Account Configuration
+## Account Setup
+
+Edit `src/accounts.json`. 
 
 > [!WARNING]
-> Edit `src/accounts.json`. The file is a **flat array** of accounts, not `{ "accounts": [ ... ] }`.
+> The file is a **flat array** of accounts, not `{ "accounts": [ ... ] }`.
 > Rebuild the script after all changes.
 
 ```json
@@ -219,7 +210,7 @@ This will launch the script headlessly using `xvfb-run`.
 ---
 ## Troubleshooting
 
-> [!NOTE]
+> [!TIP]
 > Most login issues can be fixed by deleting your /sessions folder, and redeploying the script 
 
 ---
