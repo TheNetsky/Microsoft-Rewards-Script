@@ -13,3 +13,4 @@ accounts.main.json
 .playwright-chromium-installed
 bun.lock
 logs/
+.stfolder/
