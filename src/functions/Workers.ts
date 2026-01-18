@@ -253,6 +253,20 @@ export class Workers {
                         break
                     }
 
+                    // Welcome Tour activity (Take the tour)
+                    case 'welcometour': {
+                        const basePromotion = activity as BasePromotion
+
+                        this.bot.logger.info(
+                            this.bot.isMobile,
+                            'ACTIVITY',
+                            `Found activity type "WelcomeTour" | title="${activity.title}" | offerId=${offerId}`
+                        )
+
+                        await this.bot.activities.doWelcomeTour(basePromotion, page)
+                        break
+                    }
+
                     // Unsupported types
                     default: {
                         this.bot.logger.warn(
