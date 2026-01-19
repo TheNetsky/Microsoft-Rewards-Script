@@ -50,7 +50,7 @@ export const ConfigSchema = z.object({
     sessionPath: z.string(),
     headless: z.boolean(),
     runOnZeroPoints: z.boolean(),
-    clusters: z.number().int().nonnegative(),
+    clusters: z.union([z.literal('auto'), z.number().int().positive()]),
     errorDiagnostics: z.boolean(),
     workers: z.object({
         doDailySet: z.boolean(),

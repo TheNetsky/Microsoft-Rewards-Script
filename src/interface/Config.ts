@@ -3,7 +3,7 @@ export interface Config {
     sessionPath: string
     headless: boolean
     runOnZeroPoints: boolean
-    clusters: number
+    clusters: number | 'auto'
     errorDiagnostics: boolean
     workers: ConfigWorkers
     searchOnBingLocalQueries: boolean

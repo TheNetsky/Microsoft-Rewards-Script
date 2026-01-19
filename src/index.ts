@@ -13,6 +13,7 @@ import { IpcLog, Logger } from './logging/Logger'
 import Utils from './util/Utils'
 import { loadAccounts, loadConfig } from './util/Load'
 import { checkNodeVersion } from './util/Validator'
+import { ClusterOptimizer } from './util/ClusterOptimizer'
 
 import { Login } from './browser/auth/Login'
 import { Workers } from './functions/Workers'
@@ -118,7 +119,7 @@ export class MicrosoftRewardsBot {
             utils: new BrowserUtils(this)
         }
         this.config = loadConfig()
-        this.activeWorkers = this.config.clusters
+        this.activeWorkers = typeof this.config.clusters === 'number' ? this.config.clusters : 1
         this.exitedWorkers = []
     }
 
@@ -134,13 +135,32 @@ export class MicrosoftRewardsBot {
         const totalAccounts = this.accounts.length
         const runStartTime = Date.now()
 
+        // Optimize cluster count if set to 'auto' (automatic mode)
+        if (this.config.clusters === 'auto') {
+            const optimalClusters = ClusterOptimizer.calculateOptimalClusters(totalAccounts)
+            const systemInfo = ClusterOptimizer.getSystemInfo()
+
+            this.logger.info(
+                'main',
+                'CLUSTER-OPTIMIZATION',
+                `System Info | CPUs: ${systemInfo.cpuCount} | Total Memory: ${systemInfo.totalMemoryMB}MB | Usable Memory: ${systemInfo.usableMemoryMB}MB`
+            )
+
+            this.logger.info(
+                'main',
+                'CLUSTER-OPTIMIZATION',
+                `Automatic cluster calculation: ${totalAccounts} accounts → ${optimalClusters} clusters`
+            )
+            this.config.clusters = optimalClusters as number
+        }
+
         this.logger.info(
             'main',
             'RUN-START',
             `Starting Microsoft Rewards Script | v${pkg.version} | Accounts: ${totalAccounts} | Clusters: ${this.config.clusters}`
         )
 
-        if (this.config.clusters > 1) {
+        if ((this.config.clusters as number) > 1) {
             if (cluster.isPrimary) {
                 this.runMaster(runStartTime)
             } else {
@@ -154,7 +174,7 @@ export class MicrosoftRewardsBot {
     private runMaster(runStartTime: number): void {
         void this.logger.info('main', 'CLUSTER-PRIMARY', `Primary process started | PID: ${process.pid}`)
 
-        const rawChunks = this.utils.chunkArray(this.accounts, this.config.clusters)
+        const rawChunks = this.utils.chunkArray(this.accounts, this.config.clusters as number)
         const accountChunks = rawChunks.filter(c => c && c.length > 0)
         this.activeWorkers = accountChunks.length
 
@@ -334,7 +354,7 @@ export class MicrosoftRewardsBot {
             }
         }
 
-        if (this.config.clusters <= 1 && !cluster.isWorker) {
+        if ((this.config.clusters as number) <= 1 && !cluster.isWorker) {
             const totalCollectedPoints = accountStats.reduce((sum, s) => sum + s.collectedPoints, 0)
             const totalInitialPoints = accountStats.reduce((sum, s) => sum + s.initialPoints, 0)
             const totalFinalPoints = accountStats.reduce((sum, s) => sum + s.finalPoints, 0)
