@@ -12,10 +12,39 @@ export class MobileAccessLogin {
     private scope = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL'
     private maxTimeout = 180_000 // 3min
 
+    // Selectors for handling Passkey prompt during OAuth
+    private readonly selectors = {
+        secondaryButton: 'button[data-testid="secondaryButton"]',
+        passKeyError: '[data-testid="registrationImg"]',
+        passKeyVideo: '[data-testid="biometricVideo"]'
+    } as const
+
     constructor(
         private bot: MicrosoftRewardsBot,
         private page: Page
     ) {}
+
+    private async checkSelector(selector: string): Promise<boolean> {
+        return this.page
+            .waitForSelector(selector, { state: 'visible', timeout: 200 })
+            .then(() => true)
+            .catch(() => false)
+    }
+
+    private async handlePasskeyPrompt(): Promise<void> {
+        try {
+            // Handle Passkey prompt - click secondary button to skip
+            const hasPasskeyError = await this.checkSelector(this.selectors.passKeyError)
+            const hasPasskeyVideo = await this.checkSelector(this.selectors.passKeyVideo)
+            if (hasPasskeyError || hasPasskeyVideo) {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-APP', 'Found Passkey prompt on OAuth page, skipping')
+                await this.bot.browser.utils.ghostClick(this.page, this.selectors.secondaryButton)
+                await this.page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+            }
+        } catch {
+            // Ignore errors in prompt handling
+        }
+    }
 
     async get(email: string): Promise<string> {
         try {
@@ -72,6 +101,9 @@ export class MobileAccessLogin {
                             break
                         }
                     }
+
+                    // Handle Passkey prompt if it appears
+                    await this.handlePasskeyPrompt()
                 } catch (err) {
                     this.bot.logger.debug(
                         this.bot.isMobile,
