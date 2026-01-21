@@ -22,12 +22,7 @@
         "scrollRandomResults": false,
         "clickRandomResults": false,
         "parallelSearching": true,
-        "queryEngines": [
-            "google",
-            "wikipedia",
-            "reddit",
-            "local"
-        ],
+        "queryEngines": ["google", "wikipedia", "reddit", "local"],
         "searchResultVisitTime": "10sec",
         "searchDelay": {
             "min": "30sec",
@@ -42,13 +37,8 @@
     "consoleLogFilter": {
         "enabled": false,
         "mode": "whitelist",
-        "levels": [
-            "error",
-            "warn"
-        ],
-        "keywords": [
-            "starting account"
-        ],
+        "levels": ["error", "warn"],
+        "keywords": ["starting account"],
         "regexPatterns": []
     },
     "proxy": {
@@ -65,23 +55,14 @@
             "topic": "",
             "token": "",
             "title": "Microsoft-Rewards-Script",
-            "tags": [
-                "bot",
-                "notify"
-            ],
+            "tags": ["bot", "notify"],
             "priority": 3
         },
         "webhookLogFilter": {
             "enabled": false,
             "mode": "whitelist",
-            "levels": [
-                "error"
-            ],
-            "keywords": [
-                "starting account",
-                "select number",
-                "collected"
-            ],
+            "levels": ["error"],
+            "keywords": ["starting account", "select number", "collected"],
             "regexPatterns": []
         }
     }

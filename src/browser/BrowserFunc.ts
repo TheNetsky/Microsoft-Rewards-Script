@@ -1,5 +1,5 @@
 import type { BrowserContext, Cookie } from 'patchright'
-import type { AxiosRequestConfig, AxiosResponse } from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 
 import type { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
@@ -23,45 +23,56 @@ export default class BrowserFunc {
      */
     async getDashboardData(): Promise<DashboardData> {
         try {
-            const allowedDomains = ['bing.com', 'live.com', 'microsoftonline.com'];
-
-            const cookieHeader = [
-            ...new Map(
-                this.bot.cookies.mobile
-                .filter(
-                    (c: { name: string; value: string; domain?: string }) =>
-                    typeof c.domain === 'string' &&
-                    allowedDomains.some(d =>
-                        c.domain && c.domain.toLowerCase().endsWith(d)
-                    )
-                )
-                .map(c => [c.name, c]) // dedupe by name, keep last
-            ).values()
-            ]
-            .map(c => `${c.name}=${c.value}`)
-            .join('; ');
-
-
             const request: AxiosRequestConfig = {
                 url: 'https://rewards.bing.com/api/getuserinfo?type=1',
                 method: 'GET',
                 headers: {
                     ...(this.bot.fingerprint?.headers ?? {}),
-                    Cookie: cookieHeader,
+                    Cookie: this.buildCookieHeader(this.bot.cookies.mobile, [
+                        'bing.com',
+                        'live.com',
+                        'microsoftonline.com'
+                    ]),
                     Referer: 'https://rewards.bing.com/',
                     Origin: 'https://rewards.bing.com'
                 }
             }
 
             const response = await this.bot.axios.request(request)
-            return response.data.dashboard as DashboardData
+
+            if (response.data?.dashboard) {
+                return response.data.dashboard as DashboardData
+            }
+            throw new Error('Dashboard data missing from API response')
         } catch (error) {
-            this.bot.logger.info(
-                this.bot.isMobile,
-                'GET-DASHBOARD-DATA',
-                `Error fetching dashboard data: ${error instanceof Error ? error.message : String(error)}`
-            )
-            throw error
+            this.bot.logger.warn(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'API failed, trying HTML fallback')
+
+            // Try using script from dashboard page
+            try {
+                const request: AxiosRequestConfig = {
+                    url: this.bot.config.baseURL,
+                    method: 'GET',
+                    headers: {
+                        ...(this.bot.fingerprint?.headers ?? {}),
+                        Cookie: this.buildCookieHeader(this.bot.cookies.mobile),
+                        Referer: 'https://rewards.bing.com/',
+                        Origin: 'https://rewards.bing.com'
+                    }
+                }
+
+                const response = await this.bot.axios.request(request)
+                const match = response.data.match(/var\s+dashboard\s*=\s*({.*?});/s)
+
+                if (!match?.[1]) {
+                    throw new Error('Dashboard script not found in HTML')
+                }
+
+                return JSON.parse(match[1]) as DashboardData
+            } catch (fallbackError) {
+                // If both fail
+                this.bot.logger.error(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Failed to get dashboard data')
+                throw fallbackError
+            }
         }
     }
 
@@ -84,7 +95,7 @@ export default class BrowserFunc {
             const response = await this.bot.axios.request(request)
             return response.data as AppDashboardData
         } catch (error) {
-            this.bot.logger.info(
+            this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-APP-DASHBOARD-DATA',
                 `Error fetching dashboard data: ${error instanceof Error ? error.message : String(error)}`
@@ -112,7 +123,7 @@ export default class BrowserFunc {
             const response = await this.bot.axios.request(request)
             return response.data as XboxDashboardData
         } catch (error) {
-            this.bot.logger.info(
+            this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-XBOX-DASHBOARD-DATA',
                 `Error fetching dashboard data: ${error instanceof Error ? error.message : String(error)}`
@@ -308,141 +319,21 @@ export default class BrowserFunc {
         }
     }
 
-    mergeCookies(response: AxiosResponse, currentCookieHeader: string = '', whitelist?: string[]): string {
-        const cookieMap = new Map<string, string>(
-            currentCookieHeader
-                .split(';')
-                .map(pair => pair.split('=').map(s => s.trim()))
-                .filter(([name, value]) => name && value)
-                .map(([name, value]) => [name, value] as [string, string])
-        )
-
-        const setCookieList = [response.headers['set-cookie']].flat().filter(Boolean) as string[]
-        const cookiesByName = new Map(this.bot.cookies.mobile.map(c => [c.name, c]))
-
-        for (const setCookie of setCookieList) {
-            const [nameValue, ...attributes] = setCookie.split(';').map(s => s.trim())
-            if (!nameValue) continue
-
-            const [name, value] = nameValue.split('=').map(s => s.trim())
-
-            if (!name) continue
-
-            if (whitelist && !whitelist?.includes(name)) {
-                continue
-            }
-
-            const attrs = this.parseAttributes(attributes)
-            const existing = cookiesByName.get(name)
-
-            if (!value) {
-                if (existing) {
-                    cookiesByName.delete(name)
-                    this.bot.cookies.mobile = this.bot.cookies.mobile.filter(c => c.name !== name)
-                }
-                cookieMap.delete(name)
-                continue
-            }
-
-            if (attrs.expires !== undefined && attrs.expires < Date.now() / 1000) {
-                if (existing) {
-                    cookiesByName.delete(name)
-                    this.bot.cookies.mobile = this.bot.cookies.mobile.filter(c => c.name !== name)
-                }
-                cookieMap.delete(name)
-                continue
-            }
-
-            cookieMap.set(name, value)
-
-            if (existing) {
-                this.updateCookie(existing, value, attrs)
-            } else {
-                this.bot.cookies.mobile.push(this.createCookie(name, value, attrs))
-            }
-        }
-
-        return Array.from(cookieMap, ([name, value]) => `${name}=${value}`).join('; ')
-    }
-
-    private parseAttributes(attributes: string[]) {
-        const attrs: {
-            domain?: string
-            path?: string
-            expires?: number
-            httpOnly?: boolean
-            secure?: boolean
-            sameSite?: Cookie['sameSite']
-        } = {}
-
-        for (const attr of attributes) {
-            const [key, val] = attr.split('=').map(s => s?.trim())
-            const lowerKey = key?.toLowerCase()
-
-            switch (lowerKey) {
-                case 'domain':
-                case 'path': {
-                    if (val) attrs[lowerKey] = val
-                    break
-                }
-                case 'expires': {
-                    if (val) {
-                        const ts = Date.parse(val)
-                        if (!isNaN(ts)) attrs.expires = Math.floor(ts / 1000)
-                    }
-                    break
-                }
-                case 'max-age': {
-                    if (val) {
-                        const maxAge = Number(val)
-                        if (!isNaN(maxAge)) attrs.expires = Math.floor(Date.now() / 1000) + maxAge
-                    }
-                    break
-                }
-                case 'httponly': {
-                    attrs.httpOnly = true
-                    break
-                }
-                case 'secure': {
-                    attrs.secure = true
-                    break
-                }
-                case 'samesite': {
-                    const normalized = val?.toLowerCase()
-                    if (normalized && ['lax', 'strict', 'none'].includes(normalized)) {
-                        attrs.sameSite = (normalized.charAt(0).toUpperCase() +
-                            normalized.slice(1)) as Cookie['sameSite']
-                    }
-                    break
-                }
-            }
-        }
-
-        return attrs
-    }
-
-    private updateCookie(cookie: Cookie, value: string, attrs: ReturnType<typeof this.parseAttributes>) {
-        cookie.value = value
-        if (attrs.domain) cookie.domain = attrs.domain
-        if (attrs.path) cookie.path = attrs.path
-        //if (attrs.expires !== undefined) cookie.expires = attrs.expires
-        //if (attrs.httpOnly) cookie.httpOnly = true
-        //if (attrs.secure) cookie.secure = true
-        //if (attrs.sameSite) cookie.sameSite = attrs.sameSite
-    }
-
-    private createCookie(name: string, value: string, attrs: ReturnType<typeof this.parseAttributes>): Cookie {
-        return {
-            name,
-            value,
-            domain: attrs.domain || '.bing.com',
-            path: attrs.path || '/'
-            /*
-            ...(attrs.expires !== undefined && { expires: attrs.expires }),
-            ...(attrs.httpOnly && { httpOnly: true }),
-            ...(attrs.secure && { secure: true }),
-            ...(attrs.sameSite && { sameSite: attrs.sameSite })
-            */
-        } as Cookie
+    buildCookieHeader(cookies: Cookie[], allowedDomains?: string[]): string {
+        return [
+            ...new Map(
+                cookies
+                    .filter(c => {
+                        if (!allowedDomains || allowedDomains.length === 0) return true
+                        return (
+                            typeof c.domain === 'string' &&
+                            allowedDomains.some(d => c.domain.toLowerCase().endsWith(d.toLowerCase()))
+                        )
+                    })
+                    .map(c => [c.name, c])
+            ).values()
+        ]
+            .map(c => `${c.name}=${c.value}`)
+            .join('; ')
     }
 }

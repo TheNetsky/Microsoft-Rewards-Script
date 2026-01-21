@@ -78,7 +78,7 @@ export class Login {
         try {
             this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Starting login process')
 
-            await page.goto('https://www.bing.com/rewards/dashboard', { waitUntil: 'domcontentloaded' }).catch(() => { })
+            await page.goto('https://www.bing.com/rewards/dashboard', { waitUntil: 'domcontentloaded' }).catch(() => {})
             await this.bot.utils.wait(2000)
             await this.bot.browser.utils.reloadBadPage(page)
             await this.bot.browser.utils.disableFido(page)
@@ -154,7 +154,7 @@ export class Login {
     }
 
     private async detectCurrentState(page: Page, account?: Account): Promise<LoginState> {
-        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { })
+        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
         const url = new URL(page.url())
         this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', `Current URL: ${url.hostname}${url.pathname}`)
@@ -190,7 +190,7 @@ export class Login {
             [this.selectors.totpInput, '2FA_TOTP'],
             [this.selectors.totpInputOld, '2FA_TOTP'],
             [this.selectors.otpCodeEntry, 'OTP_CODE_ENTRY'], // PR 450
-            [this.selectors.otpInput, 'OTP_CODE_ENTRY']      // My Fix
+            [this.selectors.otpInput, 'OTP_CODE_ENTRY'] // My Fix
         ]
 
         const results = await Promise.all(
@@ -435,7 +435,7 @@ export class Login {
                             waitUntil: 'domcontentloaded',
                             timeout: 10000
                         })
-                        .catch(() => { })
+                        .catch(() => {})
                     await this.bot.utils.wait(3000)
                     this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Recovery navigation successful')
                     return true
@@ -446,7 +446,7 @@ export class Login {
                             waitUntil: 'domcontentloaded',
                             timeout: 10000
                         })
-                        .catch(() => { })
+                        .catch(() => {})
                     await this.bot.utils.wait(3000)
                     this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Fallback navigation successful')
                     return true
@@ -502,7 +502,11 @@ export class Login {
             }
 
             case 'OTP_CODE_ENTRY': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'OTP code entry page detected, attempting to find password option')
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'LOGIN',
+                    'OTP code entry page detected, attempting to find password option'
+                )
 
                 // My Fix: Click "Use your password" footer
                 const footerLink = await page
@@ -552,7 +556,7 @@ export class Login {
     private async finalizeLogin(page: Page, email: string) {
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Finalizing login')
 
-        await page.goto(this.bot.config.baseURL, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => { })
+        await page.goto(this.bot.config.baseURL, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
 
         const loginRewardsSuccess = new URL(page.url()).hostname === 'rewards.bing.com'
         if (loginRewardsSuccess) {
@@ -583,7 +587,7 @@ export class Login {
         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing session')
 
         try {
-            await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => { })
+            await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
 
             for (let i = 0; i < loopMax; i++) {
                 if (page.isClosed()) break
@@ -605,7 +609,7 @@ export class Login {
                 )
 
                 if (atBingHome) {
-                    await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => { })
+                    await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => {})
 
                     const signedIn = await page
                         .waitForSelector(this.selectors.bingProfile, { timeout: 3000 })
@@ -641,7 +645,7 @@ export class Login {
         try {
             await page
                 .goto(`${this.bot.config.baseURL}?_=${Date.now()}`, { waitUntil: 'networkidle', timeout: 10000 })
-                .catch(() => { })
+                .catch(() => {})
 
             for (let i = 0; i < loopMax; i++) {
                 if (page.isClosed()) break

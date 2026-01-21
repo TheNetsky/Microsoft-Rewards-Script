@@ -1,12 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import {
-    getDirname,
-    getProjectRoot,
-    log,
-    loadJsonFile,
-    safeRemoveDirectory
-} from '../utils.js'
+import { getDirname, getProjectRoot, log, loadJsonFile, safeRemoveDirectory } from '../utils.js'
 
 const __dirname = getDirname(import.meta.url)
 const projectRoot = getProjectRoot(__dirname)

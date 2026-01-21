@@ -53,7 +53,7 @@ export class Search extends Workers {
 
             queries = [...new Set(queries.map(q => q.trim()).filter(Boolean))]
 
-            this.bot.logger.debug(isMobile, 'SEARCH-BING', `Query pool ready | count=${queries.length}`)
+            this.bot.logger.info(isMobile, 'SEARCH-BING', `Search query pool ready | count=${queries.length}`)
 
             // Go to bing
             const targetUrl = this.searchPageURL ? this.searchPageURL : this.bingHome
@@ -169,10 +169,10 @@ export class Search extends Workers {
                     const newPool = [...new Set(merged)]
                     queries = this.bot.utils.shuffleArray(newPool)
 
-                    this.bot.logger.debug(
+                    this.bot.logger.info(
                         isMobile,
                         'SEARCH-BING-EXTRA',
-                        `New query pool generated | count=${queries.length}`
+                        `New search query pool generated | count=${queries.length}`
                     )
 
                     for (const query of queries) {
