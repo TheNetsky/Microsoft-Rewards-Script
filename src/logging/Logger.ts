@@ -45,7 +45,7 @@ function formatMessage(message: string | Error): string {
 }
 
 export class Logger {
-    constructor(private bot: MicrosoftRewardsBot) { }
+    constructor(private bot: MicrosoftRewardsBot) {}
 
     info(isMobile: Platform, title: string, message: string, color?: ColorKey) {
         return this.baseLog('info', isMobile, title, message, color)
@@ -180,7 +180,7 @@ export class Logger {
                         isMatch = true
                         break
                     }
-                } catch { }
+                } catch {}
             }
         }
 

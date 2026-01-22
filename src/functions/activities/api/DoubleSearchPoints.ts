@@ -21,9 +21,9 @@ export class DoubleSearchPoints extends Workers {
                 return
             }
 
-            this.cookieHeader = (this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop)
-                .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
-                .join('; ')
+            this.cookieHeader = this.bot.browser.func.buildCookieHeader(
+                this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop
+            )
 
             const fingerprintHeaders = { ...this.bot.fingerprint.headers }
             delete fingerprintHeaders['Cookie']
