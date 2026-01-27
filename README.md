@@ -91,7 +91,7 @@ Edit `src/config.json` to customize behavior. Below are all currently available 
 | `sessionPath`              | string  | `"sessions"`                 | Directory to store browser sessions   |
 | `headless`                 | boolean | `false`                      | Run browser invisibly                 |
 | `runOnZeroPoints`          | boolean | `false`                      | Run even when no points are available |
-| `clusters`                 | number  | `1`                          | Number of concurrent account clusters |
+| `clusters`                 | number / string  | `1`                          | Number of concurrent account clusters |
 | `errorDiagnostics`         | boolean | `false`                      | Enable error diagnostics              |
 | `searchOnBingLocalQueries` | boolean | `false`                      | Use local query list                  |
 | `globalTimeout`            | string  | `"30sec"`                    | Timeout for all actions               |
