@@ -8,14 +8,6 @@ import { UserAgentManager } from './UserAgent'
 
 import type { Account, AccountProxy } from '../interface/Account'
 
-/* Test Stuff
-https://abrahamjuliot.github.io/creepjs/
-https://botcheck.luminati.io/
-https://fv.pro/
-https://pixelscan.net/
-https://www.browserscan.net/
-*/
-
 interface BrowserCreationResult {
     context: BrowserContext
     fingerprint: BrowserFingerprintWithHeaders

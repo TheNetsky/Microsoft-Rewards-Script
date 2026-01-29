@@ -42,27 +42,6 @@ export default class Activities {
         await searchOnBing.doSearchOnBing(promotion, page)
     }
 
-    /*
-    doABC = async (page: Page): Promise<void> => {
-        const abc = new ABC(this.bot)
-        await abc.doABC(page)
-    }
-    */
-
-    /*
-    doPoll = async (page: Page): Promise<void> => {
-        const poll = new Poll(this.bot)
-        await poll.doPoll(page)
-    }
-    */
-
-    /*
-    doThisOrThat = async (page: Page): Promise<void> => {
-        const thisOrThat = new ThisOrThat(this.bot)
-        await thisOrThat.doThisOrThat(page)
-    }
-    */
-
     // API Activities
     doUrlReward = async (promotion: BasePromotion): Promise<void> => {
         const urlReward = new UrlReward(this.bot)
