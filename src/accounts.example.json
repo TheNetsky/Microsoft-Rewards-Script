@@ -1,26 +1,7 @@
 [
     {
-        "email": "email_1",
-        "password": "password_1",
-        "totpSecret": "",
-        "recoveryEmail": "",
-        "geoLocale": "auto",
-        "langCode": "en",
-        "proxy": {
-            "proxyAxios": false,
-            "url": "",
-            "port": 0,
-            "username": "",
-            "password": ""
-        },
-        "saveFingerprint": {
-            "mobile": false,
-            "desktop": false
-        }
-    },
-    {
-        "email": "email_2",
-        "password": "password_2",
+        "email": "",
+        "password": "",
         "totpSecret": "",
         "recoveryEmail": "",
         "geoLocale": "auto",

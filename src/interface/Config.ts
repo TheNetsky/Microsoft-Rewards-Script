@@ -6,7 +6,6 @@ export interface Config {
     clusters: number
     errorDiagnostics: boolean
     workers: ConfigWorkers
-    searchOnBingLocalQueries: boolean
     globalTimeout: number | string
     searchSettings: ConfigSearchSettings
     debugLogs: boolean
@@ -15,7 +14,7 @@ export interface Config {
     webhook: ConfigWebhook
 }
 
-export type QueryEngine = 'google' | 'wikipedia' | 'reddit' | 'local'
+export type QueryEngine = 'google' | 'wikipedia' | 'reddit'
 
 export interface ConfigSearchSettings {
     scrollRandomResults: boolean

@@ -1,7 +1,5 @@
 import type { AxiosRequestConfig } from 'axios'
 import type { Page } from 'patchright'
-import * as fs from 'fs'
-import path from 'path'
 
 import { Workers } from '../../Workers'
 import { QueryCore } from '../../QueryEngine'
@@ -233,37 +231,24 @@ export class SearchOnBing extends Workers {
         let queries: Queries[] = []
 
         try {
-            if (this.bot.config.searchOnBingLocalQueries) {
-                this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-QUERY', 'Using local queries config file')
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'SEARCH-ON-BING-QUERY',
+                'Fetching queries config from remote repository'
+            )
 
-                const data = fs.readFileSync(path.join(__dirname, '../bing-search-activity-queries.json'), 'utf8')
-                queries = JSON.parse(data)
+            // Fetch from the repo directly so the user doesn't need to redownload the script for the new activities
+            const response = await this.bot.axios.request({
+                method: 'GET',
+                url: 'https://raw.githubusercontent.com/TheNetsky/Microsoft-Rewards-Script/refs/heads/v3/src/functions/bing-search-activity-queries.json'
+            })
+            queries = response.data
 
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'SEARCH-ON-BING-QUERY',
-                    `Loaded queries config | source=local | entries=${queries.length}`
-                )
-            } else {
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'SEARCH-ON-BING-QUERY',
-                    'Fetching queries config from remote repository'
-                )
-
-                // Fetch from the repo directly so the user doesn't need to redownload the script for the new activities
-                const response = await this.bot.axios.request({
-                    method: 'GET',
-                    url: 'https://raw.githubusercontent.com/TheNetsky/Microsoft-Rewards-Script/refs/heads/v3/src/functions/bing-search-activity-queries.json'
-                })
-                queries = response.data
-
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'SEARCH-ON-BING-QUERY',
-                    `Loaded queries config | source=remote | entries=${queries.length}`
-                )
-            }
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'SEARCH-ON-BING-QUERY',
+                `Loaded queries config | source=remote | entries=${queries.length}`
+            )
 
             const answers = queries.find(
                 x => this.bot.utils.normalizeString(x.title) === this.bot.utils.normalizeString(promotion.title)
@@ -275,7 +260,7 @@ export class SearchOnBing extends Workers {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-QUERY',
-                    `Found answers for activity title | source=${this.bot.config.searchOnBingLocalQueries ? 'local' : 'remote'} | title="${promotion.title}" | answersCount=${answer.length} | firstQuery="${answer[0]}"`
+                    `Found answers for activity title | source=remote | title="${promotion.title}" | answersCount=${answer.length} | firstQuery="${answer[0]}"`
                 )
 
                 return answer
@@ -283,7 +268,7 @@ export class SearchOnBing extends Workers {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-QUERY',
-                    `No matching title in queries config | source=${this.bot.config.searchOnBingLocalQueries ? 'local' : 'remote'} | title="${promotion.title}"`
+                    `No matching title in queries config | source=remote | title="${promotion.title}"`
                 )
 
                 const queryCore = new QueryCore(this.bot)

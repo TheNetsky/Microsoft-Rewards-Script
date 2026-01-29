@@ -68,9 +68,7 @@
     "include": [
         "src/**/*.ts",
         "src/accounts.json",
-        "src/config.json",
-        "src/functions/bing-search-activity-queries.json",
-        "src/functions/search-queries.json"
+        "src/config.json"
     ],
     "exclude": ["node_modules"]
 }

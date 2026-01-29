@@ -63,7 +63,6 @@ export const ConfigSchema = z.object({
         doDailyCheckIn: z.boolean(),
         doReadToEarn: z.boolean()
     }),
-    searchOnBingLocalQueries: z.boolean(),
     globalTimeout: NumberOrString,
     searchSettings: z.object({
         scrollRandomResults: z.boolean(),

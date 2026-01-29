@@ -16,13 +16,12 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true
     },
-    "searchOnBingLocalQueries": false,
     "globalTimeout": "30sec",
     "searchSettings": {
         "scrollRandomResults": false,
         "clickRandomResults": false,
         "parallelSearching": true,
-        "queryEngines": ["google", "wikipedia", "reddit", "local"],
+        "queryEngines": ["google", "wikipedia", "reddit"],
         "searchResultVisitTime": "10sec",
         "searchDelay": {
             "min": "30sec",

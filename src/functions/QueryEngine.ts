@@ -1,6 +1,4 @@
 import type { AxiosRequestConfig } from 'axios'
-import * as fs from 'fs'
-import path from 'path'
 import type { GoogleSearch, GoogleTrendsResponse, RedditListing, WikipediaTopResponse } from '../interface/Search'
 import type { MicrosoftRewardsBot } from '../index'
 import { QueryEngine } from '../interface/Config'
@@ -35,7 +33,7 @@ export class QueryCore {
             const topicLists: string[][] = []
 
             const sourceHandlers: Record<
-                'google' | 'wikipedia' | 'reddit' | 'local',
+                'google' | 'wikipedia' | 'reddit',
                 (() => Promise<string[]>) | (() => string[])
             > = {
                 google: async () => {
@@ -51,11 +49,6 @@ export class QueryCore {
                 reddit: async () => {
                     const topics = await this.getRedditTopics().catch(() => [])
                     this.bot.logger.debug(this.bot.isMobile, 'QUERY-MANAGER', `reddit: ${topics.length}`)
-                    return topics
-                },
-                local: () => {
-                    const topics = this.getLocalQueryList()
-                    this.bot.logger.debug(this.bot.isMobile, 'QUERY-MANAGER', `local: ${topics.length}`)
                     return topics
                 }
             }
@@ -448,36 +441,4 @@ export class QueryCore {
         }
     }
 
-    getLocalQueryList(): string[] {
-        try {
-            const file = path.join(__dirname, './search-queries.json')
-            const queries = JSON.parse(fs.readFileSync(file, 'utf8')) as string[]
-            const out = Array.isArray(queries) ? queries : []
-
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'SEARCH-LOCAL-QUERY-LIST',
-                'local queries loaded | file=search-queries.json'
-            )
-
-            if (!out.length) {
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'SEARCH-LOCAL-QUERY-LIST',
-                    'search-queries.json parsed but empty or invalid'
-                )
-            }
-
-            return out
-        } catch (error) {
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'SEARCH-LOCAL-QUERY-LIST',
-                `read/parse failed | error=${
-                    error instanceof Error ? `${error.name}: ${error.message}\n${error.stack ?? ''}` : String(error)
-                }`
-            )
-            return []
-        }
-    }
 }
