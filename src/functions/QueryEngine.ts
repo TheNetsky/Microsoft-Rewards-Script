@@ -17,7 +17,7 @@ export class QueryCore {
     ): Promise<string[]> {
         const {
             shuffle = false,
-            sourceOrder = ['google', 'wikipedia', 'reddit', 'local'],
+            sourceOrder = ['google', 'wikipedia', 'reddit'],
             related = true,
             langCode = 'en',
             geoLocale = 'US'
