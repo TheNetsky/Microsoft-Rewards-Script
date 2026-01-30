@@ -77,7 +77,6 @@ export class QueryCore {
             const baseTopics = this.normalizeAndDedupe(topicLists.flat())
 
             if (!baseTopics.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'QUERY-MANAGER', 'No queries')
                 this.bot.logger.debug(this.bot.isMobile, 'QUERY-MANAGER', 'No base topics found (all sources empty)')
                 return []
             }
@@ -115,7 +114,6 @@ export class QueryCore {
             )
 
             if (!finalQueries.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'QUERY-MANAGER', 'No queries')
                 this.bot.logger.debug(this.bot.isMobile, 'QUERY-MANAGER', 'finalQueries deduped to 0')
                 return []
             }
@@ -124,7 +122,6 @@ export class QueryCore {
 
             return finalQueries
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'QUERY-MANAGER', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUERY-MANAGER',
@@ -216,7 +213,6 @@ export class QueryCore {
             const response = await this.bot.axios.request(request, this.bot.config.proxy.queryEngine)
             const trendsData = this.extractJsonFromResponse(response.data)
             if (!trendsData) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'No queries')
                 this.bot.logger.debug(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'No trendsData parsed from response')
                 return []
             }
@@ -234,7 +230,6 @@ export class QueryCore {
                 })
             }
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-GOOGLE-TRENDS',
@@ -277,7 +272,6 @@ export class QueryCore {
                 response.data.suggestionGroups?.[0]?.searchSuggestions?.map((x: { query: any }) => x.query) ?? []
 
             if (!suggestions.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-BING-SUGGESTIONS', 'No queries')
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-BING-SUGGESTIONS',
@@ -287,7 +281,6 @@ export class QueryCore {
 
             return suggestions
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-BING-SUGGESTIONS', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-BING-SUGGESTIONS',
@@ -314,7 +307,6 @@ export class QueryCore {
             const out = Array.isArray(related) ? related : []
 
             if (!out.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-BING-RELATED', 'No queries')
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-BING-RELATED',
@@ -324,7 +316,6 @@ export class QueryCore {
 
             return out
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-BING-RELATED', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-BING-RELATED',
@@ -359,7 +350,6 @@ export class QueryCore {
                 ) ?? []
 
             if (!topics.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-BING-TRENDING', 'No queries')
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-BING-TRENDING',
@@ -369,7 +359,6 @@ export class QueryCore {
 
             return topics
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-BING-TRENDING', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-BING-TRENDING',
@@ -402,7 +391,6 @@ export class QueryCore {
             const out = articles.slice(0, 50).map(a => a.article.replace(/_/g, ' '))
 
             if (!out.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-WIKIPEDIA-TRENDING', 'No queries')
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-WIKIPEDIA-TRENDING',
@@ -412,7 +400,6 @@ export class QueryCore {
 
             return out
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-WIKIPEDIA-TRENDING', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-WIKIPEDIA-TRENDING',
@@ -441,7 +428,6 @@ export class QueryCore {
             const out = posts.filter(p => !p.data.over_18).map(p => p.data.title)
 
             if (!out.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-REDDIT-TRENDING', 'No queries')
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-REDDIT-TRENDING',
@@ -451,7 +437,6 @@ export class QueryCore {
 
             return out
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-REDDIT', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-REDDIT',
@@ -476,7 +461,6 @@ export class QueryCore {
             )
 
             if (!out.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-LOCAL-QUERY-LIST', 'No queries')
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-LOCAL-QUERY-LIST',
@@ -486,7 +470,6 @@ export class QueryCore {
 
             return out
         } catch (error) {
-            this.bot.logger.warn(this.bot.isMobile, 'SEARCH-LOCAL-QUERY-LIST', 'No queries')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-LOCAL-QUERY-LIST',

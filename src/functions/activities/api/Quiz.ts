@@ -23,9 +23,13 @@ export class Quiz extends Workers {
         )
 
         try {
-            this.cookieHeader = (this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop)
-                .map((c: { name: string; value: string }) => `${c.name}=${c.value}`)
-                .join('; ')
+            this.cookieHeader = this.bot.browser.func.buildCookieHeader(
+                this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop, [
+                    'bing.com',
+                    'live.com',
+                    'microsoftonline.com'
+                ]
+            )
 
             const fingerprintHeaders = { ...this.bot.fingerprint.headers }
             delete fingerprintHeaders['Cookie']

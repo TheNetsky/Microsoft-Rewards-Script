@@ -94,10 +94,7 @@ export function loadJsonFile(possiblePaths, required = true) {
 export function loadConfig(projectRoot, isDev = false) {
     const possiblePaths = isDev
         ? [path.join(projectRoot, 'src', 'config.json')]
-        : [
-            path.join(projectRoot, 'dist', 'config.json'),
-            path.join(projectRoot, 'config.json')
-        ]
+        : [path.join(projectRoot, 'dist', 'config.json'), path.join(projectRoot, 'config.json')]
 
     const result = loadJsonFile(possiblePaths, true)
 
@@ -121,17 +118,20 @@ export function loadAccounts(projectRoot, isDev = false) {
     const possiblePaths = isDev
         ? [path.join(projectRoot, 'src', 'accounts.dev.json')]
         : [
-            path.join(projectRoot, 'dist', 'accounts.json'),
-            path.join(projectRoot, 'accounts.json'),
-            path.join(projectRoot, 'accounts.example.json')
-        ]
+              path.join(projectRoot, 'dist', 'accounts.json'),
+              path.join(projectRoot, 'accounts.json'),
+              path.join(projectRoot, 'accounts.example.json')
+          ]
 
     return loadJsonFile(possiblePaths, true)
 }
 
 export function findAccountByEmail(accounts, email) {
     if (!email || typeof email !== 'string') return null
-    return accounts.find(a => a?.email && typeof a.email === 'string' && a.email.toLowerCase() === email.toLowerCase()) || null
+    return (
+        accounts.find(a => a?.email && typeof a.email === 'string' && a.email.toLowerCase() === email.toLowerCase()) ||
+        null
+    )
 }
 
 export function getRuntimeBase(projectRoot, isDev = false) {

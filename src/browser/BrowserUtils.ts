@@ -220,14 +220,14 @@ export default class BrowserUtils {
             )
 
             // Wait for selector to exist before clicking
-            await page.waitForSelector(selector, { timeout: 10000 })
+            await page.waitForSelector(selector, { timeout: 1000 }).catch(() => {})
 
             const cursor = createCursor(page as any)
             await cursor.click(selector, options)
 
             return true
         } catch (error) {
-            this.bot.logger.error(
+            this.bot.logger.warn(
                 this.bot.isMobile,
                 'GHOST-CLICK',
                 `Failed for ${selector}: ${error instanceof Error ? error.message : String(error)}`
