@@ -52,6 +52,7 @@ export interface ConfigWorkers {
 export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig
+    influxdb?: WebhookInfluxDBConfig
     webhookLogFilter: LogFilter
 }
 
@@ -76,4 +77,13 @@ export interface WebhookNtfyConfig {
     title?: string
     tags?: string[]
     priority?: 1 | 2 | 3 | 4 | 5 // 5 highest (important)
+}
+
+export interface WebhookInfluxDBConfig {
+    enabled?: boolean
+    url: string
+    bucket: string
+    org: string
+    token: string
+    measurement?: string // default: "microsoft_rewards"
 }

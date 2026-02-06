@@ -23,6 +23,7 @@ import type { Account } from './interface/Account'
 import AxiosClient from './util/Axios'
 import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
+import { sendToInfluxDB, flushInfluxDBQueue } from './logging/InfluxDB'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
 
@@ -57,7 +58,7 @@ export function getCurrentContext(): ExecutionContext {
 }
 
 async function flushAllWebhooks(timeoutMs = 5000): Promise<void> {
-    await Promise.allSettled([flushDiscordQueue(timeoutMs), flushNtfyQueue(timeoutMs)])
+    await Promise.allSettled([flushDiscordQueue(timeoutMs), flushNtfyQueue(timeoutMs), flushInfluxDBQueue(timeoutMs)])
 }
 
 interface UserData {
@@ -213,6 +214,12 @@ export class MicrosoftRewardsBot {
                     `Completed all accounts | Accounts processed: ${allAccountStats.length} | Total points collected: +${totalCollectedPoints} | Old total: ${totalInitialPoints} → New total: ${totalFinalPoints} | Total runtime: ${totalDurationMinutes}min`,
                     'green'
                 )
+
+                const config = this.config
+                if (config.webhook.influxdb?.enabled && config.webhook.influxdb.url) {
+                    await sendToInfluxDB(config.webhook.influxdb, allAccountStats)
+                }
+
                 await flushAllWebhooks()
                 process.exit(code ?? 0)
             }
@@ -346,6 +353,11 @@ export class MicrosoftRewardsBot {
                 `Completed all accounts | Accounts processed: ${accountStats.length} | Total points collected: +${totalCollectedPoints} | Old total: ${totalInitialPoints} → New total: ${totalFinalPoints} | Total runtime: ${totalDurationMinutes}min`,
                 'green'
             )
+
+            const config = this.config
+            if (config.webhook.influxdb?.enabled && config.webhook.influxdb.url) {
+                await sendToInfluxDB(config.webhook.influxdb, accountStats)
+            }
 
             await flushAllWebhooks()
             process.exit()

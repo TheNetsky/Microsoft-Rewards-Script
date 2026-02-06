@@ -58,6 +58,14 @@
             "tags": ["bot", "notify"],
             "priority": 3
         },
+        "influxdb": {
+            "enabled": false,
+            "url": "http://localhost:8086",
+            "bucket": "microsoft-rewards",
+            "org": "my-org",
+            "token": "",
+            "measurement": "rewards_stats"
+        },
         "webhookLogFilter": {
             "enabled": false,
             "mode": "whitelist",
