@@ -27,7 +27,6 @@
 Works on Windows, Linux, macOS, and WSL.
 
 ### Get the script
-
 ```bash
 git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
@@ -35,40 +34,42 @@ cd Microsoft-Rewards-Script
 
 Or, download the latest release ZIP and extract it.
 
-### Create an account.json and config.json
+> [!TIP]
+> **Docker users:** optionally skip the clone step when using the prebuilt image. You only need a valid `accounts.json` and `config.json` locally. They can be placed anywhere. 
+> Update the `volumes` section in [`compose.yaml`](./compose.yaml) to point to your files (e.g., `/your/path/to/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro`).
+
+### Create accounts.json and config.json
 
 Copy, rename, and edit your account and configuration files before deploying the script.
 
 - Copy or rename `src/accounts.example.json` to `src/accounts.json` and add your credentials
-- Copy or rename `src/config.example.json` to `src/config.json` and customize your preferences.
+- Copy or rename `src/config.example.json` to `src/config.json` and customize your preferences
 
 > [!CAUTION]
 > Do not skip this step.
-> Prior versions of accounts.json and config.json are not compatible with current release.
+> Prior versions of accounts.json and config.json are not compatible with the current release.
 
 > [!WARNING]
 > You must rebuild your script after making any changes to accounts.json and config.json.
 
-### Build and run the script (bare metal version)
-
+### Build and run the script (bare metal)
 ```bash
 npm run pre-build
 npm run build
 npm run start
 ```
 
-### Build and run the script (docker version)
-
+### Build and run the script (Docker)
 ```bash
 docker compose up -d
 ```
 
 > [!CAUTION]
-> Set `headless` to `true` in the `src/config.json` when using Docker.
-> Additional docker-specific scheduling options are in the `compose.yaml`
+> Set `headless` to `true` in `src/config.json` when using Docker.
+> Additional Docker-specific scheduling options are in `compose.yaml`.
 
 > [!TIP]
-> When headeless, monitor logs with `docker logs microsoft-rewards-script` (for example, to view passwordless codes), or enable a webhook service in the `src/config.json`.
+> When headless, monitor logs with `docker logs microsoft-rewards-script` (for example, to view passwordless codes), or enable a webhook service in `src/config.json`.
 
 ---
 
