@@ -23,10 +23,13 @@
 
 ## Quick Setup
 
+### Bare metal
+
 **Requirements:** Node.js >= 24 and Git  
 Works on Windows, Linux, macOS, and WSL.
 
-### Get the script
+#### Get the script
+
 ```bash
 git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
@@ -34,43 +37,47 @@ cd Microsoft-Rewards-Script
 
 Or, download the latest release ZIP and extract it.
 
-> [!TIP]
-> **Docker users:** optionally skip the clone step when using the prebuilt image. You only need a valid `accounts.json` and `config.json` locally. They can be placed anywhere. 
-> Update the `volumes` section in [`compose.yaml`](./compose.yaml) to point to your files (e.g., `/your/path/to/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro`).
-
-### Create accounts.json and config.json
+#### Create an account.json and config.json
 
 Copy, rename, and edit your account and configuration files before deploying the script.
 
 - Copy or rename `src/accounts.example.json` to `src/accounts.json` and add your credentials
-- Copy or rename `src/config.example.json` to `src/config.json` and customize your preferences
+- Copy or rename `src/config.example.json` to `src/config.json` and customize your preferences.
 
 > [!CAUTION]
 > Do not skip this step.
-> Prior versions of accounts.json and config.json are not compatible with the current release.
+> Prior versions of accounts.json and config.json are not compatible with current release.
 
 > [!WARNING]
 > You must rebuild your script after making any changes to accounts.json and config.json.
 
-### Build and run the script (bare metal)
+#### Build and run the script (bare metal version)
+
 ```bash
 npm run pre-build
 npm run build
 npm run start
 ```
 
-### Build and run the script (Docker)
+### Docker
+- Copy the sample [`compose.yaml`](compose.yaml)
+- Copy and rename [`env.example`](env.example)to `.env` and add your account credentials:
+```env
+ACCOUNT_1_EMAIL=you@example.com
+ACCOUNT_1_PASSWORD=your_password
+```
+- Optionally, review `compose.yaml` to adjust scheduling, timezone, and config options such as webhooks. Then start the container:
 ```bash
 docker compose up -d
 ```
-
 > [!CAUTION]
-> Set `headless` to `true` in `src/config.json` when using Docker.
-> Additional Docker-specific scheduling options are in `compose.yaml`.
+> A `config.json` is generated automatically on first run with sensible defaults.
+> To customise it, edit `./config/config.json` directly or set `CONFIG_*` variables in `compose.yaml`.
+> If a new image version adds config options you're missing, a warning will appear in the container logs.
 
 > [!TIP]
-> When headless, monitor logs with `docker logs microsoft-rewards-script` (for example, to view passwordless codes), or enable a webhook service in `src/config.json`.
-
+> Monitor logs with `docker logs microsoft-rewards-script`, useful for viewing passwordless login codes or diagnosing issues. 
+> You can also enable a webhook in `compose.yaml` for notifications.
 ---
 
 ## Nix Setup

@@ -14,3 +14,4 @@ accounts.main.json
 bun.lock
 logs/
 .stfolder/
+.env
