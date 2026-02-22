@@ -61,19 +61,27 @@ npm run start
 
 ### Docker
 - Copy the sample [`compose.yaml`](compose.yaml)
-- Copy and rename [`env.example`](env.example)to `.env` and add your account credentials:
+- Copy and rename [`env.example`](env.example) to `.env` and add your account credentials:
 ```env
 ACCOUNT_1_EMAIL=you@example.com
 ACCOUNT_1_PASSWORD=your_password
 ```
-- Optionally, review `compose.yaml` to adjust scheduling, timezone, and config options such as webhooks. Then start the container:
-```bash
-docker compose up -d
-```
-> [!CAUTION]
-> A `config.json` is generated automatically on first run with sensible defaults.
-> To customise it, edit `./config/config.json` directly or set `CONFIG_*` variables in `compose.yaml`.
-> If a new image version adds config options you're missing, a warning will appear in the container logs.
+> [!NOTE]
+> A valid `accounts.json` is automatically created based on these values, and saved locally to `./config/`
+
+- Review `compose.yaml` to adjust scheduling, timezone, and config options. 
+
+> [!NOTE]
+> A valid `config.json` is auto-generated on first run using default values, and saved locally to `./config/`. 
+> Optionally, use `CONFIG_*` variables in the `environment:` section of the `compose.yaml` to customise your options (e.g., clusters, webhook). 
+> Commonly changed values are included in the sample `compose.yaml`, and a full list of configuration options are in [the table below](#configuration-options). 
+> Custom config values set in the `compose.yaml` are applied on every startup and always take precedence over `./config/config.json`.
+
+> [!TIP]
+> If a new image adds config options you're missing, a warning will appear in the container logs.
+> To update, delete `./config/config.json` and restart, a fresh one will be generated from the latest example, with your `compose.yaml` overrides re-applied.
+
+- Start the container: `docker compose up -d`
 
 > [!TIP]
 > Monitor logs with `docker logs microsoft-rewards-script`, useful for viewing passwordless login codes or diagnosing issues. 
@@ -92,9 +100,6 @@ Edit `config.json` to customize behavior, or set `CONFIG_*` environment variable
 
 > [!WARNING]
 > Rebuild the script (bare metal), or recreate the container (Docker) after all config changes.
-
-> [!NOTE]
-> Docker: `CONFIG_*` variables are applied on every startup and always take precedence over `./config/config.json`. See `compose.yaml` for common options, and all available keys are listed below.
 
 ### Core
 
