@@ -1,26 +1,18 @@
 services:
     microsoft-rewards-script:
         #image: ghcr.io/thenetsky/microsoft-rewards-script:latest
-        build: . #dev: must be built locally for testing
+        build: . #dev note: must be built locally for testing
         container_name: microsoft-rewards-script
         restart: unless-stopped
 
         # ── Volumes ──────────────────────────────────────────────────────────
-        # Files in ./config/ are mapped into the container at their expected paths.
-        # On first run, config.json is generated from config.example.json and
-        # accounts.json is generated from ACCOUNT_* env vars — both written into
-        # ./config/ so they persist and are visible locally. Edit either file
-        # freely; the container will never overwrite them, but will warn in the
-        # logs if a new image version adds config keys you're missing.
+        # A valid config.json and accounts.json are auto-generated into ./config/ on first run.
         volumes:
             - ./config:/usr/src/microsoft-rewards-script/dist/config
             - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
 
         # ── Accounts ─────────────────────────────────────────────────────────
-        # Credentials are recommended to be set in .env (loaded automatically).
-        # Only ACCOUNT_1_EMAIL and ACCOUNT_1_PASSWORD are required — all other
-        # fields are optional and fall back to defaults from accounts.example.json.
-        # Accounts can also be set directly in the environment block below.
+        # Account credentials are loaded from .env, see env.example. At minimum an ACCOUNT_1_EMAIL and ACCOUNT_1_PASSWORD are required.
         env_file:
             - .env
 
@@ -33,55 +25,23 @@ services:
             SKIP_RANDOM_SLEEP: 'false'
             #MIN_SLEEP_MINUTES: "5"
             #MAX_SLEEP_MINUTES: "50"
-            #STUCK_PROCESS_TIMEOUT_HOURS: "8"
+            #STUCK_PROCESS_TIMEOUT_HOURS: "8"  
 
             # ── Accounts (optional override) ──────────────────────────────────
-            # Account are normally set in .env — only use these if you want to
-            # hardcode an account directly in the compose, e.g. for testing.
+            # Account credentials can be set here directly instead of .env, remove the env_file block above if doing so
             #ACCOUNT_1_EMAIL: you@example.com
             #ACCOUNT_1_PASSWORD: your_password
 
             # ── Config overrides ──────────────────────────────────────────────
-            # These patch config.json at every startup. Defaults come from
-            # config.example.json — only set what you want to change.
-            # headless is always forced true in Docker and cannot be changed.
-            #
+            # Common config options — uncomment and set only what you want to change from default
+            # A full list of available CONFIG_* options are in the README.
+            # 
             # General:
             #CONFIG_CLUSTERS: '1'
-            #CONFIG_DEBUG_LOGS: 'false'
-            #CONFIG_ERROR_DIAGNOSTICS: 'false'
-            #CONFIG_GLOBAL_TIMEOUT: '30sec'
-            #CONFIG_SEARCH_ON_BING_LOCAL: 'false'
-            #
-            # Workers (set to 'false' to disable):
-            #CONFIG_WORKER_DAILY_SET: 'true'
-            #CONFIG_WORKER_SPECIAL_PROMOTIONS: 'true'
-            #CONFIG_WORKER_MORE_PROMOTIONS: 'true'
-            #CONFIG_WORKER_PUNCH_CARDS: 'true'
-            #CONFIG_WORKER_APP_PROMOTIONS: 'true'
-            #CONFIG_WORKER_DESKTOP_SEARCH: 'true'
-            #CONFIG_WORKER_MOBILE_SEARCH: 'true'
-            #CONFIG_WORKER_DAILY_CHECKIN: 'true'
-            #CONFIG_WORKER_READ_TO_EARN: 'true'
             #
             # Search behaviour:
-            #CONFIG_SEARCH_PARALLEL: 'true'
             #CONFIG_SEARCH_DELAY_MIN: '30sec'
             #CONFIG_SEARCH_DELAY_MAX: '1min'
-            #CONFIG_SEARCH_READ_DELAY_MIN: '30sec'
-            #CONFIG_SEARCH_READ_DELAY_MAX: '1min'
-            #CONFIG_SEARCH_VISIT_TIME: '10sec'
-            #CONFIG_SEARCH_SCROLL_RANDOM: 'false'
-            #CONFIG_SEARCH_CLICK_RANDOM: 'false'
-            #
-            # Proxy:
-            #CONFIG_PROXY_QUERY_ENGINE: 'true'
-            #
-            # Console log filter:
-            #CONFIG_LOG_FILTER_ENABLED: 'false'
-            #CONFIG_LOG_FILTER_MODE: 'whitelist'       # whitelist or blacklist
-            #CONFIG_LOG_FILTER_LEVELS: 'error,warn'    # comma-separated
-            #CONFIG_LOG_FILTER_KEYWORDS: 'starting account' # comma-separated
             #
             # Discord webhook:
             #CONFIG_DISCORD_ENABLED: 'true'
@@ -95,13 +55,12 @@ services:
             #CONFIG_NTFY_TITLE: 'Microsoft-Rewards-Script'
             #CONFIG_NTFY_PRIORITY: '3'
             #
-            # Webhook log filter (controls which events trigger webhook notifications):
+            # Webhook log filter (controls which events trigger webhook notifications, enable when using NTFY):
             #CONFIG_WEBHOOK_LOG_FILTER_ENABLED: 'false'
             #CONFIG_WEBHOOK_LOG_FILTER_MODE: 'whitelist'      # whitelist or blacklist
             #CONFIG_WEBHOOK_LOG_FILTER_LEVELS: 'error'        # comma-separated
             #CONFIG_WEBHOOK_LOG_FILTER_KEYWORDS: 'starting account,select number,collected'
-            
-        # Health check: ensures cron is running, container marked unhealthy if cron stops
+
         healthcheck:
             test: ['CMD', 'sh', '-c', 'pgrep cron > /dev/null || exit 1']
             interval: 60s
@@ -109,10 +68,5 @@ services:
             retries: 3
             start_period: 30s
 
-        # Dev: set container memory limits to prevent crashes during testing
-        mem_limit: 3g
-        memswap_limit: 4g   # 3g RAM + 1g swap
-        
-        # Security hardening
         security_opt:
             - no-new-privileges:true
