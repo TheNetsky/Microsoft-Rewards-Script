@@ -191,11 +191,12 @@ _config_file_is_valid() {
   jq -e 'type == "object"' "$CONFIG_FILE" > /dev/null 2>&1
 }
 
-# Returns all recursive leaf key-paths present in example but missing from config
+# Returns object key-paths present in example but missing from config.
 _find_new_keys() {
   local config_keys example_keys
-  config_keys=$(jq -r '[path(..)] | map(join(".")) | sort[]' "$CONFIG_FILE" 2>/dev/null)
-  example_keys=$(jq -r '[path(..)] | map(join(".")) | sort[]' "$CONFIG_EXAMPLE" 2>/dev/null)
+  local jq_expr='[path(..)] | map(select(all(. ; type == "string")) | join(".")) | sort[]'
+  config_keys=$(jq -r "$jq_expr" "$CONFIG_FILE" 2>/dev/null)
+  example_keys=$(jq -r "$jq_expr" "$CONFIG_EXAMPLE" 2>/dev/null)
   comm -13 <(echo "$config_keys") <(echo "$example_keys")
 }
 
