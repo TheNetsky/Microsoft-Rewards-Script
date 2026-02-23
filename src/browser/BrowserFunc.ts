@@ -293,29 +293,33 @@ export default class BrowserFunc {
     }
 
     async closeBrowser(browser: BrowserContext, email: string) {
-        try {
-            const cookies = await browser.cookies()
+        const rootBrowser = (browser as any).browser?.() || null
 
-            // Save cookies
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'CLOSE-BROWSER',
-                `Saving ${cookies.length} cookies to session folder!`
-            )
+        try {
+            // Try to save cookies
+            const cookies = await browser.cookies()
+            this.bot.logger.debug(this.bot.isMobile, 'CLOSE-BROWSER', `Saving ${cookies.length} cookies.`)
             await saveSessionData(this.bot.config.sessionPath, cookies, email, this.bot.isMobile)
 
             await this.bot.utils.wait(2000)
-
-            // Close browser
-            await browser.close()
-            this.bot.logger.info(this.bot.isMobile, 'CLOSE-BROWSER', 'Browser closed cleanly!')
         } catch (error) {
-            this.bot.logger.error(
-                this.bot.isMobile,
-                'CLOSE-BROWSER',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
-            )
-            throw error
+            this.bot.logger.error(this.bot.isMobile, 'CLOSE-BROWSER', `Failed to save session: ${error}`)
+        } finally {
+            try {
+                await browser.close()
+
+                if (rootBrowser) {
+                    await rootBrowser.close().catch(() => {})
+                }
+
+                this.bot.logger.info(this.bot.isMobile, 'CLOSE-BROWSER', 'All browser resources closed.')
+            } catch (closeError) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'CLOSE-BROWSER',
+                    'Shutdown encountered an error, but process exiting.'
+                )
+            }
         }
     }
 

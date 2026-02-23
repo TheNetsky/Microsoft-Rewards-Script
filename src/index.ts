@@ -142,7 +142,7 @@ export class MicrosoftRewardsBot {
 
         if (this.config.clusters > 1) {
             if (cluster.isPrimary) {
-                this.runMaster(runStartTime)
+                await this.runMaster(runStartTime)
             } else {
                 this.runWorker(runStartTime)
             }
@@ -151,7 +151,7 @@ export class MicrosoftRewardsBot {
         }
     }
 
-    private runMaster(runStartTime: number): void {
+    private async runMaster(runStartTime: number): Promise<void> {
         void this.logger.info('main', 'CLUSTER-PRIMARY', `Primary process started | PID: ${process.pid}`)
 
         const rawChunks = this.utils.chunkArray(this.accounts, this.config.clusters)
@@ -159,6 +159,7 @@ export class MicrosoftRewardsBot {
         this.activeWorkers = accountChunks.length
 
         const allAccountStats: AccountStats[] = []
+        let hadWorkerFailure = false
 
         for (const chunk of accountChunks) {
             const worker = cluster.fork()
@@ -170,12 +171,11 @@ export class MicrosoftRewardsBot {
                 }
 
                 const log = msg.__ipcLog
-
                 if (log && typeof log.content === 'string') {
-                    const config = this.config
-                    const webhook = config.webhook
-                    const content = log.content
-                    const level = log.level
+                    const { webhook } = this.config
+                    const { content, level } = log
+
+                    // Webhooks, for later expansion?
                     if (webhook.discord?.enabled && webhook.discord.url) {
                         sendDiscord(webhook.discord.url, content, level)
                     }
@@ -184,23 +184,35 @@ export class MicrosoftRewardsBot {
                     }
                 }
             })
+
+            // Startup delay for clusters due to resource usage
+            if (accountChunks.indexOf(chunk) !== accountChunks.length - 1) {
+                await this.utils.wait(5000)
+            }
         }
 
-        const onWorkerDone = async (label: 'exit' | 'disconnect', worker: Worker, code?: number): Promise<void> => {
+        const onWorkerExit = async (worker: Worker, code?: number, signal?: string): Promise<void> => {
             const { pid } = worker.process
-            this.activeWorkers -= 1
 
             if (!pid || this.exitedWorkers.includes(pid)) {
                 return
-            } else {
-                this.exitedWorkers.push(pid)
+            }
+
+            this.exitedWorkers.push(pid)
+            this.activeWorkers -= 1
+
+            // exit 0 = good, exit 1 = crash
+            const failed = (code ?? 0) !== 0 || Boolean(signal)
+            if (failed) {
+                hadWorkerFailure = true
             }
 
             this.logger.warn(
                 'main',
-                `CLUSTER-WORKER-${label.toUpperCase()}`,
-                `Worker ${worker.process?.pid ?? '?'} ${label} | Code: ${code ?? 'n/a'} | Active workers: ${this.activeWorkers}`
+                'CLUSTER-WORKER-EXIT',
+                `Worker ${pid} exit | Code: ${code ?? 'n/a'} | Signal: ${signal ?? 'n/a'} | Active workers: ${this.activeWorkers}`
             )
+
             if (this.activeWorkers <= 0) {
                 const totalCollectedPoints = allAccountStats.reduce((sum, s) => sum + s.collectedPoints, 0)
                 const totalInitialPoints = allAccountStats.reduce((sum, s) => sum + s.initialPoints, 0)
@@ -213,40 +225,50 @@ export class MicrosoftRewardsBot {
                     `Completed all accounts | Accounts processed: ${allAccountStats.length} | Total points collected: +${totalCollectedPoints} | Old total: ${totalInitialPoints} → New total: ${totalFinalPoints} | Total runtime: ${totalDurationMinutes}min`,
                     'green'
                 )
+
                 await flushAllWebhooks()
-                process.exit(code ?? 0)
+
+                process.exit(hadWorkerFailure ? 1 : 0)
             }
         }
 
-        cluster.on('exit', (worker, code) => {
-            void onWorkerDone('exit', worker, code)
+        cluster.on('exit', (worker, code, signal) => {
+            void onWorkerExit(worker, code ?? undefined, signal ?? undefined)
         })
+
         cluster.on('disconnect', worker => {
-            void onWorkerDone('disconnect', worker, undefined)
+            const pid = worker.process?.pid
+            this.logger.warn('main', 'CLUSTER-WORKER-DISCONNECT', `Worker ${pid ?? '?'} disconnected`) // <-- Warning only
         })
     }
 
     private runWorker(runStartTimeFromMaster?: number): void {
         void this.logger.info('main', 'CLUSTER-WORKER-START', `Worker spawned | PID: ${process.pid}`)
+
         process.on('message', async ({ chunk, runStartTime }: { chunk: Account[]; runStartTime: number }) => {
             void this.logger.info(
                 'main',
                 'CLUSTER-WORKER-TASK',
                 `Worker ${process.pid} received ${chunk.length} accounts.`
             )
+
             try {
                 const stats = await this.runTasks(chunk, runStartTime ?? runStartTimeFromMaster ?? Date.now())
+
+                // Send and flush before exit
                 if (process.send) {
                     process.send({ __stats: stats })
                 }
 
-                process.disconnect()
+                await flushAllWebhooks()
+                process.exit(0)
             } catch (error) {
                 this.logger.error(
                     'main',
                     'CLUSTER-WORKER-ERROR',
                     `Worker task crash: ${error instanceof Error ? error.message : String(error)}`
                 )
+
                 await flushAllWebhooks()
                 process.exit(1)
             }
@@ -334,7 +356,7 @@ export class MicrosoftRewardsBot {
             }
         }
 
-        if (this.config.clusters <= 1 && !cluster.isWorker) {
+        if (this.config.clusters <= 1 && cluster.isPrimary) {
             const totalCollectedPoints = accountStats.reduce((sum, s) => sum + s.collectedPoints, 0)
             const totalInitialPoints = accountStats.reduce((sum, s) => sum + s.initialPoints, 0)
             const totalFinalPoints = accountStats.reduce((sum, s) => sum + s.finalPoints, 0)
@@ -348,7 +370,7 @@ export class MicrosoftRewardsBot {
             )
 
             await flushAllWebhooks()
-            process.exit()
+            process.exit(0)
         }
 
         return accountStats
