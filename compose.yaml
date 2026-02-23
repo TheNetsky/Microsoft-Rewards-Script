@@ -1,40 +1,42 @@
 services:
     microsoft-rewards-script:
-        #image: ghcr.io/thenetsky/microsoft-rewards-script:latest
-        build: . #dev note: must be built locally for testing
+        image: ghcr.io/thenetsky/microsoft-rewards-script:latest
         container_name: microsoft-rewards-script
         restart: unless-stopped
-
-        # ── Volumes ──────────────────────────────────────────────────────────
-        # A valid config.json and accounts.json are auto-generated into ./config/ on first run.
         volumes:
             - ./config:/usr/src/microsoft-rewards-script/dist/config
             - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
-
-        # ── Accounts ─────────────────────────────────────────────────────────
-        # Account credentials are loaded from .env, see env.example. At minimum an ACCOUNT_1_EMAIL and ACCOUNT_1_PASSWORD are required.
-        env_file:
-            - .env
-
         environment:
+
             # ── Scheduling ───────────────────────────────────────────────────
             TZ: 'America/Toronto'
             NODE_ENV: 'production'
-            CRON_SCHEDULE: '0 7 * * *'   # use crontab.guru to build your schedule
-            RUN_ON_START: 'true'          # run immediately on container start
+            CRON_SCHEDULE: '0 7 * * *'   # use crontab.guru to customize your schedule
+            RUN_ON_START: 'true'          # run script immediately on container start
             SKIP_RANDOM_SLEEP: 'false'
             #MIN_SLEEP_MINUTES: "5"
             #MAX_SLEEP_MINUTES: "50"
             #STUCK_PROCESS_TIMEOUT_HOURS: "8"  
 
-            # ── Accounts (optional override) ──────────────────────────────────
-            # Account credentials can be set here directly instead of .env, remove the env_file block above if doing so
-            #ACCOUNT_1_EMAIL: you@example.com
-            #ACCOUNT_1_PASSWORD: your_password
+            # ── Accounts ─────────────────────────────────────────────────────
+            ACCOUNT_1_EMAIL: ${ACCOUNT_1_EMAIL}
+            ACCOUNT_1_PASSWORD: ${ACCOUNT_1_PASSWORD}
+            #ACCOUNT_1_TOTP_SECRET: ${ACCOUNT_1_TOTP_SECRET}
+            #ACCOUNT_1_RECOVERY_EMAIL: ${ACCOUNT_1_RECOVERY_EMAIL}
+            #ACCOUNT_1_GEO_LOCALE: ${ACCOUNT_1_GEO_LOCALE}
+            #ACCOUNT_1_LANG_CODE: ${ACCOUNT_1_LANG_CODE}
+            #ACCOUNT_1_PROXY_AXIOS: ${ACCOUNT_1_PROXY_AXIOS}
+            #ACCOUNT_1_PROXY_URL: ${ACCOUNT_1_PROXY_URL}
+            #ACCOUNT_1_PROXY_PORT: ${ACCOUNT_1_PROXY_PORT}
+            #ACCOUNT_1_PROXY_USERNAME: ${ACCOUNT_1_PROXY_USERNAME}
+            #ACCOUNT_1_PROXY_PASSWORD: ${ACCOUNT_1_PROXY_PASSWORD}
+            #
+            #ACCOUNT_2_EMAIL: ${ACCOUNT_2_EMAIL}
+            #ACCOUNT_2_PASSWORD: ${ACCOUNT_2_PASSWORD}
+            # Add additional accounts as ACCOUNT_3_*, ACCOUNT_4_*, etc. following the same pattern
 
-            # ── Config overrides ──────────────────────────────────────────────
-            # Common config options — uncomment and set only what you want to change from default
-            # A full list of available CONFIG_* options are in the README.
+            # ── Configuration ───────────────────────────────────────────────
+            # Uncomment to override defaults, a full list of configuration options are in the README.
             # 
             # General:
             #CONFIG_CLUSTERS: '1'
