@@ -326,6 +326,10 @@ _cfg "${CONFIG_WEBHOOK_LOG_FILTER_MODE:-}"     '.webhook.webhookLogFilter.mode' 
 _cfg_array "${CONFIG_WEBHOOK_LOG_FILTER_LEVELS-__UNSET__}"    '.webhook.webhookLogFilter.levels'
 _cfg_array "${CONFIG_WEBHOOK_LOG_FILTER_KEYWORDS-__UNSET__}"  '.webhook.webhookLogFilter.keywords'
 
+# Save accounts results
+_cfg "${CONFIG_SAVERESULTS_ENABLED:-}"  '.saveResults.enabled'  bool
+_cfg "${CONFIG_SAVERESULTS_DBPATH:-}"  '.saveResults.dbPath'  string
+
 echo "[entrypoint] Config ready."
 
 # ─────────────────────────────────────────────────────────────────────────────

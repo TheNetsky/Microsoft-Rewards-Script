@@ -25,6 +25,7 @@ import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
+import { Database } from './logging/Database'
 
 interface ExecutionContext {
     isMobile: boolean
@@ -36,7 +37,7 @@ interface BrowserSession {
     fingerprint: BrowserFingerprintWithHeaders
 }
 
-interface AccountStats {
+export interface AccountStats {
     email: string
     initialPoints: number
     finalPoints: number
@@ -97,6 +98,7 @@ export class MicrosoftRewardsBot {
     private searchManager: SearchManager
 
     public axios!: AxiosClient
+    public db!: Database
 
     constructor() {
         this.userData = {
@@ -128,6 +130,7 @@ export class MicrosoftRewardsBot {
 
     async initialize(): Promise<void> {
         this.accounts = loadAccounts()
+        this.db = new Database(this.config.saveResults)
     }
 
     async run(): Promise<void> {
@@ -310,14 +313,16 @@ export class MicrosoftRewardsBot {
                     const accountInitialPoints = result.initialPoints ?? 0
                     const accountFinalPoints = accountInitialPoints + collectedPoints
 
-                    accountStats.push({
+                    const successStats: AccountStats = {
                         email: accountEmail,
                         initialPoints: accountInitialPoints,
                         finalPoints: accountFinalPoints,
                         collectedPoints: collectedPoints,
                         duration: parseFloat(durationSeconds),
                         success: true
-                    })
+                    }
+                    accountStats.push(successStats)
+                    this.db.saveAccountResult(successStats)
 
                     this.logger.info(
                         'main',
@@ -326,7 +331,7 @@ export class MicrosoftRewardsBot {
                         'green'
                     )
                 } else {
-                    accountStats.push({
+                    const failStats: AccountStats = {
                         email: accountEmail,
                         initialPoints: 0,
                         finalPoints: 0,
@@ -334,7 +339,9 @@ export class MicrosoftRewardsBot {
                         duration: parseFloat(durationSeconds),
                         success: false,
                         error: 'Flow failed'
-                    })
+                    }
+                    accountStats.push(failStats)
+                    this.db.saveAccountResult(failStats)
                 }
             } catch (error) {
                 const durationSeconds = ((Date.now() - accountStartTime) / 1000).toFixed(1)
@@ -344,7 +351,7 @@ export class MicrosoftRewardsBot {
                     `${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
                 )
 
-                accountStats.push({
+                const errorStats: AccountStats = {
                     email: accountEmail,
                     initialPoints: 0,
                     finalPoints: 0,
@@ -352,7 +359,9 @@ export class MicrosoftRewardsBot {
                     duration: parseFloat(durationSeconds),
                     success: false,
                     error: error instanceof Error ? error.message : String(error)
-                })
+                }
+                accountStats.push(errorStats)
+                this.db.saveAccountResult(errorStats)
             }
         }
 
@@ -432,8 +441,7 @@ export class MicrosoftRewardsBot {
                 this.logger.info(
                     'main',
                     'POINTS',
-                    `Earnable today | Mobile: ${this.pointsCanCollect} | Browser: ${
-                        browserEarnable.mobileSearchPoints
+                    `Earnable today | Mobile: ${this.pointsCanCollect} | Browser: ${browserEarnable.mobileSearchPoints
                     } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.userData.geoLocale}`
                 )
 
@@ -482,7 +490,7 @@ export class MicrosoftRewardsBot {
                     await executionContext.run({ isMobile: true, account }, async () => {
                         await this.browser.func.closeBrowser(mobileSession!.context, accountEmail)
                     })
-                } catch {}
+                } catch { }
             }
         }
     }

@@ -12,6 +12,12 @@ export interface Config {
     proxy: ConfigProxy
     consoleLogFilter: LogFilter
     webhook: ConfigWebhook
+    saveResults?: ConfigSaveResults
+}
+
+export interface ConfigSaveResults {
+    enabled: boolean
+    dbPath?: string
 }
 
 export type QueryEngine = 'google' | 'wikipedia' | 'reddit' | 'local'

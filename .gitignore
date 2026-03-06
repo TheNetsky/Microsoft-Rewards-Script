@@ -5,8 +5,10 @@ node_modules/
 src/accounts.json
 src/config.json
 /.vscode
+/.idea
 /diagnostics
 note
+accounts.db
 accounts.dev.json
 accounts.main.json
 .DS_Store

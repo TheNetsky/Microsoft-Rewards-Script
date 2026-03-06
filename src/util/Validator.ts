@@ -78,7 +78,13 @@ export const ConfigSchema = z.object({
         queryEngine: z.boolean()
     }),
     consoleLogFilter: LogFilterSchema,
-    webhook: WebhookSchema
+    webhook: WebhookSchema,
+    saveResults: z
+        .object({
+            enabled: z.boolean(),
+            dbPath: z.string().optional()
+        })
+        .optional()
 })
 
 // Account
