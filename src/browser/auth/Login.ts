@@ -61,6 +61,7 @@ export class Login {
         otpCodeEntry: '[data-testid="codeEntry"]',
         backButton: '#back-button',
         bingProfile: '#id_n',
+        startEarningLink: 'a#start-earning-rewards-link',
         requestToken: 'input[name="__RequestVerificationToken"]',
         requestTokenMeta: 'meta[name="__RequestVerificationToken"]',
         otpInput: 'div[data-testid="codeEntry"]'
@@ -170,9 +171,18 @@ export class Login {
             return 'ACCOUNT_LOCKED'
         }
 
-        if (url.hostname === 'rewards.bing.com' || url.hostname === 'account.microsoft.com') {
-            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On rewards/account page, assuming logged in')
+        if (url.hostname === 'account.microsoft.com') {
+            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On account.microsoft.com, assuming logged in')
             return 'LOGGED_IN'
+        }
+
+        // Only treat rewards.bing.com as logged in when on the homepage/dashboard paths.
+        if (url.hostname === 'rewards.bing.com') {
+            const loggedInPaths = ['/', '/dashboard']
+            if (loggedInPaths.includes(url.pathname) || url.pathname.startsWith('/dashboard')) {
+                this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On rewards dashboard, assuming logged in')
+                return 'LOGGED_IN'
+            }
         }
 
         const stateChecks: Array<[string, LoginState]> = [
@@ -539,11 +549,32 @@ export class Login {
 
             case 'UNKNOWN': {
                 const url = new URL(page.url())
+                // handle the new rewards welcome page (bc microsoft sucks at anything)
+                if (url.hostname === 'rewards.bing.com' && url.pathname.startsWith('/welcome')) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Detected Rewards welcome page, attempting to continue')
+
+                    // try the "start earning" button thingy (i think only on mobile, desktop seems to have a different flow)
+                    const startLink = await page
+                        .waitForSelector(this.selectors.startEarningLink, { state: 'visible', timeout: 1500 })
+                        .catch(() => null)
+
+                    if (startLink) {
+                        await this.bot.browser.utils.ghostClick(page, this.selectors.startEarningLink)
+                        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Clicked "Start earning" link')
+                        return true
+                    }
+
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'No "Start earning" link found on welcome page')
+                    return true
+                }
+
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'LOGIN',
                     `Unknown state at ${url.hostname}${url.pathname}, waiting`
                 )
+
                 return true
             }
 
