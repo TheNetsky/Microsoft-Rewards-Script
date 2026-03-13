@@ -1,4 +1,6 @@
 @echo on
+start "" "C:\XboxGames\Minecraft Launcher\Content\Minecraft.exe"
+
 echo [BOT] Iniciando compilação...
 echo %DATE% %TIME% Iniciando compilação...> D:\Microsoft-Rewards-Script\log_execucao.txt
 
@@ -14,4 +16,6 @@ echo %DATE% %TIME% Executando bot...>> D:\Microsoft-Rewards-Script\log_execucao.
 call "C:\Program Files\nodejs\node.exe" D:\Microsoft-Rewards-Script\dist\index.js
 
 echo %DATE% %TIME% Terminando ação...>> D:\Microsoft-Rewards-Script\log_execucao.txt
+
+taskkill /IM Minecraft.exe
 pause
