@@ -1,0 +1,66 @@
+[3/16/2026, 8:57:19 PM] [MAIN] [INFO] MAIN [RUN-START] Starting Microsoft Rewards Script | v4.0.0-beta.1 | Accounts: 1 | Clusters: 1
+[3/16/2026, 8:57:19 PM] [helmiii] [INFO] MAIN [ACCOUNT-START] Starting account: helmiii@duck.com | geoLocale: auto
+[3/16/2026, 8:57:19 PM] [helmiii] [INFO] MAIN [FLOW] Starting session for helmiii@duck.com
+[3/16/2026, 8:57:21 PM] [helmiii] [INFO] MOBILE [BROWSER] Created browser with User-Agent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36 EdgA/145.0.3800.99"
+[3/16/2026, 8:57:22 PM] [helmiii] [INFO] MAIN [BROWSER] Mobile Browser started | helmiii@duck.com
+[3/16/2026, 8:57:22 PM] [helmiii] [INFO] MOBILE [LOGIN] Starting login process
+[3/16/2026, 8:57:29 PM] [helmiii] [INFO] MOBILE [LOGIN] Entering email
+[3/16/2026, 8:57:33 PM] [helmiii] [INFO] MOBILE [LOGIN-ENTER-EMAIL] Email submitted
+[3/16/2026, 8:57:38 PM] [helmiii] [INFO] MOBILE [LOGIN] Email entered successfully
+[3/16/2026, 8:57:44 PM] [helmiii] [INFO] MOBILE [LOGIN] State transition: EMAIL_INPUT → GET_A_CODE
+[3/16/2026, 8:57:44 PM] [helmiii] [INFO] MOBILE [LOGIN] Attempting to bypass "Get code" page
+[3/16/2026, 8:57:44 PM] [helmiii] [INFO] MOBILE [LOGIN] Found "Other ways to sign in" link
+[3/16/2026, 8:57:51 PM] [helmiii] [INFO] MOBILE [LOGIN] "Other ways to sign in" clicked
+[3/16/2026, 8:57:58 PM] [helmiii] [INFO] MOBILE [LOGIN] State transition: GET_A_CODE → OTP_CODE_ENTRY
+[3/16/2026, 8:57:58 PM] [helmiii] [INFO] MOBILE [LOGIN] OTP code entry page detected, attempting to find password option
+[3/16/2026, 8:57:59 PM] [helmiii] [INFO] MOBILE [LOGIN] Footer link clicked
+[3/16/2026, 8:58:04 PM] [helmiii] [INFO] MOBILE [LOGIN] Navigated back from OTP entry page
+[3/16/2026, 8:58:10 PM] [helmiii] [INFO] MOBILE [LOGIN] State transition: OTP_CODE_ENTRY → PASSWORD_INPUT
+[3/16/2026, 8:58:10 PM] [helmiii] [INFO] MOBILE [LOGIN] Entering password
+[3/16/2026, 8:58:15 PM] [helmiii] [INFO] MOBILE [LOGIN-ENTER-PASSWORD] Password submitted
+[3/16/2026, 8:58:17 PM] [helmiii] [INFO] MOBILE [LOGIN] Password entered successfully
+[3/16/2026, 8:58:18 PM] [helmiii] [INFO] MOBILE [LOGIN] State transition: PASSWORD_INPUT → KMSI_PROMPT
+[3/16/2026, 8:58:18 PM] [helmiii] [INFO] MOBILE [LOGIN] Accepting KMSI prompt
+[3/16/2026, 8:58:20 PM] [helmiii] [INFO] MOBILE [LOGIN] KMSI prompt accepted
+[3/16/2026, 8:58:26 PM] [helmiii] [INFO] MOBILE [LOGIN] State transition: KMSI_PROMPT → LOGGED_IN
+[3/16/2026, 8:58:26 PM] [helmiii] [INFO] MOBILE [LOGIN] Successfully logged in
+[3/16/2026, 8:58:26 PM] [helmiii] [INFO] MOBILE [LOGIN] Finalizing login
+[3/16/2026, 8:58:28 PM] [helmiii] [INFO] MOBILE [LOGIN] Logged into Microsoft Rewards successfully
+[3/16/2026, 8:58:28 PM] [helmiii] [INFO] MOBILE [LOGIN] Starting Bing session verification
+[3/16/2026, 8:58:28 PM] [helmiii] [INFO] MOBILE [LOGIN-BING] Verifying Bing session
+[3/16/2026, 8:58:35 PM] [helmiii] [INFO] MOBILE [LOGIN-BING] Bing session verified successfully
+[3/16/2026, 8:58:35 PM] [helmiii] [INFO] MOBILE [LOGIN] Starting rewards session verification
+[3/16/2026, 8:58:35 PM] [helmiii] [INFO] MOBILE [GET-REWARD-SESSION] Fetching request token
+[3/16/2026, 8:58:43 PM] [helmiii] [WARN] MOBILE [GET-REWARD-SESSION] No RequestVerificationToken found, some activities may not work
+[3/16/2026, 8:58:43 PM] [helmiii] [INFO] MOBILE [LOGIN] Login completed, session saved
+[3/16/2026, 8:58:43 PM] [helmiii] [INFO] MOBILE [GET-APP-TOKEN] Requesting mobile access token
+[3/16/2026, 8:58:43 PM] [helmiii] [INFO] MOBILE [LOGIN-APP] Waiting for mobile OAuth code...
+[3/16/2026, 8:58:44 PM] [helmiii] [INFO] MOBILE [LOGIN-APP] Mobile access token received
+[3/16/2026, 8:58:49 PM] [helmiii] [INFO] MAIN [POINTS] Earnable today | Mobile: 0 | Browser: 0 | App: 0 | helmiii@duck.com | locale: US
+[3/16/2026, 8:58:49 PM] [helmiii] [INFO] MOBILE [DAILY-SET] Solving 6 modern items
+[3/16/2026, 8:58:49 PM] [helmiii] [INFO] MOBILE [ACTIVITY] Solving: Upcoming sporting events
+[3/16/2026, 8:58:49 PM] [helmiii] [WARN] MOBILE [ACTIVITY] Card NOT found on dashboard for: Upcoming sporting events. Navigating directly.
+[3/16/2026, 8:59:12 PM] [helmiii] [INFO] MOBILE [ACTIVITY] Solving: Explore Microsoft Shopping
+[3/16/2026, 8:59:17 PM] [helmiii] [WARN] MOBILE [ACTIVITY] Card NOT found on dashboard for: Explore Microsoft Shopping. Navigating directly.
+[3/16/2026, 8:59:38 PM] [helmiii] [INFO] MOBILE [ACTIVITY] Solving: Aegean Escape?
+[3/16/2026, 8:59:41 PM] [helmiii] [WARN] MOBILE [ACTIVITY] Card NOT found on dashboard for: Aegean Escape?. Navigating directly.
+[3/16/2026, 9:00:05 PM] [helmiii] [INFO] MOBILE [ACTIVITY] Solving: Upcoming comedy events
+[3/16/2026, 9:00:09 PM] [helmiii] [WARN] MOBILE [ACTIVITY] Card NOT found on dashboard for: Upcoming comedy events. Navigating directly.
+[3/16/2026, 9:00:34 PM] [helmiii] [INFO] MOBILE [ACTIVITY] Solving: Philosophy roots
+[3/16/2026, 9:00:37 PM] [helmiii] [WARN] MOBILE [ACTIVITY] Card NOT found on dashboard for: Philosophy roots. Navigating directly.
+[3/16/2026, 9:01:07 PM] [helmiii] [INFO] MOBILE [ACTIVITY] Solving: Neon Crossroads?
+[3/16/2026, 9:01:09 PM] [helmiii] [WARN] MOBILE [ACTIVITY] Card NOT found on dashboard for: Neon Crossroads?. Navigating directly.
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MOBILE [MORE-PROMOTIONS] All modern more items already completed
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MOBILE [DAILY-CHECK-IN] Starting Daily Check-In | geo=US | currentPoints=0
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MOBILE [DAILY-CHECK-IN] Completed Daily Check-In | type=101 | gainedPoints=511 | oldBalance=0 | newBalance=511
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MOBILE [READ-TO-EARN] Starting Read to Earn | geo=US | delayRange=30sec-1min | currentPoints=511
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MOBILE [READ-TO-EARN] No points gained, stopping Read to Earn | article=1/10 | status=200 | oldBalance=511 | newBalance=511
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MOBILE [READ-TO-EARN] Completed Read to Earn | articlesRead=0 | totalGained=0 | startBalance=511 | finalBalance=511
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MAIN [FLOW] Switching to Desktop mode for helmiii@duck.com to solve activities...
+[3/16/2026, 9:01:31 PM] [helmiii] [INFO] MAIN [BROWSER] Emulating Desktop view & User-Agent | helmiii@duck.com
+[3/16/2026, 9:01:34 PM] [helmiii] [INFO] DESKTOP [DAILY-SET] Solving 6 modern items
+[3/16/2026, 9:01:34 PM] [helmiii] [INFO] DESKTOP [ACTIVITY] Solving: Upcoming sporting events
+[3/16/2026, 9:01:34 PM] [helmiii] [WARN] DESKTOP [ACTIVITY] Card NOT found on dashboard for: Upcoming sporting events. Navigating directly.
+[3/16/2026, 9:01:59 PM] [helmiii] [INFO] DESKTOP [ACTIVITY] Solving: Explore Microsoft Shopping
+[3/16/2026, 9:02:04 PM] [helmiii] [WARN] DESKTOP [ACTIVITY] Card NOT found on dashboard for: Explore Microsoft Shopping. Navigating directly.
+[3/16/2026, 9:02:18 PM] [helmiii] [WARN] MAIN [PROCESS] SIGTERM received, flushing and exiting...

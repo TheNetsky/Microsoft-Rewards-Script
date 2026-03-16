@@ -62,6 +62,8 @@ export class Workers {
                         title: x.title || 'Unknown Title',
                         offerId: x.offerId || 'Unknown ID',
                         destination: x.destination || x.destinationUrl,
+                        hash: x.hash || '',
+                        type: x.type || x.activityType || '',
                         complete: false,
                         pointProgressMax: x.points || x.pointProgressMax || 0
                     }))
@@ -82,6 +84,8 @@ export class Workers {
                     title: x.title || 'Unknown Title',
                     offerId: x.offerId || 'Unknown ID',
                     destination: x.destination || x.destinationUrl,
+                    hash: x.hash || '',
+                    type: x.type || x.activityType || '',
                     complete: false,
                     pointProgressMax: x.points || x.pointProgressMax || 0
                 }))
@@ -257,6 +261,12 @@ export class Workers {
                                 'ACTIVITY',
                                 `New tab opened for: ${activity.title}`
                             )
+
+                            // Try to complete via API for V4
+                            if (activity.hash && this.bot.rewardsVersion === 'modern') {
+                                await this.completeActivityV4(activity, newPage)
+                            }
+
                             await this.bot.utils.wait(this.bot.utils.randomDelay(20000, 30000))
                             await newPage.close().catch(() => {})
                         } else {
@@ -269,6 +279,12 @@ export class Workers {
                             `Card NOT found on dashboard for: ${activity.title}. Navigating directly.`
                         )
                         await page.goto(url, { waitUntil: 'domcontentloaded' }).catch(() => {})
+
+                        // Try to complete via API for V4
+                        if (activity.hash && this.bot.rewardsVersion === 'modern') {
+                            await this.completeActivityV4(activity, page)
+                        }
+
                         await this.bot.utils.wait(this.bot.utils.randomDelay(20000, 30000))
                     }
                 }
@@ -282,4 +298,81 @@ export class Workers {
 
     public async doSpecialPromotions(data: DashboardData) {}
     public async doPunchCards(data: DashboardData, page: Page) {}
+
+    private async completeActivityV4(activity: any, page: Page): Promise<boolean> {
+        const offerId = activity.offerId
+        const hash = activity.hash || ''
+
+        if (!offerId) {
+            this.bot.logger.warn(this.bot.isMobile, 'ACTIVITY-V4', 'No offerId found')
+            return false
+        }
+
+        this.bot.logger.info(this.bot.isMobile, 'ACTIVITY-V4', `Completing: ${activity.title} (${offerId})`)
+
+        try {
+            const formData = new URLSearchParams({
+                id: offerId,
+                hash: hash,
+                timeZone: '60',
+                activityAmount: '1',
+                dbs: '0'
+            })
+
+            const context = page.context() as any
+            const cookies = await context.cookies()
+            const cookieHeader = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ')
+
+            const request: any = {
+                url: 'https://rewards.bing.com/api/reportactivity?X-Requested-With=XMLHttpRequest',
+                method: 'POST',
+                headers: {
+                    ...(this.bot.fingerprint?.headers ?? {}),
+                    Cookie: cookieHeader,
+                    Referer: 'https://rewards.bing.com/',
+                    Origin: 'https://rewards.bing.com',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                data: formData.toString()
+            }
+
+            const response = await this.bot.axios.request(request)
+
+            if (response.status === 200) {
+                const result = response.data
+                if (result?.result?.resultCode === 0 || result?.resultCode === 0) {
+                    const points = result?.result?.pointsEarned || result?.pointsEarned || 0
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'ACTIVITY-V4',
+                        `Completed: ${activity.title} | +${points} points`,
+                        'green'
+                    )
+                    return true
+                }
+            }
+
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'ACTIVITY-V4',
+                `API returned status ${response.status} for: ${activity.title}`
+            )
+            return false
+        } catch (error) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'ACTIVITY-V4',
+                `Failed to complete: ${activity.title} - ${error instanceof Error ? error.message : String(error)}`
+            )
+            const axiosError = error as any
+            if (axiosError.response?.data) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'ACTIVITY-V4',
+                    `Response: ${JSON.stringify(axiosError.response.data)}`
+                )
+            }
+            return false
+        }
+    }
 }
