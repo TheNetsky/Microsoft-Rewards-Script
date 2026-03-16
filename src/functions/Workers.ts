@@ -311,12 +311,22 @@ export class Workers {
         this.bot.logger.info(this.bot.isMobile, 'ACTIVITY-V4', `Completing: ${activity.title} (${offerId})`)
 
         try {
+            // Visit the activity page first to "start" the activity
+            const url = activity.destination || activity.destinationUrl
+            if (url) {
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
+                await this.bot.utils.wait(2000)
+            }
+
             const formData = new URLSearchParams({
                 id: offerId,
                 hash: hash,
                 timeZone: '60',
                 activityAmount: '1',
-                dbs: '0'
+                dbs: '0',
+                form: activity.form || '',
+                type: activity.type || '',
+                __RequestVerificationToken: this.bot.requestToken || ''
             })
 
             const context = page.context() as any
