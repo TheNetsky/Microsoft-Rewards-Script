@@ -18,6 +18,7 @@ import { Login } from './browser/auth/Login'
 import { Workers } from './functions/Workers'
 import Activities from './functions/Activities'
 import { SearchManager } from './functions/SearchManager'
+import NextParser from './util/NextParser'
 
 import type { Account } from './interface/Account'
 import AxiosClient from './util/Axios'
@@ -73,6 +74,7 @@ export class MicrosoftRewardsBot {
     public logger: Logger
     public config
     public utils: Utils
+    public nextParser: NextParser = new NextParser()
     public activities: Activities = new Activities(this)
     public browser: { func: BrowserFunc; utils: BrowserUtils }
 
@@ -408,25 +410,18 @@ export class MicrosoftRewardsBot {
                 this.cookies.mobile = await initialContext.cookies()
                 this.fingerprint = mobileSession.fingerprint
 
-                const data: DashboardData = await this.browser.func.getDashboardData()
+                const data: DashboardData = await this.browser.func.getDashboardDataFromPage(this.mainMobilePage)
                 const appData: AppDashboardData = await this.browser.func.getAppDashboardData()
 
                 // Set geo
                 this.userData.geoLocale =
                     account.geoLocale === 'auto' ? data.userProfile.attributes.country : account.geoLocale.toLowerCase()
-                if (this.userData.geoLocale.length > 2) {
-                    this.logger.warn(
-                        'main',
-                        'GEO-LOCALE',
-                        `The provided geoLocale is longer than 2 (${this.userData.geoLocale} | auto=${account.geoLocale === 'auto'}), this is likely invalid and can cause errors!`
-                    )
-                }
-
+                
                 this.userData.initialPoints = data.userStatus.availablePoints
                 this.userData.currentPoints = data.userStatus.availablePoints
                 const initialPoints = this.userData.initialPoints ?? 0
 
-                const browserEarnable = await this.browser.func.getBrowserEarnablePoints()
+                const browserEarnable = await this.browser.func.getBrowserEarnablePoints(data)
                 const appEarnable = await this.browser.func.getAppEarnablePoints()
 
                 this.pointsCanCollect = browserEarnable.mobileSearchPoints + (appEarnable?.totalEarnablePoints ?? 0)
@@ -446,6 +441,27 @@ export class MicrosoftRewardsBot {
                 if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
                 if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
                 if (this.config.workers.doPunchCards) await this.workers.doPunchCards(data, this.mainMobilePage)
+
+                // DESKTOP SESSION (V4 Adaptation - Session Reuse)
+                this.logger.info('main', 'FLOW', `Switching to Desktop mode for ${accountEmail} to solve activities...`)
+                try {
+                    await executionContext.run({ isMobile: false, account }, async () => {
+                        await this.mainMobilePage.setViewportSize({ width: 1920, height: 1080 })
+                        const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.3856.62'
+                        await (this.mainMobilePage.context() as any)._setExtraHTTPHeaders?.({ 'User-Agent': desktopUA })
+                        
+                        this.logger.info('main', 'BROWSER', `Emulating Desktop view & User-Agent | ${accountEmail}`)
+                        
+                        const desktopData: DashboardData = await this.browser.func.getDashboardDataFromPage(this.mainMobilePage)
+                        
+                        if (this.config.workers.doDailySet) await this.workers.doDailySet(desktopData, this.mainMobilePage)
+                        if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(desktopData, this.mainMobilePage)
+                        
+                        await (this.mainMobilePage.context() as any)._setExtraHTTPHeaders?.({ 'User-Agent': mobileSession!.fingerprint.headers['User-Agent'] })
+                    })
+                } catch (desktopError) {
+                    this.logger.error('main', 'DESKTOP-SESSION', `Error during desktop emulation: ${desktopError}`)
+                }
 
                 const searchPoints = await this.browser.func.getSearchPoints()
                 const missingSearchPoints = this.browser.func.missingSearchPoints(searchPoints, true)
