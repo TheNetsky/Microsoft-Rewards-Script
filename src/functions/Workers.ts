@@ -202,12 +202,13 @@ export class Workers {
                 // Structure: { name, attributes: { offerid, title, complete, max, destination } }
                 const transformedPromos = userInfoPromos.map((p: any) => {
                     const attrs = p.attributes || {}
+                    const isComplete = attrs.complete === 'True' || attrs.complete === true
                     return {
                         title: attrs.title || p.name || 'Unknown Title',
                         offerId: attrs.offerid || p.name || 'Unknown ID',
                         destination: attrs.destination || '',
-                        complete: attrs.complete === 'True' || attrs.complete === true,
-                        isCompleted: attrs.complete === 'True' || attrs.complete === true,
+                        complete: isComplete,
+                        isCompleted: isComplete,
                         points: parseInt(attrs.max) || 0,
                         pointProgressMax: parseInt(attrs.max) || 0,
                         activityType: 0
@@ -489,8 +490,9 @@ export class Workers {
 
                 const userInfo = (panelData as any)?.userInfo
                 const panelPromotion =
-                    userInfo?.morePromotions?.find((p: any) => p.offerId === offerId) ||
-                    panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find((p: any) => p.offerId === offerId)
+                    userInfo?.promotions?.find((p: any) => p.offerId === offerId || p.name === offerId) ||
+                    panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find((p: any) => p.offerId === offerId) ||
+                    panelData?.flyoutResult?.morePromotions?.find((p: any) => p.offerId === offerId)
 
                 const jsonData = {
                     ActivityCount: 1,
