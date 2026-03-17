@@ -35,7 +35,7 @@ export class QueryCore {
                 `start | shuffle=${shuffle}, related=${related}, lang=${langCode}, geo=${geoLocale}, sources=${sourceOrder.join(',')}`
             )
 
-            // 网络检测：如果网络不可达，回落到 local 查询
+            // Network check: fall back to local queries if unreachable
             let effectiveSourceOrder = sourceOrder
             if (!skipNetworkCheck) {
                 try {
@@ -51,7 +51,7 @@ export class QueryCore {
                     }
                     effectiveSourceOrder = effectiveOrder as QueryEngine[]
                 } catch {
-                    // 网络检测失败，继续使用原有配置
+                    // Network check failed, use default source order
                     this.bot.logger.debug(this.bot.isMobile, 'QUERY-MANAGER', 'Network check failed, using default source order')
                 }
             }

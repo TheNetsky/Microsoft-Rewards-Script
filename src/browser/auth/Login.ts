@@ -605,7 +605,7 @@ export class Login {
                 }
 
                 const u = new URL(page.url())
-                // 支持所有 Bing 域名（包括 cn.bing.com 等区域域名）
+                // Support all Bing domains (including cn.bing.com, etc.)
                 const isBingDomain = u.hostname.endsWith('.bing.com') || u.hostname === 'bing.com'
                 const atBingHome = isBingDomain && u.pathname === '/'
                 this.bot.logger.debug(
@@ -643,9 +643,6 @@ export class Login {
         }
     }
 
-    /**
-     * 检查错误是否为浏览器崩溃错误
-     */
     private isBrowserCrashError(error: unknown): boolean {
         const message = error instanceof Error ? error.message : String(error)
         return message.includes('Target crashed') ||
@@ -730,7 +727,7 @@ export class Login {
                 'No RequestVerificationToken found, some activities may not work'
             )
         } catch (error) {
-            // 检测浏览器崩溃
+            // Check for browser crash
             if (this.isBrowserCrashError(error)) {
                 throw this.bot.logger.error(
                     this.bot.isMobile,

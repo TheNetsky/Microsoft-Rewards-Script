@@ -11,9 +11,6 @@ export default class BrowserUtils {
         this.bot = bot
     }
 
-    /**
-     * 检查页面是否仍然可用（未崩溃）
-     */
     private isPageHealthy(page: Page): boolean {
         try {
             return !page.isClosed()
@@ -22,9 +19,6 @@ export default class BrowserUtils {
         }
     }
 
-    /**
-     * 检查错误是否为浏览器崩溃错误
-     */
     private isBrowserCrashError(error: unknown): boolean {
         const message = error instanceof Error ? error.message : String(error)
         return message.includes('Target crashed') ||
@@ -35,7 +29,6 @@ export default class BrowserUtils {
 
     async tryDismissAllMessages(page: Page): Promise<boolean> {
         try {
-            // 初始健康检查
             if (!this.isPageHealthy(page)) {
                 this.bot.logger.warn(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Page is closed or crashed, skipping')
                 return false
@@ -56,7 +49,6 @@ export default class BrowserUtils {
                 { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
             ]
 
-            // 移除不稳定的通配符选择器，改用更稳定的选择器
             const cookieBannerSelectors = [
                 '#wcpConsentBannerCtrl button:first-child',
                 '#wcpConsentBannerCtrl .action-button',
@@ -79,10 +71,9 @@ export default class BrowserUtils {
                 .map(r => (r.status === 'fulfilled' ? r.value : null))
                 .filter(Boolean)
 
-            // 串行处理点击，避免并发导致的崩溃
+            // Process clicks serially to avoid crashes
             let dismissedCount = 0
             for (const b of visibleButtons) {
-                // 每次点击前检查页面健康状态
                 if (!this.isPageHealthy(page)) {
                     this.bot.logger.warn(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Page became unhealthy during dismissal')
                     return dismissedCount > 0
@@ -98,7 +89,6 @@ export default class BrowserUtils {
                         )
                         dismissedCount++
                     }
-                    // 每次点击后短暂等待，让页面稳定
                     await this.bot.utils.wait(200)
                 }
             }
@@ -107,7 +97,7 @@ export default class BrowserUtils {
                 await this.bot.utils.wait(300)
             }
 
-            // 处理 Cookie 横幅（特殊处理，更安全的方式）
+            // Handle cookie banner
             if (this.isPageHealthy(page)) {
                 for (const selector of cookieBannerSelectors) {
                     if (!this.isPageHealthy(page)) break
@@ -127,12 +117,12 @@ export default class BrowserUtils {
                             }
                         }
                     } catch {
-                        // 继续尝试下一个选择器
+                        // Try next selector
                     }
                 }
             }
 
-            // Overlay 处理
+            // Handle overlay
             if (this.isPageHealthy(page)) {
                 const overlay = await page.$('#bnp_overlay_wrapper').catch(() => null)
                 if (overlay) {
@@ -155,14 +145,13 @@ export default class BrowserUtils {
 
             return true
         } catch (error) {
-            // 检测是否为浏览器崩溃
             if (this.isBrowserCrashError(error)) {
                 this.bot.logger.error(
                     this.bot.isMobile,
                     'DISMISS-ALL-MESSAGES',
                     'Browser crashed during message dismissal'
                 )
-                throw error // 重新抛出崩溃错误，让上层处理
+                throw error
             }
 
             this.bot.logger.warn(
@@ -232,13 +221,11 @@ export default class BrowserUtils {
                 `Found ${tabs.length} tab(s) open (min: ${config.minTabs}, max: ${config.maxTabs})`
             )
 
-            // Check if valid
             if (config.minTabs < 1 || config.maxTabs < config.minTabs) {
                 this.bot.logger.warn(this.bot.isMobile, 'SEARCH-CLOSE-TABS', 'Invalid config, using defaults')
                 config = { minTabs: 1, maxTabs: 1 }
             }
 
-            // Close if more than max config
             if (tabs.length > config.maxTabs) {
                 const tabsToClose = tabs.slice(config.maxTabs)
 
@@ -251,7 +238,6 @@ export default class BrowserUtils {
                     `Closed ${closedCount}/${tabsToClose.length} excess tab(s) to reach max of ${config.maxTabs}`
                 )
 
-                // Open more tabs
             } else if (tabs.length < config.minTabs) {
                 const tabsNeeded = config.minTabs - tabs.length
                 this.bot.logger.debug(
@@ -298,7 +284,6 @@ export default class BrowserUtils {
 
     async ghostClick(page: Page, selector: string, options?: ClickOptions): Promise<boolean> {
         try {
-            // 页面健康检查
             if (!this.isPageHealthy(page)) {
                 this.bot.logger.warn(this.bot.isMobile, 'GHOST-CLICK', 'Page is closed or crashed, cannot click')
                 return false
@@ -310,10 +295,8 @@ export default class BrowserUtils {
                 `Trying to click selector: ${selector}, options: ${JSON.stringify(options)}`
             )
 
-            // Wait for selector to exist before clicking
             await page.waitForSelector(selector, { timeout: 1000 }).catch(() => {})
 
-            // 再次检查页面状态
             if (!this.isPageHealthy(page)) {
                 this.bot.logger.warn(this.bot.isMobile, 'GHOST-CLICK', 'Page became unhealthy during wait')
                 return false
@@ -324,14 +307,13 @@ export default class BrowserUtils {
 
             return true
         } catch (error) {
-            // 检测浏览器崩溃
             if (this.isBrowserCrashError(error)) {
                 this.bot.logger.error(
                     this.bot.isMobile,
                     'GHOST-CLICK',
                     `Browser crashed while clicking ${selector}`
                 )
-                throw error // 重新抛出崩溃错误
+                throw error
             }
 
             this.bot.logger.warn(
