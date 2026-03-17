@@ -4,6 +4,7 @@ import path from 'path'
 import type { GoogleSearch, GoogleTrendsResponse, RedditListing, WikipediaTopResponse } from '../interface/Search'
 import type { MicrosoftRewardsBot } from '../index'
 import { QueryEngine } from '../interface/Config'
+import { NetworkDetector } from '../util/NetworkDetector'
 
 export class QueryCore {
     constructor(private bot: MicrosoftRewardsBot) {}
@@ -15,6 +16,7 @@ export class QueryCore {
             related?: boolean
             langCode?: string
             geoLocale?: string
+            skipNetworkCheck?: boolean
         } = {}
     ): Promise<string[]> {
         const {
@@ -22,7 +24,8 @@ export class QueryCore {
             sourceOrder = ['google', 'wikipedia', 'reddit', 'local'],
             related = true,
             langCode = 'en',
-            geoLocale = 'US'
+            geoLocale = 'US',
+            skipNetworkCheck = false
         } = options
 
         try {
@@ -31,6 +34,27 @@ export class QueryCore {
                 'QUERY-MANAGER',
                 `start | shuffle=${shuffle}, related=${related}, lang=${langCode}, geo=${geoLocale}, sources=${sourceOrder.join(',')}`
             )
+
+            // 网络检测：如果网络不可达，回落到 local 查询
+            let effectiveSourceOrder = sourceOrder
+            if (!skipNetworkCheck) {
+                try {
+                    const effectiveOrder = await NetworkDetector.getSourceOrderWithFallback(sourceOrder, {
+                        timeout: 1000
+                    })
+                    if (effectiveOrder[0] === 'local' && sourceOrder[0] !== 'local') {
+                        this.bot.logger.warn(
+                            this.bot.isMobile,
+                            'QUERY-MANAGER',
+                            'Network unreachable, falling back to local queries only'
+                        )
+                    }
+                    effectiveSourceOrder = effectiveOrder as QueryEngine[]
+                } catch {
+                    // 网络检测失败，继续使用原有配置
+                    this.bot.logger.debug(this.bot.isMobile, 'QUERY-MANAGER', 'Network check failed, using default source order')
+                }
+            }
 
             const topicLists: string[][] = []
 
@@ -60,7 +84,7 @@ export class QueryCore {
                 }
             }
 
-            for (const source of sourceOrder) {
+            for (const source of effectiveSourceOrder) {
                 const handler = sourceHandlers[source]
                 if (!handler) continue
 

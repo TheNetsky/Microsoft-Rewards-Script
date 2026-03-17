@@ -11,11 +11,39 @@ export default class BrowserUtils {
         this.bot = bot
     }
 
-    async tryDismissAllMessages(page: Page): Promise<void> {
+    /**
+     * 检查页面是否仍然可用（未崩溃）
+     */
+    private isPageHealthy(page: Page): boolean {
         try {
+            return !page.isClosed()
+        } catch {
+            return false
+        }
+    }
+
+    /**
+     * 检查错误是否为浏览器崩溃错误
+     */
+    private isBrowserCrashError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : String(error)
+        return message.includes('Target crashed') ||
+               message.includes('Session closed') ||
+               message.includes('Page crashed') ||
+               message.includes('Target closed')
+    }
+
+    async tryDismissAllMessages(page: Page): Promise<boolean> {
+        try {
+            // 初始健康检查
+            if (!this.isPageHealthy(page)) {
+                this.bot.logger.warn(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Page is closed or crashed, skipping')
+                return false
+            }
+
             const buttons = [
                 { selector: '#acceptButton', label: 'AcceptButton' },
-                { selector: '#wcpConsentBannerCtrl > * > button:first-child', label: 'Bing Cookies Accept' },
+                { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
                 { selector: '.ext-secondary.ext-button', label: '"Skip for now" Button' },
                 { selector: '#iLandingViewAction', label: 'iLandingViewAction' },
                 { selector: '#iShowSkip', label: 'iShowSkip' },
@@ -25,8 +53,15 @@ export default class BrowserUtils {
                 { selector: '.ms-Button.ms-Button--primary', label: 'Primary Button' },
                 { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
                 { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
-                { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
                 { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
+            ]
+
+            // 移除不稳定的通配符选择器，改用更稳定的选择器
+            const cookieBannerSelectors = [
+                '#wcpConsentBannerCtrl button:first-child',
+                '#wcpConsentBannerCtrl .action-button',
+                'button[data-bind*="acceptAll"]',
+                'button[aria-label*="Accept" i]'
             ]
 
             const checkVisible = await Promise.allSettled(
@@ -44,48 +79,98 @@ export default class BrowserUtils {
                 .map(r => (r.status === 'fulfilled' ? r.value : null))
                 .filter(Boolean)
 
-            if (visibleButtons.length > 0) {
-                await Promise.allSettled(
-                    visibleButtons.map(async b => {
-                        if (b) {
-                            const clicked = await this.ghostClick(page, b.selector)
+            // 串行处理点击，避免并发导致的崩溃
+            let dismissedCount = 0
+            for (const b of visibleButtons) {
+                // 每次点击前检查页面健康状态
+                if (!this.isPageHealthy(page)) {
+                    this.bot.logger.warn(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Page became unhealthy during dismissal')
+                    return dismissedCount > 0
+                }
+
+                if (b) {
+                    const clicked = await this.ghostClick(page, b.selector)
+                    if (clicked) {
+                        this.bot.logger.debug(
+                            this.bot.isMobile,
+                            'DISMISS-ALL-MESSAGES',
+                            `Dismissed: ${b.label}`
+                        )
+                        dismissedCount++
+                    }
+                    // 每次点击后短暂等待，让页面稳定
+                    await this.bot.utils.wait(200)
+                }
+            }
+
+            if (dismissedCount > 0) {
+                await this.bot.utils.wait(300)
+            }
+
+            // 处理 Cookie 横幅（特殊处理，更安全的方式）
+            if (this.isPageHealthy(page)) {
+                for (const selector of cookieBannerSelectors) {
+                    if (!this.isPageHealthy(page)) break
+
+                    try {
+                        const isVisible = await page.locator(selector).isVisible().catch(() => false)
+                        if (isVisible) {
+                            const clicked = await this.ghostClick(page, selector)
                             if (clicked) {
                                 this.bot.logger.debug(
                                     this.bot.isMobile,
                                     'DISMISS-ALL-MESSAGES',
-                                    `Dismissed: ${b.label}`
+                                    `Dismissed: Cookie Banner (${selector})`
                                 )
+                                await this.bot.utils.wait(500)
+                                break
                             }
                         }
-                    })
-                )
-                await this.bot.utils.wait(300)
-            }
-
-            // Overlay
-            const overlay = await page.$('#bnp_overlay_wrapper')
-            if (overlay) {
-                const rejected = await this.ghostClick(page, '#bnp_btn_reject, button[aria-label*="Reject" i]')
-                if (rejected) {
-                    this.bot.logger.debug(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Bing Overlay Reject')
-                } else {
-                    const accepted = await this.ghostClick(page, '#bnp_btn_accept')
-                    if (accepted) {
-                        this.bot.logger.debug(
-                            this.bot.isMobile,
-                            'DISMISS-ALL-MESSAGES',
-                            'Dismissed: Bing Overlay Accept'
-                        )
+                    } catch {
+                        // 继续尝试下一个选择器
                     }
                 }
-                await this.bot.utils.wait(250)
             }
+
+            // Overlay 处理
+            if (this.isPageHealthy(page)) {
+                const overlay = await page.$('#bnp_overlay_wrapper').catch(() => null)
+                if (overlay) {
+                    const rejected = await this.ghostClick(page, '#bnp_btn_reject, button[aria-label*="Reject" i]')
+                    if (rejected) {
+                        this.bot.logger.debug(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Bing Overlay Reject')
+                    } else {
+                        const accepted = await this.ghostClick(page, '#bnp_btn_accept')
+                        if (accepted) {
+                            this.bot.logger.debug(
+                                this.bot.isMobile,
+                                'DISMISS-ALL-MESSAGES',
+                                'Dismissed: Bing Overlay Accept'
+                            )
+                        }
+                    }
+                    await this.bot.utils.wait(250)
+                }
+            }
+
+            return true
         } catch (error) {
+            // 检测是否为浏览器崩溃
+            if (this.isBrowserCrashError(error)) {
+                this.bot.logger.error(
+                    this.bot.isMobile,
+                    'DISMISS-ALL-MESSAGES',
+                    'Browser crashed during message dismissal'
+                )
+                throw error // 重新抛出崩溃错误，让上层处理
+            }
+
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'DISMISS-ALL-MESSAGES',
                 `Handler error: ${error instanceof Error ? error.message : String(error)}`
             )
+            return false
         }
     }
 
@@ -213,6 +298,12 @@ export default class BrowserUtils {
 
     async ghostClick(page: Page, selector: string, options?: ClickOptions): Promise<boolean> {
         try {
+            // 页面健康检查
+            if (!this.isPageHealthy(page)) {
+                this.bot.logger.warn(this.bot.isMobile, 'GHOST-CLICK', 'Page is closed or crashed, cannot click')
+                return false
+            }
+
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'GHOST-CLICK',
@@ -222,11 +313,27 @@ export default class BrowserUtils {
             // Wait for selector to exist before clicking
             await page.waitForSelector(selector, { timeout: 1000 }).catch(() => {})
 
+            // 再次检查页面状态
+            if (!this.isPageHealthy(page)) {
+                this.bot.logger.warn(this.bot.isMobile, 'GHOST-CLICK', 'Page became unhealthy during wait')
+                return false
+            }
+
             const cursor = createCursor(page as any)
             await cursor.click(selector, options)
 
             return true
         } catch (error) {
+            // 检测浏览器崩溃
+            if (this.isBrowserCrashError(error)) {
+                this.bot.logger.error(
+                    this.bot.isMobile,
+                    'GHOST-CLICK',
+                    `Browser crashed while clicking ${selector}`
+                )
+                throw error // 重新抛出崩溃错误
+            }
+
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'GHOST-CLICK',

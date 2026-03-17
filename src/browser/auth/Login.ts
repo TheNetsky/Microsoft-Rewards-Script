@@ -605,7 +605,9 @@ export class Login {
                 }
 
                 const u = new URL(page.url())
-                const atBingHome = u.hostname === 'www.bing.com' && u.pathname === '/'
+                // 支持所有 Bing 域名（包括 cn.bing.com 等区域域名）
+                const isBingDomain = u.hostname.endsWith('.bing.com') || u.hostname === 'bing.com'
+                const atBingHome = isBingDomain && u.pathname === '/'
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-BING',
@@ -639,6 +641,17 @@ export class Login {
                 `Verification error: ${error instanceof Error ? error.message : String(error)}`
             )
         }
+    }
+
+    /**
+     * 检查错误是否为浏览器崩溃错误
+     */
+    private isBrowserCrashError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : String(error)
+        return message.includes('Target crashed') ||
+               message.includes('Session closed') ||
+               message.includes('Page crashed') ||
+               message.includes('Target closed')
     }
 
     private async getRewardsSession(page: Page) {
@@ -717,6 +730,14 @@ export class Login {
                 'No RequestVerificationToken found, some activities may not work'
             )
         } catch (error) {
+            // 检测浏览器崩溃
+            if (this.isBrowserCrashError(error)) {
+                throw this.bot.logger.error(
+                    this.bot.isMobile,
+                    'GET-REWARD-SESSION',
+                    'Browser crashed during session retrieval'
+                )
+            }
             throw this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-REWARD-SESSION',
