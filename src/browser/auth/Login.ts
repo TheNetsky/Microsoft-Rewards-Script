@@ -304,7 +304,6 @@ export class Login {
                 let errorMsg = await alertEl.innerText().catch(() => '')
 
                 if (!errorMsg) {
-                    // Fallback to body content if specific alert element not found
                     const bodyText = await page.innerText('body').catch(() => '')
                     if (
                         bodyText.toLowerCase().includes('too many requests') ||
@@ -317,16 +316,6 @@ export class Login {
                 }
 
                 this.bot.logger.error(this.bot.isMobile, 'LOGIN', `Account error detected: ${errorMsg}`)
-
-                if (
-                    errorMsg.toLowerCase().includes('too many requests') ||
-                    errorMsg.toLowerCase().includes('banyak permintaan')
-                ) {
-                    const msg =
-                        'Terdeteksi error "Too many requests" dari Microsoft. Silakan login secara manual dengan mengubah "headless": false di config.json, jalankan ulang skrip, selesaikan login di browser yang terbuka, lalu simpan session.'
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', msg)
-                    throw new Error(msg)
-                }
 
                 throw new Error(`Microsoft login error: ${errorMsg}`)
             }

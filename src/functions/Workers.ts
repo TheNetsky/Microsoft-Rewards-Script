@@ -301,7 +301,6 @@ export class Workers {
 
     private async completeActivityV4(activity: any, page: Page): Promise<boolean> {
         const offerId = activity.offerId
-        const hash = activity.hash || ''
 
         if (!offerId) {
             this.bot.logger.warn(this.bot.isMobile, 'ACTIVITY-V4', 'No offerId found')
@@ -311,22 +310,56 @@ export class Workers {
         this.bot.logger.info(this.bot.isMobile, 'ACTIVITY-V4', `Completing: ${activity.title} (${offerId})`)
 
         try {
-            // Visit the activity page first to "start" the activity
             const url = activity.destination || activity.destinationUrl
             if (url) {
+                // For URL activities, just visiting the page may complete them
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
-                await this.bot.utils.wait(2000)
+
+                // Wait for page to load and any potential auto-complete
+                await this.bot.utils.wait(3000)
+
+                // Check if it's a quiz/poll that needs interaction
+                const pageText = await page.innerText('body').catch(() => '')
+
+                // If it's a quiz/poll, try to find and click answers (basic)
+                if (pageText.toLowerCase().includes('quiz') || pageText.toLowerCase().includes('poll')) {
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'ACTIVITY-V4',
+                        'Detected quiz/poll, attempting interaction'
+                    )
+                    // Try clicking common quiz buttons
+                    await page.click('button, [role="button"]', { timeout: 2000 }).catch(() => {})
+                    await this.bot.utils.wait(2000)
+                }
+
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'ACTIVITY-V4',
+                    `Completed (URL visited): ${activity.title}`,
+                    'green'
+                )
+                return true
             }
 
+            // No URL - try API
+            const panelData = this.bot.panelData
+            const todayKey = this.bot.utils.getFormattedDate()
+
+            const panelPromotion =
+                panelData?.flyoutResult?.morePromotions?.find(p => p.offerId === offerId) ||
+                panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find(p => p.offerId === offerId)
+
+            // Try desktop API endpoint (form data) - works for URL activities
             const formData = new URLSearchParams({
                 id: offerId,
-                hash: hash,
+                hash: activity.hash || panelPromotion?.hash || '',
                 timeZone: '60',
                 activityAmount: '1',
                 dbs: '0',
-                form: activity.form || '',
-                type: activity.type || '',
-                __RequestVerificationToken: this.bot.requestToken || ''
+                form: '',
+                type: '',
+                __RequestVerificationToken: ''
             })
 
             const context = page.context() as any
@@ -350,12 +383,24 @@ export class Workers {
 
             if (response.status === 200) {
                 const result = response.data
-                if (result?.result?.resultCode === 0 || result?.resultCode === 0) {
-                    const points = result?.result?.pointsEarned || result?.pointsEarned || 0
+
+                // Check for V3/V4 success format
+                const earnedCredits = result?.EarnedCredits || result?.earnedCredits || 0
+                const activityComplete = result?.ActivityComplete || result?.activityComplete || false
+                const errorCode = result?.ErrorDetail?.ErrorCode || result?.errorDetail?.errorCode
+                const v3ResultCode = result?.result?.resultCode ?? result?.resultCode
+
+                if (
+                    activityComplete ||
+                    earnedCredits > 0 ||
+                    errorCode === 'I_SUCCESS' ||
+                    errorCode === 0 ||
+                    v3ResultCode === 0
+                ) {
                     this.bot.logger.info(
                         this.bot.isMobile,
                         'ACTIVITY-V4',
-                        `Completed: ${activity.title} | +${points} points`,
+                        `Completed: ${activity.title} | +${earnedCredits} points`,
                         'green'
                     )
                     return true
