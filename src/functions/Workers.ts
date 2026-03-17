@@ -226,15 +226,14 @@ export class Workers {
                 )
             }
             const panelUncompleted = panelFlyoutPromos
-                .filter((p: any) => !p.isCompleted && !p.complete)
-                .filter((p: any) => p.points > 0 || p.pointProgressMax > 0 || p.offerId?.includes('ENstar_Rewards'))
+                .filter((p: any) => !p.isCompleted && !p.complete && p.offerId)
                 .map((p: any) => ({
                     title: p.title || 'Unknown Title',
                     offerId: p.offerId || p.name || 'Unknown ID',
                     destination: p.destinationUrl || p.destination || '',
                     hash: p.hash || '',
                     complete: false,
-                    pointProgressMax: p.points || p.pointProgressMax || (p.offerId?.includes('ENstar_Rewards') ? 5 : 0),
+                    pointProgressMax: p.points || p.pointProgressMax || 0,
                     activityType: p.activityType || 0,
                     isLocked: false
                 }))
@@ -419,7 +418,7 @@ export class Workers {
 
                             // Try to complete via API for V4 (even without hash, try using panel data)
                             if (this.bot.rewardsVersion === 'modern') {
-                                await this.completeActivityV4(activity, newPage)
+                                await this.completeActivity(activity, newPage)
                             }
 
                             await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
@@ -437,7 +436,7 @@ export class Workers {
 
                         // Try to complete via API for V4 (even without hash, try using panel data)
                         if (this.bot.rewardsVersion === 'modern') {
-                            await this.completeActivityV4(activity, page)
+                            await this.completeActivity(activity, page)
                         }
 
                         await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
@@ -454,7 +453,7 @@ export class Workers {
     public async doSpecialPromotions(data: DashboardData) {}
     public async doPunchCards(data: DashboardData, page: Page) {}
 
-    private async completeActivityV4(activity: any, page: Page): Promise<boolean> {
+    private async completeActivity(activity: any, page: Page): Promise<boolean> {
         const offerId = activity.offerId
 
         if (!offerId) {
