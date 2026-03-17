@@ -151,7 +151,7 @@ export class Workers {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'MORE-PROMOTIONS',
-                `Found ${allWithOfferId.length} items with offerId`
+                `Found ${allWithOfferId.length} items with offerId in Next.js data`
             )
 
             // Try multiple keys
@@ -170,13 +170,77 @@ export class Workers {
                 `Found ${moreActivities.length} moreActivities items`
             )
 
-            // Filter out locked activities (require membership level)
-            const available = moreActivities.filter((x: any) => !x.isLocked && x.points > 0)
-            const uncompleted = available.filter((x: any) => !x.isCompleted && x.points > 0)
+            // Get morePromotions from panel flyout data (contains "Do you know the answer?" etc)
+            // Note: API response structure - check both userInfo.promotions and flyoutResult.morePromotions
+            const panelDataRaw = this.bot.panelData as any
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'MORE-PROMOTIONS',
+                `Panel data keys: ${panelDataRaw ? Object.keys(panelDataRaw).join(', ') : 'undefined'}`
+            )
+            const userInfoData = panelDataRaw?.userInfo
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'MORE-PROMOTIONS',
+                `UserInfo keys: ${userInfoData ? Object.keys(userInfoData).join(', ') : 'undefined'}`
+            )
 
-            if (uncompleted.length) {
-                this.bot.logger.info(this.bot.isMobile, 'MORE-PROMOTIONS', `Solving ${uncompleted.length} modern items`)
-                const mapped = uncompleted.map((x: any) => ({
+            // Try multiple sources for morePromotions
+            let panelFlyoutPromos: any[] = []
+
+            // Try flyoutResult.morePromotions (original path)
+            if (panelDataRaw?.flyoutResult?.morePromotions) {
+                panelFlyoutPromos = panelDataRaw.flyoutResult.morePromotions
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'MORE-PROMOTIONS',
+                    `Found ${panelFlyoutPromos.length} items in flyoutResult.morePromotions`
+                )
+                // Debug: show all items and their status
+                panelFlyoutPromos.forEach((p: any) => {
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'MORE-PROMOTIONS',
+                        `  Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | isCompleted: ${p.isCompleted} | points: ${p.points}`
+                    )
+                })
+            }
+
+            // Also try userInfo.promotions
+            if (userInfoData?.promotions && panelFlyoutPromos.length === 0) {
+                panelFlyoutPromos = userInfoData.promotions
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'MORE-PROMOTIONS',
+                    `Found ${panelFlyoutPromos.length} items in userInfo.promotions`
+                )
+            }
+            const panelUncompleted = panelFlyoutPromos
+                .filter((p: any) => !p.isCompleted && !p.complete && p.points > 0)
+                .map((p: any) => ({
+                    title: p.title || 'Unknown Title',
+                    offerId: p.offerId || 'Unknown ID',
+                    destination: p.destinationUrl || p.destination || '',
+                    hash: p.hash || '',
+                    complete: false,
+                    pointProgressMax: p.points || p.pointProgressMax || 0,
+                    activityType: p.activityType || 0,
+                    isLocked: false
+                }))
+
+            if (panelUncompleted.length) {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'MORE-PROMOTIONS',
+                    `Panel flyout items to solve: ${panelUncompleted.map((m: any) => `${m.title} (${m.offerId})`).join(', ')}`
+                )
+            }
+
+            // Map moreActivities to same format
+            const mappedMoreActivities = moreActivities
+                .filter((x: any) => !x.isLocked && x.points > 0)
+                .filter((x: any) => !x.isCompleted)
+                .map((x: any) => ({
                     title: x.title || 'Unknown Title',
                     offerId: x.offerId || 'Unknown ID',
                     destination: x.destination || x.destinationUrl,
@@ -186,12 +250,22 @@ export class Workers {
                     activityType: x.activityType || 0,
                     isLocked: x.isLocked || false
                 }))
+
+            // Combine both sources
+            const allUncompleted = [...mappedMoreActivities, ...panelUncompleted]
+
+            if (allUncompleted.length) {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'MORE-PROMOTIONS',
+                    `Solving ${allUncompleted.length} modern items`
+                )
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'MORE-PROMOTIONS',
-                    `Detected items: ${mapped.map((m: any) => `${m.title} (ID: ${m.offerId}, locked: ${m.isLocked})`).join(', ')}`
+                    `Detected items: ${allUncompleted.map((m: any) => `${m.title} (ID: ${m.offerId}, locked: ${m.isLocked})`).join(', ')}`
                 )
-                await this.solveActivities(mapped, page)
+                await this.solveActivities(allUncompleted, page)
             } else {
                 this.bot.logger.info(this.bot.isMobile, 'MORE-PROMOTIONS', 'All modern more items already completed')
             }
@@ -412,9 +486,10 @@ export class Workers {
                 const panelData = this.bot.panelData
                 const todayKey = this.bot.utils.getFormattedDate()
 
+                const userInfo = (panelData as any)?.userInfo
                 const panelPromotion =
-                    panelData?.flyoutResult?.morePromotions?.find(p => p.offerId === offerId) ||
-                    panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find(p => p.offerId === offerId)
+                    userInfo?.morePromotions?.find((p: any) => p.offerId === offerId) ||
+                    panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find((p: any) => p.offerId === offerId)
 
                 const jsonData = {
                     ActivityCount: 1,

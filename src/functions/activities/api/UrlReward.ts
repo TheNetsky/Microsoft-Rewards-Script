@@ -50,10 +50,11 @@ export class UrlReward extends Workers {
             // V4: Find promotion in panelData
             const panelData: PanelFlyoutData = this.bot.panelData
             const todayKey = this.bot.utils.getFormattedDate()
+            const userInfo = (panelData as any)?.userInfo
 
             const panelPromotion =
-                panelData?.flyoutResult?.morePromotions?.find(p => p.offerId === offerId) ||
-                panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find(p => p.offerId === offerId)
+                userInfo?.morePromotions?.find((p: any) => p.offerId === offerId) ||
+                panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find((p: any) => p.offerId === offerId)
 
             if (!panelPromotion) {
                 this.bot.logger.warn(
