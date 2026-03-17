@@ -630,7 +630,7 @@
             {
               "className": "font-semibold",
               "children": [
-                "330"
+                "325"
               ]
             }
           ]
@@ -652,7 +652,7 @@
         null,
         {
           "className": "text-title1 mai:text-pageHeader",
-          "children": "586"
+          "children": "591"
         }
       ],
       "$undefined"
