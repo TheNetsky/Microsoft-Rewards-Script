@@ -458,11 +458,11 @@ export class Workers {
         const offerId = activity.offerId
 
         if (!offerId) {
-            this.bot.logger.warn(this.bot.isMobile, 'ACTIVITY-V4', 'No offerId found')
+            this.bot.logger.warn(this.bot.isMobile, 'ACTIVITY', 'No offerId found')
             return false
         }
 
-        this.bot.logger.info(this.bot.isMobile, 'ACTIVITY-V4', `Completing: ${activity.title} (${offerId})`)
+        this.bot.logger.info(this.bot.isMobile, 'ACTIVITY', `Completing: ${activity.title} (${offerId})`)
 
         try {
             const url = activity.destination || activity.destinationUrl
@@ -478,11 +478,7 @@ export class Workers {
 
                 // If it's a quiz/poll, try to find and click answers (basic)
                 if (pageText.toLowerCase().includes('quiz') || pageText.toLowerCase().includes('poll')) {
-                    this.bot.logger.debug(
-                        this.bot.isMobile,
-                        'ACTIVITY-V4',
-                        'Detected quiz/poll, attempting interaction'
-                    )
+                    this.bot.logger.debug(this.bot.isMobile, 'ACTIVITY', 'Detected quiz/poll, attempting interaction')
                     // Try clicking common quiz buttons
                     await page.click('button, [role="button"]', { timeout: 2000 }).catch(() => {})
                     await this.bot.utils.wait(2000)
@@ -510,7 +506,7 @@ export class Workers {
 
                 this.bot.logger.debug(
                     this.bot.isMobile,
-                    'ACTIVITY-V4',
+                    'ACTIVITY',
                     `Calling reportActivity API | offerId=${offerId} | ActivityType=${jsonData.ActivityType}`
                 )
 
@@ -535,18 +531,18 @@ export class Workers {
                     const response = await this.bot.axios.request(request)
                     this.bot.logger.debug(
                         this.bot.isMobile,
-                        'ACTIVITY-V4',
+                        'ACTIVITY',
                         `reportActivity response | offerId=${offerId} | status=${response.status}`
                     )
                 } catch (apiError) {
                     this.bot.logger.warn(
                         this.bot.isMobile,
-                        'ACTIVITY-V4',
+                        'ACTIVITY',
                         `reportActivity API call failed | offerId=${offerId} | error=${apiError instanceof Error ? apiError.message : String(apiError)}`
                     )
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'ACTIVITY-V4', `Completed: ${activity.title}`, 'green')
+                this.bot.logger.info(this.bot.isMobile, 'ACTIVITY', `Completed: ${activity.title}`, 'green')
                 return true
             }
 
@@ -607,7 +603,7 @@ export class Workers {
                 ) {
                     this.bot.logger.info(
                         this.bot.isMobile,
-                        'ACTIVITY-V4',
+                        'ACTIVITY',
                         `Completed: ${activity.title} | +${earnedCredits} points`,
                         'green'
                     )
@@ -617,21 +613,21 @@ export class Workers {
 
             this.bot.logger.warn(
                 this.bot.isMobile,
-                'ACTIVITY-V4',
+                'ACTIVITY',
                 `API returned status ${response.status} for: ${activity.title}`
             )
             return false
         } catch (error) {
             this.bot.logger.warn(
                 this.bot.isMobile,
-                'ACTIVITY-V4',
+                'ACTIVITY',
                 `Failed to complete: ${activity.title} - ${error instanceof Error ? error.message : String(error)}`
             )
             const axiosError = error as any
             if (axiosError.response?.data) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
-                    'ACTIVITY-V4',
+                    'ACTIVITY',
                     `Response: ${JSON.stringify(axiosError.response.data)}`
                 )
             }
