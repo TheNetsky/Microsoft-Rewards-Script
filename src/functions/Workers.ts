@@ -121,9 +121,58 @@ export class Workers {
         // V4 MODERN UI LOGIC
         if (this.bot.rewardsVersion === 'modern' && (data as any).v4Data) {
             this.bot.logger.debug(this.bot.isMobile, 'MORE-PROMOTIONS', 'Using Modern UI (V4) detection logic')
-            const v4Data = (data as any).v4Data
-            const moreActivities = this.bot.nextParser.find(v4Data, 'moreActivities') ?? []
-            const uncompleted = moreActivities.filter((x: any) => !x.isCompleted && x.points > 0)
+            let v4Data = (data as any).v4Data
+
+            // Also try to get data from /earn page for "Keep earning" activities
+            let earnPageData = null
+            try {
+                await page
+                    .goto('https://rewards.bing.com/earn', { waitUntil: 'networkidle', timeout: 15000 })
+                    .catch(() => {})
+                const earnHtml = await page.content()
+                const earnNextData = this.bot.nextParser.parse(earnHtml)
+                if (earnNextData.length > 0) {
+                    earnPageData = earnNextData
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'MORE-PROMOTIONS',
+                        'Fetched /earn page data for Keep earning'
+                    )
+                }
+            } catch (e) {
+                this.bot.logger.debug(this.bot.isMobile, 'MORE-PROMOTIONS', 'Could not fetch /earn page data')
+            }
+
+            // Combine both sources of data
+            const combinedData = earnPageData ? [...v4Data, ...earnPageData] : v4Data
+
+            // Debug: Find ALL objects with offerId
+            const allWithOfferId = this.findAllWithOfferId(combinedData)
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'MORE-PROMOTIONS',
+                `Found ${allWithOfferId.length} items with offerId`
+            )
+
+            // Try multiple keys
+            let moreActivities = this.bot.nextParser.find(combinedData, 'moreActivities') ?? []
+            if (!moreActivities.length) {
+                // Try alternative keys
+                moreActivities =
+                    this.bot.nextParser.find(combinedData, 'moreActivities') ??
+                    this.bot.nextParser.find(combinedData, 'more_activity') ??
+                    allWithOfferId.filter((x: any) => x.destination && !x.isCompleted)
+            }
+
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'MORE-PROMOTIONS',
+                `Found ${moreActivities.length} moreActivities items`
+            )
+
+            // Filter out locked activities (require membership level)
+            const available = moreActivities.filter((x: any) => !x.isLocked && x.points > 0)
+            const uncompleted = available.filter((x: any) => !x.isCompleted && x.points > 0)
 
             if (uncompleted.length) {
                 this.bot.logger.info(this.bot.isMobile, 'MORE-PROMOTIONS', `Solving ${uncompleted.length} modern items`)
@@ -131,13 +180,16 @@ export class Workers {
                     title: x.title || 'Unknown Title',
                     offerId: x.offerId || 'Unknown ID',
                     destination: x.destination || x.destinationUrl,
+                    hash: x.hash || '',
                     complete: false,
-                    pointProgressMax: x.points || x.pointProgressMax || 0
+                    pointProgressMax: x.points || x.pointProgressMax || 0,
+                    activityType: x.activityType || 0,
+                    isLocked: x.isLocked || false
                 }))
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'MORE-PROMOTIONS',
-                    `Detected items: ${mapped.map((m: any) => `${m.title} (ID: ${m.offerId})`).join(', ')}`
+                    `Detected items: ${mapped.map((m: any) => `${m.title} (ID: ${m.offerId}, locked: ${m.isLocked})`).join(', ')}`
                 )
                 await this.solveActivities(mapped, page)
             } else {
@@ -163,8 +215,31 @@ export class Workers {
 
     public async doAppPromotions(data: any) {}
 
+    private findAllWithOfferId(data: any, results: any[] = []): any[] {
+        if (!data) return results
+        if (Array.isArray(data)) {
+            for (const item of data) {
+                this.findAllWithOfferId(item, results)
+            }
+        } else if (typeof data === 'object') {
+            if (data.offerId && data.destination) {
+                results.push(data)
+            }
+            for (const key in data) {
+                this.findAllWithOfferId(data[key], results)
+            }
+        }
+        return results
+    }
+
     protected async solveActivities(activities: any[], page: Page, punchCard?: PunchCard) {
         for (const activity of activities) {
+            // Skip locked activities
+            if (activity.isLocked) {
+                this.bot.logger.info(this.bot.isMobile, 'ACTIVITY', `Skipping locked: ${activity.title}`)
+                continue
+            }
+
             this.bot.logger.info(this.bot.isMobile, 'ACTIVITY', `Solving: ${activity.title}`)
 
             try {
@@ -262,8 +337,8 @@ export class Workers {
                                 `New tab opened for: ${activity.title}`
                             )
 
-                            // Try to complete via API for V4
-                            if (activity.hash && this.bot.rewardsVersion === 'modern') {
+                            // Try to complete via API for V4 (even without hash, try using panel data)
+                            if (this.bot.rewardsVersion === 'modern') {
                                 await this.completeActivityV4(activity, newPage)
                             }
 
@@ -280,8 +355,8 @@ export class Workers {
                         )
                         await page.goto(url, { waitUntil: 'domcontentloaded' }).catch(() => {})
 
-                        // Try to complete via API for V4
-                        if (activity.hash && this.bot.rewardsVersion === 'modern') {
+                        // Try to complete via API for V4 (even without hash, try using panel data)
+                        if (this.bot.rewardsVersion === 'modern') {
                             await this.completeActivityV4(activity, page)
                         }
 
