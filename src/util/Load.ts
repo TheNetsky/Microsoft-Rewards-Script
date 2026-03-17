@@ -63,6 +63,13 @@ export async function loadSessionData(
         if (fs.existsSync(cookieFile)) {
             const cookiesData = await fs.promises.readFile(cookieFile, 'utf-8')
             cookies = JSON.parse(cookiesData)
+
+            const hasValidAuth = cookies.some(c => c.name === '_C_Auth' && c.value && c.value.length > 0)
+            if (!hasValidAuth) {
+                return { cookies: [], fingerprint: undefined }
+            }
+        } else {
+            return { cookies: [], fingerprint: undefined }
         }
 
         const fingerprintFileName = isMobile ? 'session_fingerprint_mobile.json' : 'session_fingerprint_desktop.json'

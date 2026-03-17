@@ -55,12 +55,12 @@ export class UserAgentManager {
             const data: ChromeVersion = response.data
             return data.channels.Stable.version
         } catch (error) {
-            this.bot.logger.error(
+            this.bot.logger.warn(
                 isMobile,
                 'USERAGENT-CHROME-VERSION',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `Failed to fetch Chrome version, using fallback: ${error instanceof Error ? error.message : String(error)}`
             )
-            throw error
+            return isMobile ? '146.0.7680.80' : '146.0.0.0'
         }
     }
 
@@ -82,12 +82,15 @@ export class UserAgentManager {
                 windows: stable.Releases.find(x => x.Platform == 'Windows' && x.Architecture == 'x64')?.ProductVersion
             }
         } catch (error) {
-            this.bot.logger.error(
+            this.bot.logger.warn(
                 isMobile,
                 'USERAGENT-EDGE-VERSION',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `Failed to fetch Edge version, using fallback: ${error instanceof Error ? error.message : String(error)}`
             )
-            throw error
+            return {
+                android: '145.0.3800.99',
+                windows: '145.0.3800.99'
+            }
         }
     }
 

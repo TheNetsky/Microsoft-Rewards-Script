@@ -11,6 +11,7 @@
         "pre-build": "npm i && rimraf dist && npx patchright install chromium",
         "build": "rimraf dist && tsc",
         "start": "node ./dist/index.js",
+        "start:log": "node ./dist/index.js 2>&1 | tee logs/bot-$(date +%Y%m%d-%H%M%S).log",
         "ts-start": "ts-node ./src/index.ts",
         "dev": "ts-node ./src/index.ts -dev",
         "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",

@@ -267,10 +267,10 @@ export class Workers {
                                 await this.completeActivityV4(activity, newPage)
                             }
 
-                            await this.bot.utils.wait(this.bot.utils.randomDelay(20000, 30000))
+                            await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
                             await newPage.close().catch(() => {})
                         } else {
-                            await this.bot.utils.wait(this.bot.utils.randomDelay(15000, 25000))
+                            await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
                         }
                     } else {
                         this.bot.logger.warn(
@@ -285,7 +285,7 @@ export class Workers {
                             await this.completeActivityV4(activity, page)
                         }
 
-                        await this.bot.utils.wait(this.bot.utils.randomDelay(20000, 30000))
+                        await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
                     }
                 }
 
@@ -312,7 +312,7 @@ export class Workers {
         try {
             const url = activity.destination || activity.destinationUrl
             if (url) {
-                // For URL activities, just visiting the page may complete them
+                // For URL activities, visit the page first
                 await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
 
                 // Wait for page to load and any potential auto-complete
@@ -333,12 +333,64 @@ export class Workers {
                     await this.bot.utils.wait(2000)
                 }
 
-                this.bot.logger.info(
+                // Now call the API to report completion
+                const panelData = this.bot.panelData
+                const todayKey = this.bot.utils.getFormattedDate()
+
+                const panelPromotion =
+                    panelData?.flyoutResult?.morePromotions?.find(p => p.offerId === offerId) ||
+                    panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find(p => p.offerId === offerId)
+
+                const jsonData = {
+                    ActivityCount: 1,
+                    ActivityType: panelPromotion?.activityType ?? activity.activityType ?? 0,
+                    ActivitySubType: '',
+                    OfferId: offerId,
+                    AuthKey: panelPromotion?.hash ?? activity.hash ?? '',
+                    Channel: panelData?.channel ?? 'BingRewards',
+                    PartnerId: panelData?.partnerId ?? 'BingRewards',
+                    UserId: panelData?.userId ?? ''
+                }
+
+                this.bot.logger.debug(
                     this.bot.isMobile,
                     'ACTIVITY-V4',
-                    `Completed (URL visited): ${activity.title}`,
-                    'green'
+                    `Calling reportActivity API | offerId=${offerId} | ActivityType=${jsonData.ActivityType}`
                 )
+
+                const context = page.context() as any
+                const cookies = await context.cookies()
+                const cookieHeader = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ')
+
+                const request: any = {
+                    url: 'https://www.bing.com/msrewards/api/v1/reportactivity',
+                    method: 'POST',
+                    headers: {
+                        ...(this.bot.fingerprint?.headers ?? {}),
+                        Cookie: cookieHeader,
+                        'Content-Type': 'application/json',
+                        Origin: 'https://www.bing.com',
+                        Referer: url
+                    },
+                    data: JSON.stringify(jsonData)
+                }
+
+                try {
+                    const response = await this.bot.axios.request(request)
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'ACTIVITY-V4',
+                        `reportActivity response | offerId=${offerId} | status=${response.status}`
+                    )
+                } catch (apiError) {
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'ACTIVITY-V4',
+                        `reportActivity API call failed | offerId=${offerId} | error=${apiError instanceof Error ? apiError.message : String(apiError)}`
+                    )
+                }
+
+                this.bot.logger.info(this.bot.isMobile, 'ACTIVITY-V4', `Completed: ${activity.title}`, 'green')
                 return true
             }
 
