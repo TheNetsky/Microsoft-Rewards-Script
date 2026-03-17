@@ -89,11 +89,6 @@ export class Workers {
                     complete: false,
                     pointProgressMax: x.points || x.pointProgressMax || 0
                 }))
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'DAILY-SET',
-                    `Detected items: ${mapped.map((m: any) => `${m.title} (ID: ${m.offerId})`).join(', ')}`
-                )
                 await this.solveActivities(mapped, page)
             } else {
                 this.bot.logger.info(this.bot.isMobile, 'DAILY-SET', 'All modern daily items already completed')
@@ -196,26 +191,13 @@ export class Workers {
                     'MORE-PROMOTIONS',
                     `Found ${panelFlyoutPromos.length} items in flyoutResult.morePromotions`
                 )
-                // Debug: show all items and their status
-                panelFlyoutPromos.forEach((p: any) => {
-                    this.bot.logger.debug(
-                        this.bot.isMobile,
-                        'MORE-PROMOTIONS',
-                        `  Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | isCompleted: ${p.isCompleted} | points: ${p.points} | dest: ${p.destination || p.destinationUrl || 'none'}`
-                    )
-                })
             }
 
             // Also try userInfo.promotions (contains "Do you know the answer?" and other activities)
-            // IMPORTANT: Combine with flyoutResult.morePromotions instead of replacing
-            // NOTE: userInfo.promotions has different structure: { name, priority, attributes: { offerid, title, complete, max, destination } }
+            // Combine with flyoutResult.morePromotions
             if (userInfoData?.promotions) {
                 const userInfoPromos = userInfoData.promotions
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'MORE-PROMOTIONS',
-                    `Found ${userInfoPromos.length} items in userInfo.promotions`
-                )
+
                 // Transform userInfo.promotions to match expected format
                 // Structure: { name, attributes: { offerid, title, complete, max, destination } }
                 const transformedPromos = userInfoPromos.map((p: any) => {
@@ -231,29 +213,16 @@ export class Workers {
                         activityType: 0
                     }
                 })
-                // Debug show transformed userInfo promotions
-                transformedPromos.slice(0, 10).forEach((p: any) => {
-                    this.bot.logger.debug(
-                        this.bot.isMobile,
-                        'MORE-PROMOTIONS',
-                        `  UserInfo Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | points: ${p.points}`
-                    )
-                })
-                if (transformedPromos.length > 10) {
-                    this.bot.logger.debug(
-                        this.bot.isMobile,
-                        'MORE-PROMOTIONS',
-                        `  ... and ${transformedPromos.length - 10} more items`
-                    )
-                }
+
                 // Combine both arrays, avoiding duplicates by offerId
                 const existingIds = new Set(panelFlyoutPromos.map((p: any) => p.offerId))
                 const newPromos = transformedPromos.filter((p: any) => !existingIds.has(p.offerId))
                 panelFlyoutPromos = [...panelFlyoutPromos, ...newPromos]
+
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'MORE-PROMOTIONS',
-                    `Combined total: ${panelFlyoutPromos.length} items`
+                    `Combined ${panelFlyoutPromos.length} items from flyoutResult + userInfo.promotions`
                 )
             }
             const panelUncompleted = panelFlyoutPromos
@@ -301,11 +270,6 @@ export class Workers {
                     this.bot.isMobile,
                     'MORE-PROMOTIONS',
                     `Solving ${allUncompleted.length} modern items`
-                )
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'MORE-PROMOTIONS',
-                    `Detected items: ${allUncompleted.map((m: any) => `${m.title} (ID: ${m.offerId}, locked: ${m.isLocked})`).join(', ')}`
                 )
                 await this.solveActivities(allUncompleted, page)
             } else {
