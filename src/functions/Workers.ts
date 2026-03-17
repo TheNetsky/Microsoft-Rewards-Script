@@ -206,13 +206,31 @@ export class Workers {
                 })
             }
 
-            // Also try userInfo.promotions
-            if (userInfoData?.promotions && panelFlyoutPromos.length === 0) {
-                panelFlyoutPromos = userInfoData.promotions
+            // Also try userInfo.promotions (contains "Do you know the answer?" and other activities)
+            // IMPORTANT: Combine with flyoutResult.morePromotions instead of replacing
+            if (userInfoData?.promotions) {
+                const userInfoPromos = userInfoData.promotions
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'MORE-PROMOTIONS',
-                    `Found ${panelFlyoutPromos.length} items in userInfo.promotions`
+                    `Found ${userInfoPromos.length} items in userInfo.promotions`
+                )
+                // Debug show userInfo promotions
+                userInfoPromos.forEach((p: any) => {
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'MORE-PROMOTIONS',
+                        `  UserInfo Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | points: ${p.points || p.pointProgressMax}`
+                    )
+                })
+                // Combine both arrays, avoiding duplicates by offerId
+                const existingIds = new Set(panelFlyoutPromos.map((p: any) => p.offerId))
+                const newPromos = userInfoPromos.filter((p: any) => !existingIds.has(p.offerId))
+                panelFlyoutPromos = [...panelFlyoutPromos, ...newPromos]
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'MORE-PROMOTIONS',
+                    `Combined total: ${panelFlyoutPromos.length} items`
                 )
             }
             const panelUncompleted = panelFlyoutPromos
