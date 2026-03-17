@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from 'axios'
 import type { FindClippyPromotion } from '../../../interface/DashboardData'
 import { Workers } from '../../Workers'
+import { randomUUID } from 'crypto'
 
 export class FindClippy extends Workers {
     private cookieHeader: string = ''
@@ -16,14 +17,15 @@ export class FindClippy extends Workers {
         const activityType = promotion.activityType
 
         try {
-            if (!this.bot.requestToken && this.bot.rewardsVersion === 'legacy') {
-                this.bot.logger.warn(
-                    this.bot.isMobile,
-                    'FIND-CLIPPY',
-                    'Skipping: Request token not available, this activity requires it!'
-                )
-                return
-            }
+            // Skip requestToken check for V4
+            // if (!this.bot.requestToken && this.bot.rewardsVersion === 'legacy') {
+            //     this.bot.logger.warn(
+            //         this.bot.isMobile,
+            //         'FIND-CLIPPY',
+            //         'Skipping: Request token not available, this activity requires it!'
+            //     )
+            //     return
+            // }
 
             this.cookieHeader = this.bot.browser.func.buildCookieHeader(
                 this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop,
@@ -47,33 +49,36 @@ export class FindClippy extends Workers {
                 `Prepared headers | cookieLength=${this.cookieHeader.length} | fingerprintHeaderKeys=${Object.keys(this.fingerprintHeader).length}`
             )
 
-            const formData = new URLSearchParams({
-                id: offerId,
-                hash: promotion.hash,
-                timeZone: '60',
-                activityAmount: '1',
-                dbs: '0',
-                form: '',
-                type: activityType,
-                __RequestVerificationToken: this.bot.requestToken
-            })
+            // V4: Use mobile API with Bearer token
+            const jsonData = {
+                amount: 1,
+                id: randomUUID(),
+                type: 101,
+                attributes: {
+                    offerid: offerId
+                },
+                country: this.bot.userData.geoLocale
+            }
 
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'FIND-CLIPPY',
-                `Prepared Find Clippy form data | offerId=${offerId} | hash=${promotion.hash} | timeZone=60 | activityAmount=1 | type=${activityType}`
+                `Prepared Find Clippy JSON data | offerId=${offerId} | hash=${promotion.hash} | amount=1 | type=${activityType}`
             )
 
             const request: AxiosRequestConfig = {
-                url: 'https://rewards.bing.com/api/reportactivity?X-Requested-With=XMLHttpRequest',
+                url: 'https://prod.rewardsplatform.microsoft.com/dapi/me/activities',
                 method: 'POST',
                 headers: {
-                    ...(this.bot.fingerprint?.headers ?? {}),
-                    Cookie: this.cookieHeader,
-                    Referer: 'https://rewards.bing.com/',
-                    Origin: 'https://rewards.bing.com'
+                    Authorization: `Bearer ${this.bot.accessToken}`,
+                    'User-Agent':
+                        'Bing/32.5.431027001 (com.microsoft.bing; build:431027001; iOS 17.6.1) Alamofire/5.10.2',
+                    'Content-Type': 'application/json',
+                    'X-Rewards-Country': this.bot.userData.geoLocale,
+                    'X-Rewards-Language': 'en',
+                    'X-Rewards-ismobile': 'true'
                 },
-                data: formData
+                data: JSON.stringify(jsonData)
             }
 
             this.bot.logger.debug(

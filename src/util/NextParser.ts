@@ -36,10 +36,12 @@ export default class NextParser {
                     try {
                         const parsed = JSON.parse(m[0])
                         results.push(parsed)
-                    } catch { /* skip */ }
+                    } catch {
+                        /* skip */
+                    }
                 }
             }
-            
+
             // Extract ALL objects from the stream aggressively
             // This regex finds JSON objects
             const jsonRegex = /\{(?:[^{}]|\{[^{}]*\})*\}/g
@@ -47,12 +49,18 @@ export default class NextParser {
             while ((matchJson = jsonRegex.exec(stream)) !== null) {
                 try {
                     const parsed = JSON.parse(matchJson[0])
-                    if (matchJson[0].includes('offerId') || matchJson[0].includes('title') || matchJson[0].includes('Points')) {
+                    if (
+                        matchJson[0].includes('offerId') ||
+                        matchJson[0].includes('title') ||
+                        matchJson[0].includes('Points')
+                    ) {
                         results.push(parsed)
                     }
-                } catch { /* skip */ }
+                } catch {
+                    /* skip */
+                }
             }
-        } catch (e) { }
+        } catch (e) {}
 
         return results
     }

@@ -26,6 +26,7 @@ import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
+import type { PanelFlyoutData } from './interface/PanelFlyoutData'
 
 interface ExecutionContext {
     isMobile: boolean
@@ -84,6 +85,7 @@ export class MicrosoftRewardsBot {
     public userData: UserData
 
     public rewardsVersion: 'legacy' | 'modern' = 'legacy'
+    public panelData!: PanelFlyoutData
 
     public accessToken = ''
     public requestToken = ''
@@ -413,10 +415,18 @@ export class MicrosoftRewardsBot {
                 const data: DashboardData = await this.browser.func.getDashboardDataFromPage(this.mainMobilePage)
                 const appData: AppDashboardData = await this.browser.func.getAppDashboardData()
 
+                // Fetch panel flyout data (V4 alternative source)
+                try {
+                    this.panelData = await this.browser.func.getPanelFlyoutData()
+                    this.logger.debug(this.isMobile, 'MAIN', 'Panel flyout data fetched successfully')
+                } catch (error) {
+                    this.logger.warn(this.isMobile, 'MAIN', `Failed to fetch panel flyout data: ${error}`)
+                }
+
                 // Set geo
                 this.userData.geoLocale =
                     account.geoLocale === 'auto' ? data.userProfile.attributes.country : account.geoLocale.toLowerCase()
-                
+
                 this.userData.initialPoints = data.userStatus.availablePoints
                 this.userData.currentPoints = data.userStatus.availablePoints
                 const initialPoints = this.userData.initialPoints ?? 0
@@ -447,17 +457,24 @@ export class MicrosoftRewardsBot {
                 try {
                     await executionContext.run({ isMobile: false, account }, async () => {
                         await this.mainMobilePage.setViewportSize({ width: 1920, height: 1080 })
-                        const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.3856.62'
+                        const desktopUA =
+                            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.3856.62'
                         await (this.mainMobilePage.context() as any)._setExtraHTTPHeaders?.({ 'User-Agent': desktopUA })
-                        
+
                         this.logger.info('main', 'BROWSER', `Emulating Desktop view & User-Agent | ${accountEmail}`)
-                        
-                        const desktopData: DashboardData = await this.browser.func.getDashboardDataFromPage(this.mainMobilePage)
-                        
-                        if (this.config.workers.doDailySet) await this.workers.doDailySet(desktopData, this.mainMobilePage)
-                        if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(desktopData, this.mainMobilePage)
-                        
-                        await (this.mainMobilePage.context() as any)._setExtraHTTPHeaders?.({ 'User-Agent': mobileSession!.fingerprint.headers['User-Agent'] })
+
+                        const desktopData: DashboardData = await this.browser.func.getDashboardDataFromPage(
+                            this.mainMobilePage
+                        )
+
+                        if (this.config.workers.doDailySet)
+                            await this.workers.doDailySet(desktopData, this.mainMobilePage)
+                        if (this.config.workers.doMorePromotions)
+                            await this.workers.doMorePromotions(desktopData, this.mainMobilePage)
+
+                        await (this.mainMobilePage.context() as any)._setExtraHTTPHeaders?.({
+                            'User-Agent': mobileSession!.fingerprint.headers['User-Agent']
+                        })
                     })
                 } catch (desktopError) {
                     this.logger.error('main', 'DESKTOP-SESSION', `Error during desktop emulation: ${desktopError}`)

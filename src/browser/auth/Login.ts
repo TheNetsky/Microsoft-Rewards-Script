@@ -161,7 +161,10 @@ export class Login {
         await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
         const pageContent = await page.innerText('body').catch(() => '')
-        if (pageContent.toLowerCase().includes('too many requests') || pageContent.toLowerCase().includes('banyak permintaan')) {
+        if (
+            pageContent.toLowerCase().includes('too many requests') ||
+            pageContent.toLowerCase().includes('banyak permintaan')
+        ) {
             return 'ERROR_ALERT'
         }
 
@@ -299,21 +302,28 @@ export class Login {
             case 'ERROR_ALERT': {
                 const alertEl = page.locator(this.selectors.errorAlert).first()
                 let errorMsg = await alertEl.innerText().catch(() => '')
-                
+
                 if (!errorMsg) {
                     // Fallback to body content if specific alert element not found
                     const bodyText = await page.innerText('body').catch(() => '')
-                    if (bodyText.toLowerCase().includes('too many requests') || bodyText.toLowerCase().includes('banyak permintaan')) {
+                    if (
+                        bodyText.toLowerCase().includes('too many requests') ||
+                        bodyText.toLowerCase().includes('banyak permintaan')
+                    ) {
                         errorMsg = 'Too many requests'
                     } else {
                         errorMsg = 'Unknown Error (Check screenshot)'
                     }
                 }
-                
+
                 this.bot.logger.error(this.bot.isMobile, 'LOGIN', `Account error detected: ${errorMsg}`)
 
-                if (errorMsg.toLowerCase().includes('too many requests') || errorMsg.toLowerCase().includes('banyak permintaan')) {
-                    const msg = 'Terdeteksi error "Too many requests" dari Microsoft. Silakan login secara manual dengan mengubah "headless": false di config.json, jalankan ulang skrip, selesaikan login di browser yang terbuka, lalu simpan session.'
+                if (
+                    errorMsg.toLowerCase().includes('too many requests') ||
+                    errorMsg.toLowerCase().includes('banyak permintaan')
+                ) {
+                    const msg =
+                        'Terdeteksi error "Too many requests" dari Microsoft. Silakan login secara manual dengan mengubah "headless": false di config.json, jalankan ulang skrip, selesaikan login di browser yang terbuka, lalu simpan session.'
                     this.bot.logger.warn(this.bot.isMobile, 'LOGIN', msg)
                     throw new Error(msg)
                 }

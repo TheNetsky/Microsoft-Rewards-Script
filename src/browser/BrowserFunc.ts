@@ -9,6 +9,7 @@ import type { AppUserData } from '../interface/AppUserData'
 import type { XboxDashboardData } from '../interface/XboxDashboardData'
 import type { AppEarnablePoints, BrowserEarnablePoints, MissingSearchPoints } from '../interface/Points'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
+import type { PanelFlyoutData } from '../interface/PanelFlyoutData'
 
 export default class BrowserFunc {
     private bot: MicrosoftRewardsBot
@@ -123,6 +124,38 @@ export default class BrowserFunc {
             }
 
             throw new Error('All dashboard data fetch methods failed')
+        }
+    }
+
+    /**
+     * Fetch user panel flyout data (V4 alternative source)
+     * @returns {PanelFlyoutData} Object of user bing rewards dashboard data
+     */
+    async getPanelFlyoutData(): Promise<PanelFlyoutData> {
+        try {
+            const request: AxiosRequestConfig = {
+                url: 'https://www.bing.com/rewards/panelflyout/getuserinfo?channel=BingFlyout&partnerId=BingRewards',
+                method: 'GET',
+                headers: {
+                    ...(this.bot.fingerprint?.headers ?? {}),
+                    Cookie: this.buildCookieHeader(this.bot.cookies.mobile, [
+                        'bing.com',
+                        'live.com',
+                        'microsoftonline.com'
+                    ]),
+                    Origin: 'https://www.bing.com'
+                }
+            }
+
+            const response = await this.bot.axios.request(request)
+            return response.data as PanelFlyoutData
+        } catch (error) {
+            this.bot.logger.error(
+                this.bot.isMobile,
+                'GET-PANEL-FLYOUT-DATA',
+                `Error fetching panel flyout data: ${error instanceof Error ? error.message : String(error)}`
+            )
+            throw error
         }
     }
 

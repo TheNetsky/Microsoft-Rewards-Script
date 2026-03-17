@@ -1,5 +1,6 @@
 import type { AxiosRequestConfig } from 'axios'
 import type { BasePromotion } from '../../../interface/DashboardData'
+import type { PanelFlyoutData } from '../../../interface/PanelFlyoutData'
 import { Workers } from '../../Workers'
 
 export class UrlReward extends Workers {
@@ -46,33 +47,50 @@ export class UrlReward extends Workers {
                 `Prepared UrlReward headers | offerId=${offerId} | cookieLength=${this.cookieHeader.length} | fingerprintHeaderKeys=${Object.keys(this.fingerprintHeader).length}`
             )
 
-            const formData = new URLSearchParams({
-                id: offerId,
-                hash: promotion.hash,
-                timeZone: '60',
-                activityAmount: '1',
-                dbs: '0',
-                form: '',
-                type: '',
-                __RequestVerificationToken: this.bot.requestToken
-            })
+            // V4: Find promotion in panelData
+            const panelData: PanelFlyoutData = this.bot.panelData
+            const todayKey = this.bot.utils.getFormattedDate()
+
+            const panelPromotion =
+                panelData?.flyoutResult?.morePromotions?.find(p => p.offerId === offerId) ||
+                panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find(p => p.offerId === offerId)
+
+            if (!panelPromotion) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'URL-REWARD',
+                    `Promotion not found in panel data | offerId=${offerId}`
+                )
+                // Fallback to original activity if panel data not available
+            }
+
+            // V4 API uses different endpoint and JSON payload
+            const jsonData = {
+                ActivityCount: 1,
+                ActivityType: panelPromotion?.activityType ?? 0,
+                ActivitySubType: '',
+                OfferId: offerId,
+                AuthKey: panelPromotion?.hash ?? promotion.hash,
+                Channel: panelData?.channel ?? 'BingRewards',
+                PartnerId: panelData?.partnerId ?? 'BingRewards',
+                UserId: panelData?.userId ?? ''
+            }
 
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Prepared UrlReward form data | offerId=${offerId} | hash=${promotion.hash} | timeZone=60 | activityAmount=1`
+                `Prepared UrlReward JSON data | offerId=${offerId} | hash=${panelPromotion?.hash ?? promotion.hash}`
             )
 
             const request: AxiosRequestConfig = {
-                url: 'https://rewards.bing.com/api/reportactivity?X-Requested-With=XMLHttpRequest',
+                url: 'https://www.bing.com/msrewards/api/v1/reportactivity',
                 method: 'POST',
                 headers: {
                     ...(this.bot.fingerprint?.headers ?? {}),
-                    Cookie: this.cookieHeader,
-                    Referer: 'https://rewards.bing.com/',
-                    Origin: 'https://rewards.bing.com'
+                    'Content-Type': 'application/json',
+                    Origin: 'https://www.bing.com'
                 },
-                data: formData
+                data: JSON.stringify(jsonData)
             }
 
             this.bot.logger.debug(
