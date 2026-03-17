@@ -201,13 +201,14 @@ export class Workers {
                     this.bot.logger.debug(
                         this.bot.isMobile,
                         'MORE-PROMOTIONS',
-                        `  Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | isCompleted: ${p.isCompleted} | points: ${p.points}`
+                        `  Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | isCompleted: ${p.isCompleted} | points: ${p.points} | dest: ${p.destination || p.destinationUrl || 'none'}`
                     )
                 })
             }
 
             // Also try userInfo.promotions (contains "Do you know the answer?" and other activities)
             // IMPORTANT: Combine with flyoutResult.morePromotions instead of replacing
+            // NOTE: userInfo.promotions has different structure: { name, priority, attributes: { offerid, title, complete, max, destination } }
             if (userInfoData?.promotions) {
                 const userInfoPromos = userInfoData.promotions
                 this.bot.logger.debug(
@@ -215,17 +216,39 @@ export class Workers {
                     'MORE-PROMOTIONS',
                     `Found ${userInfoPromos.length} items in userInfo.promotions`
                 )
-                // Debug show userInfo promotions
-                userInfoPromos.forEach((p: any) => {
+                // Transform userInfo.promotions to match expected format
+                // Structure: { name, attributes: { offerid, title, complete, max, destination } }
+                const transformedPromos = userInfoPromos.map((p: any) => {
+                    const attrs = p.attributes || {}
+                    return {
+                        title: attrs.title || p.name || 'Unknown Title',
+                        offerId: attrs.offerid || p.name || 'Unknown ID',
+                        destination: attrs.destination || '',
+                        complete: attrs.complete === 'True' || attrs.complete === true,
+                        isCompleted: attrs.complete === 'True' || attrs.complete === true,
+                        points: parseInt(attrs.max) || 0,
+                        pointProgressMax: parseInt(attrs.max) || 0,
+                        activityType: 0
+                    }
+                })
+                // Debug show transformed userInfo promotions
+                transformedPromos.slice(0, 10).forEach((p: any) => {
                     this.bot.logger.debug(
                         this.bot.isMobile,
                         'MORE-PROMOTIONS',
-                        `  UserInfo Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | points: ${p.points || p.pointProgressMax}`
+                        `  UserInfo Item: ${p.title} | offerId: ${p.offerId} | complete: ${p.complete} | points: ${p.points}`
                     )
                 })
+                if (transformedPromos.length > 10) {
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'MORE-PROMOTIONS',
+                        `  ... and ${transformedPromos.length - 10} more items`
+                    )
+                }
                 // Combine both arrays, avoiding duplicates by offerId
                 const existingIds = new Set(panelFlyoutPromos.map((p: any) => p.offerId))
-                const newPromos = userInfoPromos.filter((p: any) => !existingIds.has(p.offerId))
+                const newPromos = transformedPromos.filter((p: any) => !existingIds.has(p.offerId))
                 panelFlyoutPromos = [...panelFlyoutPromos, ...newPromos]
                 this.bot.logger.debug(
                     this.bot.isMobile,
@@ -234,14 +257,15 @@ export class Workers {
                 )
             }
             const panelUncompleted = panelFlyoutPromos
-                .filter((p: any) => !p.isCompleted && !p.complete && p.points > 0)
+                .filter((p: any) => !p.isCompleted && !p.complete)
+                .filter((p: any) => p.points > 0 || p.pointProgressMax > 0 || p.offerId?.includes('ENstar_Rewards'))
                 .map((p: any) => ({
                     title: p.title || 'Unknown Title',
-                    offerId: p.offerId || 'Unknown ID',
+                    offerId: p.offerId || p.name || 'Unknown ID',
                     destination: p.destinationUrl || p.destination || '',
                     hash: p.hash || '',
                     complete: false,
-                    pointProgressMax: p.points || p.pointProgressMax || 0,
+                    pointProgressMax: p.points || p.pointProgressMax || (p.offerId?.includes('ENstar_Rewards') ? 5 : 0),
                     activityType: p.activityType || 0,
                     isLocked: false
                 }))
