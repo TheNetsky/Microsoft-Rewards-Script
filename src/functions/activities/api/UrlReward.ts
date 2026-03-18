@@ -52,8 +52,10 @@ export class UrlReward extends Workers {
             const todayKey = this.bot.utils.getFormattedDate()
             const userInfo = (panelData as any)?.userInfo
 
+            // Find in: flyoutResult.morePromotions, userInfo.promotions, dailySetPromotions
             const panelPromotion =
-                userInfo?.morePromotions?.find((p: any) => p.offerId === offerId) ||
+                panelData?.flyoutResult?.morePromotions?.find((p: any) => p.offerId === offerId) ||
+                userInfo?.promotions?.find((p: any) => p.offerId === offerId || p.name === offerId) ||
                 panelData?.flyoutResult?.dailySetPromotions?.[todayKey]?.find((p: any) => p.offerId === offerId)
 
             if (!panelPromotion) {
