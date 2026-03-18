@@ -31,12 +31,6 @@ export default class BrowserFunc {
                 this.bot.rewardsVersion = 'modern'
                 this.bot.logger.debug(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Modern UI (V4) detected from Page')
 
-                // DEBUG: Dump data
-                try {
-                    const fs = require('fs')
-                    fs.writeFileSync('v4_dashboard_dump.json', JSON.stringify(nextData, null, 2))
-                } catch {}
-
                 const match = html.match(/var\s+dashboard\s*=\s*({.*?});/s)
                 const legacyData = match?.[1] ? JSON.parse(match[1]) : null
 
