@@ -1,259 +1,198 @@
-# AGENTS.md - Agentic Coding Guidelines
+# AGENTS.md
 
-This file provides guidelines for AI agents working on this Microsoft Rewards Script codebase.
+This file provides guidelines for agentic coding assistants working in this repository.
 
-## Project Overview
-
-- **Language**: TypeScript (Node.js >= 24.0.0)
-- **Package Manager**: npm
-- **Build Output**: `dist/` directory
-- **Main Entry**: `src/index.ts`
-
-## Build, Lint, and Test Commands
+## Commands
 
 ### Build
 
-```bash
-npm run build        # Compile TypeScript to dist/
-npm run pre-build    # Install deps + patchright install chromium
-```
+- `npm ci` - Install dependencies (use in CI/CD)
+- `npm i` - Install dependencies (development)
+- `npm run build` - Compile TypeScript to JavaScript (output: `dist/`)
+- `npm run pre-build` - Full pre-build: install deps, clean dist, install browsers
+- `npm run start` - Run compiled code from `dist/index.js`
+- `npm run dev` - Run with ts-node for development (hot reload)
+- `npm run ts-start` - Run with ts-node without dev flags
+- `npm run clear-sessions` - Delete browser session data
 
-### Run
+### Lint & Format
 
-```bash
-npm start            # Run compiled JS from dist/
-npm run dev          # Run with ts-node (development)
-npm run ts-start     # Run with ts-node
-```
+- `npx eslint .` - Lint all files (ESLint with @typescript-eslint)
+- `npm run format` - Format code with Prettier
+- `npm run format:check` - Check formatting without changes
+- `npm run build` also performs TypeScript type checking
 
-### Code Quality
+### Docker
 
-```bash
-npm run format           # Auto-fix formatting with Prettier
-npm run format:check     # Check formatting without fixing
-# Note: No test command configured - manual testing only
-```
+- `npm run create-docker` - Build Docker image
+- `docker compose up -d` - Start container (Docker deployment)
+- `docker logs microsoft-rewards-script` - View container logs
 
-### Development Utilities
+### Single Test Execution
 
-```bash
-npm run clear-sessions   # Clear saved browser sessions
-npm run open-session    # Open browser session for debugging
-npm run kill-chrome-win # Kill Chrome processes (Windows)
-```
+No test framework is currently configured. To add tests:
 
----
+1. Install a test runner (vitest or jest recommended)
+2. Add scripts: `"test": "vitest"`, `"test:run": "vitest run"`, `"test:single": "vitest run <path>"`
+3. Create `__tests__` directories or `*.test.ts` files
 
 ## Code Style Guidelines
 
+### TypeScript Configuration
+
+- Target: ES2020
+- Module: CommonJS
+- Strict mode enabled with all strict flags
+- `noUnusedLocals: true`, `noImplicitReturns: true`, `noFallthroughCasesInSwitch: true`
+- `esModuleInterop: true`
+- `resolveJsonModule: true` (JSON imports allowed)
+- Root dir: `src/`, Out dir: `dist/`
+
 ### Formatting (Prettier)
 
-| Setting        | Value             |
-| -------------- | ----------------- |
-| Semi           | No (none)         |
-| Quotes         | Single `'string'` |
-| Trailing Comma | None              |
-| Tab Width      | 4 spaces          |
-| Print Width    | 120 chars         |
-| Arrow Parens   | Avoid             |
+- Semicolons: never
+- Quotes: single
+- Trailing commas: none
+- Tab width: 4 spaces
+- Print width: 120
+- Arrow parentheses: avoid when possible
+- Line endings: LF (unix)
+- Use tabs: false (spaces)
 
 ### ESLint Rules
 
-- Linebreak style: Unix (`\n`)
-- No semicolons
-- Single quotes
-- Trailing commas: Allowed
-- Prefer arrow callbacks
-- `any` type: Warns but allowed
+- `linebreak-style: unix`
+- `quotes: single`
+- `semi: never`
+- `prefer-arrow-callback: error`
+- `@typescript-eslint/no-explicit-any: warn` (with fixToUnknown: false)
+- `@typescript-eslint/comma-dangle: error`
+- `no-empty: off`
 
-### TypeScript Strict Mode
+### Imports
 
-All strict options are enabled:
+- Use explicit import type for type-only imports: `import type { Foo } from './foo'`
+- Node built-ins use `node:` prefix when applicable (e.g., `import { AsyncLocalStorage } from 'node:async_hooks'`)
+- Group imports logically: standard library, third-party, local (internal)
+- Internal imports use relative paths from `src/` root
+- Avoid `import * as` unless necessary; prefer named imports
 
-- `strict: true`
-- `noImplicitAny: true`
-- `strictNullChecks: true`
-- `noImplicitReturns: true`
-- `noUncheckedIndexedAccess: true`
-- `noImplicitOverride: true`
+### Naming Conventions
 
-Avoid `any` when possible. Use `unknown` or specific types instead.
-
----
-
-## Naming Conventions
-
-| Type                | Convention                         | Example                            |
-| ------------------- | ---------------------------------- | ---------------------------------- |
-| Classes             | PascalCase                         | `MicrosoftRewardsBot`, `Workers`   |
-| Functions/Variables | camelCase                          | `doDailySet`, `getDashboardData`   |
-| Interfaces          | PascalCase                         | `DashboardData`, `Account`         |
-| Types               | PascalCase                         | `ExecutionContext`                 |
-| Constants           | SCREAMING_SNAKE_CASE               | `MAX_RETRIES`                      |
-| File Names          | PascalCase (classes) or kebab-case | `BrowserFunc.ts`, `next-parser.ts` |
-
----
-
-## Import Order
-
-Organize imports in this order with blank lines between groups:
-
-```typescript
-// 1. Node.js built-ins
-import { AsyncLocalStorage } from 'node:async_hooks'
-import cluster, { Worker } from 'cluster'
-
-// 2. External packages
-import type { BrowserContext, Cookie, Page } from 'patchright'
-import pkg from '../package.json'
-import type { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
-
-// 3. Local relative imports
-import Browser from './browser/Browser'
-import BrowserFunc from './browser/BrowserFunc'
-import { IpcLog, Logger } from './logging/Logger'
-
-// 4. Type-only imports (can be anywhere, usually grouped)
-import type { Account } from './interface/Account'
-```
-
-**Note**: Use `import type` for type-only imports to enable tree-shaking.
-
----
-
-## Code Patterns
-
-### Classes
-
-```typescript
-export class Workers {
-    protected bot: MicrosoftRewardsBot
-
-    constructor(bot: MicrosoftRewardsBot) {
-        this.bot = bot
-    }
-
-    public async doDailySet(data: DashboardData, page: Page): Promise<void> {
-        // Implementation
-    }
-}
-```
-
-### Interface Definitions
-
-```typescript
-interface ExecutionContext {
-    isMobile: boolean
-    account: Account
-}
-```
+- Classes: PascalCase (e.g., `Browser`, `SearchManager`)
+- Interfaces: PascalCase with `I` prefix optional (project uses PascalCase without prefix)
+- Functions/methods: camelCase
+- Variables: camelCase
+- Constants: UPPER_SNAKE_CASE for true constants; PascalCase for class constants
+- Files: PascalCase matching the primary export (e.g., `Browser.ts`, `Logger.ts`)
+- Directories: lowercase or kebab-case (project uses PascalCase in src/)
 
 ### Error Handling
 
-```typescript
-try {
-    await someFunction()
-} catch (error) {
-    this.logger.error('main', 'ERROR-CONTEXT', error instanceof Error ? error.message : String(error))
-}
-```
+- Always throw Error objects with descriptive messages
+- Use specific error types when appropriate (custom errors in `src/util/ErrorDiagnostic.ts`)
+- Log errors via `Logger` before throwing when in a worker context
+- Avoid empty catch blocks; at minimum log the error
+- Use optional chaining and nullish coalescing for safe access
+- Validate inputs with `Validator` utilities
 
-### Boolean Checks
+### Type Safety
 
-```typescript
-// Prefer explicit comparisons
-if (result !== undefined) {
-}
-if (this.config.workers.doDailySet) {
-}
+- Leverage TypeScript strict mode; avoid `any` (ESLint warns)
+- Use type inference where obvious; be explicit where needed
+- Define interfaces for all data structures (see `src/interface/`)
+- Use `unknown` instead of `any` for unknown data
+- Prefer `Record<string, unknown>` over `{ [key: string]: any }`
+- Use `zod` for runtime validation when interfacing with external data
 
-// Avoid implicit truthy checks for optional values
-```
+### Classes & Structure
+
+- Classes use explicit method visibility (`private`, `protected`, `public`)
+- Static members marked `static`
+- Use constructor injection for dependencies (see `Browser` class)
+- Keep classes focused on single responsibility
+- Utility classes may use static methods (e.g., `Utils`)
 
 ### Async/Await
 
-```typescript
-// Always use try-catch for async operations
-async function initialize(): Promise<void> {
-    try {
-        this.accounts = loadAccounts()
-    } catch (error) {
-        this.logger.error('main', 'INIT', 'Failed to load accounts')
-        throw error
-    }
-}
+- Use async/await over raw promises
+- Handle promise rejections with try/catch
+- Use `Promise.all` for parallel operations when order doesn't matter
+- Avoid callback-style; use arrow functions: `arr.map(x => ...)` not `function(x)`
 
-// Use void for fire-and-forget async calls in event handlers
-process.on('SIGINT', async () => {
-    void flushAllWebhooks()
-})
-```
+### Comments & Documentation
 
----
+- JSDoc comments for public classes/methods (not required for internal)
+- Inline comments for non-obvious logic
+- Multi-line comments use `/* */` style
+- Single-line comments use `//`
+- TODO comments should include issue reference if applicable
 
-## Logging Pattern
+### Logging
 
-All loggers use a consistent format with context:
+- Use `Logger` class for all logging (info, warn, error, debug)
+- Log levels: verbose in debug mode, concise in production
+- Include contextual information (account email, action being performed)
+- Use Ntfy/Discord webhooks for important notifications via `config.json`
 
-```typescript
-this.logger.info(category, event, message, color?)
-this.logger.debug(category, event, message)
-this.logger.warn(category, event, message)
-this.logger.error(category, event, message)
-```
+### Configuration
 
-Categories: `'main'`, `'FLOW'`, `'BROWSER'`, `'DAILY-SET'`, `'SEARCH'`, etc.
+- Config in `config.json` with Docker overrides via `CONFIG_*` env vars
+- Accounts in flat JSON array `accounts.json`
+- Never commit real credentials; use examples as templates
+- Changes to config/accounts require rebuild (`npm run build`)
 
----
+### Browser Automation (Patchright/Playwright)
 
-## Browser Automation
+- Always use `patchright` ( Playwright fork with fingerprinting patches)
+- Launch with appropriate browser args (see `Browser.ts`)
+- Handle browser context cleanup; use try/finally
+- Use `await` for all async Playwright methods
+- Implement proper等待 strategies (waitForSelector, expect, etc.)
+- Enable stealth features via fingerprint injection
 
-This project uses **Patchright** (Playwright fork) for browser automation. Key patterns:
+### Cluster Usage
 
-```typescript
-import type { Page, BrowserContext } from 'patchright'
+- Main process uses Node.js `cluster` module
+- Fork workers based on `config.clusters`
+- Inter-process communication via `process.send()`
+- Handle worker exit/restart logic gracefully
 
-// Navigate and wait
-await page.goto('https://rewards.bing.com', { waitUntil: 'networkidle' })
+## Framework-Specific Notes
 
-// Get content for parsing
-const html = await page.content()
+### Project-Specific Patterns
 
-// Click elements
-await page.click('button.submit')
+- Entry point: `src/index.ts` exports `MicrosoftRewardsBot`
+- Activities pattern: each activity is a class in `src/functions/activities/`
+- Search system: query engines in `src/functions/QueryEngine.ts`
+- Dashboard parsing: interface definitions in `src/interface/`
+- Browser sessions stored in `config.sessionPath`
+- Use `Logger` singleton with IPC for cluster logging
 
-// Fill forms
-await page.fill('input#email', 'user@example.com')
-```
+### JSON Configs
 
----
+- `src/config.json` - script configuration
+- `src/accounts.json` - account credentials (gitignored)
+- `src/functions/search-queries.json` - search query pool
+- `src/functions/bing-search-activity-queries.json` - Bing-specific queries
 
-## Key Files and Locations
+### Docker Notes
 
-| File                          | Purpose                                 |
-| ----------------------------- | --------------------------------------- |
-| `src/index.ts`                | Main entry, bot orchestration           |
-| `src/functions/Workers.ts`    | Daily set, promotions, punch cards      |
-| `src/functions/Activities.ts` | App activities (check-in, read-to-earn) |
-| `src/browser/Browser.ts`      | Browser creation and management         |
-| `src/browser/BrowserFunc.ts`  | Page functions (get data, points)       |
-| `src/browser/auth/Login.ts`   | Authentication flows                    |
-| `src/util/Utils.ts`           | Utility functions                       |
-| `src/util/Axios.ts`           | HTTP client with retry logic            |
-| `src/interface/*.ts`          | TypeScript interfaces                   |
-| `src/config.json`             | Configuration (NOT committed)           |
-| `src/accounts.json`           | Account credentials (NOT committed)     |
+- Multi-stage build: builder (dev deps) → runtime (prod only)
+- Uses `npx patchright install --with-deps --only-shell chromium`
+- Entrypoint script: `scripts/docker/entrypoint.sh`
+- Config/accounts mounted to `./config/` in container
+- Cron template: `src/crontab.template`
 
----
+## Cursor & Copilot
 
-## Important Notes
+No Cursor rules or Copilot instructions present in repository. Follow this AGENTS.md for all guidelines.
 
-1. **Credentials**: Never commit `config.json`, `accounts.json`, or any files containing secrets. These are in `.gitignore`.
+## Summary
 
-2. **V4 UI**: This codebase is currently in transition to support Microsoft Rewards V4 UI. See branch `v4-exp` for experimental work.
-
-3. **Environment Variables**: Use `.env` files or CLI arguments for configuration. Never hardcode credentials.
-
-4. **Clusters**: The bot supports multi-process execution via `clusters` config option for parallel account processing.
-
-5. **Mobile vs Desktop**: Some activities only work on mobile or desktop. The bot switches user-agent dynamically.
+- TypeScript strict, CommonJS, Node 24+
+- Prettier: 4 spaces, no semis, single quotes, width 120
+- ESLint: @typescript-eslint, prefer arrow callbacks
+- Build: `npm run build` → `dist/`
+- Structure: src/ (TS) → dist/ (JS)
+- No tests configured yet; add vitest if needed
