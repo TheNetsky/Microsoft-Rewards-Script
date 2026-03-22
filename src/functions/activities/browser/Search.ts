@@ -60,9 +60,17 @@ export class Search extends Workers {
             const targetUrl = this.searchPageURL ? this.searchPageURL : this.bingHome
             this.bot.logger.debug(isMobile, 'SEARCH-BING', `Navigating to search page | url=${targetUrl}`)
 
-            await page.goto(targetUrl)
-            await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
-            await this.bot.browser.utils.tryDismissAllMessages(page)
+            for (let retry = 0; retry < 3; retry++) {
+                try {
+                    await page.goto(targetUrl)
+                    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
+                    break
+                } catch (error) {
+                    if (retry === 2) throw error
+                    this.bot.logger.warn(isMobile, 'SEARCH-BING', `Failed to navigate to target URL, retrying...`)
+                    await this.bot.utils.wait(2000)
+                }
+            }
 
             let stagnantLoop = 0
             const stagnantLoopMax = 10
