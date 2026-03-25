@@ -267,7 +267,7 @@ export class Workers {
                                 `Found activity type "UrlReward" | title="${activity.title}" | offerId=${offerId}`
                             )
 
-                            await this.bot.activities.doUrlReward(basePromotion)
+                            await this.bot.activities.doUrlReward(basePromotion, page)
                         }
                         break
                     }
