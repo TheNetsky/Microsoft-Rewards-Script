@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from 'axios'
 import type { BasePromotion } from '../../../interface/DashboardData'
 import { Workers } from '../../Workers'
+import { Page } from 'patchright'
 
 export class UrlReward extends Workers {
     private cookieHeader: string = ''
@@ -13,11 +14,57 @@ export class UrlReward extends Workers {
 
     public async doUrlReward(promotion: BasePromotion) {
         if (!this.bot.requestToken && this.bot.rewardsVersion === 'legacy') {
-            this.bot.logger.warn(
+            this.bot.logger.info(
                 this.bot.isMobile,
                 'URL-REWARD',
-                'Skipping: Request token not available, this activity requires it!'
+                `Starting UrlReward | offerId=${promotion.offerId} | geo=${this.bot.userData.geoLocale} | oldBalance=${this.oldBalance}`
             )
+            let temp_page = await page.context().newPage()
+            if (promotion.offerId.includes('DailySet')) {
+                await temp_page.goto('https://rewards.bing.com/dashboard')
+            } else {
+                await temp_page.goto('https://rewards.bing.com/earn')
+            }
+            let selector = `a[href='${promotion.destinationUrl}']`
+            let locator = temp_page.locator(selector)
+            await temp_page.waitForSelector(selector, { timeout: 5000 }).catch(() => {})
+            await locator.scrollIntoViewIfNeeded() // Ghost click doesn't scroll the page for some reason
+            let clicked = await this.bot.browser.utils.ghostClick(page, selector)
+            if (clicked) {
+                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))
+                const newBalance = await this.bot.browser.func.getCurrentPoints()
+                this.gainedPoints = newBalance - this.oldBalance
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'URL-REWARD',
+                    `Balance delta after UrlReward | offerId=${promotion.offerId} | oldBalance=${this.oldBalance} | newBalance=${newBalance} | gainedPoints=${this.gainedPoints}`
+                )
+
+                if (this.gainedPoints > 0) {
+                    this.bot.userData.currentPoints = newBalance
+                    this.bot.userData.gainedPoints = (this.bot.userData.gainedPoints ?? 0) + this.gainedPoints
+
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'URL-REWARD',
+                        `Completed UrlReward | offerId=${promotion.offerId} | gainedPoints=${this.gainedPoints} | newBalance=${newBalance}`,
+                        'green'
+                    )
+                } else {
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'URL-REWARD',
+                        `Failed UrlReward with no points | offerId=${promotion.offerId} | oldBalance=${this.oldBalance} | newBalance=${newBalance}`
+                    )
+                }
+            } else {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'URL-REWARD',
+                    `Failed UrlReward with no points | offerId=${promotion.offerId} | oldBalance=${this.oldBalance} | newBalance=${this.oldBalance}`
+                )
+            }
+            await temp_page.close()
             return
         }
 
