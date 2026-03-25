@@ -165,16 +165,23 @@ grep "QUEST" /tmp/quest_*.log
 
 ### Changes Made to Quest.ts
 
-#### 1. Enhanced Link Detection (Lines 337-385)
+#### 1. **Desktop Viewport/UA Switch BEFORE Quest Processing** (NEW - CRITICAL FIX)
+
+- **Problem:** Task links were not rendering in headless mode because script used mobile viewport (412x915) and mobile user agent
+- **Solution:** Switch to desktop viewport (1920x1080) and desktop user agent BEFORE processing quests
+- **Result:** HTML now loads with 82K+ bytes and includes task link container elements
+- **Code Location:** Lines 32-55 in doQuests()
+
+#### 2. Enhanced Link Detection (Lines 338-407)
 
 - **Method 1:** Direct `querySelectorAll('a[href]')` with filter for ms-search/bing.com/search
 - **Method 2:** Fallback search in element HTML for headless mode (when Method 1 finds nothing)
 - **Method 3:** Aggressive regex-based extraction from `document.body.innerHTML` as last resort
     - Extracts ms-search:// URLs via regex: `/href=["']([^"']*ms-search:\/\/[^"']*)["']/g`
     - Extracts bing.com/search URLs via regex: `/href=["']([^"']*bing\.com\/search[^"']*)["']/g`
-- **Post-hydration wait:** Added 2000ms wait after scrolling to allow React/Vue components to fully render
+- **Post-hydration wait:** Added 3000ms wait after scrolling to allow React/Next.js components to fully render
 
-#### 2. Improved Click Strategy (Lines 407-506)
+#### 3. Improved Click Strategy (Lines 527-627)
 
 - **Strategy 1:** Exact href match using `a[href="${destination}"]`
 - **Strategy 2:** Partial href match:
@@ -186,57 +193,58 @@ grep "QUEST" /tmp/quest_*.log
     - Avoids locator/element reference issues in headless mode
 - **Dialog handling:** Improved logging for ms-search alert detection and dismissal
 
-#### 3. Better Page Re-navigation (Lines 362-399)
+#### 4. Enhanced Diagnostics (Lines 270-300)
 
-- Changed from `waitUntil: 'networkidle'` to `'domcontentloaded'` for faster re-navigation (15s timeout)
-- Scroll cycle reduced from 5x to 3x per re-navigation to save time
-- Added error handling with warning log instead of silent failure
-- Total re-navigation cycle: ~3-4 seconds vs previous 5-6 seconds
+- Captures HTML body length, total anchor tags count
+- Counts ms-search and bing search links separately
+- Logs visible text snippet for debugging
 
-### Why These Changes Help with Headless Mode
+### Test Results - Initial
 
-1. **Method 2 & 3 Detection:** Headless mode sometimes doesn't hydrate HTML immediately, so we search in the raw HTML
-2. **JavaScript Click:** Patchright locators sometimes fail in headless; direct `.click()` from within page context is more reliable
-3. **Extended Hydration Wait:** React/Vue apps may take longer to render in headless; 2000ms buffer helps
-4. **Regex Extraction:** As a nuclear option, we parse the HTML ourselves to find href patterns
-
-### Testing Recommendations
-
-```bash
-# Build the updated code
-npm run build
-
-# Test with headless: true (NEW - should now work)
-# Edit config.json: headless: true, only doQuests: true
-npm run start
-
-# Expected behavior:
-# 1. Find quest links on /earn page
-# 2. Navigate to ENstar_pcparent_FY26_WSB_Dec_punchcard
-# 3. Detect remaining task links (should find 1 task: "Define any word in Biodiversity")
-# 4. Click the ms-search:// link
-# 5. Dismiss alert dialog
-# 6. Task completed
-
-# Check logs
-tail -f dist/logs/*.log | grep -E "QUEST|QUEST-TASK"
+```
+HTML body length: 82940 bytes | Total <a> tags: 24 | ms-search: 0 | bing search: 0
 ```
 
-### Known Limitations & Workarounds
+Despite HTML loading with 82K, task links still not found. Root cause analysis:
 
-1. **If headless still fails to detect links:**
-    - Try increasing the 2000ms hydration wait to 5000ms
-    - Add more scroll cycles (change loop `< 3` to `< 5`)
-    - Check if Microsoft changed the page structure (validate with BrowserOS)
+- HTML HTML loads but task links still not rendering even with desktop viewport
+- Possible reasons:
+    1. Microsoft may use lazy loading or intersection observer that requires user interaction
+    2. Task links may be in iframes or shadow DOM
+    3. Microsoft may conditionally render based on account/quest status
+    4. Rate limiting on account side (encountered "Too many requests" error)
 
-2. **If ms-search:// dialog doesn't get dismissed:**
-    - Verify `page.on('dialog', handler)` is set BEFORE the click
-    - Check logs for "Dialog detected" message
-    - May need timeout increase if system is slow
+### Key Findings
 
-3. **If this still doesn't work in your environment:**
-    - Fall back to headless: false (GUI mode) which is confirmed working
-    - Or implement API-based approach using getuserinfo.json endpoint
+1. **Viewport/UA IS critical** - Without desktop viewport, HTML doesn't fully load
+2. **HTML loading != Task links rendering** - Even with 82K HTML, task links elements may not be present
+3. **Account rate limiting** - After multiple test attempts, Microsoft blocks with "Too many requests"
+4. **Detection logic is solid** - Multiple fallback strategies ensure detection if links exist
+
+### Commits Made
+
+1. **4b68b2c** - feat: implement headless-mode-compatible quest task detection and clicking
+2. **6f32e99** - fix: set desktop viewport and user agent before processing quests
+
+### What Needs Investigation
+
+1. **Why are task links not rendering despite desktop viewport?**
+    - Possible: Microsoft uses JS rendering that requires specific conditions
+    - Possible: Task links only appear for quests with pending tasks
+    - Possible: Need more aggressive waiting (5000ms+ instead of 3000ms)
+    - Possible: Need to trigger intersection observer or scroll into specific elements
+
+2. **Next debugging steps:**
+    - Check if BrowserOS can see task links with headless: false on same account
+    - Inspect page structure with devtools to see if task links are in DOM at all
+    - Check for iframes containing task content
+    - Verify if task link HTML changes after certain user interactions
+    - Check if account needs specific conditions (quest not started, etc.)
+
+3. **Alternative approaches if headless detection fails:**
+    - Use API endpoint (getuserinfo.json) to get task URLs directly
+    - Implement API-based task clicking instead of DOM parsing
+    - Use puppeteer's `exposeFunction` to call Node code from page context
 
 ## Reference Files
 
