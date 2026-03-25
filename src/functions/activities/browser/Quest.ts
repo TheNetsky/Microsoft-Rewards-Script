@@ -35,12 +35,14 @@ export class Quest extends Workers {
         try {
             // IMPORTANT: Quest task links (ms-search:// and bing.com/search URLs) do not render in headless mode
             // even with proper viewport/user agent settings. This is a Microsoft-side rendering limitation.
+            // Solution: Use API-based approach when headless mode is enabled
             if (this.bot.config.headless) {
-                this.bot.logger.warn(
+                this.bot.logger.info(
                     this.bot.isMobile,
                     'QUEST',
-                    'Quest task detection disabled in headless mode - Microsoft does not render task links in headless browsers. Set headless: false in config.json to enable quest support.'
+                    'Headless mode detected - using API-based quest processing'
                 )
+                await this.doQuestsViaAPI(page)
                 return
             }
 
@@ -150,6 +152,142 @@ export class Quest extends Workers {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'QUEST',
+                `Error: ${error instanceof Error ? error.message : String(error)}`
+            )
+        }
+    }
+
+    private async doQuestsViaAPI(page: Page): Promise<void> {
+        try {
+            // Fetch dashboard data from API
+            const dashboardData = await this.bot.browser.func.getDashboardData()
+
+            if (!dashboardData.punchCards || dashboardData.punchCards.length === 0) {
+                this.bot.logger.info(this.bot.isMobile, 'QUEST', 'No punchcards found in API response')
+                return
+            }
+
+            this.bot.logger.info(
+                this.bot.isMobile,
+                'QUEST',
+                `Found ${dashboardData.punchCards.length} punchcard(s) in API response`
+            )
+
+            // Process each punchcard's child promotions (quest tasks)
+            for (const punchCard of dashboardData.punchCards) {
+                if (!punchCard.childPromotions || punchCard.childPromotions.length === 0) {
+                    continue
+                }
+
+                const questName = punchCard.name || 'Unknown Quest'
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'QUEST',
+                    `Processing quest: "${questName}" with ${punchCard.childPromotions.length} task(s)`
+                )
+
+                // Process each task in the punchcard
+                for (const task of punchCard.childPromotions) {
+                    if (!task.destinationUrl) {
+                        continue
+                    }
+
+                    // Skip completed tasks
+                    if (task.complete) {
+                        this.bot.logger.debug(this.bot.isMobile, 'QUEST', `Skipping completed task: "${task.title}"`)
+                        continue
+                    }
+
+                    const taskTitle = task.title || 'Unknown Task'
+                    const destination = task.destinationUrl
+
+                    this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Processing: "${taskTitle}"`)
+
+                    await this.processQuestTaskViaAPI(page, taskTitle, destination)
+
+                    const cooldown = this.bot.utils.randomDelay(8000, 15000)
+                    this.bot.logger.debug(this.bot.isMobile, 'QUEST-TASK', `Cooldown ${cooldown}ms`)
+                    await this.bot.utils.wait(cooldown)
+                }
+            }
+
+            this.bot.logger.info(this.bot.isMobile, 'QUEST', 'API-based quest processing completed', 'green')
+        } catch (error) {
+            this.bot.logger.error(
+                this.bot.isMobile,
+                'QUEST',
+                `API-based quest error: ${error instanceof Error ? error.message : String(error)}`
+            )
+        }
+    }
+
+    private async processQuestTaskViaAPI(page: Page, title: string, destination: string): Promise<void> {
+        try {
+            if (!destination) {
+                this.bot.logger.warn(this.bot.isMobile, 'QUEST-TASK', `No destination URL for: "${title}"`)
+                return
+            }
+
+            const isMsSearch = destination.startsWith('ms-search://')
+
+            this.bot.logger.debug(this.bot.isMobile, 'QUEST-TASK', `Destination: ${destination.substring(0, 80)}`)
+
+            if (isMsSearch) {
+                // Handle ms-search:// URLs
+                // Extract query parameter from ms-search URL
+                const queryMatch = destination.match(/q=([^&]+)/)
+                if (queryMatch) {
+                    const query = decodeURIComponent(queryMatch[1] ?? '')
+                    const bingSearchUrl = `https://www.bing.com/search?q=${encodeURIComponent(query)}`
+
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'QUEST-TASK',
+                        `Converted ms-search to Bing search: ${query}`
+                    )
+
+                    await page.goto(bingSearchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+                    await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
+
+                    this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Completed: "${title}" (Bing search)`)
+                } else {
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'QUEST-TASK',
+                        `Could not extract query from ms-search URL: ${destination}`
+                    )
+                }
+            } else if (destination.includes('bing.com/search')) {
+                // Handle bing.com/search URLs - navigate directly
+                await page.goto(destination, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
+
+                this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Completed: "${title}" (Bing search)`)
+            } else {
+                // Handle other URLs
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'QUEST-TASK',
+                    `Unknown destination type, attempting navigation: ${destination.substring(0, 60)}`
+                )
+
+                await page.goto(destination, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
+
+                this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Completed: "${title}"`)
+            }
+
+            // Navigate back to earn page
+            try {
+                await page.goto('https://rewards.bing.com/earn', { waitUntil: 'domcontentloaded', timeout: 10000 })
+                await this.bot.utils.wait(1000)
+            } catch {
+                // Ignore navigation errors
+            }
+        } catch (error) {
+            this.bot.logger.error(
+                this.bot.isMobile,
+                'QUEST-TASK',
                 `Error: ${error instanceof Error ? error.message : String(error)}`
             )
         }
