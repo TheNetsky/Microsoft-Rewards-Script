@@ -1,0 +1,130 @@
+
+> microsoft-rewards-script@4.0.0-beta.1 start
+> node ./dist/index.js
+
+[3/26/2026, 12:47:12 AM] [MAIN] [INFO] MAIN [RUN-START] Starting Microsoft Rewards Script | v4.0.0-beta.1 | Accounts: 1 | Clusters: 1
+[3/26/2026, 12:47:12 AM] [helmiii] [INFO] MAIN [ACCOUNT-START] Starting account: helmiii@duck.com | geoLocale: auto
+[3/26/2026, 12:47:12 AM] [helmiii] [INFO] MAIN [FLOW] Starting session for helmiii@duck.com
+[3/26/2026, 12:47:14 AM] [helmiii] [INFO] MOBILE [BROWSER] Created browser with User-Agent: "Mozilla/5.0 (Linux; Android 11; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36 EdgA/146.0.3856.71"
+[3/26/2026, 12:47:14 AM] [helmiii] [DEBUG] MOBILE [BROWSER-FINGERPRINT] {"fingerprint":{"screen":{"availTop":0,"availLeft":0,"pageXOffset":0,"pageYOffset":0,"screenX":0,"hasHDR":false,"width":360,"height":800,"availWidth":360,"availHeight":800,"clientWidth":0,"clientHeight":19,"innerWidth":0,"innerHeight":0,"outerWidth":360,"outerHeight":764,"colorDepth":24,"pixelDepth":24,"devicePixelRatio":2},"navigator":{"userAgent":"Mozilla/5.0 (Linux; Android 11; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36 EdgA/146.0.3856.71","userAgentData":{"isMobile":true,"platform":"Android","fullVersionList":[{"brand":"Not/A)Brand","version":"99.0.0.0"},{"brand":"Microsoft Edge","version":"146.0.3856.71"},{"brand":"Chromium","version":"146.0.7680.165"}],"brands":[{"brand":"Not/A)Brand","version":"99"},{"brand":"Microsoft Edge","version":"146"},{"brand":"Chromium","version":"146"}],"platformVersion":"9.0.0","architecture":"","bitness":"","model":""},"language":"en-US","languages":["en-US"],"platform":"Linux armv81","deviceMemory":4,"hardwareConcurrency":8,"maxTouchPoints":2,"product":"Gecko","productSub":"20030107","vendor":"Google Inc.","vendorSub":null,"doNotTrack":"1","appCodeName":"Mozilla","appName":"Netscape","appVersion":"5.0 (Linux; Android 11; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36 EdgA/146.0.3856.71","oscpu":null,"extraProperties":{"vendorFlavors":["chrome"],"globalPrivacyControl":null,"pdfViewerEnabled":null,"installedApps":[]},"webdriver":false},"audioCodecs":{"ogg":"probably","mp3":"probably","wav":"probably","m4a":"maybe","aac":"probably"},"videoCodecs":{"ogg":"","h264":"probably","webm":"probably"},"pluginsData":{"plugins":[],"mimeTypes":[]},"battery":{"charging":true,"chargingTime":1,"dischargingTime":null,"level":0.82},"videoCard":{"renderer":"Mali-G57","vendor":"ARM"},"multimediaDevices":{"speakers":[{"deviceId":"","kind":"audiooutput","label":"","groupId":""}],"micros":[{"deviceId":"","kind":"audioinput","label":"","groupId":""}],"webcams":[{"deviceId":"","kind":"videoinput","label":"","groupId":""}]},"fonts":["sans-serif-thin"],"mockWebRTC":false,"slim":false},"headers":{"sec-ch-ua":"\"Microsoft Edge\";v=\"146\", \"Not=A?Brand\";v=\"99\", \"Chromium\";v=\"146\"","sec-ch-ua-mobile":"?1","sec-ch-ua-platform":"\"Android\"","upgrade-insecure-requests":"1","user-agent":"Mozilla/5.0 (Linux; Android 11; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36 EdgA/146.0.3856.71","accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7","sec-fetch-site":"same-site","sec-fetch-mode":"navigate","sec-fetch-user":"?1","sec-fetch-dest":"document","accept-encoding":"gzip, deflate, br, zstd","accept-language":"en-US","dnt":"1","sec-ch-ua-full-version-list":"\"Microsoft Edge\";v=\"146.0.3856.71\", \"Not=A?Brand\";v=\"99.0.0.0\", \"Chromium\";v=\"146.0.7680.165\""}}
+[3/26/2026, 12:47:14 AM] [helmiii] [INFO] MAIN [BROWSER] Mobile Browser started | helmiii@duck.com
+[3/26/2026, 12:47:14 AM] [helmiii] [INFO] MOBILE [LOGIN] Starting login process
+[3/26/2026, 12:47:19 AM] [helmiii] [DEBUG] MOBILE [LOGIN] State check iteration 1/25
+[3/26/2026, 12:47:19 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: login.live.com/oauth20_authorize.srf
+[3/26/2026, 12:47:19 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Visible states: [EMAIL_INPUT]
+[3/26/2026, 12:47:20 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Selected state by priority: EMAIL_INPUT
+[3/26/2026, 12:47:20 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Current state: EMAIL_INPUT
+[3/26/2026, 12:47:20 AM] [helmiii] [DEBUG] MOBILE [HANDLE-STATE] Processing state: EMAIL_INPUT
+[3/26/2026, 12:47:20 AM] [helmiii] [INFO] MOBILE [LOGIN] Entering email
+[3/26/2026, 12:47:23 AM] [helmiii] [DEBUG] MOBILE [GHOST-CLICK] Trying to click selector: button[type="submit"], options: undefined
+[3/26/2026, 12:47:24 AM] [helmiii] [DEBUG] MOBILE [DISABLE-FIDO] Modified request body: isFidoSupported set to false
+[3/26/2026, 12:47:25 AM] [helmiii] [INFO] MOBILE [LOGIN-ENTER-EMAIL] Email submitted
+[3/26/2026, 12:47:30 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Network idle timeout after email entry
+[3/26/2026, 12:47:30 AM] [helmiii] [INFO] MOBILE [LOGIN] Email entered successfully
+[3/26/2026, 12:47:31 AM] [helmiii] [DEBUG] MOBILE [LOGIN] State check iteration 2/25
+[3/26/2026, 12:47:36 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: login.live.com/oauth20_authorize.srf
+[3/26/2026, 12:47:36 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Get code state detected: GET_A_CODE (has password: true)
+[3/26/2026, 12:47:36 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Selected state by priority: GET_A_CODE
+[3/26/2026, 12:47:36 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Current state: GET_A_CODE
+[3/26/2026, 12:47:36 AM] [helmiii] [INFO] MOBILE [LOGIN] State transition: EMAIL_INPUT → GET_A_CODE
+[3/26/2026, 12:47:36 AM] [helmiii] [DEBUG] MOBILE [HANDLE-STATE] Processing state: GET_A_CODE
+[3/26/2026, 12:47:36 AM] [helmiii] [INFO] MOBILE [LOGIN] Attempting to bypass "Get code" page
+[3/26/2026, 12:47:36 AM] [helmiii] [INFO] MOBILE [LOGIN] Found "Other ways to sign in" link
+[3/26/2026, 12:47:36 AM] [helmiii] [DEBUG] MOBILE [GHOST-CLICK] Trying to click selector: [data-testid="viewFooter"] span[role="button"], options: undefined
+[3/26/2026, 12:47:43 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Network idle timeout after clicking other ways
+[3/26/2026, 12:47:43 AM] [helmiii] [INFO] MOBILE [LOGIN] "Other ways to sign in" clicked
+[3/26/2026, 12:47:44 AM] [helmiii] [DEBUG] MOBILE [LOGIN] State check iteration 3/25
+[3/26/2026, 12:47:49 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: login.live.com/oauth20_authorize.srf
+[3/26/2026, 12:47:49 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Visible states: [OTP_CODE_ENTRY, OTP_CODE_ENTRY]
+[3/26/2026, 12:47:50 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Selected state by priority: OTP_CODE_ENTRY
+[3/26/2026, 12:47:50 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Current state: OTP_CODE_ENTRY
+[3/26/2026, 12:47:50 AM] [helmiii] [INFO] MOBILE [LOGIN] State transition: GET_A_CODE → OTP_CODE_ENTRY
+[3/26/2026, 12:47:50 AM] [helmiii] [DEBUG] MOBILE [HANDLE-STATE] Processing state: OTP_CODE_ENTRY
+[3/26/2026, 12:47:50 AM] [helmiii] [INFO] MOBILE [LOGIN] OTP code entry page detected, attempting to find password option
+[3/26/2026, 12:47:50 AM] [helmiii] [DEBUG] MOBILE [GHOST-CLICK] Trying to click selector: [data-testid="viewFooter"] >> [role="button"], options: undefined
+[3/26/2026, 12:47:52 AM] [helmiii] [INFO] MOBILE [LOGIN] Footer link clicked
+[3/26/2026, 12:47:57 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Network idle timeout after OTP navigation
+[3/26/2026, 12:47:57 AM] [helmiii] [INFO] MOBILE [LOGIN] Navigated back from OTP entry page
+[3/26/2026, 12:47:57 AM] [helmiii] [DEBUG] MOBILE [LOGIN] State check iteration 4/25
+[3/26/2026, 12:48:02 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: login.live.com/oauth20_authorize.srf
+[3/26/2026, 12:48:03 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Visible states: [PASSWORD_INPUT]
+[3/26/2026, 12:48:03 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Selected state by priority: PASSWORD_INPUT
+[3/26/2026, 12:48:03 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Current state: PASSWORD_INPUT
+[3/26/2026, 12:48:03 AM] [helmiii] [INFO] MOBILE [LOGIN] State transition: OTP_CODE_ENTRY → PASSWORD_INPUT
+[3/26/2026, 12:48:03 AM] [helmiii] [DEBUG] MOBILE [HANDLE-STATE] Processing state: PASSWORD_INPUT
+[3/26/2026, 12:48:03 AM] [helmiii] [INFO] MOBILE [LOGIN] Entering password
+[3/26/2026, 12:48:06 AM] [helmiii] [DEBUG] MOBILE [GHOST-CLICK] Trying to click selector: button[type="submit"], options: undefined
+[3/26/2026, 12:48:07 AM] [helmiii] [INFO] MOBILE [LOGIN-ENTER-PASSWORD] Password submitted
+[3/26/2026, 12:48:08 AM] [helmiii] [INFO] MOBILE [LOGIN] Password entered successfully
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [LOGIN] State check iteration 5/25
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: login.live.com/ppsecure/post.srf
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Visible states: [KMSI_PROMPT]
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Get code state detected: GET_A_CODE (has password: true)
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Selected state by priority: KMSI_PROMPT
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Current state: KMSI_PROMPT
+[3/26/2026, 12:48:09 AM] [helmiii] [INFO] MOBILE [LOGIN] State transition: PASSWORD_INPUT → KMSI_PROMPT
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [HANDLE-STATE] Processing state: KMSI_PROMPT
+[3/26/2026, 12:48:09 AM] [helmiii] [INFO] MOBILE [LOGIN] Accepting KMSI prompt
+[3/26/2026, 12:48:09 AM] [helmiii] [DEBUG] MOBILE [GHOST-CLICK] Trying to click selector: button[data-testid="primaryButton"], options: undefined
+[3/26/2026, 12:48:11 AM] [helmiii] [INFO] MOBILE [LOGIN] KMSI prompt accepted
+[3/26/2026, 12:48:12 AM] [helmiii] [DEBUG] MOBILE [LOGIN] State check iteration 6/25
+[3/26/2026, 12:48:18 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: rewards.bing.com/dashboard
+[3/26/2026, 12:48:18 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] On rewards/account page, assuming logged in
+[3/26/2026, 12:48:18 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Current state: LOGGED_IN
+[3/26/2026, 12:48:18 AM] [helmiii] [INFO] MOBILE [LOGIN] State transition: KMSI_PROMPT → LOGGED_IN
+[3/26/2026, 12:48:18 AM] [helmiii] [INFO] MOBILE [LOGIN] Successfully logged in
+[3/26/2026, 12:48:18 AM] [helmiii] [INFO] MOBILE [LOGIN] Finalizing login
+[3/26/2026, 12:48:20 AM] [helmiii] [INFO] MOBILE [LOGIN] Logged into Microsoft Rewards successfully
+[3/26/2026, 12:48:20 AM] [helmiii] [INFO] MOBILE [LOGIN] Starting Bing session verification
+[3/26/2026, 12:48:20 AM] [helmiii] [INFO] MOBILE [LOGIN-BING] Verifying Bing session
+[3/26/2026, 12:48:24 AM] [helmiii] [DEBUG] MOBILE [LOGIN-BING] Verification loop 1/5
+[3/26/2026, 12:48:24 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] Current URL: www.bing.com/
+[3/26/2026, 12:48:24 AM] [helmiii] [DEBUG] MOBILE [DETECT-STATE] No matching states found
+[3/26/2026, 12:48:24 AM] [helmiii] [DEBUG] MOBILE [LOGIN-BING] At Bing home: true (www.bing.com/)
+[3/26/2026, 12:48:28 AM] [helmiii] [DEBUG] MOBILE [LOGIN-BING] Profile element found: false
+[3/26/2026, 12:48:28 AM] [helmiii] [INFO] MOBILE [LOGIN-BING] Bing session verified successfully
+[3/26/2026, 12:48:28 AM] [helmiii] [INFO] MOBILE [LOGIN] Starting rewards session verification
+[3/26/2026, 12:48:28 AM] [helmiii] [INFO] MOBILE [GET-REWARD-SESSION] Fetching request token
+[3/26/2026, 12:48:30 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Token fetch loop 1/5
+[3/26/2026, 12:48:30 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Not at reward home: rewards.bing.com/dashboard
+[3/26/2026, 12:48:31 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Token fetch loop 2/5
+[3/26/2026, 12:48:31 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Not at reward home: rewards.bing.com/dashboard
+[3/26/2026, 12:48:32 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Token fetch loop 3/5
+[3/26/2026, 12:48:32 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Not at reward home: rewards.bing.com/dashboard
+[3/26/2026, 12:48:33 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Token fetch loop 4/5
+[3/26/2026, 12:48:33 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Not at reward home: rewards.bing.com/dashboard
+[3/26/2026, 12:48:34 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Token fetch loop 5/5
+[3/26/2026, 12:48:34 AM] [helmiii] [DEBUG] MOBILE [GET-REWARD-SESSION] Not at reward home: rewards.bing.com/dashboard
+[3/26/2026, 12:48:35 AM] [helmiii] [DEBUG] MOBILE [LOGIN] Retrieved 70 cookies
+[3/26/2026, 12:48:35 AM] [helmiii] [INFO] MOBILE [LOGIN] Login completed, session saved
+[3/26/2026, 12:48:35 AM] [helmiii] [INFO] MOBILE [GET-APP-TOKEN] Requesting mobile access token
+[3/26/2026, 12:48:35 AM] [helmiii] [DEBUG] MOBILE [LOGIN-APP] Auth URL constructed: https://login.live.com/oauth20_authorize.srf
+[3/26/2026, 12:48:35 AM] [helmiii] [DEBUG] MOBILE [LOGIN-APP] Navigating to OAuth authorize URL
+[3/26/2026, 12:48:36 AM] [helmiii] [INFO] MOBILE [LOGIN-APP] Waiting for mobile OAuth code...
+[3/26/2026, 12:48:36 AM] [helmiii] [DEBUG] MOBILE [LOGIN-APP] OAuth poll URL changed → https://login.live.com/oauth20_desktop.srf?code=M.C521_BAY.2.U.Dohdy09gXoi!YJ!b555u2H2GrBTvbkX8B9G8fhMhzvTw2prr!ae*!DhuvIJdelcA7JtbwWn!3NNkviqJb6ENLRJ1ot8tVXyiuXZWsW5KVxXrGWS2arso5T*Vej5MyhcpTLl!CAD0YRJcjeas7Ys9hyqYvIrGkOuw9v!OY48teX3DW!ngCaNZMpBDqybxbF5C7Dvssu6sgu2CaKfI!dIhmhdbUnUjY3X!Q8bV5b4pWj3Jp5LsaKgCErx5Szpz27JJJzP2kbdnkWZ0TI!6gq112EWEJodOgmdL!q6E1p0toB!T*PIZyRFuPRGm2OWgO97lP3p1MO!VJ1xJOAwWWmqSOm2zvJoMnA6God!S7mg2BtqMVwXnTBh7SNIqoJVamapiina!jzU6mrzQl88aLFYEEZ**4jXNusGYrdk!IcCRFf!XnSyxKoQXcIs2mz!ldzMJ74kEhTTnb2DFA54DtRxZMHgo!7kiHeh6P8JXCQTqmbyBcn8I2EOIm*cYJfEEHbPzTPSLf63gnDauTioDUSPnYCkSc3mMIzQZEE7AK9JyARwH&state=1a56c177dd6b31df4686f892f2e7dc1a&lc=1033
+[3/26/2026, 12:48:36 AM] [helmiii] [DEBUG] MOBILE [LOGIN-APP] OAuth code detected in redirect URL
+[3/26/2026, 12:48:36 AM] [helmiii] [DEBUG] MOBILE [LOGIN-APP] Exchanging OAuth code for access token
+[3/26/2026, 12:48:37 AM] [helmiii] [INFO] MOBILE [LOGIN-APP] Mobile access token received
+[3/26/2026, 12:48:37 AM] [helmiii] [DEBUG] MOBILE [LOGIN-APP] Returning to base URL
+[3/26/2026, 12:48:40 AM] [helmiii] [DEBUG] MOBILE [GET-DASHBOARD-DATA] Modern UI (V4) detected from Page
+[3/26/2026, 12:48:41 AM] [helmiii] [DEBUG] MOBILE [MAIN] Panel flyout data fetched successfully
+[3/26/2026, 12:48:41 AM] [helmiii] [DEBUG] MOBILE [GET-POINTS] rewardsVersion=modern, hasData=true
+[3/26/2026, 12:48:42 AM] [helmiii] [DEBUG] MOBILE [GET-POINTS] API counters: pcSearch=[{"name":"WW_NewLevel1_search_PC","priority":5,"attributes":{"animated_icon":"https://rewards.bing.com/rewardscdn/images/rewards/membercenter/missions/Animated-Icons/Search.json","answerScenario.Tag":"PCSearch","classification.Tag":"PCSearch","complete":"False","description":"Earn up to 15 points per day, 3 points per search. Earning starts with your third search","destination":"https://www.bing.com","image":"https://rewards.bing.com/rewardscdn/images/rewards/membercenter/missions/PC-SearchEarn_108x70.jpg","link_text":"Search and earn","max":"15","modern_image":"https://bing.com/th?id=OMR.Search.jpg&pid=Rewards","progress":"0","recurring":"true","small_image":"https://rewards.bing.com/rewardscdn/images/rewards/membercenter/missions/Mobile/Laptop-yellow-75x75px.png","state":"Default","title":"Search","translation_prompt":"Translate into target language Do not alter the placeholder parameters {0} and {1}; keep them exactly as they are","type":"search","give_eligible":"True","offerid":"WW_search_global_NewLevel1"},"offerId":"WW_search_global_NewLevel1","complete":false,"counter":0,"activityProgress":0,"activityProgressMax":0,"pointProgressMax":15,"pointProgress":0,"promotionType":"search","promotionSubtype":"","title":"Search","extBannerTitle":"","titleStyle":"","theme":"","description":"Earn up to 15 points per day, 3 points per search. Earning starts with your third search","extBannerDescription":"","descriptionStyle":"","showcaseTitle":"","showcaseDescription":"","imageUrl":"https://rewards.bing.com/rewardscdn/images/rewards/membercenter/missions/PC-SearchEarn_108x70.jpg","dynamicImage":"","smallImageUrl":"https://rewards.bing.com/rewardscdn/images/rewards/membercenter/missions/Mobile/Laptop-yellow-75x75px.png","backgroundImageUrl":"","showcaseBackgroundImageUrl":"","showcaseBackgroundLargeImageUrl":"","promotionBackgroundLeft":"","promotionBackgroundRight":"","iconUrl":"","animatedIconUrl":"https://rewards.bing.com/rewardscdn/images/rewards/membercenter/missions/Animated-Icons/Search.json","animatedLargeBackgroundImageUrl":"","destinationUrl":"https://www.bing.com","linkText":"Search and earn","hash":"f9e52d94959612df668d88c492f9f641cd0fe52fe7c116e521a43e2b962eccfb","activityType":"11","isRecurring":true,"isHidden":false,"isTestOnly":false,"isGiveEligible":true,"level":"","levelUpActionsProgress":0,"levelUpActivityDefaultSearchEngineDays":0,"levelUpActivityDefaultSearchEngineCompletedAmount":0,"levelUpActivityDailySetStreakDays":0,"levelUpActivityDailySetCompletedAmount":0,"levelUpActivityDailyStreaksCompletedAmount":0,"levelUpActivityXboxGamePassCompleted":false,"bingSearchDailyPoints":0,"bingStarMonthlyBonusProgress":0,"bingStarMonthlyBonusMaximum":0,"bingStarBonusWeeklyProgress":0,"bingStarBonusWeeklyState":"","defaultSearchEngineMonthlyBonusProgress":0,"defaultSearchEngineMonthlyBonusMaximum":0,"defaultSearchEngineMonthlyBonusState":"","monthlyLevelBonusMaximum":0,"monthlyDistributionChartSrc":"","monthlyLevelBonusProgress":0,"monthlyLevelBonusState":"","slidesCount":0,"legalText":"","legalLinkText":"","deviceType":"","exclusiveLockedFeatureCategory":"notsupported","exclusiveLockedFeatureStatus":"notsupported","exclusiveLockedFeatureDestinationUrl":"","lockedImage":"","pointsPerSearch":0,"pointsPerSearchNewLevels":0,"lastMonthLevel":"","sectionalOrdering":-1,"isAnimatedRewardEnabled":false,"hvaLevelUpActivityDailySetCompletedAmount_V2":"","hvaLevelUpActivityDailySetCompletedMax_V2":"","hvaLevelUpActivityDailySetDays_V2":"","hvaLevelUpActivityDailySetDaysMax_V2":"","hvaLevelUpActivityDailySetProgress_V2":false,"hvaLevelUpActivityDailySetDisplay_V2":false,"hvaLevelUpActivityDailyStreaksBingCompletedAmount_V2":"","hvaLevelUpActivityDailyStreaksBingCompletedMax_V2":"","hvaLevelUpActivityDailyStreaksBingProgress_V2":false,"hvaLevelUpActivityDailyStreaksBingDisplay_V2":false,"hvaLevelUpActivityDailyStreaksMobileCompletedAmount_V2":"","hvaLevelUpActivityDailyStreaksMobileCompletedMax_V2":"","hvaLevelUpActivityDailyStreaksMobileProgress_V2":false,"hvaLevelUpActivityDailyStreaksMobileDisplay_V2":false,"hvaLevelUpDefaultSearchEngineCompletedAmount_V2":"","hvaLevelUpActivityDefaultSearchEngineCompletedMax_V2":"","hvaLevelUpActivityDefaultSearchEngineDays_V2":"","hvaLevelUpActivityDefaultSearchEngineDaysMax_V2":"","hvaLevelUpActivityDefaultSearchEngineProgress_V2":false,"hvaLevelUpActivityDefaultSearchEngineDisplay_V2":false,"hvaLevelUpActivityXboxGamePassCompletedAmount_V2":"","hvaLevelUpActivityXboxGamePassCompletedMax_V2":"","hvaLevelUpActivityXboxGamePassProgress_V2":false,"hvaLevelUpActivityXboxGamePassDisplay_V2":false,"programRestructureWave2HvaFlight":"","programRestructureHvaSevenDayLink":""}], mobileSearch=undefined
+[3/26/2026, 12:48:43 AM] [helmiii] [INFO] MAIN [POINTS] Earnable today | Mobile: 35 | Browser: 0 | App: 35 | helmiii@duck.com | locale: US
+[3/26/2026, 12:48:43 AM] [helmiii] [INFO] MOBILE [QUEST] Starting Quest activity
+[3/26/2026, 12:48:43 AM] [helmiii] [INFO] MOBILE [QUEST] Headless mode detected - using API-based quest processing
+[3/26/2026, 12:48:43 AM] [helmiii] [INFO] MOBILE [QUEST] Found 1 punchcard(s) in API response
+[3/26/2026, 12:48:43 AM] [helmiii] [INFO] MOBILE [QUEST] Processing quest: "ENWW_pcparent_FY26_BingMonthlyPC_Mar_a_punchcard" with 4 task(s)
+[3/26/2026, 12:48:43 AM] [helmiii] [DEBUG] MOBILE [QUEST] Skipping completed task: "Last-minute flight deals: Fast, flexible worldwide savings - Click to complete"
+[3/26/2026, 12:48:43 AM] [helmiii] [DEBUG] MOBILE [QUEST] Skipping completed task: "Top home organization tips to keep every space clean - Click to complete"
+[3/26/2026, 12:48:43 AM] [helmiii] [INFO] MOBILE [QUEST-TASK] Processing: "T20 World Cup 2026 updates - Click to complete"
+[3/26/2026, 12:48:43 AM] [helmiii] [DEBUG] MOBILE [QUEST-TASK] Destination: https://www.bing.com/search?q=T20+World+Cup+2026&form=ML2XLX&OCID=ML2XLX&PUBL=Re
+[3/26/2026, 12:48:50 AM] [helmiii] [INFO] MOBILE [QUEST-TASK] Completed: "T20 World Cup 2026 updates - Click to complete" (Bing search)
+[3/26/2026, 12:48:52 AM] [helmiii] [DEBUG] MOBILE [QUEST-TASK] Cooldown 14471ms
+[3/26/2026, 12:49:06 AM] [helmiii] [INFO] MOBILE [QUEST-TASK] Processing: "Find March comedy events near you - Click to complete"
+[3/26/2026, 12:49:06 AM] [helmiii] [DEBUG] MOBILE [QUEST-TASK] Destination: https://www.bing.com/search?q=Comedy+events+near+me&form=ML2XLY&OCID=ML2XLY&PUBL
+[3/26/2026, 12:49:14 AM] [helmiii] [INFO] MOBILE [QUEST-TASK] Completed: "Find March comedy events near you - Click to complete" (Bing search)
+[3/26/2026, 12:49:16 AM] [helmiii] [DEBUG] MOBILE [QUEST-TASK] Cooldown 13634ms
+[3/26/2026, 12:49:30 AM] [helmiii] [INFO] MOBILE [QUEST] API-based quest processing completed
+[3/26/2026, 12:49:30 AM] [helmiii] [INFO] MAIN [FLOW] Switching to Desktop mode for helmiii@duck.com to solve activities...
+[3/26/2026, 12:49:30 AM] [helmiii] [INFO] MAIN [BROWSER] Emulating Desktop view & User-Agent | helmiii@duck.com

@@ -1,13 +1,7 @@
 import type { Page } from 'patchright'
-import * as fs from 'fs'
-import path from 'path'
 
 import { Workers } from '../../Workers'
 import type { MicrosoftRewardsBot } from '../../../index'
-
-// These imports are used for file saving in debug mode
-void fs
-void path
 
 interface QuestCard {
     href: string
@@ -24,6 +18,11 @@ interface QuestTask {
     isLocked: boolean
 }
 
+/**
+ * Quest activity handler - discovers and completes quest tasks
+ * NOTE: Only supports bing.com/search URLs. MS-search:// URLs are skipped
+ * as their task content cannot be reliably detected via DOM
+ */
 export class Quest extends Workers {
     constructor(bot: MicrosoftRewardsBot) {
         super(bot)
@@ -218,105 +217,13 @@ export class Quest extends Workers {
                 /* ignore */
             }
 
-            // Ensure desktop UA & viewport to maximize chance of rendering ms-search items
-            try {
-                const desktopUA =
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.3856.62'
-                // Set HTTP header (best-effort)
-                await (page.context() as any)._setExtraHTTPHeaders?.({ 'User-Agent': desktopUA })
-                // Inject JS before any script runs to override navigator properties used by client-side detection
-                try {
-                    await page.context().addInitScript(() => {
-                        try {
-                            // @ts-ignore
-                            Object.defineProperty(navigator, 'platform', { get: () => 'Win32' })
-                        } catch {}
-                        try {
-                            // @ts-ignore
-                            Object.defineProperty(navigator, 'userAgent', {
-                                get: () =>
-                                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.3856.62'
-                            })
-                        } catch {}
-                        try {
-                            // Provide a minimal userAgentData fallback
-                            // @ts-ignore
-                            if (navigator.userAgentData) {
-                                // @ts-ignore
-                                navigator.userAgentData.platform = 'Windows'
-                            }
-                        } catch {}
-                    })
-                } catch {}
-
-                await page.setViewportSize({ width: 1920, height: 1080 }).catch(() => {})
-            } catch {}
-
             // Navigate to quest detail page
             await page.goto(quest.href, { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {})
 
-            // Wait for page content to load (initial)
+            // Wait for page content to load
             await this.bot.utils.wait(2000)
 
-            // --- Diagnostic instrumentation: capture page content, console, and network failures ---
-            try {
-                try {
-                    fs.mkdirSync('./logs', { recursive: true })
-                } catch {}
-
-                page.on('console', msg => {
-                    try {
-                        this.bot.logger.debug(this.bot.isMobile, 'QUEST-DIAG', `PAGE_CONSOLE: ${msg.text()}`)
-                    } catch {}
-                })
-
-                page.on('requestfailed', req => {
-                    try {
-                        this.bot.logger.warn(
-                            this.bot.isMobile,
-                            'QUEST-DIAG',
-                            `REQUEST_FAILED: ${req.url()} ${req.failure()?.errorText ?? ''}`
-                        )
-                    } catch {}
-                })
-
-                const snapshot = await page.content().catch(() => '')
-                try {
-                    const fname = `./logs/quest-${questId}-${Date.now()}-headless-${String(this.bot.config.headless)}.html`
-                    fs.writeFileSync(fname, snapshot)
-                    this.bot.logger.info(this.bot.isMobile, 'QUEST-DIAG', `Wrote quest HTML snapshot: ${fname}`)
-                } catch (e) {
-                    this.bot.logger.warn(this.bot.isMobile, 'QUEST-DIAG', `Failed writing snapshot: ${String(e)}`)
-                }
-
-                const msLinksDiag = await page
-                    .evaluate(() =>
-                        Array.from(document.querySelectorAll('a[href^="ms-search://"]')).map(a =>
-                            a.getAttribute('href')
-                        )
-                    )
-                    .catch(() => [])
-                this.bot.logger.info(
-                    this.bot.isMobile,
-                    'QUEST-DIAG',
-                    `Diagnostic ms-search links count: ${msLinksDiag?.length ?? 0}`
-                )
-                if (msLinksDiag && (msLinksDiag as string[]).length > 0) {
-                    this.bot.logger.debug(
-                        this.bot.isMobile,
-                        'QUEST-DIAG',
-                        `ms-search examples: ${(msLinksDiag as string[]).slice(0, 5).join(', ')}`
-                    )
-                }
-            } catch (diagErr) {
-                this.bot.logger.warn(
-                    this.bot.isMobile,
-                    'QUEST-DIAG',
-                    `Diagnostic error: ${diagErr instanceof Error ? diagErr.message : String(diagErr)}`
-                )
-            }
-
-            // Scroll to trigger lazy loading and wait for ms-search links to appear
+            // Scroll to trigger lazy loading
             for (let i = 0; i < 5; i++) {
                 await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {})
                 await this.bot.utils.wait(1000)
@@ -324,44 +231,39 @@ export class Quest extends Workers {
                 await this.bot.utils.wait(1000)
             }
 
-            // Wait explicitly for ms-search or bing search links to appear (robust to hydration timing)
+            // Wait for task links to appear
             try {
-                await page.waitForFunction(
-                    () => !!document.querySelectorAll('a[href^="ms-search://"], a[href*="bing.com/search"]').length,
-                    { timeout: 15000 }
-                )
+                await page.waitForFunction(() => !!document.querySelectorAll('a[href*="bing.com/search"]').length, {
+                    timeout: 15000
+                })
             } catch {
                 this.bot.logger.debug(this.bot.isMobile, 'QUEST', 'Timed out waiting for task links to appear')
             }
 
-            // Additional hydration wait for React/Vue components to fully render
+            // Additional wait for React/Vue components to fully render
             await this.bot.utils.wait(2000)
 
-            // Use JavaScript to find ALL links on the page with robust detection
+            // Use JavaScript to find ALL task links on the page
             let allLinks = await page
                 .evaluate(() => {
                     const results: Array<{ href: string; text: string; ariaLabel: string }> = []
 
-                    // Method 1: Direct attribute search
+                    // Method 1: Direct attribute search for bing.com/search
                     document.querySelectorAll('a[href]').forEach(el => {
                         const href = el.getAttribute('href') ?? ''
                         const text = el.textContent?.trim() ?? ''
                         const ariaLabel = el.getAttribute('aria-label') ?? ''
-                        // Filter for task-like links (bing search or ms-search)
-                        if (href.includes('bing.com/search') || href.includes('ms-search://')) {
+                        if (href.includes('bing.com/search')) {
                             results.push({ href, text, ariaLabel })
                         }
                     })
 
-                    // Method 2: Search in all elements' outer HTML as fallback for headless mode
+                    // Method 2: Search in all elements' outer HTML as fallback
                     if (results.length === 0) {
                         document.querySelectorAll('[class*="button"], [class*="link"], div, span').forEach(el => {
                             const html = el.outerHTML ?? ''
-                            if (
-                                (html.includes('ms-search://') || html.includes('bing.com/search')) &&
-                                html.includes('<a')
-                            ) {
-                                const linkMatch = html.match(/href=["']([^"']*(?:ms-search|bing\.com)[^"']*)["']/g)
+                            if (html.includes('bing.com/search') && html.includes('<a')) {
+                                const linkMatch = html.match(/href=["']([^"']*bing\.com\/search[^"']*)["']/g)
                                 if (linkMatch) {
                                     linkMatch.forEach(match => {
                                         const href = match.replace(/^href=["']|["']$/g, '')
@@ -383,23 +285,14 @@ export class Quest extends Workers {
                 })
                 .catch(() => [])
 
-            // If still no links found, try one more aggressive search
+            // If still no links found, try regex extraction
             if (allLinks.length === 0) {
                 allLinks = await page
                     .evaluate(() => {
                         const results: Array<{ href: string; text: string; ariaLabel: string }> = []
                         const html = document.body.innerHTML
 
-                        // Extract ms-search URLs using regex
-                        const msSearchMatches = html.matchAll(/href=["']([^"']*ms-search:\/\/[^"']*)["']/g)
-                        for (const match of msSearchMatches) {
-                            const href = match[1] ?? ''
-                            if (href && !results.some(r => r.href === href)) {
-                                results.push({ href, text: '', ariaLabel: '' })
-                            }
-                        }
-
-                        // Extract bing search URLs
+                        // Extract bing search URLs using regex
                         const bingMatches = html.matchAll(/href=["']([^"']*bing\.com\/search[^"']*)["']/g)
                         for (const match of bingMatches) {
                             const href = match[1] ?? ''
@@ -485,8 +378,6 @@ export class Quest extends Workers {
                 return
             }
 
-            const isMsSearch = task.destination.startsWith('ms-search://')
-
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUEST-TASK',
@@ -505,21 +396,10 @@ export class Quest extends Workers {
                 }
             } catch {}
 
-            // Strategy 2: If exact match fails, find by partial href
+            // Strategy 2: If exact match fails, find by partial href (bing.com/search)
             if (!linkElement || (await linkElement.count().catch(() => 0)) === 0) {
                 try {
-                    if (isMsSearch) {
-                        // For ms-search, extract the query parameter to match
-                        const queryMatch = task.destination.match(/q=([^&]+)/)
-                        if (queryMatch) {
-                            const query = queryMatch[1] ?? ''
-                            linkElement = page.locator(`a[href*="ms-search://"][href*="${query}"]`).first()
-                        } else {
-                            linkElement = page.locator(`a[href*="ms-search://"]`).first()
-                        }
-                    } else {
-                        linkElement = page.locator(`a[href*="bing.com/search"]`).first()
-                    }
+                    linkElement = page.locator(`a[href*="bing.com/search"]`).first()
                     const count = await linkElement.count().catch(() => 0)
                     if (count > 0) {
                         this.bot.logger.debug(this.bot.isMobile, 'QUEST-TASK', 'Found by partial href match')
@@ -543,14 +423,7 @@ export class Quest extends Workers {
                     }, task.destination)
                     .catch(() => false)
 
-                if (isMsSearch) {
-                    // For ms-search, still need to handle dialog
-                    await this.bot.utils.wait(1000)
-                } else {
-                    // For bing search, just wait
-                    await this.bot.utils.wait(3000)
-                }
-
+                await this.bot.utils.wait(3000)
                 this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Clicked (JS): "${task.title}"`)
                 return
             }
@@ -559,49 +432,27 @@ export class Quest extends Workers {
             await linkElement.scrollIntoViewIfNeeded().catch(() => {})
             await this.bot.utils.wait(500)
 
-            if (isMsSearch) {
-                // Handle ms-search:// URLs - click and dismiss alert dialog
-                const dialogHandler = async (dialog: any) => {
-                    this.bot.logger.debug(this.bot.isMobile, 'QUEST-TASK', `Dialog detected: ${dialog.message()}`)
-                    await dialog.dismiss().catch(() => {})
-                    this.bot.logger.debug(this.bot.isMobile, 'QUEST-TASK', 'Dialog dismissed')
-                }
-                page.on('dialog', dialogHandler)
+            // Handle Bing search URLs - click and open new tab
+            const [newPage] = await Promise.all([
+                page
+                    .context()
+                    .waitForEvent('page', { timeout: 10000 })
+                    .catch(() => null),
+                linkElement.click({ delay: this.bot.utils.randomDelay(200, 500) }).catch(() => {})
+            ])
 
-                try {
-                    await linkElement.click({ delay: this.bot.utils.randomDelay(200, 500) }).catch(() => {})
-                    await this.bot.utils.wait(2000)
-                    this.bot.logger.info(
-                        this.bot.isMobile,
-                        'QUEST-TASK',
-                        `Clicked: "${task.title}" (ms-search, alert dismissed)`
-                    )
-                } finally {
-                    page.off('dialog', dialogHandler)
-                }
+            if (newPage) {
+                await newPage.waitForLoadState('domcontentloaded').catch(() => {})
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'QUEST-TASK',
+                    `Clicked: "${task.title}" → ${newPage.url().substring(0, 60)}...`
+                )
+                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
+                await newPage.close().catch(() => {})
             } else {
-                // Handle Bing search URLs - click and open new tab
-                const [newPage] = await Promise.all([
-                    page
-                        .context()
-                        .waitForEvent('page', { timeout: 10000 })
-                        .catch(() => null),
-                    linkElement.click({ delay: this.bot.utils.randomDelay(200, 500) }).catch(() => {})
-                ])
-
-                if (newPage) {
-                    await newPage.waitForLoadState('domcontentloaded').catch(() => {})
-                    this.bot.logger.info(
-                        this.bot.isMobile,
-                        'QUEST-TASK',
-                        `Clicked: "${task.title}" → ${newPage.url().substring(0, 60)}...`
-                    )
-                    await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 8000))
-                    await newPage.close().catch(() => {})
-                } else {
-                    await this.bot.utils.wait(this.bot.utils.randomDelay(3000, 5000))
-                    this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Clicked: "${task.title}" (same tab)`)
-                }
+                await this.bot.utils.wait(this.bot.utils.randomDelay(3000, 5000))
+                this.bot.logger.info(this.bot.isMobile, 'QUEST-TASK', `Clicked: "${task.title}" (same tab)`)
             }
 
             // Navigate back to earn page if needed
