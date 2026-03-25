@@ -1,0 +1,46 @@
+[
+  {
+    "title": "Put on your dancing shoes",
+    "offerId": "WW_Rewards_locked_level2_Mar26w3_offer1",
+    "hash": "b956e05c26b6dd3bc6b29dfaf96f2c269c4dcb816da4ced5fa3d28c57a1662a3",
+    "destination": "https://rewards.bing.com/levelbenefitexclusive",
+    "description": "Discover Buenos Aires' tango dance and local cuisine",
+    "isCompleted": false,
+    "isLocked": true,
+    "unlockCriteria": "newLevel2",
+    "points": 5
+  },
+  {
+    "title": "Ancient architecture",
+    "offerId": "WW_Rewards_locked_level2_Mar26w3_offer2",
+    "hash": "b5a34d50690317e30c8ee825f5394e10dc25c9da16023a0518e87dd335dc131a",
+    "destination": "https://rewards.bing.com/levelbenefitexclusive",
+    "description": "Explore key elements of ancient Egyptian architecture",
+    "isCompleted": false,
+    "isLocked": true,
+    "unlockCriteria": "newLevel2",
+    "points": 5
+  },
+  {
+    "title": "Complete this puzzle",
+    "offerId": "ENstar_Rewards_DailyGlobalOffer_Evergreen_Monday",
+    "hash": "24151edb5865abd46363e46ea212b13fbbfc46fd24d93ce085b073c6be2ea1ae",
+    "destination": "https://www.bing.com/spotlight/imagepuzzle?form=ML2BF0&OCID=ML2BF0&PUBL=RewardsDO&PROGRAMNAME=BingDailyOfferIN&CREA=ML2BF0",
+    "description": "Arrange the tiles to reveal the image",
+    "isCompleted": true,
+    "isLocked": false,
+    "unlockCriteria": "$undefined",
+    "points": 5
+  },
+  {
+    "title": "Do you know the answer?",
+    "offerId": "ENstar_Rewards_DailyGlobalOffer_Evergreen_Sunday",
+    "hash": "d32762e039b18030a50530b9256cf70ab34bffc37618d5ec5dade869ee4bc7e9",
+    "destination": "https://www.bing.com/search?q=Bing%20Homepage%20quiz&form=ML2BF1&OCID=ML2BF1&PUBL=RewardsDO&PROGRAMNAME=BingDailyOfferIN&CREA=ML2BF1",
+    "description": "Challenge yourself with these trivia questions",
+    "isCompleted": true,
+    "isLocked": false,
+    "unlockCriteria": "$undefined",
+    "points": 5
+  }
+]
