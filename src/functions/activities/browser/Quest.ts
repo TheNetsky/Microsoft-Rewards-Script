@@ -33,6 +33,17 @@ export class Quest extends Workers {
         this.bot.logger.info(this.bot.isMobile, 'QUEST', 'Starting Quest activity')
 
         try {
+            // IMPORTANT: Quest task links (ms-search:// and bing.com/search URLs) do not render in headless mode
+            // even with proper viewport/user agent settings. This is a Microsoft-side rendering limitation.
+            if (this.bot.config.headless) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'QUEST',
+                    'Quest task detection disabled in headless mode - Microsoft does not render task links in headless browsers. Set headless: false in config.json to enable quest support.'
+                )
+                return
+            }
+
             // Switch to desktop viewport and user agent BEFORE processing quests
             // This ensures Microsoft renders task links properly
             try {
