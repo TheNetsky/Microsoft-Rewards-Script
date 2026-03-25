@@ -15,6 +15,7 @@ import { DoubleSearchPoints } from './activities/api/DoubleSearchPoints'
 // Browser
 import { SearchOnBing } from './activities/browser/SearchOnBing'
 import { Search } from './activities/browser/Search'
+import { Quest } from './activities/browser/Quest'
 
 import type {
     BasePromotion,
@@ -98,5 +99,11 @@ export default class Activities {
     doDailyCheckIn = async (): Promise<void> => {
         const dailyCheckIn = new DailyCheckIn(this.bot)
         await dailyCheckIn.doDailyCheckIn()
+    }
+
+    // Quest Activities
+    doQuests = async (page: Page): Promise<void> => {
+        const quest = new Quest(this.bot)
+        await quest.doQuests(page)
     }
 }

@@ -13,7 +13,8 @@
         "doDesktopSearch": true,
         "doMobileSearch": true,
         "doDailyCheckIn": true,
-        "doReadToEarn": true
+        "doReadToEarn": true,
+        "doQuests": true
     },
     "searchOnBingLocalQueries": false,
     "globalTimeout": "30sec",
