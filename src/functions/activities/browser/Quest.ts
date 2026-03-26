@@ -20,8 +20,23 @@ interface QuestTask {
 
 /**
  * Quest activity handler - discovers and completes quest tasks
- * NOTE: Only supports bing.com/search URLs. MS-search:// URLs are skipped
- * as their task content cannot be reliably detected via DOM
+ *
+ * LIMITATION: Only supports bing.com/search URLs
+ * ============================================
+ * ms-search:// protocol URLs are NOT supported for the following reasons:
+ * 1. ms-search:// is a custom protocol that doesn't load in standard browsers
+ * 2. Task content (title, description, completion status) is NOT visible in the DOM
+ * 3. Task metadata is embedded in Next.js JSON data, not accessible via DOM queries
+ * 4. No way to reliably determine if a task is completed without API calls
+ * 5. Click handlers are obfuscated and don't follow standard HTML link patterns
+ *
+ * WORKAROUND: Only bing.com/search tasks are processed because:
+ * - They render as standard <a> tags with href attributes
+ * - Click opens new tab/window, allowing standard navigation detection
+ * - Task completion can be inferred from page state changes
+ * - No API calls required for task discovery
+ *
+ * CONSEQUENCE: quests with exclusively ms-search:// tasks will be skipped
  */
 export class Quest extends Workers {
     constructor(bot: MicrosoftRewardsBot) {
@@ -385,9 +400,11 @@ export class Quest extends Workers {
             )
 
             // Find the link - try multiple strategies
+            // NOTE: Only works for bing.com/search URLs (ms-search:// tasks never reach here)
             let linkElement: any = null
 
             // Strategy 1: Find by exact href match
+            // Most reliable - exact URL from DOM
             try {
                 linkElement = await page.locator(`a[href="${task.destination}"]`).first()
                 const count = await linkElement.count().catch(() => 0)
