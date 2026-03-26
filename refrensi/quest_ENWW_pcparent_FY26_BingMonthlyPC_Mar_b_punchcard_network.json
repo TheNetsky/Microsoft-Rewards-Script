@@ -1,7 +1,0 @@
-[
-  {
-    "url": "https://browser.events.data.microsoft.com/OneCollector/1.0/?cors=true&content-type=application/x-json-stream&ext.intweb.msfpc=GUID%3D8ef64d2d4dcf48eca1db6831bd1133b6%26HASH%3D8ef6%26LV%3D202603%26V%3D4%26LU%3D1774240467959&w=0",
-    "body": "{\"acc\":10,\"webResult\":{}}",
-    "status": 200
-  }
-]
