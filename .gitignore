@@ -15,4 +15,3 @@ bun.lock
 logs/
 .stfolder/
 .env
-tsconfig.tsbuildinfo
