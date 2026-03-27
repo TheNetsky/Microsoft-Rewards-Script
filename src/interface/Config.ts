@@ -7,11 +7,17 @@ export interface Config {
     workers: ConfigWorkers
     searchOnBingLocalQueries: boolean
     globalTimeout: number | string
+    loginRateLimit?: ConfigLoginRateLimit
     searchSettings: ConfigSearchSettings
     debugLogs: boolean
     proxy: ConfigProxy
     consoleLogFilter: LogFilter
     webhook: ConfigWebhook
+}
+
+export interface ConfigLoginRateLimit {
+    delay: number | string
+    maxAttempts: number
 }
 
 export type QueryEngine = 'google' | 'wikipedia' | 'reddit' | 'local'

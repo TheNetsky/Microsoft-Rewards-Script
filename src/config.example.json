@@ -17,6 +17,10 @@
     },
     "searchOnBingLocalQueries": false,
     "globalTimeout": "30sec",
+    "loginRateLimit": {
+        "delay": "5min",
+        "maxAttempts": 3
+    },
     "searchSettings": {
         "scrollRandomResults": false,
         "clickRandomResults": false,
