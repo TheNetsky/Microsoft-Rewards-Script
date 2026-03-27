@@ -1,6 +1,6 @@
 import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../../index'
-import { saveSessionData } from '../../util/Load'
+import { saveSessionData, setRateLimitCooldown, getRateLimitCooldown } from '../../util/Load'
 
 import { MobileAccessLogin } from './methods/MobileAccessLogin'
 import { EmailLogin } from './methods/EmailLogin'
@@ -30,6 +30,7 @@ type LoginState =
     | 'OTP_CODE_ENTRY'
     | 'UNKNOWN'
     | 'CHROMEWEBDATA_ERROR'
+    | 'TOO_MANY_REQUESTS'
 
 export class Login {
     emailLogin: EmailLogin
@@ -37,6 +38,7 @@ export class Login {
     totp2FALogin: TotpLogin
     codeLogin: CodeLogin
     recoveryLogin: RecoveryLogin
+    private loginRetryCount = 0
 
     private readonly selectors = {
         primaryButton: 'button[data-testid="primaryButton"]',
@@ -76,7 +78,25 @@ export class Login {
 
     async login(page: Page, account: Account) {
         try {
+            this.loginRetryCount = 0
             this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Starting login process')
+
+            // Check global IP-based rate limit cooldown
+            const remainingCooldown = getRateLimitCooldown(this.bot.config.sessionPath)
+            if (remainingCooldown > 0) {
+                const { maxAttempts } = this.bot.config.loginRateLimit!
+                if (this.loginRetryCount >= maxAttempts) {
+                    const msg = 'IP is rate limited and max retries exhausted, skipping account'
+                    this.bot.logger.error(this.bot.isMobile, 'LOGIN', msg)
+                    throw new Error(msg)
+                }
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'LOGIN',
+                    `IP rate limit active, waiting remaining ${Math.ceil(remainingCooldown / 1000)}s`
+                )
+                await this.bot.utils.wait(remainingCooldown)
+            }
 
             await page
                 .goto('https://rewards.bing.com/createuser?idru=%2F&userScenarioId=anonsignin', {
@@ -166,6 +186,15 @@ export class Login {
         if (url.hostname === 'chromewebdata') {
             this.bot.logger.warn(this.bot.isMobile, 'DETECT-STATE', 'Detected chromewebdata error page')
             return 'CHROMEWEBDATA_ERROR'
+        }
+
+        // Check for "too many requests" rate limiting on post-srf page
+        if (url.hostname === 'login.live.com' && url.pathname === '/ppsecure/post.srf') {
+            const pageContent = await page.content().catch(() => '')
+            if (pageContent.toLowerCase().includes('too many requests')) {
+                this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'Detected "too many requests" rate limit page')
+                return 'TOO_MANY_REQUESTS'
+            }
         }
 
         const isLocked = await this.checkSelector(page, this.selectors.accountLocked)
@@ -455,6 +484,36 @@ export class Login {
                     this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Fallback navigation successful')
                     return true
                 }
+            }
+
+            case 'TOO_MANY_REQUESTS': {
+                const { delay, maxAttempts } = this.bot.config.loginRateLimit!
+                this.loginRetryCount++
+
+                if (this.loginRetryCount > maxAttempts) {
+                    const msg = `Rate limit retry exhausted after ${maxAttempts} attempts, skipping account`
+                    this.bot.logger.error(this.bot.isMobile, 'LOGIN', msg)
+                    throw new Error(msg)
+                }
+
+                const delayMs = this.bot.utils.stringToNumber(delay)
+
+                // Set global cooldown so other accounts/workers are aware
+                setRateLimitCooldown(this.bot.config.sessionPath, delayMs)
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'LOGIN',
+                    `Too many requests detected, retrying in ${delay} (${this.loginRetryCount}/${maxAttempts})`
+                )
+                await this.bot.utils.wait(delayMs)
+                await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
+                await this.bot.utils.wait(2000)
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'LOGIN',
+                    `Retry ${this.loginRetryCount}/${maxAttempts} after rate limit`
+                )
+                return true
             }
 
             case '2FA_TOTP': {

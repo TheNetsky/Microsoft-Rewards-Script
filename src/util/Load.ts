@@ -127,3 +127,44 @@ export async function saveFingerprintData(
         throw new Error(error as string)
     }
 }
+
+const RATE_LIMIT_FILE = '.rate-limit-cooldown'
+
+function getRateLimitFilePath(sessionPath: string): string {
+    return path.join(__dirname, '../browser/', sessionPath, RATE_LIMIT_FILE)
+}
+
+export function setRateLimitCooldown(sessionPath: string, delayMs: number): void {
+    const filePath = getRateLimitFilePath(sessionPath)
+    const dir = path.dirname(filePath)
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+    }
+    const expiry = Date.now() + delayMs
+    fs.writeFileSync(filePath, String(expiry))
+}
+
+export function getRateLimitCooldown(sessionPath: string): number {
+    const filePath = getRateLimitFilePath(sessionPath)
+    if (!fs.existsSync(filePath)) {
+        return 0
+    }
+    const expiry = parseInt(fs.readFileSync(filePath, 'utf-8').trim(), 10)
+    if (isNaN(expiry)) {
+        fs.unlinkSync(filePath)
+        return 0
+    }
+    const remaining = expiry - Date.now()
+    if (remaining <= 0) {
+        fs.unlinkSync(filePath)
+        return 0
+    }
+    return remaining
+}
+
+export function clearRateLimitCooldown(sessionPath: string): void {
+    const filePath = getRateLimitFilePath(sessionPath)
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+    }
+}

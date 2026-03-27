@@ -64,6 +64,13 @@ export const ConfigSchema = z.object({
     }),
     searchOnBingLocalQueries: z.boolean(),
     globalTimeout: NumberOrString,
+    loginRateLimit: z
+        .object({
+            delay: NumberOrString,
+            maxAttempts: z.number().int().positive().max(100)
+        })
+        .optional()
+        .default({ delay: '5min', maxAttempts: 3 }),
     searchSettings: z.object({
         scrollRandomResults: z.boolean(),
         clickRandomResults: z.boolean(),
