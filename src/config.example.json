@@ -63,7 +63,7 @@
             "enabled": false,
             "mode": "whitelist",
             "levels": ["error"],
-            "keywords": ["starting account", "select number", "collected"],
+            "keywords": ["starting account", "select number", "collected", "earnable"],
             "regexPatterns": []
         }
     }

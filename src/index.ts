@@ -132,6 +132,124 @@ export class MicrosoftRewardsBot {
         this.accounts = loadAccounts()
     }
 
+    private async getModernEarnablePoints(page: Page): Promise<{
+        dailySet: number
+        exploreOnBing: number
+        quests: number
+        keepEarning: number
+        total: number
+    }> {
+        try {
+            // Check Dashboard for Daily Set
+            await page.goto(`${this.config.baseURL}/dashboard`, {
+                waitUntil: 'domcontentloaded',
+                timeout: 15000
+            }).catch(() => {})
+            await this.utils.wait(2000)
+            await this.browser.utils.tryDismissAllMessages(page)
+
+            // Expand Daily Set
+            await page.evaluate(() => {
+                const buttons = document.querySelectorAll('button')
+                for (const btn of buttons) {
+                    if (btn.textContent?.trim() === 'Daily set' && btn.getAttribute('aria-expanded') !== 'true') {
+                        btn.click()
+                    }
+                }
+            })
+            await this.utils.wait(1000)
+
+            const dailySet = await page.evaluate(() => {
+                const groups = document.querySelectorAll('[role="group"]')
+                for (const g of groups) {
+                    if (g.previousElementSibling?.textContent?.includes('Daily set')) {
+                        const links = g.querySelectorAll('a')
+                        let count = 0
+                        for (const link of links) {
+                            if (/\+\d+/.test(link.textContent || '')) count++
+                        }
+                        return count
+                    }
+                }
+                return 0
+            })
+
+            // Check Earn page for Explore on Bing, Quests, Keep Earning
+            await page.goto(`${this.config.baseURL}/earn`, {
+                waitUntil: 'domcontentloaded',
+                timeout: 15000
+            }).catch(() => {})
+            await this.utils.wait(2000)
+            await this.browser.utils.tryDismissAllMessages(page)
+
+            const earnPageCounts = await page.evaluate(() => {
+                const counts = { exploreOnBing: 0, quests: 0, keepEarning: 0 }
+                const groups = document.querySelectorAll('[role="group"]')
+
+                for (const g of groups) {
+                    const prevText = g.previousElementSibling?.textContent || ''
+
+                    if (prevText.includes('Explore on Bing')) {
+                        const links = g.querySelectorAll('a:not([aria-disabled="true"])')
+                        for (const link of links) {
+                            if (/\+\d+/.test(link.textContent || '')) counts.exploreOnBing++
+                        }
+                    }
+
+                    if (prevText.includes('Keep earning')) {
+                        const links = g.querySelectorAll('a')
+                        for (const link of links) {
+                            const href = link.getAttribute('href') || ''
+                            const text = link.textContent || ''
+                            if (/\+\d+/.test(text) && href.includes('bing.com') && !text.includes('Completed')) {
+                                counts.keepEarning++
+                            }
+                        }
+                    }
+                }
+
+                // Count quests with incomplete tasks
+                const questLinks = document.querySelectorAll('a[href*="/earn/quest/"]')
+                for (const link of questLinks) {
+                    const allElements = link.querySelectorAll('p, span, div')
+                    for (const el of allElements) {
+                        const t = el.textContent?.trim() || ''
+                        const taskMatch = t.match(/^(\d{1,2})\/(\d{1,2}) tasks$/)
+                        if (taskMatch) {
+                            const done = parseInt(taskMatch[1] || '0')
+                            const total = parseInt(taskMatch[2] || '0')
+                            if (done < total) counts.quests++
+                            break
+                        }
+                    }
+                }
+
+                return counts
+            })
+
+            // Deduplicate explore on bing count (items appear twice on page)
+            const exploreOnBing = Math.ceil(earnPageCounts.exploreOnBing / 2)
+
+            const total = dailySet + exploreOnBing + earnPageCounts.quests + earnPageCounts.keepEarning
+
+            return {
+                dailySet,
+                exploreOnBing,
+                quests: earnPageCounts.quests,
+                keepEarning: earnPageCounts.keepEarning,
+                total
+            }
+        } catch (error) {
+            this.logger.warn(
+                this.isMobile,
+                'MODERN-EARNABLE',
+                `Failed to check modern earnable points: ${error instanceof Error ? error.message : String(error)}`
+            )
+            // Return non-zero so activities still run on error
+            return { dailySet: 1, exploreOnBing: 1, quests: 1, keepEarning: 1, total: 4 }
+        }
+    }
+
     async run(): Promise<void> {
         const totalAccounts = this.accounts.length
         const runStartTime = Date.now()
@@ -446,16 +564,33 @@ export class MicrosoftRewardsBot {
                         'Modern Rewards dashboard detected, using browser-based activities'
                     )
 
-                    // App activities still work on modern dashboard
-                    if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
-                    if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
-                    if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
+                    // Check for available activities on the modern UI
+                    const modernEarnable = await this.getModernEarnablePoints(this.mainMobilePage)
 
-                    // New browser-based activities for the modern UI
-                    if (this.config.workers.doDailySet) await this.activities.doDailySetModern(this.mainMobilePage)
-                    if (this.config.workers.doExploreOnBing) await this.activities.doExploreOnBing(this.mainMobilePage)
-                    if (this.config.workers.doQuests) await this.activities.doQuests(this.mainMobilePage)
-                    if (this.config.workers.doMorePromotions) await this.activities.doKeepEarning(this.mainMobilePage)
+                    this.logger.info(
+                        this.isMobile,
+                        'POINTS',
+                        `Modern UI earnable | DailySet: ${modernEarnable.dailySet} | ExploreOnBing: ${modernEarnable.exploreOnBing} | Quests: ${modernEarnable.quests} | KeepEarning: ${modernEarnable.keepEarning} | Total: ${modernEarnable.total}`
+                    )
+
+                    if (modernEarnable.total === 0 && !(this.config as any).runOnZeroPoints) {
+                        this.logger.info(
+                            this.isMobile,
+                            'FLOW',
+                            'No modern UI activities available to complete, skipping browser activities'
+                        )
+                    } else {
+                        // App activities still work on modern dashboard
+                        if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
+                        if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
+                        if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
+
+                        // New browser-based activities for the modern UI
+                        if (this.config.workers.doDailySet) await this.activities.doDailySetModern(this.mainMobilePage)
+                        if (this.config.workers.doExploreOnBing) await this.activities.doExploreOnBing(this.mainMobilePage)
+                        if (this.config.workers.doQuests) await this.activities.doQuests(this.mainMobilePage)
+                        if (this.config.workers.doMorePromotions) await this.activities.doKeepEarning(this.mainMobilePage)
+                    }
                 } else {
                     // Legacy API-based activities
                     if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
