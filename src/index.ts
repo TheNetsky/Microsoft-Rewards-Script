@@ -452,8 +452,10 @@ export class MicrosoftRewardsBot {
                     if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
 
                     // New browser-based activities for the modern UI
+                    if (this.config.workers.doDailySet) await this.activities.doDailySetModern(this.mainMobilePage)
                     if (this.config.workers.doExploreOnBing) await this.activities.doExploreOnBing(this.mainMobilePage)
                     if (this.config.workers.doQuests) await this.activities.doQuests(this.mainMobilePage)
+                    if (this.config.workers.doMorePromotions) await this.activities.doKeepEarning(this.mainMobilePage)
                 } else {
                     // Legacy API-based activities
                     if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)

@@ -721,5 +721,38 @@
             "GBP to USD",
             "crypto exchange rates"
         ]
+    },
+    {
+        "title": "Learn a new recipe",
+        "queries": [
+            "easy pasta recipe",
+            "how to make fried rice",
+            "simple chicken dinner recipe",
+            "best homemade pizza recipe",
+            "quick soup recipe",
+            "healthy meal prep ideas"
+        ]
+    },
+    {
+        "title": "Find places to stay",
+        "queries": [
+            "hotels near me",
+            "best hotels in new york",
+            "cheap hotels london",
+            "airbnb deals near me",
+            "places to stay in barcelona",
+            "hotel deals this weekend"
+        ]
+    },
+    {
+        "title": "Talk, text, save",
+        "queries": [
+            "best cell phone plans 2026",
+            "cheap phone plans unlimited data",
+            "compare mobile phone plans",
+            "best family phone plans",
+            "prepaid phone plans near me",
+            "5G phone plans comparison"
+        ]
     }
 ]

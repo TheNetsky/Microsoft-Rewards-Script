@@ -17,6 +17,8 @@ import { SearchOnBing } from './activities/browser/SearchOnBing'
 import { Search } from './activities/browser/Search'
 import { ExploreOnBing } from './activities/browser/ExploreOnBing'
 import { Quests } from './activities/browser/Quests'
+import { DailySetModern } from './activities/browser/DailySet'
+import { KeepEarning } from './activities/browser/KeepEarning'
 
 import type {
     BasePromotion,
@@ -111,5 +113,15 @@ export default class Activities {
     doQuests = async (page: Page): Promise<void> => {
         const quests = new Quests(this.bot)
         await quests.doQuests(page)
+    }
+
+    doDailySetModern = async (page: Page): Promise<void> => {
+        const dailySet = new DailySetModern(this.bot)
+        await dailySet.doDailySetModern(page)
+    }
+
+    doKeepEarning = async (page: Page): Promise<void> => {
+        const keepEarning = new KeepEarning(this.bot)
+        await keepEarning.doKeepEarning(page)
     }
 }
