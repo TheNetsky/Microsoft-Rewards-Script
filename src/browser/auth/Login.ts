@@ -168,6 +168,12 @@ export class Login {
             return 'CHROMEWEBDATA_ERROR'
         }
 
+        // New UI: Passkey FIDO redirect page at login.microsoft.com/consumers/fido/get
+        if (url.hostname === 'login.microsoft.com' && url.pathname.includes('/fido/')) {
+            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'Detected FIDO passkey redirect page')
+            return 'PASSKEY_ERROR'
+        }
+
         const isLocked = await this.checkSelector(page, this.selectors.accountLocked)
         if (isLocked) {
             this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'Account locked selector found')
@@ -487,7 +493,23 @@ export class Login {
             case 'PASSKEY_VIDEO':
             case 'PASSKEY_ERROR': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Skipping Passkey prompt')
-                await this.bot.browser.utils.ghostClick(page, this.selectors.secondaryButton)
+
+                // New UI: FIDO redirect page has a "Sign in another way" link
+                const signInAnotherWay = await page
+                    .waitForSelector('a:has-text("Sign in another way"), a:has-text("sign in another way")', {
+                        state: 'visible',
+                        timeout: 2000
+                    })
+                    .catch(() => null)
+
+                if (signInAnotherWay) {
+                    await signInAnotherWay.click()
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Clicked "Sign in another way" on FIDO page')
+                } else {
+                    await this.bot.browser.utils.ghostClick(page, this.selectors.secondaryButton)
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Clicked secondary button to skip passkey')
+                }
+
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
                     this.bot.logger.debug(this.bot.isMobile, 'LOGIN', 'Network idle timeout after Passkey skip')
                 })
@@ -657,7 +679,7 @@ export class Login {
                 this.bot.logger.debug(this.bot.isMobile, 'GET-REWARD-SESSION', `Token fetch loop ${i + 1}/${loopMax}`)
 
                 const u = new URL(page.url())
-                const atRewardHome = u.hostname === 'rewards.bing.com' && u.pathname === '/'
+                const atRewardHome = u.hostname === 'rewards.bing.com' && (u.pathname === '/' || u.pathname === '/dashboard')
 
                 if (atRewardHome) {
                     await this.bot.browser.utils.tryDismissAllMessages(page)
@@ -666,7 +688,11 @@ export class Login {
                     const $ = await this.bot.browser.utils.loadInCheerio(html)
 
                     // Check which version of the dashboard is being used, disable requestToken req on new dash
-                    const isModernDashboard = $('section#dailyset').length > 0 // Only on new UI and on dashboard/overview page
+                    const isModernDashboard = $('section#dailyset').length > 0
+                        || $('h2:contains("Daily set")').length > 0
+                        || $('[data-testid]').length > 0
+                        || html.includes('"Daily set"')
+                        || html.includes('/earn') // New UI has /earn tab links
 
                     if (isModernDashboard) {
                         this.bot.rewardsVersion = 'modern'

@@ -26,7 +26,10 @@ export default class BrowserUtils {
                 { selector: '.c-glyph.glyph-cancel', label: 'Mobile Welcome Button' },
                 { selector: '.maybe-later', label: 'Mobile Rewards App Banner' },
                 { selector: '#bnp_btn_accept', label: 'Bing Cookie Banner' },
-                { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
+                { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' },
+                { selector: 'button:has-text("Accept")', label: 'Rewards Cookie Accept' },
+                { selector: 'dialog:has-text("Nice work") button:has-text("Close")', label: 'Nice Work Dialog' },
+                { selector: 'dialog:has-text("Welcome back") button:has-text("Get Rewards now")', label: 'Welcome Back Dialog' }
             ]
 
             const checkVisible = await Promise.allSettled(

@@ -439,13 +439,31 @@ export class MicrosoftRewardsBot {
                     } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.userData.geoLocale}`
                 )
 
-                if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
-                if (this.config.workers.doDailySet) await this.workers.doDailySet(data, this.mainMobilePage)
-                if (this.config.workers.doSpecialPromotions) await this.workers.doSpecialPromotions(data)
-                if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(data, this.mainMobilePage)
-                if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
-                if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
-                if (this.config.workers.doPunchCards) await this.workers.doPunchCards(data, this.mainMobilePage)
+                if (this.rewardsVersion === 'modern') {
+                    this.logger.info(
+                        this.isMobile,
+                        'FLOW',
+                        'Modern Rewards dashboard detected, using browser-based activities'
+                    )
+
+                    // App activities still work on modern dashboard
+                    if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
+                    if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
+                    if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
+
+                    // New browser-based activities for the modern UI
+                    if (this.config.workers.doExploreOnBing) await this.activities.doExploreOnBing(this.mainMobilePage)
+                    if (this.config.workers.doQuests) await this.activities.doQuests(this.mainMobilePage)
+                } else {
+                    // Legacy API-based activities
+                    if (this.config.workers.doAppPromotions) await this.workers.doAppPromotions(appData)
+                    if (this.config.workers.doDailySet) await this.workers.doDailySet(data, this.mainMobilePage)
+                    if (this.config.workers.doSpecialPromotions) await this.workers.doSpecialPromotions(data)
+                    if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(data, this.mainMobilePage)
+                    if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn()
+                    if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn()
+                    if (this.config.workers.doPunchCards) await this.workers.doPunchCards(data, this.mainMobilePage)
+                }
 
                 const searchPoints = await this.browser.func.getSearchPoints()
                 const missingSearchPoints = this.browser.func.missingSearchPoints(searchPoints, true)

@@ -578,5 +578,148 @@
             "attractions touristiques à proximité",
             "meilleurs cafés près de chez moi"
         ]
+    },
+    {
+        "title": "Find your next read",
+        "queries": [
+            "best books to read 2026",
+            "new book releases this week",
+            "best sellers fiction",
+            "book recommendations thriller",
+            "top rated books this month",
+            "best fantasy books"
+        ]
+    },
+    {
+        "title": "Get creative",
+        "queries": [
+            "DIY craft kits for adults",
+            "best art supplies online",
+            "creative hobby ideas",
+            "painting supplies deals",
+            "craft ideas for beginners",
+            "DIY home decor projects"
+        ]
+    },
+    {
+        "title": "Protect what matters",
+        "queries": [
+            "best home insurance plans",
+            "compare car insurance rates",
+            "life insurance quotes online",
+            "affordable health insurance",
+            "renters insurance comparison",
+            "pet insurance best plans"
+        ]
+    },
+    {
+        "title": "Hit the road",
+        "queries": [
+            "new cars for sale near me",
+            "best used cars 2026",
+            "car deals this month",
+            "compare SUV prices",
+            "electric car deals",
+            "best family cars"
+        ]
+    },
+    {
+        "title": "Swipe smart",
+        "queries": [
+            "best credit cards 2026",
+            "credit cards with best rewards",
+            "no annual fee credit cards",
+            "best cashback credit cards",
+            "travel credit card comparison",
+            "low interest credit cards"
+        ]
+    },
+    {
+        "title": "Check options",
+        "queries": [
+            "best internet providers near me",
+            "compare internet plans",
+            "fastest internet service",
+            "cheap internet plans",
+            "fiber internet availability",
+            "5G home internet plans"
+        ]
+    },
+    {
+        "title": "Upgrade your space",
+        "queries": [
+            "home improvement ideas",
+            "best power tools deals",
+            "kitchen renovation ideas",
+            "bathroom remodel cost",
+            "DIY home upgrades",
+            "home depot deals today"
+        ]
+    },
+    {
+        "title": "Send a smile",
+        "queries": [
+            "flower delivery near me",
+            "best online flower delivery",
+            "same day flower delivery",
+            "birthday flowers bouquet",
+            "roses delivery online",
+            "cheap flower delivery"
+        ]
+    },
+    {
+        "title": "Catch the show",
+        "queries": [
+            "concert tickets near me",
+            "live music events tonight",
+            "upcoming concerts 2026",
+            "buy concert tickets online",
+            "music festivals this summer",
+            "cheap concert tickets"
+        ]
+    },
+    {
+        "title": "Set sail",
+        "queries": [
+            "cruise deals 2026",
+            "best cruise lines",
+            "Caribbean cruise packages",
+            "cheap cruises from Miami",
+            "Mediterranean cruise deals",
+            "Alaska cruise packages"
+        ]
+    },
+    {
+        "title": "Plan your future",
+        "queries": [
+            "personal loan rates today",
+            "best personal loans 2026",
+            "low interest personal loans",
+            "debt consolidation loans",
+            "home equity loan rates",
+            "student loan refinancing"
+        ]
+    },
+    {
+        "title": "Too tired to cook?",
+        "queries": [
+            "restaurants near me",
+            "food delivery near me",
+            "best takeout near me",
+            "pizza delivery near me",
+            "fast food open now",
+            "best dinner spots nearby"
+        ]
+    },
+    {
+        "title": "Quickly convert money",
+        "queries": [
+            "currency converter",
+            "USD to EUR exchange rate",
+            "convert 100 dollars to euros",
+            "exchange rate today",
+            "GBP to USD",
+            "crypto exchange rates"
+        ]
     }
 ]
