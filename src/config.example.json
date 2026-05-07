@@ -1,0 +1,91 @@
+{
+    "baseURL": "https://rewards.bing.com",
+    "sessionPath": "sessions",
+    "headless": true,
+    "runOnZeroPoints": false,
+    "clusters": 1,
+    "errorDiagnostics": false,
+    "workers": {
+        "doDailySet": true,
+        "doSpecialPromotions": true,
+        "doExploreOnBingActivation": false,
+        "doMorePromotions": true,
+        "doPunchCards": false,
+        "doAppPromotions": true,
+        "doDesktopSearch": true,
+        "doMobileSearch": false,
+        "doDailyCheckIn": true,
+        "doReadToEarn": true,
+        "doClaimAllPoints": false
+    },
+    "searchOnBingLocalQueries": false,
+    "geminiApiKey": "changeme,changeme2",
+    "globalTimeout": "20sec",
+    "searchSettings": {
+        "scrollRandomResults": false,
+        "clickRandomResults": false,
+        "parallelSearching": true,
+        "queryEngines": [
+            "google",
+            "wikipedia",
+            "reddit",
+            "local"
+        ],
+        "searchResultVisitTime": "5sec",
+        "searchDelay": {
+            "min": "10sec",
+            "max": "17sec"
+        },
+        "readDelay": {
+            "min": "10sec",
+            "max": "17sec"
+        }
+    },
+    "debugLogs": false,
+    "consoleLogFilter": {
+        "enabled": false,
+        "mode": "whitelist",
+        "levels": [
+            "error",
+            "warn"
+        ],
+        "keywords": [
+            "starting account"
+        ],
+        "regexPatterns": []
+    },
+    "proxy": {
+        "queryEngine": true
+    },
+    "webhook": {
+        "discord": {
+            "enabled": false,
+            "url": ""
+        },
+        "ntfy": {
+            "enabled": false,
+            "url": "",
+            "topic": "",
+            "token": "",
+            "title": "Microsoft-Rewards-Script",
+            "tags": [
+                "bot",
+                "notify"
+            ],
+            "priority": 3
+        },
+        "webhookLogFilter": {
+            "enabled": false,
+            "mode": "whitelist",
+            "levels": [
+                "error"
+            ],
+            "keywords": [
+                "starting account",
+                "select number",
+                "collected"
+            ],
+            "regexPatterns": []
+        }
+    }
+}

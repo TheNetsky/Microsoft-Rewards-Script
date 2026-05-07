@@ -1,0 +1,21 @@
+[
+    {
+        "email": "you@example.com",
+        "password": "your-password-here",
+        "totpSecret": "",
+        "recoveryEmail": "",
+        "geoLocale": "auto",
+        "langCode": "en",
+        "proxy": {
+            "proxyAxios": false,
+            "url": "",
+            "port": 0,
+            "username": "",
+            "password": ""
+        },
+        "saveFingerprint": {
+            "mobile": false,
+            "desktop": false
+        }
+    }
+]
