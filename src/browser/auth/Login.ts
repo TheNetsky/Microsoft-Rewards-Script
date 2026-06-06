@@ -496,6 +496,38 @@ export class Login {
             }
 
             case 'LOGIN_PASSWORDLESS': {
+                // If totpSecret is configured, bypass passwordless to reach the TOTP code entry page
+                if (account.totpSecret) {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'TOTP secret configured, attempting to bypass passwordless flow'
+                    )
+
+                    const otherWaysLink = await page
+                        .waitForSelector(this.selectors.otherWaysToSignIn, { state: 'visible', timeout: 3000 })
+                        .catch(() => null)
+
+                    if (otherWaysLink) {
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Found "Other ways to sign in" link')
+                        await this.bot.browser.utils.ghostClick(page, this.selectors.otherWaysToSignIn)
+                        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
+                            this.bot.logger.debug(
+                                this.bot.isMobile,
+                                'LOGIN',
+                                'Network idle timeout after clicking other ways'
+                            )
+                        })
+                        return true
+                    }
+
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'Could not find "Other ways to sign in", falling back to manual approval'
+                    )
+                }
+
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Handling passwordless authentication')
                 await this.passwordlessLogin.handle(page)
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
