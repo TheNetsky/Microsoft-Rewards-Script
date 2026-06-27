@@ -21,8 +21,7 @@
         "format:check": "prettier --check .",
         "clear-diagnostics": "rimraf diagnostics",
         "clear-sessions": "node ./scripts/main/clearSessions.js",
-        "open-session": "node ./scripts/main/browserSession.js -email",
-        "open-session:dev": "node ./scripts/main/browserSession.js -dev -email ItsNetsky@protonmail.com"
+        "open-session": "node ./scripts/main/browserSession.js -email"
     },
     "keywords": [
         "Bing Rewards",
