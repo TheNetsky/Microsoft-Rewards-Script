@@ -46,6 +46,13 @@ const WebhookSchema = z.object({
             priority: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional()
         })
         .optional(),
+    telegram: z
+        .object({
+            enabled: z.boolean().optional(),
+            botToken: z.string(),
+            chatId: z.union([z.string(), z.number()])
+        })
+        .optional(),
     webhookLogFilter: LogFilterSchema
 })
 
