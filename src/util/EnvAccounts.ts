@@ -227,10 +227,14 @@ export function parseAccountsFromEnvContent(content: string): Account[] {
         const key = keyRaw.trim()
         const value = parseEnvValue(valueRaw)
 
-        const current = ensureRecord(accountMap.get(index))
+        const existing = accountMap.get(index)
+        const current = ensureRecord(existing)
         assignAccountField(current, key, value)
-        accountMap.set(index, current)
-    }
+
+        const hasAnyField = Object.values(current).some(field => field !== undefined)
+        if (hasAnyField || existing !== undefined) {
+            accountMap.set(index, current)
+        }
 
     return [...accountMap.entries()]
         .sort(([left], [right]) => left - right)
