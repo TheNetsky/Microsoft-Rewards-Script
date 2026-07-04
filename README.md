@@ -89,6 +89,21 @@ npm run build
 npm run start
 ```
 
+### Interactive manager
+
+If you want to manage accounts and config without hand-editing files:
+
+```bash
+npm run manage
+```
+
+The manager edits:
+
+- `.env` account blocks (`ACCOUNT_N_*`)
+- `config.json`
+
+This keeps the current runtime format intact, so `npm run start` and Docker behavior remain unchanged.
+
 ## Docker
 
 - Copy the sample [`compose.yaml`](compose.yaml)
