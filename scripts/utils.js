@@ -9,13 +9,21 @@ export function getDirname(importMetaUrl) {
 }
 
 export function getProjectRoot(currentDir) {
-    let dir = currentDir
-    while (dir !== path.parse(dir).root) {
+    let dir = path.resolve(currentDir)
+
+    while (true) {
         if (fs.existsSync(path.join(dir, 'package.json'))) {
             return dir
         }
-        dir = path.dirname(dir)
+
+        const parent = path.dirname(dir)
+        if (parent === dir) {
+            break
+        }
+
+        dir = parent
     }
+
     throw new Error('Could not find project root (package.json not found)')
 }
 

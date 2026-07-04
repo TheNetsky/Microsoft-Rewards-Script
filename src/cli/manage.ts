@@ -8,6 +8,7 @@ import type { Config } from '../interface/Config'
 import { createEmptyAccount, readAccountsFromEnvFile, saveAccountsToEnvFile } from '../util/EnvAccounts'
 import { resolveProjectFile } from '../util/ProjectFiles'
 import { validateAccounts, validateConfig } from '../util/Validator'
+import { formatCurrentValueSuffix, InteractiveMenu } from './InteractiveMenu'
 
 type JsonValue = string | number | boolean | null | JsonObject | JsonValue[]
 
@@ -17,6 +18,7 @@ interface JsonObject {
 
 class CliApp {
     private readonly rl = readline.createInterface({ input, output })
+    private readonly menu = new InteractiveMenu(input, output)
     private readonly envPath: string
     private readonly configPath: string
     private accounts: Account[]
@@ -315,25 +317,24 @@ class CliApp {
             }
 
             const entries = Object.entries(current)
-            console.log('')
-            console.log(`Config path: ${pathParts.length ? pathParts.join('.') : '<root>'}`)
-            entries.forEach(([key, value], index) => {
-                console.log(`${index + 1}. ${key} = ${this.formatValue(value)}`)
-            })
+            const choice = await this.selectOption(
+                `Config path: ${pathParts.length ? pathParts.join('.') : '<root>'}`,
+                [
+                    ...entries.map(([key, value]) => `${key} = ${this.formatValue(value)}`),
+                    'Validate this draft',
+                    'Back'
+                ]
+            )
 
-            console.log(`${entries.length + 1}. Validate this draft`)
-            console.log(`${entries.length + 2}. Back`)
-
-            const choice = await this.promptMenuSelection(entries.length + 2)
-            if (choice === entries.length + 1) {
+            if (choice === entries.length) {
                 this.validateConfigDraft(root)
                 continue
             }
-            if (choice === entries.length + 2) {
+            if (choice === entries.length + 1) {
                 return
             }
 
-            const selected = entries[choice - 1]
+            const selected = entries[choice]
             if (!selected) {
                 continue
             }
@@ -469,15 +470,30 @@ class CliApp {
     }
 
     private async promptAccountIndex(label: string): Promise<number | undefined> {
-        console.log(label)
-        const choice = await this.promptMenuSelection(this.accounts.length + 1, true)
-        if (choice === this.accounts.length + 1) {
+        const options = this.accounts.map(
+            (account, index) =>
+                `${index + 1}. ${account.email} | locale=${account.geoLocale} | lang=${account.langCode} | ` +
+                `totp=${account.totpSecret ? 'yes' : 'no'} | proxy=${account.proxy.url ? 'yes' : 'no'}`
+        )
+
+        const choice = await this.selectOption(label, [...options, 'Cancel'])
+        if (choice === options.length) {
             return undefined
         }
-        return choice - 1
+
+        return choice
     }
 
     private async selectOption(title: string, options: string[]): Promise<number> {
+        if (this.menu.isSupported()) {
+            this.rl.pause()
+            try {
+                return await this.menu.select(title, options)
+            } finally {
+                this.rl.resume()
+            }
+        }
+
         console.log(title)
         options.forEach((option, index) => {
             console.log(`${index + 1}. ${option}`)
@@ -506,7 +522,7 @@ class CliApp {
 
     private async promptRequired(label: string, currentValue: string): Promise<string> {
         while (true) {
-            const suffix = currentValue ? ` [current: ${currentValue}]` : ''
+            const suffix = formatCurrentValueSuffix(currentValue)
             const answer = (await this.prompt(`${label}${suffix}: `)).trim()
             if (answer) return answer
             if (currentValue) return currentValue
@@ -515,7 +531,7 @@ class CliApp {
     }
 
     private async promptOptional(label: string, currentValue: string): Promise<string> {
-        const suffix = currentValue ? ` [current: ${currentValue}]` : ''
+        const suffix = formatCurrentValueSuffix(currentValue)
         const answer = await this.prompt(`${label}${suffix}: `)
         const trimmed = answer.trim()
         if (!trimmed) {

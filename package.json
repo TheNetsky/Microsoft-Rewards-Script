@@ -11,6 +11,7 @@
         "pre-build": "npm i && rimraf dist && npx patchright install chromium",
         "install:browser": "npx patchright install chromium",
         "build": "rimraf dist && tsc && node ./scripts/main/copyAssets.js",
+        "test": "npm run build && node --test dist/test/run-tests.js",
         "start": "node ./dist/index.js",
         "ts-start": "ts-node ./src/index.ts",
         "dev": "ts-node ./src/index.ts -dev",

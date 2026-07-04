@@ -118,9 +118,13 @@ function buildAccount(index: number, record: PartialAccountRecord): Account {
         throw new Error(`ACCOUNT_${index}_EMAIL is missing in .env.`)
     }
 
+    if (record.password === undefined || record.password.length === 0) {
+        throw new Error(`ACCOUNT_${index}_PASSWORD is missing in .env.`)
+    }
+
     return {
         email: record.email,
-        password: record.password ?? '',
+        password: record.password,
         totpSecret: record.totpSecret || undefined,
         recoveryEmail: record.recoveryEmail ?? '',
         geoLocale: record.geoLocale ?? 'auto',
@@ -170,6 +174,11 @@ function trimTrailingBlankLines(lines: string[]): string[] {
         copy.pop()
     }
     return copy
+}
+
+function stripLeadingComment(line: string): string {
+    const trimmed = line.trim()
+    return trimmed.startsWith('#') ? trimmed.slice(1).trim() : trimmed
 }
 
 export function createEmptyAccount(): Account {
@@ -250,13 +259,13 @@ export function saveAccountsToEnvFile(filePath: string, accounts: Account[]): vo
             .split(/\r?\n/)
             .filter(line => {
                 const trimmed = line.trim()
+                const uncommented = stripLeadingComment(line)
+
                 if (ACCOUNT_HEADER_RE.test(trimmed)) {
                     return false
                 }
-                if (trimmed.startsWith('#') && ACCOUNT_KEY_RE.test(trimmed.slice(1).trim())) {
-                    return false
-                }
-                return !ACCOUNT_ASSIGNMENT_RE.test(trimmed)
+
+                return !ACCOUNT_KEY_RE.test(uncommented) && !ACCOUNT_ASSIGNMENT_RE.test(uncommented)
             })
     }
 

@@ -97,6 +97,8 @@ If you want to manage accounts and config without hand-editing files:
 npm run manage
 ```
 
+Use the arrow keys and `Enter` to navigate the manager menus. Text fields are still typed normally.
+
 The manager edits:
 
 - `.env` account blocks (`ACCOUNT_N_*`)
