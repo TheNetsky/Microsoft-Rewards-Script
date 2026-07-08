@@ -277,6 +277,11 @@ _cfg_array "${CONFIG_LOG_FILTER_KEYWORDS-__UNSET__}"  '.consoleLogFilter.keyword
 _cfg "${CONFIG_DISCORD_ENABLED:-}"  '.webhook.discord.enabled'  bool
 _cfg "${CONFIG_DISCORD_URL:-}"      '.webhook.discord.url'      string
 
+# Telegram webhook
+_cfg "${CONFIG_TELEGRAM_ENABLED:-}"  '.webhook.telegram.enabled'  bool
+_cfg "${CONFIG_TELEGRAM_BOTTOKEN:-}"      '.webhook.telegram.botToken'      string
+_cfg "${CONFIG_TELEGRAM_CHATID:-}"      '.webhook.telegram.chatId'      string
+
 # ntfy webhook
 _cfg "${CONFIG_NTFY_ENABLED:-}"   '.webhook.ntfy.enabled'   bool
 _cfg "${CONFIG_NTFY_URL:-}"       '.webhook.ntfy.url'       string

@@ -50,7 +50,7 @@ const WebhookSchema = z.object({
         .object({
             enabled: z.boolean().optional(),
             botToken: z.string(),
-            chatId: z.union([z.string(), z.number()])
+            chatId: z.string()
         })
         .optional(),
     webhookLogFilter: LogFilterSchema
