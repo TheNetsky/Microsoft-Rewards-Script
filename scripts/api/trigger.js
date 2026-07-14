@@ -22,17 +22,17 @@ function request(method, path) {
     return new Promise((resolve, reject) => {
         const headers = { 'Content-Type': 'application/json', 'Content-Length': '2' }
         if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`
-        const req = http.request(
-            { host: '127.0.0.1', port: PORT, path, method, headers },
-            res => {
-                let raw = ''
-                res.on('data', c => (raw += c))
-                res.on('end', () => {
-                    try { resolve({ status: res.statusCode, body: JSON.parse(raw) }) }
-                    catch { resolve({ status: res.statusCode, body: raw }) }
-                })
-            }
-        )
+        const req = http.request({ host: '127.0.0.1', port: PORT, path, method, headers }, res => {
+            let raw = ''
+            res.on('data', c => (raw += c))
+            res.on('end', () => {
+                try {
+                    resolve({ status: res.statusCode, body: JSON.parse(raw) })
+                } catch {
+                    resolve({ status: res.statusCode, body: raw })
+                }
+            })
+        })
         req.on('error', reject)
         req.end('{}')
     })
@@ -48,8 +48,13 @@ let ready = false
 for (let i = 0; i < STARTUP_ATTEMPTS; i++) {
     try {
         const { status } = await request('GET', '/health')
-        if (status === 200) { ready = true; break }
-    } catch { /* server not up yet */ }
+        if (status === 200) {
+            ready = true
+            break
+        }
+    } catch {
+        /* server not up yet */
+    }
     if (i < STARTUP_ATTEMPTS - 1) {
         console.log(`[trigger] Waiting for API server (attempt ${i + 1}/${STARTUP_ATTEMPTS})…`)
         await sleep(STARTUP_DELAY_MS)
@@ -88,7 +93,9 @@ while (Date.now() < deadline) {
             console.log('[trigger] Run completed.')
             process.exit(0)
         }
-    } catch { /* momentary blip — keep polling */ }
+    } catch {
+        /* momentary blip — keep polling */
+    }
 }
 
 console.error(`[trigger] Timed out after ${process.env.STUCK_PROCESS_TIMEOUT_HOURS || 8}h waiting for run to finish.`)
