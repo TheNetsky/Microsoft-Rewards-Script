@@ -10,7 +10,7 @@ const CRON_FIELD_RANGES = [
     { min: 0, max: 23 }, // hour
     { min: 1, max: 31 }, // day of month
     { min: 1, max: 12 }, // month
-    { min: 0, max: 7 }   // day of week (7 == Sunday)
+    { min: 0, max: 7 } // day of week (7 == Sunday)
 ]
 
 function validateField(expr, { min, max }) {
@@ -101,10 +101,9 @@ export function writeSchedule(projectRoot, patch) {
 
     if ('cron' in patch) {
         if (typeof patch.cron !== 'string' || !isValidCron(patch.cron)) {
-            throw Object.assign(
-                new Error('Invalid cron expression (5 fields, e.g. "0 9 * * *").'),
-                { code: 'BAD_REQUEST' }
-            )
+            throw Object.assign(new Error('Invalid cron expression (5 fields, e.g. "0 9 * * *").'), {
+                code: 'BAD_REQUEST'
+            })
         }
         next.cron = patch.cron.trim()
     }
@@ -116,10 +115,9 @@ export function writeSchedule(projectRoot, patch) {
         }
         const indexes = [...new Set(patch.excludedAccountIndexes.map(Number))]
         if (indexes.some(i => !Number.isSafeInteger(i) || i < 1)) {
-            throw Object.assign(
-                new Error('excludedAccountIndexes must contain only positive integers.'),
-                { code: 'BAD_REQUEST' }
-            )
+            throw Object.assign(new Error('excludedAccountIndexes must contain only positive integers.'), {
+                code: 'BAD_REQUEST'
+            })
         }
         next.excludedAccountIndexes = indexes.sort((a, b) => a - b)
     }
@@ -168,10 +166,9 @@ export function applyCrontab({ enabled, cron }) {
     }
 
     if (!fs.existsSync(CRON_TEMPLATE)) {
-        throw Object.assign(
-            new Error(`Cron template not found at ${CRON_TEMPLATE} — image may be corrupt.`),
-            { code: 'TEMPLATE_MISSING' }
-        )
+        throw Object.assign(new Error(`Cron template not found at ${CRON_TEMPLATE} — image may be corrupt.`), {
+            code: 'TEMPLATE_MISSING'
+        })
     }
 
     const tz = process.env.TZ || 'UTC'
