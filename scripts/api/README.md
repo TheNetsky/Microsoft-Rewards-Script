@@ -21,6 +21,41 @@ The API can:
 It uses only Node.js built-ins and follows the same ESM `.js` convention as the
 other scripts in the project.
 
+---
+
+## Table of Contents
+
+- [Architecture and persistence](#architecture-and-persistence)
+- [Requirements](#requirements)
+- [Quick Setup](#quick-setup)
+    - [Build the bot](#build-the-bot)
+    - [Run without authentication](#run-without-authentication)
+    - [Run with authentication from the command line](#run-with-authentication-from-the-command-line)
+    - [Run with authentication from `.env`](#run-with-authentication-from-env)
+    - [Connect a dashboard](#connect-a-dashboard)
+    - [Verify the API](#verify-the-api)
+- [Authentication](#authentication)
+- [HTTP conventions](#http-conventions)
+- [Axios setup](#axios-setup)
+- [Endpoint overview](#endpoint-overview)
+- [Reading API state](#reading-api-state)
+- [Session management](#session-management)
+- [Reading diagnostics](#reading-diagnostics)
+- [Starting and controlling runs](#starting-and-controlling-runs)
+- [Live event stream with SSE](#live-event-stream-with-sse)
+- [Reading and editing configuration](#reading-and-editing-configuration)
+- [Reading and editing the schedule](#reading-and-editing-the-schedule)
+- [Axios response and error handling](#axios-response-and-error-handling)
+- [PowerShell examples](#powershell-examples)
+- [HTTP status codes](#http-status-codes)
+- [Environment variables](#environment-variables)
+- [Security guidance](#security-guidance)
+- [Keeping the API running](#keeping-the-api-running)
+- [Startup readiness](#startup-readiness)
+- [File layout](#file-layout)
+
+---
+
 ## Architecture and persistence
 
 The API is designed as a lightweight runtime controller between the bot and a
@@ -72,12 +107,26 @@ when durable history is needed.
 The implementation is platform-independent. Process-tree termination uses
 `taskkill` on Windows and process-group signals on Linux and macOS.
 
-## Quick start
+## Quick Setup
 
-Build the bot once, then start the API:
+### Build the bot
+
+Install and build the project before starting the Control API:
 
 ```bash
+npm install
 npm run build
+```
+
+`npm run api` starts the API server, not an immediate rewards run. Use
+`POST /start` or a connected dashboard to start the bot after the API is
+listening.
+
+### Run without authentication
+
+Start the API without a token:
+
+```bash
 npm run api
 ```
 
@@ -87,17 +136,105 @@ The equivalent direct command is:
 node scripts/api/server.js
 ```
 
-The default address is:
+This starts an unauthenticated API at:
 
 ```text
 http://127.0.0.1:3010
 ```
 
-Test it locally:
+> [!IMPORTANT]
+> This is unauthenticated only when `API_TOKEN` is absent or empty in both the
+> current process environment and the loaded `.env` file. If `.env` already
+> contains `API_TOKEN`, remove or comment out that line and restart the API.
+
+> [!WARNING]
+> Run without authentication only while `API_HOST` is `127.0.0.1`, `localhost`,
+> or `::1` on a trusted machine. Never expose an unauthenticated API through a
+> LAN address, published container port, reverse proxy, or the public internet.
+
+### Run with authentication from the command line
+
+Pass a token through npm for a one-time authenticated launch:
+
+```bash
+npm run api -- --token "YOUR_API_TOKEN"
+```
+
+The first `--` belongs to npm. It tells npm to forward the remaining arguments
+to `scripts/api/server.js`. The API itself receives
+`--token "YOUR_API_TOKEN"`.
+
+The equivalent direct command is:
+
+```bash
+node scripts/api/server.js --token "YOUR_API_TOKEN"
+```
+
+> [!NOTE]
+> The supported option is `--token`, not `--auth`. If `API_TOKEN` is already set
+> in the environment or `.env`, that value takes precedence over the command-line
+> token.
+
+Generate a strong token instead of using a short example value:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+You can also set the listen address and port for the same launch:
+
+```bash
+npm run api -- --host 127.0.0.1 --port 3010 --token "YOUR_API_TOKEN"
+```
+
+### Run with authentication from `.env`
+
+For normal or repeated use, configure authentication in the project `.env`:
+
+```dotenv
+API_HOST=127.0.0.1
+API_PORT=3010
+API_TOKEN=replace-with-a-long-random-token
+API_CORS_ORIGIN=http://127.0.0.1:3000
+```
+
+Then start the API normally:
+
+```bash
+npm run api
+```
+
+The API automatically loads the first available `.env` from the current working
+directory, repository root, or `dist/` directory. Authentication mode is chosen
+at startup, so restart the API after adding, changing, or removing `API_TOKEN`.
+
+### Connect a dashboard
+
+Give the dashboard the same base URL and token used by the API:
+
+```dotenv
+CONTROL_API_URL=http://127.0.0.1:3010
+CONTROL_API_TOKEN=replace-with-the-same-token
+```
+
+Leave `CONTROL_API_TOKEN` empty only when the API is intentionally running
+without authentication.
+
+### Verify the API
+
+For an unauthenticated server:
 
 ```bash
 curl --request GET \
   --url http://127.0.0.1:3010/health
+```
+
+For an authenticated server:
+
+```bash
+curl --request GET \
+  --url http://127.0.0.1:3010/health \
+  --header 'Authorization: Bearer YOUR_API_TOKEN'
 ```
 
 A successful response looks like:
@@ -109,43 +246,13 @@ A successful response looks like:
     "version": "4.0.3",
     "state": "idle",
     "uptimeSec": 12,
-    "authRequired": false
+    "authRequired": true
 }
 ```
 
-`stateless: true` means live controller data is kept in memory rather than an
-API database. It does not mean the explicitly enabled config/schedule writes or
-account-scoped session deletion are unavailable.
-
-The exact package name and version are read from the repository's
-`package.json`.
-
-## Recommended `.env` setup
-
-The API automatically loads the first available `.env` from the current working
-directory, repository root, or `dist/` directory.
-
-For local dashboard use:
-
-```dotenv
-API_HOST=127.0.0.1
-API_PORT=3010
-API_TOKEN=replace-with-a-long-random-token
-API_CORS_ORIGIN=http://127.0.0.1:3000
-```
-
-Generate a strong token:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Give the dashboard the same value, normally as:
-
-```dotenv
-CONTROL_API_URL=http://127.0.0.1:3010
-CONTROL_API_TOKEN=replace-with-the-same-token
-```
+If authentication is enabled, the same request without a valid token returns
+`401 Unauthorized`. The exact package name and version are read from the
+repository's `package.json`.
 
 ## Authentication
 
@@ -154,6 +261,12 @@ the API is bound to a trusted loopback interface.
 
 When `API_TOKEN` is set, **every endpoint** requires the token, including `/`,
 `/health`, diagnostic files, and the SSE stream.
+
+The server token can be configured either persistently with `API_TOKEN` or for
+a one-time launch with `npm run api -- --token "YOUR_API_TOKEN"`. An environment
+or `.env` value takes precedence when both are present. The token is fixed for
+the lifetime of the API process; restart the server to change authentication
+mode or use a different token.
 
 The token can be supplied in one of three ways.
 
@@ -1805,14 +1918,24 @@ The Docker entrypoint also uses `API_MODE=true` to run this API as the main
 container process. In that mode, scheduled and `RUN_ON_START` executions are
 routed through `POST /start`, so the API can observe and control them.
 
-CLI flags can override host, port, and token:
+The equivalent CLI flags are `--host`, `--port`, and `--token`:
 
 ```bash
 node scripts/api/server.js \
-  -host 0.0.0.0 \
-  -port 3010 \
-  -token "$API_TOKEN"
+  --host 0.0.0.0 \
+  --port 3010 \
+  --token "YOUR_API_TOKEN"
 ```
+
+Through npm, include npm's argument separator:
+
+```bash
+npm run api -- --host 0.0.0.0 --port 3010 --token "YOUR_API_TOKEN"
+```
+
+`API_HOST` and `API_TOKEN` take precedence over their CLI equivalents when they
+are already defined in the process environment or loaded `.env`. The `--port`
+flag takes precedence over `API_PORT` when it contains a valid non-zero number.
 
 The API normally launches `dist/index.js` with the current Node executable. If
 that file is missing, it falls back to the local `ts-node` CLI and
