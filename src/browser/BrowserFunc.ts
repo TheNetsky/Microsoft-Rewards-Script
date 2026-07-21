@@ -483,7 +483,7 @@ export default class BrowserFunc {
                 await browser.close()
 
                 if (rootBrowser) {
-                    await rootBrowser.close().catch(() => { })
+                    await rootBrowser.close().catch(() => {})
                 }
 
                 this.bot.logger.info(this.bot.isMobile, 'CLOSE-BROWSER', 'All browser resources closed.')
@@ -607,7 +607,7 @@ export default class BrowserFunc {
         const ig =
             typeof searchRes.data === 'string'
                 ? ((searchRes.data.match(/\bIG:"([A-F0-9]{32})"/i) ??
-                    searchRes.data.match(/[?&]IG=([A-F0-9]{32})\b/i))?.[1] ?? null)
+                      searchRes.data.match(/[?&]IG=([A-F0-9]{32})\b/i))?.[1] ?? null)
                 : null
         if (!ig) {
             this.bot.logger.warn(
@@ -737,7 +737,7 @@ export default class BrowserFunc {
             )
             return { ...empty, gained: null }
         } finally {
-            await visualPage?.close().catch(() => { })
+            await visualPage?.close().catch(() => {})
         }
     }
 
@@ -930,7 +930,6 @@ export default class BrowserFunc {
         }
     }
 
-
     async ensureOffer(offerId: string): Promise<ParsedOffer | null> {
         const cached = this.bot.reactSnapshot?.offers.find(o => o.offerId === offerId)
         if (cached) return cached
@@ -1040,7 +1039,7 @@ export default class BrowserFunc {
             const obj = typeof data === 'string' ? JSON.parse(data) : data
             const url = (obj as { redirectUrl?: unknown })?.redirectUrl
             if (typeof url === 'string' && url.includes('bcid=')) return url
-        } catch { }
+        } catch {}
 
         if (typeof data === 'string') {
             const m = data.match(/"redirectUrl"\s*:\s*"([^"]+)"/)
