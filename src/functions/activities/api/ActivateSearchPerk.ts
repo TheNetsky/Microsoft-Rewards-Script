@@ -57,7 +57,7 @@ export class ActivateSearchPerk extends Workers {
             return
         }
 
-        const live = this.bot.reactSnapshot?.offers.find(o => o.offerId === perk.offerId)
+        const live = await this.bot.browser.func.ensureOffer(perk.offerId)
         if (!live) {
             this.bot.logger.warn(
                 this.bot.isMobile,

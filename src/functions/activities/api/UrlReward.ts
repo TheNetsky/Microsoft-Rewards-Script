@@ -15,9 +15,13 @@ export class UrlReward extends Workers {
             return
         }
 
-        const live = this.bot.reactSnapshot?.offers.find(o => o.offerId === offerId)
+        const live = await this.bot.browser.func.ensureOffer(offerId)
         if (!live) {
-            this.bot.logger.warn(this.bot.isMobile, 'URL-REWARD', `Skipping ${offerId}: not present in page snapshot`)
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'URL-REWARD',
+                `Skipping ${offerId}: not present in page snapshot, even after refetching /earn`
+            )
             return
         }
         if (!live.reportable) {
@@ -40,7 +44,11 @@ export class UrlReward extends Workers {
 
         const oldBalance = this.bot.userData.currentPoints
         const expectedPoints = live.points
-        const activityType = Number(promotion.activityType ?? 11)
+
+        const dashboardActivityType = Number(promotion.activityType)
+        const activityType =
+            live.activityType ??
+            (Number.isInteger(dashboardActivityType) && dashboardActivityType > 0 ? dashboardActivityType : 11)
 
         this.bot.logger.info(
             this.bot.isMobile,

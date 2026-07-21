@@ -81,7 +81,7 @@ export class SearchOnBing extends Workers {
             return false
         }
 
-        const live = this.bot.reactSnapshot?.offers.find(o => o.offerId === offerId)
+        const live = await this.bot.browser.func.ensureOffer(offerId)
         const hash = live?.hash ?? promotion.hash ?? null
         if (!hash) {
             this.bot.logger.warn(

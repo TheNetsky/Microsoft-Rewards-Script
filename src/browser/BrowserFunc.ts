@@ -6,7 +6,7 @@ import type { BrowserContext, Cookie, Page } from 'patchright'
 import type { HttpRequestConfig } from '../util/Http'
 
 import type { MicrosoftRewardsBot } from '../index'
-import type { PageSnapshot } from './ReactFunc'
+import type { PageSnapshot, ParsedOffer } from './ReactFunc'
 import { saveStorageState } from '../util/SessionStore'
 import { isBrowserClosedError } from '../util/Utils'
 
@@ -239,38 +239,24 @@ export default class BrowserFunc {
         try {
             // /earn is the offers page
             await page.goto(URLs.rewards.earn, { waitUntil: 'domcontentloaded' })
-            const earnHtml = await page.content()
-            this.rewardsDeploymentId = this.bot.browser.react.buildId(earnHtml) ?? ''
+
+            const earnDom = await page.content()
+            const earnRaw = await this.fetchBootstrapHtml(page, URLs.rewards.earn, '/earn')
+
+            this.rewardsDeploymentId = this.bot.browser.react.buildId(earnRaw || earnDom) ?? ''
 
             this.bot.nextRouterStateTree = this.bot.browser.react.routerStateTree('earn')
 
             // pull /dashboard HTML to capture chunks that /earn doesn't show
-            let dashboardHtml = ''
-            try {
-                const res = await page.request.get(URLs.rewards.dashboard)
-                if (res.ok()) {
-                    dashboardHtml = await res.text()
-                } else {
-                    this.bot.logger.warn(
-                        this.bot.isMobile,
-                        'BOOTSTRAP',
-                        `Failed to fetch /dashboard HTML | status=${res.status()} - action discovery may be incomplete`
-                    )
-                }
-            } catch (error) {
-                this.bot.logger.warn(
-                    this.bot.isMobile,
-                    'BOOTSTRAP',
-                    `Failed to fetch /dashboard HTML | error=${error instanceof Error ? error.message : String(error)} - action discovery may be incomplete`
-                )
-            }
+            const dashboardHtml = await this.fetchBootstrapHtml(page, URLs.rewards.dashboard, '/dashboard')
 
-            this.bot.reactSnapshot = this.bot.browser.react.snapshotPage([earnHtml, dashboardHtml])
+            const sources = [earnRaw, earnDom, dashboardHtml].filter(Boolean)
+            this.bot.reactSnapshot = this.bot.browser.react.snapshotPage(sources)
 
             // discovered from chunks referenced by either page
-            this.bot.nextActions = await this.resolveActionIds(page, [earnHtml, dashboardHtml])
+            this.bot.nextActions = await this.resolveActionIds(page, sources)
 
-            const dashboardRendered = /<section\b[^>]*\bid=["']dailyset["']/i.test(`${earnHtml}\n${dashboardHtml}`)
+            const dashboardRendered = /<section\b[^>]*\bid=["']dailyset["']/i.test(sources.join('\n'))
             if (!dashboardRendered) {
                 throw new Error(
                     'Rewards dashboard did not render (no section#dailyset) - likely a login/redirect issue, aborting'
@@ -313,6 +299,27 @@ export default class BrowserFunc {
             )
             throw error
         }
+    }
+
+    private async fetchBootstrapHtml(page: Page, url: string, route: string): Promise<string> {
+        try {
+            const res = await page.request.get(url, { timeout: 20000 })
+            if (res.ok()) return await res.text()
+
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'BOOTSTRAP',
+                `Failed to fetch ${route} HTML | status=${res.status()} - snapshot and action discovery may be incomplete`
+            )
+        } catch (error) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'BOOTSTRAP',
+                `Failed to fetch ${route} HTML | error=${error instanceof Error ? error.message : String(error)} - snapshot and action discovery may be incomplete`
+            )
+        }
+
+        return ''
     }
 
     private async resolveActionIds(page: Page, htmls: string[]): Promise<Record<string, string>> {
@@ -476,7 +483,7 @@ export default class BrowserFunc {
                 await browser.close()
 
                 if (rootBrowser) {
-                    await rootBrowser.close().catch(() => {})
+                    await rootBrowser.close().catch(() => { })
                 }
 
                 this.bot.logger.info(this.bot.isMobile, 'CLOSE-BROWSER', 'All browser resources closed.')
@@ -600,7 +607,7 @@ export default class BrowserFunc {
         const ig =
             typeof searchRes.data === 'string'
                 ? ((searchRes.data.match(/\bIG:"([A-F0-9]{32})"/i) ??
-                      searchRes.data.match(/[?&]IG=([A-F0-9]{32})\b/i))?.[1] ?? null)
+                    searchRes.data.match(/[?&]IG=([A-F0-9]{32})\b/i))?.[1] ?? null)
                 : null
         if (!ig) {
             this.bot.logger.warn(
@@ -730,7 +737,7 @@ export default class BrowserFunc {
             )
             return { ...empty, gained: null }
         } finally {
-            await visualPage?.close().catch(() => {})
+            await visualPage?.close().catch(() => { })
         }
     }
 
@@ -856,10 +863,13 @@ export default class BrowserFunc {
 
     async refreshEarnSnapshot(): Promise<PageSnapshot | null> {
         const page = this.bot.isMobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage
-        if (!page || page.isClosed()) return null
+        const usePage = !!page && !page.isClosed()
 
         const fetchSnapshotPage = async (url: string, route: string): Promise<string | null> => {
             try {
+                // the browser is already gone in the api-only flow, fall back to the cookie jar
+                if (!usePage) return await this.fetchRewardsHtml(url, route)
+
                 const res = await page.request.get(url, { timeout: 20000 })
                 if (res.ok()) return await res.text()
 
@@ -886,6 +896,67 @@ export default class BrowserFunc {
         const availablePages = pages.filter((html): html is string => html !== null)
 
         return availablePages.length ? this.bot.browser.react.snapshotPage(availablePages) : null
+    }
+
+    private async fetchRewardsHtml(url: string, route: string): Promise<string | null> {
+        try {
+            const headers = { ...(this.bot.fingerprint?.headers ?? {}) }
+            delete headers['Cookie']
+            delete headers['cookie']
+
+            const response = await this.bot.http.request<string>({
+                url,
+                method: 'GET',
+                headers: {
+                    ...headers,
+                    Cookie: this.buildCookieHeader(
+                        this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop,
+                        ['bing.com', 'live.com', 'microsoftonline.com']
+                    ),
+                    Referer: URLs.rewards.referer,
+                    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                },
+                responseType: 'text'
+            })
+
+            return typeof response.data === 'string' ? response.data : null
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'EARN-SNAPSHOT',
+                `Failed to fetch ${route} over http | ${error instanceof Error ? error.message : String(error)}`
+            )
+            return null
+        }
+    }
+
+
+    async ensureOffer(offerId: string): Promise<ParsedOffer | null> {
+        const cached = this.bot.reactSnapshot?.offers.find(o => o.offerId === offerId)
+        if (cached) return cached
+
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'EARN-SNAPSHOT',
+            `${offerId} absent from the cached snapshot (offers=${this.bot.reactSnapshot?.offers.length ?? 0}) - refetching /earn`
+        )
+
+        const refreshed = await this.refreshEarnSnapshot()
+        if (!refreshed) return null
+
+        if (!this.bot.reactSnapshot || refreshed.offers.length >= this.bot.reactSnapshot.offers.length) {
+            this.bot.reactSnapshot = refreshed
+        }
+
+        const live = refreshed.offers.find(o => o.offerId === offerId) ?? null
+
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'EARN-SNAPSHOT',
+            `Refetched /earn | offers=${refreshed.offers.length} | ${offerId} found=${!!live}`
+        )
+
+        return live
     }
 
     resetHttpJars(): void {
@@ -969,7 +1040,7 @@ export default class BrowserFunc {
             const obj = typeof data === 'string' ? JSON.parse(data) : data
             const url = (obj as { redirectUrl?: unknown })?.redirectUrl
             if (typeof url === 'string' && url.includes('bcid=')) return url
-        } catch {}
+        } catch { }
 
         if (typeof data === 'string') {
             const m = data.match(/"redirectUrl"\s*:\s*"([^"]+)"/)
