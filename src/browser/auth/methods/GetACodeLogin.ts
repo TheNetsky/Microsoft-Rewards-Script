@@ -1,6 +1,7 @@
 import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../../../index'
-import { getErrorMessage, getSubtitleMessage, promptInput } from './LoginUtils'
+import { getErrorMessage, getSubtitleMessage, isPasswordlessNumberMatchMessage, promptInput } from './LoginUtils'
+import { PasswordlessLogin } from './PasswordlessLogin'
 
 export class CodeLogin {
     private readonly textInputSelector = '[data-testid="codeInputWrapper"]'
@@ -92,6 +93,17 @@ export class CodeLogin {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', `Page message: "${emailMessage}"`)
             } else {
                 this.bot.logger.warn(this.bot.isMobile, 'LOGIN-CODE', 'Unable to retrieve email code destination')
+            }
+
+            // Authenticator number-match — wait for phone approval (do not prompt for a typed code)
+            if (isPasswordlessNumberMatchMessage(emailMessage)) {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'LOGIN-CODE',
+                    'Page is Authenticator number-match — waiting for phone approval'
+                )
+                await new PasswordlessLogin(this.bot).handle(page)
+                return
             }
 
             const emailProofInput = await page

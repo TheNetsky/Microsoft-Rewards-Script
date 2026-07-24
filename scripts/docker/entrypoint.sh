@@ -32,7 +32,7 @@ fi
 #    environment. This is just a fail-fast presence check.
 if [ -z "${ACCOUNT_1_EMAIL:-}" ]; then
   echo "WARNING: No ACCOUNT_1_EMAIL found in environment - the script will fail." >&2
-  echo "         Set ACCOUNT_1_EMAIL and ACCOUNT_1_PASSWORD in your .env file." >&2
+  echo "         Set ACCOUNT_1_EMAIL in your .env file (PASSWORD is optional for passwordless login)." >&2
 else
   # Count configured accounts for the startup log (stops at first gap)
   acct_count=0

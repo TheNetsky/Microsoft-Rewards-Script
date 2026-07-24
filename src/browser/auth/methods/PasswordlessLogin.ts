@@ -2,7 +2,7 @@ import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../../../index'
 
 export class PasswordlessLogin {
-    private readonly maxAttempts = 60
+    private readonly maxAttempts = 120
     private readonly numberDisplaySelector = 'div[data-testid="displaySign"]'
     private readonly approvalPath = '/ppsecure/post.srf'
 
@@ -31,7 +31,7 @@ export class PasswordlessLogin {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'LOGIN-PASSWORDLESS',
-                `Waiting for approval... (timeout after ${this.maxAttempts} seconds)`
+                `Waiting for phone approval... (timeout after ${this.maxAttempts} seconds)`
             )
 
             for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
@@ -41,12 +41,18 @@ export class PasswordlessLogin {
                     return true
                 }
 
+                // Also succeed if we already landed on Rewards / account home
+                if (currentUrl.hostname === 'rewards.bing.com' || currentUrl.hostname === 'account.microsoft.com') {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Logged-in redirect detected')
+                    return true
+                }
+
                 // Every 5 seconds to show it's still waiting
                 if (attempt % 5 === 0) {
                     this.bot.logger.info(
                         this.bot.isMobile,
                         'LOGIN-PASSWORDLESS',
-                        `Still waiting... (${attempt}/${this.maxAttempts} seconds elapsed)`
+                        `Still waiting for Authenticator approval... (${attempt}/${this.maxAttempts}s)`
                     )
                 }
 
@@ -73,20 +79,25 @@ export class PasswordlessLogin {
         try {
             this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Passwordless authentication requested')
 
-            const displayedNumber = await this.getDisplayedNumber(page)
+            // Number may appear a moment after "Send notification"
+            let displayedNumber = await this.getDisplayedNumber(page)
+            if (!displayedNumber) {
+                await this.bot.utils.wait(2000)
+                displayedNumber = await this.getDisplayedNumber(page)
+            }
 
             if (displayedNumber) {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN-PASSWORDLESS',
-                    `Please approve login and select number: ${displayedNumber}`,
+                    `>>> Open Microsoft Authenticator and select number: ${displayedNumber}  (waiting — do NOT type here)`,
                     'yellowBright'
                 )
             } else {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN-PASSWORDLESS',
-                    'Please approve login on your authenticator app',
+                    '>>> Approve the sign-in in Microsoft Authenticator on your phone (waiting — do NOT type here)',
                     'yellowBright'
                 )
             }

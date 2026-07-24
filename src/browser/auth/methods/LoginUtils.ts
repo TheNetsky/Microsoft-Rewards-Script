@@ -67,3 +67,11 @@ export async function getErrorMessage(page: Page): Promise<string | null> {
     const text = await errorAlert.innerText()
     return text.trim()
 }
+
+/** Microsoft Authenticator number-match / approve-on-phone prompts (not email OTP). */
+export function isPasswordlessNumberMatchMessage(message: string | null | undefined): boolean {
+    if (!message) return false
+    return /select this number|sign-in request on your (mobile )?device|approve.*(authenticator|notification)|open your authenticator/i.test(
+        message
+    )
+}

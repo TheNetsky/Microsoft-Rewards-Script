@@ -124,10 +124,8 @@ export function loadAccounts(): Account[] {
 
             if (!email) break
 
-            const password = envStr(`ACCOUNT_${index}_PASSWORD`)
-            if (!password) {
-                throw new Error(`ACCOUNT_${index}_EMAIL is set but ACCOUNT_${index}_PASSWORD is missing`)
-            }
+            // Password is optional — leave blank to use passwordless / email code / TOTP instead
+            const password = envStr(`ACCOUNT_${index}_PASSWORD`) ?? ''
 
             accounts.push({
                 email,
@@ -143,7 +141,7 @@ export function loadAccounts(): Account[] {
 
         if (!accounts.length) {
             throw new Error(
-                'No accounts found in environment. Set ACCOUNT_1_EMAIL / ACCOUNT_1_PASSWORD (see env.example).'
+                'No accounts found in environment. Set ACCOUNT_1_EMAIL (see env.example). Password is optional.'
             )
         }
 

@@ -10,6 +10,7 @@ import { PasswordlessLogin } from './methods/PasswordlessLogin'
 import { TotpLogin } from './methods/Totp2FALogin'
 import { CodeLogin } from './methods/GetACodeLogin'
 import { RecoveryLogin } from './methods/RecoveryEmailLogin'
+import { getSubtitleMessage, isPasswordlessNumberMatchMessage } from './methods/LoginUtils'
 
 import type { Account } from '../../interface/Account'
 
@@ -57,6 +58,7 @@ export class Login {
         passKeyVideo: '[data-testid="biometricVideo"]',
         passKeyError: '[data-testid="registrationImg"]',
         passwordlessCheck: '[data-testid="deviceShieldCheckmarkVideo"]',
+        displaySign: 'div[data-testid="displaySign"]',
         totpInput: 'input[name="otc"]',
         totpInputOld: 'form[name="OneTimeCodeViewForm"]',
         identityBanner: '[data-testid="identityBanner"]',
@@ -194,6 +196,7 @@ export class Login {
             [this.selectors.emailIcon, 'SIGN_IN_ANOTHER_WAY_EMAIL'],
             [this.selectors.emailIconOld, 'SIGN_IN_ANOTHER_WAY_EMAIL'],
             [this.selectors.passwordlessCheck, 'LOGIN_PASSWORDLESS'],
+            [this.selectors.displaySign, 'LOGIN_PASSWORDLESS'],
             [this.selectors.totpInput, '2FA_TOTP'],
             [this.selectors.totpInputOld, '2FA_TOTP'],
             [this.selectors.otpCodeEntry, 'OTP_CODE_ENTRY'],
@@ -212,20 +215,36 @@ export class Login {
             this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', `Visible states: [${visibleStates.join(', ')}]`)
         }
 
-        const [identityBanner, primaryButton, passwordEntry] = await Promise.all([
+        const [identityBanner, primaryButton, passwordEntry, displaySign] = await Promise.all([
             this.checkSelector(page, this.selectors.identityBanner),
             this.checkSelector(page, this.selectors.primaryButton),
-            this.checkSelector(page, this.selectors.passwordEntry)
+            this.checkSelector(page, this.selectors.passwordEntry),
+            this.checkSelector(page, this.selectors.displaySign)
         ])
 
-        if (identityBanner && primaryButton && !passwordEntry && !results.includes('2FA_TOTP')) {
-            const codeState = account?.password ? 'GET_A_CODE' : 'GET_A_CODE_2'
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'DETECT-STATE',
-                `Get code state detected: ${codeState} (has password: ${!!account?.password})`
-            )
-            results.push(codeState)
+        // Authenticator number-match ("Select this number on your phone") — not an email code
+        if (displaySign || results.includes('LOGIN_PASSWORDLESS')) {
+            if (!results.includes('LOGIN_PASSWORDLESS')) results.push('LOGIN_PASSWORDLESS')
+        } else if (identityBanner && primaryButton && !passwordEntry && !results.includes('2FA_TOTP')) {
+            const subtitle = (await getSubtitleMessage(page)) || ''
+            if (isPasswordlessNumberMatchMessage(subtitle)) {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'DETECT-STATE',
+                    `Passwordless number-match detected from subtitle: "${subtitle}"`
+                )
+                results.push('LOGIN_PASSWORDLESS')
+            } else {
+                const hasPassword = Boolean(account?.password?.trim())
+                // With a password: try to bypass the code page. Without: actually use the email-code flow.
+                const codeState = hasPassword ? 'GET_A_CODE' : 'GET_A_CODE_2'
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'DETECT-STATE',
+                    `Get code state detected: ${codeState} (has password: ${hasPassword})`
+                )
+                results.push(codeState)
+            }
         }
 
         let foundStates = results.filter((s): s is LoginState => s !== null)
@@ -246,21 +265,40 @@ export class Login {
             foundStates = foundStates.filter(s => s !== 'ERROR_ALERT')
         }
 
-        const priorities: LoginState[] = [
-            'ACCOUNT_LOCKED',
-            'PASSKEY_VIDEO',
-            'PASSKEY_ERROR',
-            'KMSI_PROMPT',
-            'PASSWORD_INPUT',
-            'EMAIL_INPUT',
-            'SIGN_IN_ANOTHER_WAY', // Prefer password option over email code
-            'SIGN_IN_ANOTHER_WAY_EMAIL',
-            'OTP_CODE_ENTRY',
-            'GET_A_CODE',
-            'GET_A_CODE_2',
-            'LOGIN_PASSWORDLESS',
-            '2FA_TOTP'
-        ]
+        const hasPassword = Boolean(account?.password?.trim())
+
+        // No password → prefer authenticator / email-code over typing a password
+        const priorities: LoginState[] = hasPassword
+            ? [
+                  'ACCOUNT_LOCKED',
+                  'PASSKEY_VIDEO',
+                  'PASSKEY_ERROR',
+                  'KMSI_PROMPT',
+                  'PASSWORD_INPUT',
+                  'EMAIL_INPUT',
+                  'SIGN_IN_ANOTHER_WAY', // Prefer password option over email code
+                  'SIGN_IN_ANOTHER_WAY_EMAIL',
+                  'OTP_CODE_ENTRY',
+                  'GET_A_CODE',
+                  'GET_A_CODE_2',
+                  'LOGIN_PASSWORDLESS',
+                  '2FA_TOTP'
+              ]
+            : [
+                  'ACCOUNT_LOCKED',
+                  'PASSKEY_VIDEO',
+                  'PASSKEY_ERROR',
+                  'KMSI_PROMPT',
+                  'LOGIN_PASSWORDLESS',
+                  '2FA_TOTP',
+                  'GET_A_CODE_2',
+                  'OTP_CODE_ENTRY',
+                  'SIGN_IN_ANOTHER_WAY_EMAIL',
+                  'SIGN_IN_ANOTHER_WAY', // Will select email/code, not password
+                  'EMAIL_INPUT',
+                  'GET_A_CODE',
+                  'PASSWORD_INPUT' // Last: will click "other ways" instead of submitting a password
+              ]
 
         for (const priority of priorities) {
             if (foundStates.includes(priority)) {
@@ -296,6 +334,17 @@ export class Login {
         return true
     }
 
+    private async isPasswordlessNumberMatchPage(page: Page): Promise<boolean> {
+        const hasDisplaySign = await this.checkSelector(page, this.selectors.displaySign)
+        if (hasDisplaySign) return true
+
+        const hasPasswordlessVideo = await this.checkSelector(page, this.selectors.passwordlessCheck)
+        if (hasPasswordlessVideo) return true
+
+        const subtitle = (await getSubtitleMessage(page)) || ''
+        return isPasswordlessNumberMatchMessage(subtitle)
+    }
+
     private async handleState(state: LoginState, page: Page, account: Account): Promise<boolean> {
         this.bot.logger.debug(this.bot.isMobile, 'HANDLE-STATE', `Processing state: ${state}`)
 
@@ -325,6 +374,26 @@ export class Login {
             }
 
             case 'PASSWORD_INPUT': {
+                if (!account.password?.trim()) {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'Password page shown but no password configured — trying other sign-in methods'
+                    )
+                    if (await this.tryClick(page, this.selectors.otherWaysToSignIn, 'Other ways to sign in', 3000)) {
+                        return true
+                    }
+                    if (await this.tryClick(page, this.selectors.viewFooter, 'Footer link')) {
+                        return true
+                    }
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'Could not leave password page — set ACCOUNT_1_PASSWORD or enable Authenticator / email code on the Microsoft account'
+                    )
+                    return false
+                }
+
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Entering password')
                 await this.emailLogin.enterPassword(page, account.password)
                 await this.waitForIdle(page, 'after password entry')
@@ -351,9 +420,35 @@ export class Login {
             }
 
             case 'GET_A_CODE_2': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Handling "Get a code" flow')
+                // Already on Authenticator number-match? Wait for phone approval.
+                if (await this.isPasswordlessNumberMatchPage(page)) {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'Detected Authenticator number-match — waiting for phone approval (do not type a code)'
+                    )
+                    await this.passwordlessLogin.handle(page)
+                    await this.waitForIdle(page, 'after passwordless auth')
+                    return true
+                }
+
+                // "Get a code to sign in" / "Send notification" — click send, then wait for number-match or email OTP
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Handling "Get a code" / Send notification flow')
                 await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
                 await this.waitForIdle(page, 'after primary button click')
+                await this.bot.utils.wait(1500)
+
+                if (await this.isPasswordlessNumberMatchPage(page)) {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'Notification sent — waiting for you to approve in Microsoft Authenticator'
+                    )
+                    await this.passwordlessLogin.handle(page)
+                    await this.waitForIdle(page, 'after passwordless auth')
+                    return true
+                }
+
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Initiating code login handler')
                 await this.codeLogin.handle(page)
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Code login handler completed successfully')
@@ -436,6 +531,34 @@ export class Login {
             }
 
             case 'SIGN_IN_ANOTHER_WAY': {
+                if (!account.password?.trim()) {
+                    // Prefer email code over password when no password is configured
+                    const [emailIconFound, emailIconOldFound] = await Promise.all([
+                        this.checkSelector(page, this.selectors.emailIcon),
+                        this.checkSelector(page, this.selectors.emailIconOld)
+                    ])
+                    const emailSelector = emailIconFound
+                        ? this.selectors.emailIcon
+                        : emailIconOldFound
+                          ? this.selectors.emailIconOld
+                          : null
+
+                    if (emailSelector) {
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Selecting "Send a code" (no password set)')
+                        await this.bot.browser.utils.ghostClick(page, emailSelector)
+                        await this.waitForIdle(page, 'after email icon click')
+                        await this.codeLogin.handle(page)
+                        return true
+                    }
+
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'No email-code option found on "Sign in another way" page'
+                    )
+                    return false
+                }
+
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Selecting "Use my password"')
                 await this.bot.browser.utils.ghostClick(page, this.selectors.passwordIcon)
                 await this.waitForIdle(page, 'after password icon click')
@@ -469,6 +592,16 @@ export class Login {
             }
 
             case 'OTP_CODE_ENTRY': {
+                if (!account.password?.trim()) {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'OTP code entry page detected — using email/SMS code (no password set)'
+                    )
+                    await this.codeLogin.handle(page)
+                    return true
+                }
+
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN',

@@ -115,7 +115,8 @@ export const ConfigSchema = z.object({
 // Account
 export const AccountSchema = z.object({
     email: z.string(),
-    password: z.string(),
+    // Empty string = skip password and use passwordless / email code / TOTP
+    password: z.string().default(''),
     totpSecret: z.string().optional(),
     recoveryEmail: z.string(),
     geoLocale: z.string(),
