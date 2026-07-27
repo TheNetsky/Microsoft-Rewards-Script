@@ -89,6 +89,16 @@ export function saveStorageState(
         .run(email, platformOf(isMobile), JSON.stringify(storageState), Date.now())
 }
 
+export function clearStorageState(sessionPath: string, email: string, isMobile: boolean): void {
+    getDb(sessionPath)
+        .prepare(
+            `UPDATE sessions
+             SET storage_state = NULL, updated_at = ?
+             WHERE email = ? AND platform = ?`
+        )
+        .run(Date.now(), email, platformOf(isMobile))
+}
+
 export function saveFingerprint(
     sessionPath: string,
     email: string,
@@ -103,11 +113,6 @@ export function saveFingerprint(
              DO UPDATE SET fingerprint = excluded.fingerprint, updated_at = excluded.updated_at`
         )
         .run(email, platformOf(isMobile), JSON.stringify(fingerprint), Date.now())
-}
-
-// Unused
-export function deleteSession(sessionPath: string, email: string, isMobile: boolean): void {
-    getDb(sessionPath).prepare('DELETE FROM sessions WHERE email = ? AND platform = ?').run(email, platformOf(isMobile))
 }
 
 export function closeSessionStore(): void {

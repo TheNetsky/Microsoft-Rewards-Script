@@ -10,17 +10,7 @@ import { validateConfig, deepMerge, readConfig, writeConfigAtomic } from './conf
 import { readSchedule, writeSchedule } from './scheduleStore.js'
 import { deleteStoredSessions, listStoredSessions } from './sessionStore.js'
 import { resolveRunCommand } from './runCommand.js'
-import {
-    log,
-    parseArgs,
-    getProjectRoot,
-    loadEnvFile,
-    loadConfigSafe,
-    redactSecrets,
-    envStr,
-    envInt,
-    envBool
-} from './lib.js'
+import { log, parseArgs, getProjectRoot, loadEnvFile, loadConfigSafe, redactSecrets, envStr, envBool } from './lib.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = getProjectRoot(__dirname)
@@ -28,6 +18,16 @@ const projectRoot = getProjectRoot(__dirname)
 loadEnvFile(projectRoot)
 
 const cliArgs = parseArgs()
+
+function integerSetting(name, value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
+    if (value === undefined) return fallback
+    const parsed = Number(value)
+    if (typeof value === 'boolean' || !Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+        log('ERROR', `${name} must be an integer between ${min} and ${max}.`)
+        process.exit(1)
+    }
+    return parsed
+}
 
 let pkgVersion = '0.0.0'
 let pkgName = 'microsoft-rewards-script'
@@ -38,11 +38,14 @@ try {
 } catch {}
 
 const HOST = envStr('API_HOST') ?? (typeof cliArgs.host === 'string' ? cliArgs.host : '127.0.0.1')
-const PORT = Number(cliArgs.port) || envInt('API_PORT', 3010)
+const PORT =
+    cliArgs.port !== undefined
+        ? integerSetting('--port', cliArgs.port, 3010, { max: 65535 })
+        : integerSetting('API_PORT', envStr('API_PORT'), 3010, { max: 65535 })
 const TOKEN = envStr('API_TOKEN') ?? (typeof cliArgs.token === 'string' ? cliArgs.token : undefined)
 const CORS_ORIGIN = envStr('API_CORS_ORIGIN') ?? '*'
-const LOG_BUFFER = envInt('API_LOG_BUFFER', 2000)
-const STOP_TIMEOUT_MS = envInt('API_STOP_TIMEOUT_MS', 15000)
+const LOG_BUFFER = integerSetting('API_LOG_BUFFER', envStr('API_LOG_BUFFER'), 2000)
+const STOP_TIMEOUT_MS = integerSetting('API_STOP_TIMEOUT_MS', envStr('API_STOP_TIMEOUT_MS'), 15000)
 const ALLOW_ENV_OVERRIDES = envBool('API_ALLOW_ENV_OVERRIDES', false)
 const REVEAL_ENABLED = envBool('API_ALLOW_CONFIG_REVEAL', false)
 const ALLOW_CONFIG_WRITE = envBool('API_ALLOW_CONFIG_WRITE', false)
@@ -51,7 +54,7 @@ const ALLOW_CONFIG_WRITE = envBool('API_ALLOW_CONFIG_WRITE', false)
 // riding along with API_MODE=true for free.
 const ALLOW_SCHEDULE_WRITE = envBool('API_ALLOW_SCHEDULE_WRITE', false)
 
-const RUN_HISTORY = envInt('API_RUN_HISTORY', 20)
+const RUN_HISTORY = integerSetting('API_RUN_HISTORY', envStr('API_RUN_HISTORY'), 20)
 const DIAG_DIR = envStr('API_DIAGNOSTICS_DIR') ?? path.join(projectRoot, 'diagnostics')
 
 const { command, args } = resolveRunCommand({ projectRoot })
@@ -68,6 +71,18 @@ const pm = new ProcessManager({
 })
 
 const startedAt = Date.now()
+
+function containsControlCharacters(value) {
+    return [...value].some(character => {
+        const code = character.charCodeAt(0)
+        return code < 32 || code === 127
+    })
+}
+
+if (containsControlCharacters(HOST) || containsControlCharacters(CORS_ORIGIN)) {
+    log('ERROR', 'API_HOST and API_CORS_ORIGIN must not contain control characters.')
+    process.exit(1)
+}
 
 // Forward bot stdout/stderr to the API server's own output streams so that
 // container logs (docker logs) continue to show the bot's output regardless
@@ -112,11 +127,14 @@ function sendJson(res, status, obj) {
 
 function tokenFromReq(req, url) {
     const auth = req.headers['authorization']
-    if (typeof auth === 'string' && auth.startsWith('Bearer ')) return auth.slice(7).trim()
+    if (typeof auth === 'string') {
+        const bearer = /^Bearer\s+(.+)$/i.exec(auth)
+        if (bearer) return bearer[1].trim()
+    }
     const apiKey = req.headers['x-api-key']
     if (typeof apiKey === 'string' && apiKey.trim()) return apiKey.trim()
     const q = url.searchParams.get('token')
-    if (q) return q
+    if (q && url.pathname.replace(/\/+$/, '') === '/events') return q
     return null
 }
 
@@ -158,6 +176,21 @@ async function readJsonBody(req, limitBytes = 1_000_000) {
         })
         req.on('error', reject)
     })
+}
+
+async function readJsonObject(req) {
+    const body = await readJsonBody(req)
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        throw Object.assign(new Error('Body must be a JSON object.'), { code: 'BAD_REQUEST' })
+    }
+    return body
+}
+
+function readForce(body) {
+    if ('force' in body && typeof body.force !== 'boolean') {
+        throw Object.assign(new Error('`force` must be a boolean.'), { code: 'BAD_REQUEST' })
+    }
+    return body.force ?? false
 }
 
 function handleEventStream(req, res, url) {
@@ -215,7 +248,13 @@ function handleEventStream(req, res, url) {
 }
 
 const requestHandler = async (req, res) => {
-    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`)
+    let url
+    try {
+        url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`)
+    } catch {
+        applyCors(res)
+        return sendJson(res, 400, { error: 'Invalid request URL.', code: 'BAD_REQUEST' })
+    }
     const pathname = url.pathname.replace(/\/+$/, '') || '/'
     const method = req.method ?? 'GET'
 
@@ -229,7 +268,7 @@ const requestHandler = async (req, res) => {
     if (TOKEN && !isAuthorized(req, url)) {
         return sendJson(res, 401, {
             error: 'Unauthorized',
-            hint: 'Provide the API token via Authorization: Bearer, X-API-Key, or ?token= (the dashboard sends its CONTROL_API_TOKEN). All endpoints require it while API_TOKEN is set.'
+            hint: 'Provide the API token via Authorization: Bearer or X-API-Key. Browser EventSource may use ?token= only on /events. All endpoints require authentication while API_TOKEN is set.'
         })
     }
 
@@ -293,6 +332,12 @@ const requestHandler = async (req, res) => {
             const limit = clampInt(url.searchParams.get('limit'), 1, LOG_BUFFER, 200)
             const afterId = url.searchParams.has('afterId') ? Number(url.searchParams.get('afterId')) : null
             const minLevel = url.searchParams.get('level') || null
+            if (minLevel && !['debug', 'info', 'warn', 'error'].includes(minLevel)) {
+                return sendJson(res, 400, {
+                    error: '`level` must be one of: debug, info, warn, error.',
+                    code: 'BAD_REQUEST'
+                })
+            }
             return sendJson(
                 res,
                 200,
@@ -307,14 +352,14 @@ const requestHandler = async (req, res) => {
             return sendJson(res, 200, pm.getErrors({ limit, includeWarnings }))
         }
 
-        // historyu
+        // history
         if (method === 'GET' && pathname === '/history') {
             const limit = clampInt(url.searchParams.get('limit'), 1, RUN_HISTORY, RUN_HISTORY)
             const runs = pm.getHistory().slice(0, limit).map(toHistoryRecord)
             return sendJson(res, 200, { runs, count: runs.length, inMemoryOnly: true })
         }
 
-        // acc overv
+        // account overview
         if (method === 'GET' && pathname === '/accounts') {
             const accounts = mergeAccountStats(loadAccounts(), pm.getHistory().map(toHistoryRecord))
             return sendJson(res, 200, { accounts, count: accounts.length })
@@ -353,7 +398,7 @@ const requestHandler = async (req, res) => {
             } catch {
                 return sendJson(res, 400, { error: 'The session email path is not valid URL encoding.' })
             }
-            if (!email || email.length > 320 || !email.includes('@') || /[\u0000-\u001F\u007F]/.test(email)) {
+            if (!email || email.length > 320 || !email.includes('@') || containsControlCharacters(email)) {
                 return sendJson(res, 400, {
                     error: 'A valid account email is required in DELETE /sessions/:email.',
                     code: 'INVALID_EMAIL'
@@ -439,7 +484,7 @@ const requestHandler = async (req, res) => {
 
         // start
         if (method === 'POST' && pathname === '/start') {
-            const body = await readJsonBody(req)
+            const body = await readJsonObject(req)
             const overrides = {}
             let selectedAccount = null
             let excludedAccounts = []
@@ -479,8 +524,8 @@ const requestHandler = async (req, res) => {
 
         // kill proc
         if (method === 'POST' && pathname === '/stop') {
-            const body = await readJsonBody(req)
-            const force = Boolean(body.force)
+            const body = await readJsonObject(req)
+            const force = readForce(body)
             try {
                 const stopping = pm.stop({ force })
                 stopping.catch(() => {})
@@ -493,8 +538,8 @@ const requestHandler = async (req, res) => {
 
         // restart
         if (method === 'POST' && pathname === '/restart') {
-            const body = await readJsonBody(req)
-            const overrides = { force: Boolean(body.force) }
+            const body = await readJsonObject(req)
+            const overrides = { force: readForce(body) }
             let selectedAccount = null
             let excludedAccounts = []
             if (body.args != null) overrides.args = body.args
@@ -545,8 +590,8 @@ const requestHandler = async (req, res) => {
             try {
                 candidate = method === 'PATCH' ? deepMerge(readConfig(projectRoot).data, body) : body
             } catch (err) {
-                return sendJson(res, 500, {
-                    error: `Could not read current config: ${err instanceof Error ? err.message : err}`
+                return sendJson(res, err.code === 'BAD_REQUEST' ? 400 : 500, {
+                    error: `Could not prepare config update: ${err instanceof Error ? err.message : err}`
                 })
             }
             const result = await validateConfig(candidate, {
@@ -569,15 +614,16 @@ const requestHandler = async (req, res) => {
 
         // stop api
         if (method === 'POST' && pathname === '/shutdown') {
-            const body = await readJsonBody(req)
+            const body = await readJsonObject(req)
+            const force = readForce(body)
             sendJson(res, 202, { shuttingDown: true, stoppingBot: pm.getStatus().state !== 'idle' })
-            setTimeout(() => void shutdown('API /shutdown', { force: Boolean(body.force) }), 50)
+            setTimeout(() => void shutdown('API /shutdown', { force }), 50)
             return
         }
 
         return sendJson(res, 404, { error: 'Not found', path: pathname })
     } catch (err) {
-        if (err && (err.code === 'BAD_JSON' || err.code === 'BODY_TOO_LARGE')) {
+        if (err && (err.code === 'BAD_JSON' || err.code === 'BODY_TOO_LARGE' || err.code === 'BAD_REQUEST')) {
             return sendJson(res, 400, { error: err.message, code: err.code })
         }
         log('ERROR', 'Unhandled request error:', err instanceof Error ? err.stack : err)
@@ -599,7 +645,7 @@ const DIAG_FILES = {
 }
 
 function listDiagnostics() {
-    let dirents = []
+    let dirents
     try {
         dirents = fs
             .readdirSync(DIAG_DIR, { withFileTypes: true })
@@ -638,7 +684,12 @@ function listDiagnostics() {
 }
 
 function serveDiagnosticFile(res, pathname) {
-    const parts = pathname.slice('/diagnostics/'.length).split('/').filter(Boolean).map(decodeURIComponent)
+    let parts
+    try {
+        parts = pathname.slice('/diagnostics/'.length).split('/').filter(Boolean).map(decodeURIComponent)
+    } catch {
+        return sendJson(res, 400, { error: 'Invalid diagnostics path encoding' })
+    }
     if (parts.length !== 2) return sendJson(res, 404, { error: 'Not found' })
     const [name, file] = parts
     if (!/^error-[A-Za-z0-9._:-]+$/.test(name) || !(file in DIAG_FILES)) {

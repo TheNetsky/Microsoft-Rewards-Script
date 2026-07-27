@@ -12,6 +12,8 @@ const BLOCKED_ENV = new Set([
     'DYLD_INSERT_LIBRARIES',
     'ELECTRON_RUN_AS_NODE'
 ])
+const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
+const RESERVED_ENV_KEYS = new Set(['__PROTO__', 'PROTOTYPE', 'CONSTRUCTOR'])
 
 export class ProcessManager extends EventEmitter {
     constructor({
@@ -253,10 +255,26 @@ export class ProcessManager extends EventEmitter {
 
     _resolveEnv(envOverride) {
         const env = { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' }
-        if (envOverride && typeof envOverride === 'object') {
+        if (envOverride != null) {
+            if (typeof envOverride !== 'object' || Array.isArray(envOverride)) {
+                const err = new Error('`env` must be a JSON object.')
+                err.code = 'BAD_REQUEST'
+                throw err
+            }
+
             for (const [key, value] of Object.entries(envOverride)) {
-                if (BLOCKED_ENV.has(key)) continue
+                if (!ENV_KEY_RE.test(key) || RESERVED_ENV_KEYS.has(key.toUpperCase())) {
+                    const err = new Error(`Invalid environment variable name: ${JSON.stringify(key)}.`)
+                    err.code = 'BAD_REQUEST'
+                    throw err
+                }
+                if (BLOCKED_ENV.has(key.toUpperCase())) continue
                 if (value == null) continue
+                if (!['string', 'number', 'boolean'].includes(typeof value)) {
+                    const err = new Error(`Environment override ${key} must be a string, number, boolean, or null.`)
+                    err.code = 'BAD_REQUEST'
+                    throw err
+                }
                 env[key] = String(value)
             }
         }

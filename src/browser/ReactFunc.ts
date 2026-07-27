@@ -99,11 +99,6 @@ export default class ReactFunc {
             account
         }
     }
-
-    public getReportableOffers(html: string): ParsedOffer[] {
-        return this.parseOffers(this.concatFlightChunks(html)).filter(o => o.reportable)
-    }
-
     public getStreakProtection(html: string): StreakProtectionState | null {
         return this.parseStreakProtection(this.concatFlightChunks(html))
     }

@@ -3,6 +3,7 @@ import type { HttpRequestConfig } from '../util/Http'
 import PQueue from 'p-queue'
 import type { WebhookTelegramConfig } from '../interface/Config'
 import type { LogLevel } from './Logger'
+import { flushQueue } from './Queue'
 
 const telegramQueue = new PQueue({
     interval: 1000,
@@ -57,13 +58,6 @@ export async function sendTelegram(config: WebhookTelegramConfig, content: strin
     })
 }
 
-export async function flushTelegramQueue(timeoutMs = 5000): Promise<void> {
-    let timer: NodeJS.Timeout | undefined
-    await Promise.race([
-        telegramQueue.onIdle(),
-        new Promise<void>((_, reject) => {
-            timer = setTimeout(() => reject(new Error('telegram flush timeout')), timeoutMs)
-        })
-    ]).catch(() => {})
-    if (timer) clearTimeout(timer)
+export function flushTelegramQueue(timeoutMs = 5000): Promise<void> {
+    return flushQueue(telegramQueue, timeoutMs)
 }

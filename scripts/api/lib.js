@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const LEVELS = ['error', 'warn', 'info', 'success']
+export { envBool, envInt, envStr } from '../env.js'
 
 export function log(level, ...args) {
     const lvl = typeof level === 'string' ? level.toUpperCase() : 'INFO'
@@ -10,7 +10,6 @@ export function log(level, ...args) {
     if (lvl === 'WARN') return console.warn(line, ...args)
     return console.log(line, ...args)
 }
-void LEVELS
 
 export function parseArgs(argv = process.argv.slice(2)) {
     const args = {}
@@ -102,24 +101,4 @@ export function redactSecrets(config) {
         if (wh.telegram?.chatId) wh.telegram.chatId = mask
     }
     return clone
-}
-
-export function envStr(key) {
-    const v = process.env[key]
-    if (v === undefined) return undefined
-    const trimmed = v.trim()
-    return trimmed.length ? trimmed : undefined
-}
-
-export function envInt(key, fallback) {
-    const v = envStr(key)
-    if (v === undefined) return fallback
-    const n = parseInt(v, 10)
-    return Number.isFinite(n) ? n : fallback
-}
-
-export function envBool(key, fallback) {
-    const v = envStr(key)
-    if (v === undefined) return fallback
-    return ['1', 'true', 'yes', 'on'].includes(v.toLowerCase())
 }

@@ -1,4 +1,4 @@
-import { QueryCore } from '../../QueryEngine'
+import { SearchQueryQueue } from '../../SearchQueryQueue'
 import { Workers } from '../../Workers'
 import { BonusTracker } from '../SearchBonus'
 
@@ -27,26 +27,29 @@ export class Search extends Workers {
                 return 0
             }
 
-            const queryCore = new QueryCore(this.bot)
-            let queries = await this.generatePool(queryCore)
-            this.bot.logger.info(isMobile, 'SEARCH-BING', `Query pool ready | count=${queries.length}`)
+            const queryQueue = new SearchQueryQueue(this.bot)
+            const topicCount = await queryQueue.prepare()
+            if (!topicCount) {
+                this.bot.logger.warn(isMobile, 'SEARCH-BING', 'No main search topics available, skipping')
+                return 0
+            }
+            this.bot.logger.info(
+                isMobile,
+                'SEARCH-BING',
+                `Query queue ready | mainTopics=${topicCount} | clusterSearch=${this.bot.config.searchSettings.clusterSearch}`
+            )
 
             let stagnant = 0
-            let index = 0
             let performed = 0
             let lastEarned: number | null = null
 
             while (performed < MAX_SEARCHES) {
-                if (index >= queries.length) {
-                    const extra = await this.generatePool(queryCore)
-                    queries = this.bot.utils.shuffleArray([...new Set([...queries, ...extra])])
-                    if (index >= queries.length) {
-                        this.bot.logger.warn(isMobile, 'SEARCH-BING', 'Query pool exhausted, stopping')
-                        break
-                    }
+                const query = await queryQueue.next()
+                if (!query) {
+                    this.bot.logger.warn(isMobile, 'SEARCH-BING', 'Query queue exhausted, stopping')
+                    break
                 }
 
-                const query = queries[index++] as string
                 const res = await this.bot.browser.func.reportSearchActivity(query)
                 performed++
 
@@ -143,27 +146,25 @@ export class Search extends Workers {
         let stagnant = 0
 
         try {
-            const queryCore = new QueryCore(this.bot)
-            let queries = await this.generatePool(queryCore)
-            if (!queries.length) {
-                this.bot.logger.warn(isMobile, tracker.context, 'No queries available, skipping')
+            const queryQueue = new SearchQueryQueue(this.bot)
+            const topicCount = await queryQueue.prepare()
+            if (!topicCount) {
+                this.bot.logger.warn(isMobile, tracker.context, 'No main search topics available, skipping')
                 return 0
             }
-            this.bot.logger.info(isMobile, tracker.context, `Query pool ready | count=${queries.length}`)
-
-            let index = 0
+            this.bot.logger.info(
+                isMobile,
+                tracker.context,
+                `Query queue ready | mainTopics=${topicCount} | clusterSearch=${this.bot.config.searchSettings.clusterSearch}`
+            )
 
             while (!tracker.done() && performed < tracker.maxSearches && stagnant < tracker.stagnantLimit) {
-                if (index >= queries.length) {
-                    const extra = await this.generatePool(queryCore)
-                    queries = this.bot.utils.shuffleArray([...new Set([...queries, ...extra])])
-                    if (index >= queries.length) {
-                        this.bot.logger.warn(isMobile, tracker.context, 'Query pool exhausted, stopping')
-                        break
-                    }
+                const query = await queryQueue.next()
+                if (!query) {
+                    this.bot.logger.warn(isMobile, tracker.context, 'Query queue exhausted, stopping')
+                    break
                 }
 
-                const query = queries[index++] as string
                 const res = await this.bot.browser.func.reportSearchActivity(query)
                 performed++
 
@@ -224,16 +225,5 @@ export class Search extends Workers {
             done || totalGained > 0 ? 'green' : undefined
         )
         return totalGained
-    }
-
-    private async generatePool(queryCore: QueryCore): Promise<string[]> {
-        const pool = await queryCore.queryManager({
-            shuffle: true,
-            related: true,
-            langCode: (this.bot.userData.langCode ?? 'en').toLowerCase(),
-            geoLocale: (this.bot.userData.geoLocale ?? 'US').toUpperCase(),
-            sourceOrder: this.bot.config.searchSettings.queryEngines
-        })
-        return [...new Set(pool.map(q => q.trim()).filter(Boolean))]
     }
 }

@@ -1,8 +1,13 @@
+import { URLs } from '../../../constants/urls'
 import type { BasePromotion } from '../../../interface/DashboardData'
 import { Workers } from '../../Workers'
 
 export class UrlReward extends Workers {
     public async doUrlReward(promotion: BasePromotion) {
+        await this.runUrlReward(promotion, true)
+    }
+
+    private async runUrlReward(promotion: BasePromotion, allowSessionRepair: boolean) {
         const offerId = promotion.offerId
 
         const actionId = this.bot.nextActions.reportActivity
@@ -20,7 +25,7 @@ export class UrlReward extends Workers {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Skipping ${offerId}: not present in page snapshot, even after refetching /earn`
+                `Skipping ${offerId}: not present in page snapshot, even after refetching /earn and /dashboard`
             )
             return
         }
@@ -57,15 +62,23 @@ export class UrlReward extends Workers {
         )
 
         try {
-            const { status, acknowledged } = await this.bot.browser.func.reportServerAction(actionId, [
-                live.hash,
-                activityType,
+            const { status, acknowledged } = await this.bot.browser.func.reportServerAction(
+                actionId,
+                [
+                    live.hash,
+                    activityType,
+                    {
+                        offerid: offerId,
+                        isPromotional: live.isPromotional ? true : '$undefined',
+                        timezoneOffset: this.bot.userData.timezoneOffset
+                    }
+                ],
                 {
-                    offerid: offerId,
-                    isPromotional: live.isPromotional ? true : '$undefined',
-                    timezoneOffset: this.bot.userData.timezoneOffset
+                    url: URLs.rewards.dashboard,
+                    referer: URLs.rewards.dashboard,
+                    routerStateTree: this.bot.browser.react.routerStateTree('dashboard')
                 }
-            ])
+            )
 
             const newBalance = await this.bot.browser.func.getCurrentPoints()
             const gainedPoints = newBalance - oldBalance
@@ -100,6 +113,19 @@ export class UrlReward extends Workers {
                     'URL-REWARD',
                     `UrlReward credited no points | offerId=${offerId} | acknowledged=${acknowledged} | expected=${expectedPoints} | pointsGained=0 | currentBalance=${newBalance}`
                 )
+
+                if (allowSessionRepair && !acknowledged && expectedPoints > 0 && this.bot.currentSessionWasRestored) {
+                    const repaired = await this.bot.repairCurrentBrowserSession(`URL-REWARD:${offerId}`)
+                    if (repaired) {
+                        this.bot.logger.info(
+                            this.bot.isMobile,
+                            'URL-REWARD',
+                            `Retrying UrlReward once with the refreshed session | offerId=${offerId}`
+                        )
+                        await this.runUrlReward(promotion, false)
+                        return
+                    }
+                }
             }
 
             await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))

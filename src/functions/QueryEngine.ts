@@ -17,13 +17,11 @@ import type { QueryEngine, QueryEngineEntry } from '../interface/Config'
 import type { MicrosoftRewardsBot } from '../index'
 
 const GOOGLE_TRENDS_RPC_ID = 'i0OFE'
-
-const RELATED_EXPANSION_LIMIT = 50
+const MAX_CLUSTER_SUGGESTIONS = 8
 
 interface QueryManagerOptions {
     shuffle?: boolean
     sourceOrder?: QueryEngineEntry[]
-    related?: boolean
     langCode?: string
     geoLocale?: string
 }
@@ -56,6 +54,10 @@ function stripHtml(text: string): string {
     return text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
 }
 
+export function normalizeQueryKey(query: string): string {
+    return query.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 export class QueryCore {
     constructor(private bot: MicrosoftRewardsBot) {}
 
@@ -63,12 +65,17 @@ export class QueryCore {
         const {
             shuffle = false,
             sourceOrder = ['google', 'wikipedia', 'wikirandom', 'hackernews', 'reddit', 'local'],
-            related = true,
             langCode = 'en',
             geoLocale = 'US'
         } = options
 
         try {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'QUERY-MANAGER',
+                `Building main topic pool | sources=${sourceOrder.join(',')} | shuffle=${shuffle} | lang=${langCode} | geo=${geoLocale}`
+            )
+
             const sourceHandlers: Record<QueryEngine, () => Promise<string[]> | string[]> = {
                 google: () => this.getGoogleTrends(geoLocale.toUpperCase()).catch(() => []),
                 wikipedia: () => this.getWikipediaTrending(langCode).catch(() => []),
@@ -78,8 +85,8 @@ export class QueryCore {
                 local: () => this.getLocalQueryList()
             }
 
-            const isRss = (s: string) => s === 'rss' || s.startsWith('rss.')
-            const coreSources = sourceOrder.filter(s => !isRss(s)) as QueryEngine[]
+            const isRss = (source: string) => source === 'rss' || source.startsWith('rss.')
+            const coreSources = sourceOrder.filter(source => !isRss(source)) as QueryEngine[]
             const rssSelectors = sourceOrder.filter(isRss)
 
             const topicLists: string[][] = []
@@ -106,68 +113,142 @@ export class QueryCore {
                 if (rssTopics.length) topicLists.push(rssTopics)
             }
 
-            const baseTopics = this.normalizeAndDedupe(topicLists.flat())
-            if (!baseTopics.length) {
+            const rawTopics = topicLists.flat()
+            const topics = this.normalizeAndDedupe(rawTopics)
+            if (!topics.length) {
                 this.bot.logger.warn(this.bot.isMobile, 'QUERY-MANAGER', 'No topics returned by any source')
                 return []
             }
 
-            const clusters = related ? await this.buildRelatedClusters(baseTopics, langCode) : baseTopics.map(t => [t])
-            this.bot.utils.shuffleArray(clusters)
+            if (shuffle) {
+                this.bot.utils.shuffleArray(topics)
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'QUERY-MANAGER',
+                    `Shuffled main topic pool | first="${topics[0] ?? ''}"`
+                )
+            }
 
-            let finalQueries = clusters.flat()
-            if (shuffle) this.bot.utils.shuffleArray(finalQueries)
-
-            finalQueries = this.normalizeAndDedupe(finalQueries)
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUERY-MANAGER',
-                `Built query pool | base=${baseTopics.length} | final=${finalQueries.length} | related=${related}`
+                `Built main topic pool | raw=${rawTopics.length} | unique=${topics.length} | duplicatesRemoved=${rawTopics.length - topics.length}`
             )
-
-            return finalQueries
+            return topics
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'QUERY-MANAGER',
-                `Failed building query pool | ${error instanceof Error ? error.message : String(error)}`
+                `Failed building main topic pool | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
     }
 
-    private async buildRelatedClusters(baseTopics: string[], langCode: string): Promise<string[][]> {
-        const clusters: string[][] = []
+    async getConfiguredSearchTopics(): Promise<string[]> {
+        return await this.queryManager({
+            shuffle: true,
+            langCode: (this.bot.userData.langCode ?? 'en').toLowerCase(),
+            geoLocale: (this.bot.userData.geoLocale ?? 'US').toUpperCase(),
+            sourceOrder: this.bot.config.searchSettings.queryEngines
+        })
+    }
 
-        const head = baseTopics.slice(0, RELATED_EXPANSION_LIMIT)
-        const tail = baseTopics.slice(RELATED_EXPANSION_LIMIT)
-
-        for (const topic of head) {
-            const suggestions = (await this.getBingSuggestions(topic, langCode).catch(() => [])).slice(0, 6)
-            const related = (await this.getBingRelatedTerms(topic).catch(() => [])).slice(0, 3)
-            clusters.push(this.normalizeAndDedupe([topic, ...suggestions, ...related]))
+    async getSearchCluster(mainTopic: string): Promise<string[]> {
+        const normalizedMain = this.normalizeAndDedupe([mainTopic])[0]
+        if (!normalizedMain) return []
+        if (!this.bot.config.searchSettings.clusterSearch) {
+            this.bot.logger.debug(this.bot.isMobile, 'QUERY-CLUSTER', `Clustering disabled | main="${normalizedMain}"`)
+            return [normalizedMain]
         }
 
-        for (const topic of tail) {
-            clusters.push([topic])
+        const langCode = (this.bot.userData.langCode ?? 'en').toLowerCase()
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'QUERY-CLUSTER',
+            `Fetching related queries | main="${normalizedMain}" | lang=${langCode} | limit=${MAX_CLUSTER_SUGGESTIONS}`
+        )
+
+        const [suggestionsResult, relatedResult] = await Promise.allSettled([
+            this.getBingSuggestions(normalizedMain, langCode),
+            this.getBingRelatedTerms(normalizedMain)
+        ])
+        const rawSuggestions = suggestionsResult.status === 'fulfilled' ? suggestionsResult.value : []
+        const rawRelated = relatedResult.status === 'fulfilled' ? relatedResult.value : []
+
+        if (suggestionsResult.status === 'rejected') {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'QUERY-CLUSTER',
+                `Related source unavailable | source=v7 | main="${normalizedMain}" | ${String(suggestionsResult.reason)}`
+            )
+        }
+        if (relatedResult.status === 'rejected') {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'QUERY-CLUSTER',
+                `Related source unavailable | source=osjson | main="${normalizedMain}" | ${String(relatedResult.reason)}`
+            )
         }
 
-        return clusters
+        const suggestions = this.normalizeAndDedupe(rawSuggestions)
+        const related = this.normalizeAndDedupe(rawRelated)
+
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'QUERY-CLUSTER',
+            `Related source ready | source=v7 | main="${normalizedMain}" | raw=${rawSuggestions.length} | unique=${suggestions.length} | queries=${JSON.stringify(suggestions)}`
+        )
+
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'QUERY-CLUSTER',
+            `Related source ready | source=osjson | main="${normalizedMain}" | raw=${rawRelated.length} | unique=${related.length} | queries=${JSON.stringify(related)}`
+        )
+
+        const interleaved: string[] = []
+        const sourceLength = Math.max(suggestions.length, related.length)
+        for (let index = 0; index < sourceLength; index++) {
+            const suggestion = suggestions[index]
+            const relatedTerm = related[index]
+            if (suggestion) interleaved.push(suggestion)
+            if (relatedTerm) interleaved.push(relatedTerm)
+        }
+
+        const mainKey = normalizeQueryKey(normalizedMain)
+        const merged = this.normalizeAndDedupe(interleaved).filter(query => normalizeQueryKey(query) !== mainKey)
+        const selected = merged.slice(0, MAX_CLUSTER_SUGGESTIONS)
+
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'QUERY-CLUSTER',
+            `Related queries merged | main="${normalizedMain}" | availableSources=${Number(suggestions.length > 0) + Number(related.length > 0)} | unique=${merged.length} | selected=${selected.length} | queries=${JSON.stringify(selected)}`
+        )
+
+        const cluster = [normalizedMain, ...selected]
+        this.bot.utils.shuffleArray(cluster)
+
+        this.bot.logger.debug(
+            this.bot.isMobile,
+            'QUERY-CLUSTER',
+            `Cluster ready | main="${normalizedMain}" | related=${Math.max(0, cluster.length - 1)} | total=${cluster.length} | order=${JSON.stringify(cluster)}`
+        )
+        return cluster
     }
 
     private normalizeAndDedupe(queries: string[]): string[] {
         const seen = new Set<string>()
         const out: string[] = []
 
-        for (const q of queries) {
-            const trimmed = q?.trim()
+        for (const query of queries) {
+            const trimmed = query?.trim()
             if (!trimmed) continue
 
-            const norm = trimmed.replace(/\s+/g, ' ').toLowerCase()
-            if (seen.has(norm)) continue
+            const key = normalizeQueryKey(trimmed)
+            if (seen.has(key)) continue
 
-            seen.add(norm)
-            out.push(trimmed)
+            seen.add(key)
+            out.push(trimmed.replace(/\s+/g, ' '))
         }
 
         return out
@@ -257,7 +338,9 @@ export class QueryCore {
 
             const response = await this.bot.http.request<unknown[]>(request, this.bot.config.proxy.queryEngine)
             const related = response.data?.[1]
-            return Array.isArray(related) ? related : []
+            return Array.isArray(related)
+                ? related.filter((term): term is string => typeof term === 'string' && term.trim().length > 0)
+                : []
         } catch (error) {
             this.bot.logger.debug(
                 this.bot.isMobile,

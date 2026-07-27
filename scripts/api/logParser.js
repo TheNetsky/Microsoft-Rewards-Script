@@ -1,4 +1,4 @@
-const ANSI_RE = /\u001B\[[0-9;]*m/g
+const ANSI_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g')
 
 export function stripAnsi(str) {
     return typeof str === 'string' ? str.replace(ANSI_RE, '') : str
@@ -96,7 +96,7 @@ const RE = {
     earnable: /^Earnable today \| Mobile: (\d+) \| Browser: (\d+) \| App: (\d+) \| (\S+) \| locale: (\S+)/,
     searchSummary: /^Search summary \| mobile=(-?\d+) \| desktop=(-?\d+) \| bonus=(-?\d+) \| total=(-?\d+)/,
     streakProtection:
-        /^Snapshot complete \| offers=(\d+) \| reportable=(\d+) \| streaks=(\d+) \| streakProtectionEnabled=(true|false) \| streakProtectionRemainingDays=(\d+|null) \| streakCounter=(\d+|null) \| level=([^|]+) \| account=(\S+@\S+)$/,
+        /^Snapshot complete \| offers=(\d+) \| reportable=(\d+) \| streaks=(\d+) \| streakProtectionEnabled=(true|false|null) \| streakProtectionRemainingDays=(\d+|null) \| streakCounter=(\d+|null) \| level=([^|]+) \| account=(\S+@\S+)$/,
     accountEnd:
         /^Completed account: (\S+) \| pointsGained=(-?\d+) \| previousBalance=(\d+) \| currentBalance=(\d+) \| durationSeconds=([\d.]+)/,
     runEnd: /^Completed all accounts \| accountsProcessed=(\d+) \| pointsGained=(-?\d+) \| previousBalance=(\d+) \| currentBalance=(\d+) \| runtimeMinutes=([\d.]+)/,
@@ -286,7 +286,7 @@ export function applyLogToRunState(state, entry) {
                 const acc = ensureAccount(state, m[8])
                 if (acc) {
                     acc.streakProtection = {
-                        enabled: m[4] === 'true',
+                        enabled: m[4] === 'null' ? null : m[4] === 'true',
                         remainingDays: m[5] === 'null' ? null : Number(m[5]),
                         streakCounter: m[6] === 'null' ? null : Number(m[6]),
                         updatedAt: entry.ts

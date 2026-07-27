@@ -42,29 +42,25 @@ export class SearchManager {
     }
 
     searchMobile(account: Account): Promise<number> {
-        return executionContext.run({ isMobile: true, account }, async () => {
-            try {
-                return await this.bot.activities.doSearch(this.bot.mainMobilePage, true)
-            } catch (error) {
-                this.bot.logger.error(
-                    'main',
-                    'SEARCH-MANAGER',
-                    `Mobile search failed | ${error instanceof Error ? error.message : String(error)}`
-                )
-                return 0
-            }
-        })
+        return this.search(account, true)
     }
 
     searchDesktop(account: Account): Promise<number> {
-        return executionContext.run({ isMobile: false, account }, async () => {
+        return this.search(account, false)
+    }
+
+    private search(account: Account, isMobile: boolean): Promise<number> {
+        const platform = isMobile ? 'Mobile' : 'Desktop'
+        const page = isMobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage
+
+        return executionContext.run({ isMobile, account }, async () => {
             try {
-                return await this.bot.activities.doSearch(this.bot.mainDesktopPage, false)
+                return await this.bot.activities.doSearch(page, isMobile)
             } catch (error) {
                 this.bot.logger.error(
                     'main',
                     'SEARCH-MANAGER',
-                    `Desktop search failed | ${error instanceof Error ? error.message : String(error)}`
+                    `${platform} search failed | ${error instanceof Error ? error.message : String(error)}`
                 )
                 return 0
             }

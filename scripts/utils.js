@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { DatabaseSync } from 'node:sqlite'
+import { envBool, envInt, envStr } from './env.js'
 
 export function getDirname(importMetaUrl) {
     const __filename = fileURLToPath(importMetaUrl)
@@ -10,12 +11,21 @@ export function getDirname(importMetaUrl) {
 
 export function getProjectRoot(currentDir) {
     let dir = currentDir
+    let nearestPackageDir = null
+
     while (dir !== path.parse(dir).root) {
-        if (fs.existsSync(path.join(dir, 'package.json'))) {
-            return dir
+        const packagePath = path.join(dir, 'package.json')
+        if (fs.existsSync(packagePath)) {
+            nearestPackageDir ??= dir
+            try {
+                const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
+                if (typeof pkg.name === 'string' && pkg.name.trim()) return dir
+            } catch {}
         }
         dir = path.dirname(dir)
     }
+
+    if (nearestPackageDir) return nearestPackageDir
     throw new Error('Could not find project root (package.json not found)')
 }
 
@@ -30,7 +40,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
         const arg = argv[i]
 
         if (arg.startsWith('-')) {
-            const key = arg.substring(1)
+            const key = arg.replace(/^-+/, '')
 
             if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
                 args[key] = argv[i + 1]
@@ -133,19 +143,6 @@ export function loadEnvFile(projectRoot) {
     }
 }
 
-function envStr(key) {
-    const v = process.env[key]
-    if (v === undefined) return undefined
-    const trimmed = v.trim()
-    return trimmed.length ? trimmed : undefined
-}
-
-function envBool(key, fallback) {
-    const v = envStr(key)
-    if (v === undefined) return fallback
-    return ['1', 'true', 'yes', 'on'].includes(v.toLowerCase())
-}
-
 const deprecationWarned = new Set()
 function envBoolWithLegacy(primary, legacy, fallback) {
     if (envStr(primary) !== undefined) return envBool(primary, fallback)
@@ -157,13 +154,6 @@ function envBoolWithLegacy(primary, legacy, fallback) {
         return envBool(legacy, fallback)
     }
     return fallback
-}
-
-function envInt(key, fallback) {
-    const v = envStr(key)
-    if (v === undefined) return fallback
-    const n = parseInt(v, 10)
-    return Number.isFinite(n) ? n : fallback
 }
 
 export function loadAccountsFromEnv(projectRoot) {
@@ -208,23 +198,21 @@ export function findAccountByEmail(accounts, email) {
     )
 }
 
-export function getUserAgent(fingerprint) {
-    if (!fingerprint) return null
-    return (
-        fingerprint?.fingerprint?.navigator?.userAgent ??
-        fingerprint?.fingerprint?.userAgent ??
-        fingerprint?.userAgent ??
-        null
-    )
-}
-
 export function buildProxyConfig(account) {
     if (!account?.proxy?.url || !account.proxy.port) {
         return null
     }
 
+    let server
+    try {
+        const url = new URL(account.proxy.url)
+        server = `${url.protocol}//${url.hostname}:${account.proxy.port}`
+    } catch {
+        server = `${account.proxy.url}:${account.proxy.port}`
+    }
+
     const proxy = {
-        server: `${account.proxy.url}:${account.proxy.port}`
+        server
     }
 
     if (account.proxy.username && account.proxy.password) {
@@ -262,7 +250,9 @@ export function getSessionDbPath(projectRoot, sessionPath) {
 }
 
 export function openSessionDb(dbPath, { readonly = false } = {}) {
-    return new DatabaseSync(dbPath, { readOnly: readonly })
+    const db = new DatabaseSync(dbPath, { readOnly: readonly })
+    db.exec('PRAGMA busy_timeout = 5000')
+    return db
 }
 
 export function closeSessionDb(db) {

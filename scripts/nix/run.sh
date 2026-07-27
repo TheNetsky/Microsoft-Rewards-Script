@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-nix develop --command bash -c "xvfb-run npm run start"
+exec nix develop --command xvfb-run -a npm run start

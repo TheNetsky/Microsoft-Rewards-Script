@@ -31,6 +31,7 @@ export interface ConfigSearchSettings {
     runOnZeroPoints: boolean
     maxBonusSearches: number
     parallelSearching: boolean
+    clusterSearch: boolean
     queryEngines: QueryEngineEntry[]
     searchResultVisitTime: number | string
     searchDelay: ConfigDelay

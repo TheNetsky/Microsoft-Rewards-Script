@@ -14,8 +14,7 @@ fs.mkdirSync(outDir, { recursive: true })
 for (const asset of assets) {
     const from = path.join(srcDir, asset)
     if (!fs.existsSync(from)) {
-        console.log(`[warn] Asset missing, skipping: ${asset}`)
-        continue
+        throw new Error(`Required build asset is missing: ${from}`)
     }
     fs.copyFileSync(from, path.join(outDir, asset))
     console.log(`[info] Copied ${asset} -> dist/functions/`)

@@ -3,6 +3,7 @@ import type { HttpRequestConfig } from '../util/Http'
 import PQueue from 'p-queue'
 import type { WebhookNtfyConfig } from '../interface/Config'
 import type { LogLevel } from './Logger'
+import { flushQueue } from './Queue'
 
 const ntfyQueue = new PQueue({
     interval: 1000,
@@ -52,13 +53,6 @@ export async function sendNtfy(config: WebhookNtfyConfig, content: string, level
     })
 }
 
-export async function flushNtfyQueue(timeoutMs = 5000): Promise<void> {
-    let timer: NodeJS.Timeout | undefined
-    await Promise.race([
-        ntfyQueue.onIdle(),
-        new Promise<void>((_, reject) => {
-            timer = setTimeout(() => reject(new Error('ntfy flush timeout')), timeoutMs)
-        })
-    ]).catch(() => {})
-    if (timer) clearTimeout(timer)
+export function flushNtfyQueue(timeoutMs = 5000): Promise<void> {
+    return flushQueue(ntfyQueue, timeoutMs)
 }

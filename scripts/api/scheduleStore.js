@@ -16,6 +16,8 @@ const CRON_FIELD_RANGES = [
 function validateField(expr, { min, max }) {
     if (expr === '*') return true
     for (const part of expr.split(',')) {
+        if (!/^(?:\*|\d+|\d+-\d+)(?:\/\d+)?$/.test(part)) return false
+
         const stepSplit = part.split('/')
         if (stepSplit.length > 2) return false
 
@@ -49,8 +51,8 @@ export function isValidCron(expr) {
     return parts.every((part, i) => validateField(part, CRON_FIELD_RANGES[i]))
 }
 
-// The override file lives inside the ./config bind mount that's already
-// mounted by compose_bot.yaml, so no new volume is required to persist it
+// The override file lives inside the ./config bind mount already configured
+// by compose.yaml, so no new volume is required to persist it
 // across container restarts.
 export function scheduleFilePath(projectRoot) {
     return process.env.SCHEDULE_FILE || path.join(projectRoot, 'config', 'schedule.json')
@@ -72,13 +74,45 @@ export function readSchedule(projectRoot) {
         } catch (err) {
             throw Object.assign(new Error(`schedule.json is corrupt: ${err.message}`), { code: 'CORRUPT_SCHEDULE' })
         }
+        const enabled = saved.enabled === undefined ? false : saved.enabled
+        const cron = saved.cron == null ? null : saved.cron
+        const skipIfRunning = saved.skipIfRunning === undefined ? true : saved.skipIfRunning
+        const excludedAccountIndexes = saved.excludedAccountIndexes ?? []
+
+        if (typeof enabled !== 'boolean') {
+            throw Object.assign(new Error('schedule.json has a non-boolean `enabled` value.'), {
+                code: 'CORRUPT_SCHEDULE'
+            })
+        }
+        if (cron !== null && (typeof cron !== 'string' || !isValidCron(cron))) {
+            throw Object.assign(new Error('schedule.json has an invalid `cron` expression.'), {
+                code: 'CORRUPT_SCHEDULE'
+            })
+        }
+        if (typeof skipIfRunning !== 'boolean') {
+            throw Object.assign(new Error('schedule.json has a non-boolean `skipIfRunning` value.'), {
+                code: 'CORRUPT_SCHEDULE'
+            })
+        }
+        if (
+            !Array.isArray(excludedAccountIndexes) ||
+            excludedAccountIndexes.some(index => !Number.isSafeInteger(index) || index < 1)
+        ) {
+            throw Object.assign(new Error('schedule.json has invalid `excludedAccountIndexes`.'), {
+                code: 'CORRUPT_SCHEDULE'
+            })
+        }
+        if (enabled && !cron) {
+            throw Object.assign(new Error('schedule.json enables scheduling without a cron expression.'), {
+                code: 'CORRUPT_SCHEDULE'
+            })
+        }
+
         return {
-            enabled: Boolean(saved.enabled),
-            cron: typeof saved.cron === 'string' ? saved.cron : null,
-            skipIfRunning: saved.skipIfRunning !== false,
-            excludedAccountIndexes: Array.isArray(saved.excludedAccountIndexes)
-                ? saved.excludedAccountIndexes.filter(n => Number.isInteger(n) && n >= 1)
-                : [],
+            enabled,
+            cron: cron?.trim() ?? null,
+            skipIfRunning,
+            excludedAccountIndexes: [...new Set(excludedAccountIndexes)].sort((a, b) => a - b),
             updatedAt: saved.updatedAt || null,
             timezone: process.env.TZ || 'UTC',
             source: 'override'
@@ -107,8 +141,18 @@ export function writeSchedule(projectRoot, patch) {
         }
         next.cron = patch.cron.trim()
     }
-    if ('enabled' in patch) next.enabled = Boolean(patch.enabled)
-    if ('skipIfRunning' in patch) next.skipIfRunning = Boolean(patch.skipIfRunning)
+    if ('enabled' in patch) {
+        if (typeof patch.enabled !== 'boolean') {
+            throw Object.assign(new Error('enabled must be a boolean.'), { code: 'BAD_REQUEST' })
+        }
+        next.enabled = patch.enabled
+    }
+    if ('skipIfRunning' in patch) {
+        if (typeof patch.skipIfRunning !== 'boolean') {
+            throw Object.assign(new Error('skipIfRunning must be a boolean.'), { code: 'BAD_REQUEST' })
+        }
+        next.skipIfRunning = patch.skipIfRunning
+    }
     if ('excludedAccountIndexes' in patch) {
         if (!Array.isArray(patch.excludedAccountIndexes)) {
             throw Object.assign(new Error('excludedAccountIndexes must be an array.'), { code: 'BAD_REQUEST' })

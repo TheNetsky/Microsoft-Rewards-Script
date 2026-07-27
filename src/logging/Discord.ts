@@ -2,6 +2,7 @@ import { httpRequest } from '../util/Http'
 import type { HttpRequestConfig } from '../util/Http'
 import PQueue from 'p-queue'
 import type { LogLevel } from './Logger'
+import { flushQueue } from './Queue'
 
 const DISCORD_LIMIT = 2000
 
@@ -52,13 +53,6 @@ export async function sendDiscord(discordUrl: string, content: string, level: Lo
     })
 }
 
-export async function flushDiscordQueue(timeoutMs = 5000): Promise<void> {
-    let timer: NodeJS.Timeout | undefined
-    await Promise.race([
-        discordQueue.onIdle(),
-        new Promise<void>((_, reject) => {
-            timer = setTimeout(() => reject(new Error('discord flush timeout')), timeoutMs)
-        })
-    ]).catch(() => {})
-    if (timer) clearTimeout(timer)
+export function flushDiscordQueue(timeoutMs = 5000): Promise<void> {
+    return flushQueue(discordQueue, timeoutMs)
 }

@@ -1,7 +1,7 @@
 import type { Page } from 'patchright'
 
 import { URLs } from '../../../constants/urls'
-import { QueryCore } from '../../QueryEngine'
+import { SearchQueryQueue } from '../../SearchQueryQueue'
 import { Workers } from '../../Workers'
 import { BonusTracker } from '../SearchBonus'
 import type { SearchTracker } from '../../../interface/Search'
@@ -89,34 +89,29 @@ export class Search extends Workers {
             const ready = await tracker.prepare()
             if (!ready) return stats
 
-            const queryCore = new QueryCore(this.bot)
-            let queries = await this.generatePool(queryCore)
-            if (!queries.length) {
-                this.bot.logger.warn(isMobile, tracker.context, 'No queries available, skipping')
+            const queryQueue = new SearchQueryQueue(this.bot)
+            const topicCount = await queryQueue.prepare()
+            if (!topicCount) {
+                this.bot.logger.warn(isMobile, tracker.context, 'No main search topics available, skipping')
                 return stats
             }
-            this.bot.logger.info(isMobile, tracker.context, `Query pool ready | count=${queries.length}`)
+            this.bot.logger.info(
+                isMobile,
+                tracker.context,
+                `Query queue ready | mainTopics=${topicCount} | clusterSearch=${this.bot.config.searchSettings.clusterSearch}`
+            )
 
             await page.goto(URLs.bing.origin)
             await page.waitForLoadState('domcontentloaded', { timeout: 8000 }).catch(() => {})
             await this.bot.browser.utils.tryDismissAllMessages(page)
 
-            let index = 0
-
             while (!tracker.done() && stats.performed < tracker.maxSearches && stats.stagnant < tracker.stagnantLimit) {
-                // Out of queries: pull a fresh batch, dedupe, and reshuffle
-                if (index >= queries.length) {
-                    const extra = await this.generatePool(queryCore)
-                    queries = this.bot.utils.shuffleArray([...new Set([...queries, ...extra])])
-                    if (index >= queries.length) {
-                        this.bot.logger.warn(isMobile, tracker.context, 'Query pool exhausted, stopping')
-                        break
-                    }
-                    this.bot.logger.debug(isMobile, tracker.context, `Query pool regenerated | count=${queries.length}`)
+                const query = await queryQueue.next()
+                if (!query) {
+                    this.bot.logger.warn(isMobile, tracker.context, 'Query queue exhausted, stopping')
+                    break
                 }
 
-                // Query still has to be decoded, RSS entries often have html entities, but to add a whole dependancy for that? Doesn't look natural however
-                const query = queries[index++] as string
                 await this.bingSearch(page, query, isMobile)
                 stats.performed++
 
@@ -150,18 +145,6 @@ export class Search extends Workers {
             return stats
         }
     }
-
-    private async generatePool(queryCore: QueryCore): Promise<string[]> {
-        const pool = await queryCore.queryManager({
-            shuffle: true,
-            related: true,
-            langCode: (this.bot.userData.langCode ?? 'en').toLowerCase(),
-            geoLocale: (this.bot.userData.geoLocale ?? 'US').toUpperCase(),
-            sourceOrder: this.bot.config.searchSettings.queryEngines
-        })
-        return [...new Set(pool.map(q => q.trim()).filter(Boolean))]
-    }
-
     private async bingSearch(page: Page, query: string, isMobile: boolean): Promise<void> {
         this.searchCount++
 

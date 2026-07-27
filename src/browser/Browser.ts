@@ -86,6 +86,22 @@ class Browser {
 
         try {
             const session = loadSession(this.bot.config.sessionPath, account.email, this.bot.isMobile)
+            this.bot.setCurrentSessionRestored(Boolean(session?.storageState))
+
+            if (session?.storageState) {
+                const ageMinutes = Math.max(0, Math.floor((Date.now() - session.updatedAt) / 60000))
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'SESSION',
+                    `Restoring saved browser session | cookies=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | ageMinutes=${ageMinutes}`
+                )
+            } else {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'SESSION',
+                    'No saved browser session found; login may be required'
+                )
+            }
 
             const shouldUseFingerprint = this.bot.isMobile
                 ? account.saveFingerprint.mobile

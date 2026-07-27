@@ -243,7 +243,7 @@ A successful response looks like:
 {
     "ok": true,
     "name": "microsoft-rewards-script",
-    "version": "4.0.3",
+    "version": "4.1.0",
     "state": "idle",
     "uptimeSec": 12,
     "authRequired": true
@@ -286,15 +286,16 @@ curl --request GET \
   --header 'X-API-Key: YOUR_API_TOKEN'
 ```
 
-### Query parameter
+### SSE query parameter
 
 ```text
 http://127.0.0.1:3010/events?token=<API_TOKEN>
 ```
 
-The query form is primarily intended for browser `EventSource`, which cannot
-set custom authorization headers. Prefer a header for normal HTTP requests,
-because URLs can be stored in browser history and proxy logs.
+The query form is accepted only by `/events` and is intended for browser
+`EventSource`, which cannot set custom authorization headers. Use a header for
+every other request because URLs can be stored in browser history and proxy
+logs.
 
 An invalid or missing token returns:
 
@@ -306,7 +307,7 @@ Content-Type: application/json
 ```json
 {
     "error": "Unauthorized",
-    "hint": "Provide the API token via Authorization: Bearer, X-API-Key, or ?token= ..."
+    "hint": "Provide the API token via Authorization: Bearer or X-API-Key. Browser EventSource may use ?token= only on /events. ..."
 }
 ```
 
@@ -421,7 +422,7 @@ console.log(data)
 ```json
 {
     "name": "microsoft-rewards-script",
-    "version": "4.0.3",
+    "version": "4.1.0",
     "message": "Control API",
     "authRequired": true,
     "stateless": true,
@@ -500,7 +501,7 @@ Representative response:
 ```jsonc
 {
     "name": "microsoft-rewards-script",
-    "version": "4.0.3",
+    "version": "4.1.0",
     "state": "running",
     "pid": 18420,
     "startedAt": "2026-07-14T09:30:00.000Z",
@@ -510,7 +511,7 @@ Representative response:
     "logBufferSize": 2000,
     "latestLogId": 418,
     "run": {
-        "version": "4.0.3",
+        "version": "4.1.0",
         "clusters": 1,
         "accountsTotal": 2,
         "accountsSeen": 1,
@@ -779,7 +780,7 @@ console.log(data.runs)
                 "signal": null,
                 "at": "2026-07-14T09:36:12.000Z"
             },
-            "version": "4.0.3",
+            "version": "4.1.0",
             "collected": 312,
             "accounts": [
                 {
@@ -807,7 +808,9 @@ should store the returned completion data in its own database.
 
 ### `GET /accounts`
 
-Returns account slots discovered from `ACCOUNT_<N>_EMAIL` variables in `.env`.
+Returns contiguous account slots discovered from `ACCOUNT_<N>_EMAIL` variables
+in `.env`, matching the bot's own loader. Discovery starts at slot 1 and stops
+at the first missing email.
 Email addresses are returned in full for the local dashboard. Passwords,
 recovery addresses, TOTP secrets, and separate proxy username/password values
 are not returned; the configured proxy URL and port are included in the summary.
@@ -831,7 +834,7 @@ console.log(data.accounts)
 {
     "accounts": [
         {
-            "index": 2,
+            "index": 1,
             "email": "user@example.com",
             "geoLocale": "NL",
             "langCode": "nl",
@@ -1216,8 +1219,9 @@ const { data } = await api.post('/start', {
 console.log(data)
 ```
 
-Values are converted to strings and exist only in the child process. The
-following launch-hijacking keys are always discarded:
+String, number, and boolean values are converted to strings and exist only in
+the child process; `null` values are ignored. Arrays and objects are rejected.
+The following launch-hijacking keys are always discarded, case-insensitively:
 
 - `NODE_OPTIONS`;
 - `NODE_PATH`;
@@ -1588,7 +1592,7 @@ Successful response:
 {
     "ok": true,
     "path": "/app/config.json",
-    "via": "bot-validateConfig",
+    "via": "bot-ConfigSchema",
     "appliesOnNextRun": true
 }
 ```
@@ -1622,17 +1626,18 @@ const { data } = await api.put('/config', config)
 console.log(data)
 ```
 
-The API prefers the bot's compiled validator from
-`dist/util/Validator.js`. `API_VALIDATOR_MODULE` can point to another compiled
-module. If no bot validator is available, a limited structural fallback checks
-core field types.
+The API prefers the bot's strict compiled `ConfigSchema` from
+`dist/util/Validator.js`, then falls back to `validateConfig` when a custom
+validator module exposes only that function. `API_VALIDATOR_MODULE` can point
+to another compiled module. If no bot validator is available, a structural
+fallback checks the current core field types.
 
 Validation failures return `422 Unprocessable Entity`:
 
 ```jsonc
 {
     "error": "Config validation failed",
-    "via": "bot-validateConfig",
+    "via": "bot-ConfigSchema",
     "errors": ["workers.doMobileSearch: Expected boolean, received string"]
 }
 ```
@@ -1935,7 +1940,8 @@ npm run api -- --host 0.0.0.0 --port 3010 --token "YOUR_API_TOKEN"
 
 `API_HOST` and `API_TOKEN` take precedence over their CLI equivalents when they
 are already defined in the process environment or loaded `.env`. The `--port`
-flag takes precedence over `API_PORT` when it contains a valid non-zero number.
+flag takes precedence over `API_PORT`; invalid port values are rejected at
+startup.
 
 The API normally launches `dist/index.js` with the current Node executable. If
 that file is missing, it falls back to the local `ts-node` CLI and
@@ -2028,7 +2034,7 @@ After the HTTP server begins listening, it writes one machine-readable line to
 stdout:
 
 ```text
-__API_READY__ {"host":"127.0.0.1","port":3010,"pid":1234,"name":"microsoft-rewards-script","version":"4.0.3","auth":true}
+__API_READY__ {"host":"127.0.0.1","port":3010,"pid":1234,"name":"microsoft-rewards-script","version":"4.1.0","auth":true}
 ```
 
 A launcher can wait for this line rather than relying on a fixed startup delay.

@@ -1,8 +1,14 @@
-function envStrFrom(sourceEnv, key) {
-    const v = sourceEnv[key]
-    if (v === undefined) return undefined
-    const t = String(v).trim()
-    return t.length ? t : undefined
+import { envStrFrom } from '../env.js'
+
+function sanitizeProxyUrl(value) {
+    try {
+        const url = new URL(value)
+        url.username = ''
+        url.password = ''
+        return url.toString().replace(/\/$/, '')
+    } catch {
+        return value.replace(/^(?:[^/@\s]+@|([a-z][a-z0-9+.-]*:\/\/)[^/@\s]+@)/i, '$1')
+    }
 }
 
 /**
@@ -12,18 +18,12 @@ function envStrFrom(sourceEnv, key) {
  */
 export function loadAccounts(sourceEnv = process.env) {
     const accounts = []
-    const indexes = [
-        ...new Set(
-            Object.keys(sourceEnv)
-                .map(key => /^ACCOUNT_(\d+)_EMAIL$/.exec(key)?.[1])
-                .filter(Boolean)
-                .map(Number)
-        )
-    ].sort((a, b) => a - b)
 
-    for (const i of indexes) {
+    // Match the bot's loader exactly: account slots are contiguous and
+    // discovery stops at the first missing ACCOUNT_N_EMAIL.
+    for (let i = 1; ; i++) {
         const email = envStrFrom(sourceEnv, `ACCOUNT_${i}_EMAIL`)
-        if (!email) continue
+        if (!email) break
 
         const proxyUrl = envStrFrom(sourceEnv, `ACCOUNT_${i}_PROXY_URL`)
         accounts.push({
@@ -36,18 +36,18 @@ export function loadAccounts(sourceEnv = process.env) {
             hasTotp: Boolean(envStrFrom(sourceEnv, `ACCOUNT_${i}_TOTP_SECRET`)),
             proxy: proxyUrl
                 ? {
-                      url: proxyUrl,
+                      url: sanitizeProxyUrl(proxyUrl),
                       port: envStrFrom(sourceEnv, `ACCOUNT_${i}_PROXY_PORT`) ?? null,
-                      hasCredentials: Boolean(envStrFrom(sourceEnv, `ACCOUNT_${i}_PROXY_USERNAME`))
+                      hasCredentials: Boolean(
+                          envStrFrom(sourceEnv, `ACCOUNT_${i}_PROXY_USERNAME`) &&
+                          envStrFrom(sourceEnv, `ACCOUNT_${i}_PROXY_PASSWORD`)
+                      )
                   }
                 : null
         })
     }
     return accounts
 }
-
-// Kept as a compatibility alias for code that imported the old function name.
-export const loadAccountsMasked = loadAccounts
 
 /**
  * Builds a child-process-only environment override that runs exactly one

@@ -6,7 +6,7 @@ export class PunchcardManager {
 
     async runMobile(data: DashboardData): Promise<void> {
         try {
-            await this.bot.workers.doPunchCards(data, this.bot.mainMobilePage)
+            await this.bot.workers.doPunchCards(data)
         } catch (error) {
             this.bot.logger.error(
                 'main',
@@ -33,7 +33,7 @@ export class PunchcardManager {
         if (!this.bot.config.workers.doPunchCards || !data) return
 
         try {
-            await this.bot.workers.doPunchCards(data, this.bot.mainDesktopPage)
+            await this.bot.workers.doPunchCards(data)
         } catch (error) {
             this.bot.logger.error(
                 'main',

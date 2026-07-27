@@ -1,9 +1,15 @@
-import { URLs } from '../../../constants/urls'
-import type { Page } from 'patchright'
 import { randomBytes } from 'crypto'
+import type { Page } from 'patchright'
 import { URLSearchParams } from 'url'
 
+import { URLs } from '../../../constants/urls'
 import type { MicrosoftRewardsBot } from '../../../index'
+
+interface TokenResponse {
+    access_token?: string
+    error?: string
+    error_description?: string
+}
 
 export class MobileAccessLogin {
     private clientId = '0000000040170455'
@@ -34,28 +40,14 @@ export class MobileAccessLogin {
                 `Auth URL constructed: ${authorizeUrl.origin}${authorizeUrl.pathname}`
             )
 
-            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Resolving mobile OAuth code via request')
-
-            let code = ''
-            try {
-                const resp = await this.page.request.get(authorizeUrl.href, { maxRedirects: 20 })
-                const finalUrl = new URL(resp.url())
-
+            let code = await this.resolveCodeViaRequest(authorizeUrl)
+            if (!code) {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    `OAuth redirect resolved → ${finalUrl.origin}${finalUrl.pathname} (status ${resp.status()})`
+                    'Request-based OAuth did not return a code, retrying through the active browser context'
                 )
-
-                if (finalUrl.pathname === '/oauth20_desktop.srf') {
-                    code = finalUrl.searchParams.get('code') || ''
-                }
-            } catch (err) {
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'LOGIN-APP',
-                    `OAuth code request failed: ${err instanceof Error ? err.message : String(err)}`
-                )
+                code = await this.resolveCodeViaBrowser(authorizeUrl)
             }
 
             if (!code) {
@@ -74,8 +66,9 @@ export class MobileAccessLogin {
             data.append('client_id', this.clientId)
             data.append('code', code)
             data.append('redirect_uri', this.redirectUrl)
+            data.append('scope', this.scope)
 
-            const response = await this.bot.http.request<{ access_token?: string }>({
+            const response = await this.bot.http.request<TokenResponse>({
                 url: this.tokenUrl,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -83,13 +76,13 @@ export class MobileAccessLogin {
             })
 
             const token = response?.data?.access_token ?? ''
-
             if (!token) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-APP', 'No access_token in token response')
-                this.bot.logger.debug(
+                const error = response?.data?.error ?? 'unknown_error'
+                const description = response?.data?.error_description ?? 'No access_token in token response'
+                this.bot.logger.warn(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    `Token response payload: ${JSON.stringify(response?.data)}`
+                    `Mobile token exchange failed | error=${error} | description=${description}`
                 )
                 return ''
             }
@@ -103,6 +96,84 @@ export class MobileAccessLogin {
                 `MobileAccess error: ${error instanceof Error ? error.stack || error.message : String(error)}`
             )
             return ''
+        }
+    }
+
+    private async resolveCodeViaRequest(authorizeUrl: URL): Promise<string> {
+        try {
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Resolving mobile OAuth code via request')
+
+            const response = await this.page.request.get(authorizeUrl.href, { maxRedirects: 20, timeout: 30000 })
+            const finalUrl = response.url()
+
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'LOGIN-APP',
+                `OAuth request resolved → ${this.safeUrl(finalUrl)} (status ${response.status()})`
+            )
+
+            return this.extractCode(finalUrl)
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'LOGIN-APP',
+                `OAuth code request failed: ${error instanceof Error ? error.message : String(error)}`
+            )
+            return ''
+        }
+    }
+
+    private async resolveCodeViaBrowser(authorizeUrl: URL): Promise<string> {
+        let oauthPage: Page | null = null
+
+        try {
+            oauthPage = await this.page.context().newPage()
+            await oauthPage.goto(authorizeUrl.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+            let code = this.extractCode(oauthPage.url())
+            if (code) return code
+
+            await oauthPage
+                .waitForURL(url => url.pathname.toLowerCase() === '/oauth20_desktop.srf', { timeout: 30000 })
+                .catch(() => {})
+
+            code = this.extractCode(oauthPage.url())
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'LOGIN-APP',
+                `OAuth browser resolved → ${this.safeUrl(oauthPage.url())} | code=${code ? 'present' : 'missing'}`
+            )
+
+            return code
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'LOGIN-APP',
+                `OAuth browser fallback failed: ${error instanceof Error ? error.message : String(error)}`
+            )
+            return ''
+        } finally {
+            await oauthPage?.close().catch(() => {})
+        }
+    }
+
+    private extractCode(rawUrl: string): string {
+        try {
+            const url = new URL(rawUrl)
+            if (url.pathname.toLowerCase() !== '/oauth20_desktop.srf') return ''
+            return url.searchParams.get('code') ?? ''
+        } catch {
+            return ''
+        }
+    }
+
+    private safeUrl(rawUrl: string): string {
+        try {
+            const url = new URL(rawUrl)
+            const error = url.searchParams.get('error')
+            return `${url.origin}${url.pathname}${error ? `?error=${encodeURIComponent(error)}` : ''}`
+        } catch {
+            return '(invalid URL)'
         }
     }
 }

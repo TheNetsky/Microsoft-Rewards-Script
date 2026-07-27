@@ -1,5 +1,4 @@
 import { URLs } from '../constants/urls'
-import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../index'
 import type { DashboardData, PunchCard, BasePromotion } from '../interface/DashboardData'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
@@ -100,22 +99,20 @@ export class Workers {
         this.bot.logger.info(this.bot.isMobile, 'APP-PROMOTIONS', 'All "App Promotions" items have been completed')
     }
 
-    public async doPunchCards(data: DashboardData, page: Page) {
+    public async doPunchCards(data: DashboardData) {
         let parents: ParentQuest[]
 
         try {
-            const earn = await page.request.get(URLs.rewards.earn)
-            if (!earn.ok()) {
-                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', `/earn ${earn.status()} - cannot list quests`)
+            const earn = await this.bot.browser.func.getRewardsPageHtml(URLs.rewards.earn, '/earn')
+            if (!earn) {
+                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', '/earn unavailable - cannot list quests')
                 return
             }
-            const html = await earn.text()
-            parents = this.bot.browser.react.snapshotQuestList(html)
+            parents = this.bot.browser.react.snapshotQuestList(earn)
 
-            // Some deploys render the carousel only on /dashboard
             if (!parents.length) {
-                const dash = await page.request.get(URLs.rewards.dashboard)
-                if (dash.ok()) parents = this.bot.browser.react.snapshotQuestList(html, await dash.text())
+                const dashboard = await this.bot.browser.func.getRewardsPageHtml(URLs.rewards.dashboard, '/dashboard')
+                if (dashboard) parents = this.bot.browser.react.snapshotQuestList(earn, dashboard)
             }
         } catch (error) {
             this.bot.logger.warn(
@@ -169,7 +166,7 @@ export class Workers {
 
         for (const parent of incomplete) {
             try {
-                await this.solvePunchCard(parent, apiById.get(parent.offerId), page)
+                await this.solvePunchCard(parent, apiById.get(parent.offerId))
             } catch (error) {
                 this.bot.logger.error(
                     this.bot.isMobile,
@@ -187,22 +184,19 @@ export class Workers {
         await this.bot.activities.doClaimBonusPoints()
     }
 
-    private async solvePunchCard(parent: ParentQuest, apiCard: PunchCard | undefined, page: Page) {
+    private async solvePunchCard(parent: ParentQuest, apiCard: PunchCard | undefined) {
         const parentId = parent.offerId
         const title = parent.title || apiCard?.parentPromotion?.title || parentId
 
         let questChildren: QuestChild[]
         try {
-            const res = await page.request.get(URLs.rewards.quest(parentId))
-            if (!res.ok()) {
-                this.bot.logger.warn(
-                    this.bot.isMobile,
-                    'PUNCHCARD',
-                    `Quest page ${res.status()} for "${title}" - skipping`
-                )
+            const questUrl = URLs.rewards.quest(parentId)
+            const html = await this.bot.browser.func.getRewardsPageHtml(questUrl, `/earn/quest/${parentId}`)
+            if (!html) {
+                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', `Quest page unavailable for "${title}" - skipping`)
                 return
             }
-            questChildren = this.bot.browser.react.snapshotQuestPage(await res.text())
+            questChildren = this.bot.browser.react.snapshotQuestPage(html)
         } catch (error) {
             this.bot.logger.warn(
                 this.bot.isMobile,
