@@ -134,12 +134,12 @@ async function main() {
                 ...(storageState ? { storageState } : {}),
                 ...(isMobile && screen
                     ? {
-                        isMobile: true,
-                        hasTouch: true,
-                        deviceScaleFactor: screen.devicePixelRatio,
-                        viewport: { width: screen.width, height: screen.height },
-                        screen: { width: screen.width, height: screen.height }
-                    }
+                          isMobile: true,
+                          hasTouch: true,
+                          deviceScaleFactor: screen.devicePixelRatio,
+                          viewport: { width: screen.width, height: screen.height },
+                          screen: { width: screen.width, height: screen.height }
+                      }
                     : {})
             }
         })
@@ -151,17 +151,17 @@ async function main() {
             ...(storageState ? { storageState } : {}),
             ...(isMobile
                 ? {
-                    isMobile: true,
-                    hasTouch: true,
-                    ...(userAgent ? { userAgent } : {}),
-                    ...(screen
-                        ? {
-                            deviceScaleFactor: screen.devicePixelRatio,
-                            viewport: { width: screen.width, height: screen.height },
-                            screen: { width: screen.width, height: screen.height }
-                        }
-                        : { viewport: { width: 375, height: 667 } })
-                }
+                      isMobile: true,
+                      hasTouch: true,
+                      ...(userAgent ? { userAgent } : {}),
+                      ...(screen
+                          ? {
+                                deviceScaleFactor: screen.devicePixelRatio,
+                                viewport: { width: screen.width, height: screen.height },
+                                screen: { width: screen.width, height: screen.height }
+                            }
+                          : { viewport: { width: 375, height: 667 } })
+                  }
                 : {})
         })
     }
@@ -169,7 +169,7 @@ async function main() {
     await context.addInitScript(() => {
         try {
             Object.defineProperty(navigator, 'webdriver', { configurable: true, get: () => false })
-        } catch { }
+        } catch {}
 
         const rejectWebAuthn = () => Promise.reject(new DOMException('WebAuthn disabled', 'NotAllowedError'))
         try {
@@ -181,12 +181,12 @@ async function main() {
                     preventSilentAccess: () => Promise.resolve()
                 })
             })
-        } catch { }
+        } catch {}
         try {
             if (window.PublicKeyCredential) {
                 window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(false)
             }
-        } catch { }
+        } catch {}
 
         delete window.RTCPeerConnection
         delete window.webkitRTCPeerConnection
