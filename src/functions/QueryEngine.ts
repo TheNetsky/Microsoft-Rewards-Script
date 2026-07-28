@@ -61,6 +61,32 @@ export function normalizeQueryKey(query: string): string {
 export class QueryCore {
     constructor(private bot: MicrosoftRewardsBot) {}
 
+    private async getChinaTrends(): Promise<string[]> {
+        const sources = ['BaiduHot', 'TouTiaoHot', 'WeiBoHot']
+        const titles = new Set<string>()
+
+        for (const source of sources) {
+            try {
+                const response: any = await this.bot.http.request({
+                    url: `https://api.gmya.net/Api/${source}`,
+                    method: 'GET',
+                    headers: { 'accept-encoding': 'gzip, deflate' },
+                    timeout: 6000
+                })
+
+                if (response?.data && Array.isArray(response.data.data)) {
+                    response.data.data.forEach((item: any) => {
+                        if (item?.title) titles.add(String(item.title).trim())
+                    })
+                    if (titles.size > 0) break
+                }
+            } catch {
+                // 自动容灾尝试下一个源
+            }
+        }
+        return Array.from(titles)
+    }
+
     async queryManager(options: QueryManagerOptions = {}): Promise<string[]> {
         const {
             shuffle = false,
@@ -68,6 +94,15 @@ export class QueryCore {
             langCode = 'en',
             geoLocale = 'US'
         } = options
+
+        const isChina = geoLocale.toUpperCase() === 'CN' || langCode.toLowerCase().startsWith('zh')
+        if (isChina) {
+            const chinaTrends = await this.getChinaTrends()
+            const localQueries = this.getLocalQueryList()
+            let combined = [...chinaTrends, ...localQueries]
+            if (shuffle) this.bot.utils.shuffleArray(combined)
+            return [...new Set(combined)]
+        }
 
         try {
             this.bot.logger.debug(

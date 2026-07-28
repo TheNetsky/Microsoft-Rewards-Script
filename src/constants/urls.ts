@@ -58,7 +58,7 @@ export const URLs = {
     queryEngine: {
         googleTrends: `${GOOGLE_TRENDS}/_/TrendsUi/data/batchexecute`,
         bingSuggestions: (query: string, langCode: string) =>
-            `${BING_APIS}/api/v7/suggestions?q=${encodeURIComponent(query)}&appid=${BING_SUGGESTIONS_APPID}&cc=xl&setlang=${langCode}`,
+            `${BING_APIS}/api/v7/suggestions?q=${encodeURIComponent(query)}&appid=${BING_SUGGESTIONS_APPID}&cc=${langCode === 'zh-CN' ? 'CN' : 'xl'}&setlang=${langCode}`,
         bingRelated: (query: string) => `${BING_API}/osjson.aspx?query=${encodeURIComponent(query)}`,
         wikipediaTop: (langCode: string, year: number, month: string, day: string) =>
             `${WIKIMEDIA}/api/rest_v1/metrics/pageviews/top/${langCode}.wikipedia/all-access/${year}/${month}/${day}`,
@@ -68,7 +68,10 @@ export const URLs = {
         reddit: (subreddit: string) => `${REDDIT}/r/${subreddit}.json?limit=50`
     },
     userAgent: {
-        chromeVersions: `${CHROME_FOR_TESTING}/chrome-for-testing/last-known-good-versions.json`
+        chromeVersions: (isChina = false) =>
+            isChina
+                ? 'https://cdn.jsdelivr.net/gh/googlechromelabs/chrome-for-testing@gh-pages/last-known-good-versions.json'
+                : `${CHROME_FOR_TESTING}/chrome-for-testing/last-known-good-versions.json`
     }
 } as const
 

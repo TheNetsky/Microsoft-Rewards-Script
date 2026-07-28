@@ -112,11 +112,20 @@ class Browser {
 
             const screen = fingerprint.fingerprint.screen
 
+            const geoLocale = (this.bot.userData?.geoLocale ?? 'US').toUpperCase()
+            const isCN = geoLocale === 'CN'
+
             //@ts-expect-error It doesn't like the browser instance from different packages
             const injected = await newInjectedContext(browser, {
                 fingerprint,
                 newContextOptions: {
                     permissions: [],
+                    ...(isCN && !hasProxy
+                        ? {
+                              locale: 'zh-CN',
+                              timezoneId: 'Asia/Shanghai'
+                          }
+                        : {}),
                     ignoreHTTPSErrors: hasProxy,
                     // Restore cookies
                     ...(session?.storageState ? { storageState: session.storageState } : {}),

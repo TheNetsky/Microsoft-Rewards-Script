@@ -133,8 +133,12 @@ export class UserAgentManager {
 
     async getChromeVersion(isMobile: boolean): Promise<string> {
         try {
+            const geoLocale = (this.bot.userData?.geoLocale ?? 'US').toUpperCase()
+            const langCode = (this.bot.userData?.langCode ?? 'en').toLowerCase()
+            const isCN = geoLocale === 'CN' || langCode.startsWith('zh')
+
             const request = {
-                url: URLs.userAgent.chromeVersions,
+                url: URLs.userAgent.chromeVersions(isCN),
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -145,12 +149,12 @@ export class UserAgentManager {
             const data: ChromeVersion = response.data
             return data.channels.Stable.version
         } catch (error) {
-            this.bot.logger.error(
+            this.bot.logger.warn(
                 isMobile,
                 'USERAGENT-CHROME-VERSION',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `Failed fetching Chrome version, using fallback | ${error instanceof Error ? error.message : String(error)}`
             )
-            throw error
+            return '133.0.6943.98'
         }
     }
 
@@ -168,16 +172,21 @@ export class UserAgentManager {
             const data: EdgeVersion[] = response.data
             const stable = data.find(x => x.Product == 'Stable') as EdgeVersion
             return {
-                android: stable.Releases.find(x => x.Platform == 'Android')?.ProductVersion,
-                windows: stable.Releases.find(x => x.Platform == 'Windows' && x.Architecture == 'x64')?.ProductVersion
+                android: stable.Releases.find(x => x.Platform == 'Android')?.ProductVersion ?? '133.0.3065.59',
+                windows:
+                    stable.Releases.find(x => x.Platform == 'Windows' && x.Architecture == 'x64')?.ProductVersion ??
+                    '133.0.3065.59'
             }
         } catch (error) {
-            this.bot.logger.error(
+            this.bot.logger.warn(
                 isMobile,
                 'USERAGENT-EDGE-VERSION',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `Failed fetching Edge version, using fallback | ${error instanceof Error ? error.message : String(error)}`
             )
-            throw error
+            return {
+                android: '133.0.3065.59',
+                windows: '133.0.3065.59'
+            }
         }
     }
 

@@ -177,8 +177,11 @@ export class Login {
             return 'ACCOUNT_LOCKED'
         }
 
-        if (url.hostname === 'rewards.bing.com' || url.hostname === 'account.microsoft.com') {
-            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On rewards/account page, assuming logged in')
+        const atBingHomeCheck =
+            (url.hostname === 'www.bing.com' || url.hostname === 'cn.bing.com') && url.pathname === '/'
+
+        if (url.hostname === 'rewards.bing.com' || url.hostname === 'account.microsoft.com' || atBingHomeCheck) {
+            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On rewards/account/bing page, assuming logged in')
             return 'LOGGED_IN'
         }
 
@@ -569,7 +572,7 @@ export class Login {
                 await this.handleState(state, page, account)
 
                 const u = new URL(page.url())
-                const atBingHome = u.hostname === 'www.bing.com' && u.pathname === '/'
+                const atBingHome = (u.hostname === 'www.bing.com' || u.hostname === 'cn.bing.com') && u.pathname === '/'
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-BING',

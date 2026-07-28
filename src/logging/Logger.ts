@@ -1,5 +1,7 @@
 import chalk from 'chalk'
 import cluster from 'cluster'
+import * as fs from 'fs'
+import path from 'path'
 import { sendDiscord } from './Discord'
 import { sendNtfy } from './Ntfy'
 import { sendTelegram } from './Telegram'
@@ -16,6 +18,20 @@ export interface IpcLog {
 }
 
 type ChalkFn = (msg: string) => string
+
+const LOG_DIR = path.join(process.cwd(), 'logs')
+const LOG_FILE = path.join(LOG_DIR, 'app.log')
+
+function writeToFileLog(cleanMsg: string): void {
+    try {
+        if (!fs.existsSync(LOG_DIR)) {
+            fs.mkdirSync(LOG_DIR, { recursive: true })
+        }
+        fs.appendFileSync(LOG_FILE, cleanMsg + '\n', 'utf-8')
+    } catch {
+        // Ignore file write errors
+    }
+}
 
 function platformText(platform: Platform): string {
     return platform === 'main' ? 'MAIN' : platform ? 'MOBILE' : 'DESKTOP'
@@ -85,8 +101,12 @@ export class Logger {
             return
         }
 
+        writeToFileLog(cleanMsg)
+
         const badge = platformBadge(isMobile)
-        const consoleStr = `[${now}] [${userName}] [${levelTag}] ${badge} [${title}] ${formatted}`
+        const firstLineFormatted = formatted.split('\n')[0] ?? formatted
+        const consoleFormatted = formatted.includes('\n') ? `${firstLineFormatted} (see logs/app.log)` : formatted
+        const consoleStr = `[${now}] [${userName}] [${levelTag}] ${badge} [${title}] ${consoleFormatted}`
 
         let logColor: ColorKey | undefined = color
 

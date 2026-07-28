@@ -25,7 +25,7 @@
         "searchOnBing": true
     },
     "searchOnBingLocalQueries": false,
-    "globalTimeout": "30sec",
+    "globalTimeout": "60sec",
     "searchSettings": {
         "scrollRandomResults": false,
         "clickRandomResults": false,
@@ -48,12 +48,12 @@
         ],
         "searchResultVisitTime": "10sec",
         "searchDelay": {
-            "min": "30sec",
-            "max": "1min"
+            "min": "2min",
+            "max": "5min"
         },
         "readDelay": {
-            "min": "30sec",
-            "max": "1min"
+            "min": "2min",
+            "max": "4min"
         }
     },
     "experimental": {
