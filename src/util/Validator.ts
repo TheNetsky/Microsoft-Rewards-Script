@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import semver from 'semver'
+import ms, { StringValue } from 'ms'
 import pkg from '../../package.json'
 
 import { Config } from '../interface/Config'
@@ -15,10 +16,30 @@ const LogFilterSchema = z.object({
     regexPatterns: z.array(z.string()).optional()
 })
 
-const DelaySchema = z.object({
-    min: NumberOrString,
-    max: NumberOrString
-})
+function durationToMs(value: number | string): number | undefined {
+    return typeof value === 'number' ? value : ms(value as StringValue)
+}
+
+const DurationValue = NumberOrString.refine(value => {
+    const parsed = durationToMs(value)
+    return parsed !== undefined && Number.isFinite(parsed) && parsed >= 0
+}, 'Expected a non-negative duration')
+
+const DelaySchema = z
+    .object({
+        min: DurationValue,
+        max: DurationValue
+    })
+    .superRefine((delay, ctx) => {
+        const min = durationToMs(delay.min)
+        const max = durationToMs(delay.max)
+        if (min !== undefined && max !== undefined && max < min) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'Maximum delay must be greater than or equal to minimum delay'
+            })
+        }
+    })
 
 const QueryEngineSchema = z.union([
     z.enum(['google', 'wikipedia', 'wikirandom', 'hackernews', 'reddit', 'local']),
@@ -65,6 +86,7 @@ export const ConfigSchema = z.object({
     ensureStreakProtection: z.boolean(),
     autoClaimPunchcardRewards: z.boolean(),
     skipNonPointTasks: z.boolean().default(true),
+    accountDelay: DelaySchema.default({ min: '1min', max: '3min' }),
     workers: z.object({
         doDailySet: z.boolean(),
         doMorePromotions: z.boolean(),
@@ -142,6 +164,7 @@ const defaultConfig: Config = {
     ensureStreakProtection: true,
     autoClaimPunchcardRewards: false,
     skipNonPointTasks: true,
+    accountDelay: { min: '1min', max: '3min' },
     workers: {
         doDailySet: true,
         doMorePromotions: true,

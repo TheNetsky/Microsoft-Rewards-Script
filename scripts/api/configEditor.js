@@ -62,6 +62,15 @@ function validateNumberOrString(value, path, errors) {
     }
 }
 
+function validateDelay(value, path, errors) {
+    if (!isObject(value)) {
+        errors.push(`${path} must be an object`)
+        return
+    }
+    if ('min' in value) validateNumberOrString(value.min, `${path}.min`, errors)
+    if ('max' in value) validateNumberOrString(value.max, `${path}.max`, errors)
+}
+
 function validateLogFilter(value, path, errors) {
     if (!isObject(value)) {
         errors.push(`${path} must be an object`)
@@ -94,6 +103,7 @@ function structuralValidate(cfg) {
     if ('activities' in cfg) validateBooleanObject(cfg.activities, 'activities', errors)
     if ('experimental' in cfg) validateBooleanObject(cfg.experimental, 'experimental', errors)
     if ('globalTimeout' in cfg) validateNumberOrString(cfg.globalTimeout, 'globalTimeout', errors)
+    if ('accountDelay' in cfg) validateDelay(cfg.accountDelay, 'accountDelay', errors)
 
     if ('searchSettings' in cfg) {
         if (!isObject(cfg.searchSettings)) {
@@ -132,13 +142,7 @@ function structuralValidate(cfg) {
             }
             for (const delayKey of ['searchDelay', 'readDelay']) {
                 if (!(delayKey in search)) continue
-                const delay = search[delayKey]
-                if (!isObject(delay)) {
-                    errors.push(`searchSettings.${delayKey} must be an object`)
-                    continue
-                }
-                if ('min' in delay) validateNumberOrString(delay.min, `searchSettings.${delayKey}.min`, errors)
-                if ('max' in delay) validateNumberOrString(delay.max, `searchSettings.${delayKey}.max`, errors)
+                validateDelay(search[delayKey], `searchSettings.${delayKey}`, errors)
             }
         }
     }

@@ -286,7 +286,11 @@ export class MicrosoftRewardsBot {
         const allAccountStats: AccountStats[] = []
         let hadWorkerFailure = false
 
-        for (const chunk of accountChunks) {
+        for (const [chunkIndex, chunk] of accountChunks.entries()) {
+            if (chunkIndex > 0) {
+                await this.accountDelay()
+            }
+
             const worker = cluster.fork()
             worker.send?.({ chunk, runStartTime })
 
@@ -311,11 +315,6 @@ export class MicrosoftRewardsBot {
                     }
                 }
             })
-
-            // Startup delay for clusters due to resource usage
-            if (accountChunks.indexOf(chunk) !== accountChunks.length - 1) {
-                await this.utils.wait(5000)
-            }
         }
 
         const onWorkerExit = async (worker: Worker, code?: number, signal?: string): Promise<void> => {
@@ -403,7 +402,11 @@ export class MicrosoftRewardsBot {
     private async runTasks(accounts: Account[], runStartTime: number): Promise<AccountStats[]> {
         const accountStats: AccountStats[] = []
 
-        for (const account of accounts) {
+        for (const [accountIndex, account] of accounts.entries()) {
+            if (accountIndex > 0) {
+                await this.accountDelay()
+            }
+
             const accountStartTime = Date.now()
             const accountEmail = account.email
             this.userData.userName = this.utils.getEmailUsername(accountEmail)
@@ -503,6 +506,24 @@ export class MicrosoftRewardsBot {
         return accountStats
     }
 
+    private async accountDelay(): Promise<void> {
+        const { min, max } = this.config.accountDelay
+        const minMs = typeof min === 'number' ? min : this.utils.stringToNumber(min)
+        const maxMs = typeof max === 'number' ? max : this.utils.stringToNumber(max)
+
+        if (minMs < 0 || maxMs < 0 || maxMs < minMs) {
+            throw new Error('accountDelay must use non-negative values with max greater than or equal to min')
+        }
+
+        const delayMs = this.utils.randomNumber(Math.ceil(minMs), Math.floor(maxMs))
+        this.logger.info(
+            'main',
+            'ACCOUNT-DELAY',
+            `Waiting ${(delayMs / 1000).toFixed(1)} seconds before starting the next account`
+        )
+        await this.utils.wait(delayMs)
+    }
+
     async createDesktopSession(account: Account): Promise<BrowserSession> {
         const session = await this.browserFactory.createBrowser(account)
         this.mainDesktopPage = await session.context.newPage()
@@ -532,6 +553,28 @@ export class MicrosoftRewardsBot {
         let mobileSession: BrowserSession | null = null
         let desktopSession: BrowserSession | null = null
 
+        const closeMobileSession = async (): Promise<void> => {
+            const session = mobileSession
+            if (!session) return
+            mobileSession = null
+
+            await executionContext.run({ isMobile: true, account }, async () => {
+                await this.browser.func.checkpointActiveSession('PRE-BROWSER-CLOSE')
+                await this.browser.func.closeBrowser(session.context, accountEmail)
+            })
+        }
+
+        const closeDesktopSession = async (): Promise<void> => {
+            const session = desktopSession
+            if (!session) return
+            desktopSession = null
+
+            await executionContext.run({ isMobile: false, account }, async () => {
+                await this.browser.func.checkpointActiveSession('PRE-BROWSER-CLOSE')
+                await this.browser.func.closeBrowser(session.context, accountEmail)
+            })
+        }
+
         try {
             return await executionContext.run({ isMobile: true, account }, async () => {
                 mobileSession = await this.browserFactory.createBrowser(account)
@@ -558,8 +601,7 @@ export class MicrosoftRewardsBot {
                 this.fingerprintMobile = mobileSession.fingerprint
 
                 if (fullApi) {
-                    await this.browser.func.closeBrowser(initialContext, accountEmail)
-                    mobileSession = null
+                    await closeMobileSession()
                     this.logger.info(
                         'main',
                         'FLOW',
@@ -645,19 +687,15 @@ export class MicrosoftRewardsBot {
                     const plan = await this.searchManager.getSearchPoints()
                     const doMobileSearch = plan.doMobile
                     const doDesktopSearch = plan.doDesktop
-                    const desktopNeeded = this.config.workers.doPunchCards || doDesktopSearch || doVisualSearch
+                    const desktopBrowserNeeded = this.config.workers.doPunchCards || doVisualSearch
 
-                    if (desktopNeeded) {
+                    if (desktopBrowserNeeded) {
                         await executionContext.run({ isMobile: false, account }, async () => {
                             desktopSession = await this.createDesktopSession(account)
                             await this.punchcardManager.runDesktop()
                             if (doVisualSearch) await this.activities.doVisualSearch(data)
                         })
-
-                        await executionContext.run({ isMobile: false, account }, async () => {
-                            await this.browser.func.closeBrowser(desktopSession!.context, accountEmail)
-                        })
-                        desktopSession = null
+                        await closeDesktopSession()
                     }
 
                     if (this.config.workers.doDailySet) await this.workers.doDailySet(data)
@@ -687,40 +725,43 @@ export class MicrosoftRewardsBot {
                     const doMobileSearch = plan.doMobile
                     const doDesktopSearch = plan.doDesktop
 
-                    const desktopNeeded = this.config.workers.doPunchCards || doDesktopSearch || doVisualSearch
+                    const desktopBrowserNeeded =
+                        this.config.workers.doPunchCards || doVisualSearch || (doDesktopSearch && !apiSearch)
 
                     if (parallel && !apiSearch && doMobileSearch && doDesktopSearch) {
-                        if (desktopNeeded) {
-                            await executionContext.run({ isMobile: false, account }, async () => {
-                                desktopSession = await this.createDesktopSession(account)
-                                await this.punchcardManager.runDesktop()
-                                if (doVisualSearch) await this.activities.doVisualSearch(data)
-                            })
+                        await executionContext.run({ isMobile: false, account }, async () => {
+                            desktopSession = await this.createDesktopSession(account)
+                            await this.punchcardManager.runDesktop()
+                            if (doVisualSearch) await this.activities.doVisualSearch(data)
+                        })
+
+                        const mobileWork = async (): Promise<[number, number]> => {
+                            try {
+                                const searchPoints = await this.searchManager.searchMobile(account)
+                                const extraPoints = doBonus ? await this.searchManager.bonusMobile(account) : 0
+                                return [searchPoints, extraPoints]
+                            } finally {
+                                await closeMobileSession()
+                            }
+                        }
+                        const desktopWork = async (): Promise<number> => {
+                            try {
+                                return await this.searchManager.searchDesktop(account)
+                            } finally {
+                                await closeDesktopSession()
+                            }
                         }
 
-                        ;[mobilePoints, desktopPoints] = await Promise.all([
-                            this.searchManager.searchMobile(account),
-                            this.searchManager.searchDesktop(account)
-                        ])
+                        ;[[mobilePoints, bonusPoints], desktopPoints] = await Promise.all([mobileWork(), desktopWork()])
+                    } else {
+                        if (apiSearch) await closeMobileSession()
 
+                        if (doMobileSearch) mobilePoints = await this.searchManager.searchMobile(account)
                         if (doBonus) bonusPoints = await this.searchManager.bonusMobile(account)
 
-                        if (desktopSession) {
-                            await executionContext.run({ isMobile: false, account }, async () => {
-                                await this.browser.func.closeBrowser(desktopSession!.context, accountEmail)
-                            })
-                            desktopSession = null
-                        }
-                    } else {
-                        if (apiSearch) {
-                            if (doMobileSearch) mobilePoints = await this.searchManager.searchMobile(account)
-                            if (doBonus) bonusPoints = await this.searchManager.bonusMobile(account)
-                        } else {
-                            if (doMobileSearch) mobilePoints = await this.searchManager.searchMobile(account)
-                            if (doBonus) bonusPoints = await this.searchManager.bonusMobile(account)
-                        }
+                        if (!apiSearch) await closeMobileSession()
 
-                        if (desktopNeeded) {
+                        if (desktopBrowserNeeded) {
                             await executionContext.run({ isMobile: false, account }, async () => {
                                 desktopSession = await this.createDesktopSession(account)
 
@@ -730,15 +771,11 @@ export class MicrosoftRewardsBot {
                                     desktopPoints = await this.searchManager.searchDesktop(account)
                                 }
                             })
+                            await closeDesktopSession()
+                        }
 
-                            await executionContext.run({ isMobile: false, account }, async () => {
-                                await this.browser.func.closeBrowser(desktopSession!.context, accountEmail)
-                            })
-                            desktopSession = null
-
-                            if (doDesktopSearch && apiSearch) {
-                                desktopPoints = await this.searchManager.searchDesktop(account)
-                            }
+                        if (doDesktopSearch && apiSearch) {
+                            desktopPoints = await this.searchManager.searchDesktop(account)
                         }
                     }
                 }
@@ -750,10 +787,6 @@ export class MicrosoftRewardsBot {
                         mobilePoints + desktopPoints + bonusPoints
                     }`
                 )
-
-                if (mobileSession) {
-                    await this.browser.func.checkpointActiveSession('PRE-FINAL-REWARDS')
-                }
 
                 if (this.config.workers.doClaimBonusPoints) await this.workers.doClaimBonusPoints()
 
@@ -774,9 +807,7 @@ export class MicrosoftRewardsBot {
         } finally {
             if (mobileSession) {
                 try {
-                    await executionContext.run({ isMobile: true, account }, async () => {
-                        await this.browser.func.closeBrowser(mobileSession!.context, accountEmail)
-                    })
+                    await closeMobileSession()
                 } catch (error) {
                     this.logger.debug(
                         'main',
@@ -788,9 +819,7 @@ export class MicrosoftRewardsBot {
 
             if (desktopSession) {
                 try {
-                    await executionContext.run({ isMobile: false, account }, async () => {
-                        await this.browser.func.closeBrowser(desktopSession!.context, accountEmail)
-                    })
+                    await closeDesktopSession()
                 } catch (error) {
                     this.logger.debug(
                         'main',
@@ -798,7 +827,6 @@ export class MicrosoftRewardsBot {
                         `Desktop context close failed | ${error instanceof Error ? error.message : String(error)}`
                     )
                 }
-                desktopSession = null
             }
         }
     }

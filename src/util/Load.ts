@@ -112,17 +112,22 @@ function buildSaveFingerprint(index: string): ConfigSaveFingerprint {
     }
 }
 
+function getAccountIndexes(): string[] {
+    return Object.keys(process.env)
+        .map(key => /^ACCOUNT_([1-9]\d*)_EMAIL$/.exec(key)?.[1])
+        .filter((index): index is string => Boolean(index && envStr(`ACCOUNT_${index}_EMAIL`)))
+        .sort((a, b) => Number(a) - Number(b))
+}
+
 export function loadAccounts(): Account[] {
     try {
         ensureEnvLoaded()
 
         const accounts: Account[] = []
 
-        for (let i = 1; ; i++) {
-            const index = String(i)
+        for (const index of getAccountIndexes()) {
             const email = envStr(`ACCOUNT_${index}_EMAIL`)
-
-            if (!email) break
+            if (!email) continue
 
             const password = envStr(`ACCOUNT_${index}_PASSWORD`)
             if (!password) {
@@ -143,7 +148,7 @@ export function loadAccounts(): Account[] {
 
         if (!accounts.length) {
             throw new Error(
-                'No accounts found in environment. Set ACCOUNT_1_EMAIL / ACCOUNT_1_PASSWORD (see env.example).'
+                'No accounts found in environment. Set at least one ACCOUNT_N_EMAIL / ACCOUNT_N_PASSWORD pair (see env.example).'
             )
         }
 

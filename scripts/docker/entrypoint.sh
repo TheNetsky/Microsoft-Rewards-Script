@@ -24,33 +24,33 @@ fi
 
 # 3. Accounts: read directly from ACCOUNT_N_* env vars by the app at runtime.
 #
-#    Add one numbered block per account in .env, starting at 1:
+#    Add one numbered block per account in .env:
 #      ACCOUNT_1_EMAIL, ACCOUNT_1_PASSWORD, ...
 #      ACCOUNT_2_EMAIL, ACCOUNT_2_PASSWORD, ...
 #
 #    No accounts.json is generated anymore - loadAccounts() parses the
 #    environment. This is just a fail-fast presence check.
-if [ -z "${ACCOUNT_1_EMAIL:-}" ]; then
-  echo "WARNING: No ACCOUNT_1_EMAIL found in environment - the script will fail." >&2
-  echo "         Set ACCOUNT_1_EMAIL and ACCOUNT_1_PASSWORD in your .env file." >&2
-elif [ -z "${ACCOUNT_1_PASSWORD:-}" ]; then
-  echo "ERROR: ACCOUNT_1_EMAIL is set but ACCOUNT_1_PASSWORD is missing." >&2
-  exit 1
+mapfile -t account_indexes < <(
+  compgen -e | sed -n 's/^ACCOUNT_\([1-9][0-9]*\)_EMAIL$/\1/p' | sort -n -u
+)
+
+acct_count=0
+for i in "${account_indexes[@]}"; do
+  email_var="ACCOUNT_${i}_EMAIL"
+  [ -z "${!email_var:-}" ] && continue
+
+  password_var="ACCOUNT_${i}_PASSWORD"
+  if [ -z "${!password_var:-}" ]; then
+    echo "ERROR: $email_var is set but $password_var is missing." >&2
+    exit 1
+  fi
+  acct_count=$((acct_count + 1))
+done
+
+if [ "$acct_count" -eq 0 ]; then
+  echo "WARNING: No ACCOUNT_N_EMAIL found in environment - the script will fail." >&2
+  echo "         Set at least one ACCOUNT_N_EMAIL and ACCOUNT_N_PASSWORD pair in your .env file." >&2
 else
-  # Count configured accounts for the startup log (stops at first gap)
-  acct_count=0
-  i=1
-  while true; do
-    email_var="ACCOUNT_${i}_EMAIL"
-    [ -z "${!email_var:-}" ] && break
-    password_var="ACCOUNT_${i}_PASSWORD"
-    if [ -z "${!password_var:-}" ]; then
-      echo "ERROR: $email_var is set but $password_var is missing." >&2
-      exit 1
-    fi
-    acct_count=$((acct_count + 1))
-    i=$((i + 1))
-  done
   echo "[entrypoint] Found $acct_count account(s) in environment"
 fi
 
@@ -75,6 +75,8 @@ fi
 #      CONFIG_AUTO_CLAIM_PUNCHCARD_REWARDS=false → .autoClaimPunchcardRewards
 #      CONFIG_SKIP_NON_POINT_TASKS=true  → .skipNonPointTasks
 #      CONFIG_GLOBAL_TIMEOUT=30sec       → .globalTimeout
+#      CONFIG_ACCOUNT_DELAY_MIN=1min     → .accountDelay.min
+#      CONFIG_ACCOUNT_DELAY_MAX=3min     → .accountDelay.max
 #
 #    Workers (boolean):
 #      CONFIG_WORKER_DAILY_SET           → .workers.doDailySet
@@ -277,6 +279,8 @@ _cfg "${CONFIG_ENSURE_STREAK_PROTECTION:-}"         '.ensureStreakProtection'   
 _cfg "${CONFIG_AUTO_CLAIM_PUNCHCARD_REWARDS:-}"     '.autoClaimPunchcardRewards'     bool
 _cfg "${CONFIG_SKIP_NON_POINT_TASKS:-}"             '.skipNonPointTasks'             bool
 _cfg "${CONFIG_GLOBAL_TIMEOUT:-}"                   '.globalTimeout'                 string
+_cfg "${CONFIG_ACCOUNT_DELAY_MIN:-}"                '.accountDelay.min'              string
+_cfg "${CONFIG_ACCOUNT_DELAY_MAX:-}"                '.accountDelay.max'              string
 
 # Workers
 _cfg "${CONFIG_WORKER_DAILY_SET:-}"            '.workers.doDailySet'            bool

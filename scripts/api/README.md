@@ -808,9 +808,9 @@ should store the returned completion data in its own database.
 
 ### `GET /accounts`
 
-Returns contiguous account slots discovered from `ACCOUNT_<N>_EMAIL` variables
-in `.env`, matching the bot's own loader. Discovery starts at slot 1 and stops
-at the first missing email.
+Returns every configured account slot discovered from `ACCOUNT_<N>_EMAIL`
+variables in `.env`, matching the bot's own loader. Missing slot numbers are
+allowed and results are returned in ascending slot order.
 Email addresses are returned in full for the local dashboard. Passwords,
 recovery addresses, TOTP secrets, and separate proxy username/password values
 are not returned; the configured proxy URL and port are included in the summary.
@@ -1157,8 +1157,8 @@ console.log(data)
 
 Remaining accounts are densely remapped in the child environment. For example,
 if slots 1, 2, and 3 exist and slot 2 is excluded, original slots 1 and 3 become
-child slots 1 and 2. This prevents the bot from stopping account discovery at a
-missing middle slot.
+child slots 1 and 2. The original indexes are still used by the API request and
+response.
 
 Unknown slots and attempts to exclude every configured account return
 `400 Bad Request`.

@@ -6,6 +6,10 @@
     "ensureStreakProtection": true,
     "autoClaimPunchcardRewards": false,
     "skipNonPointTasks": true,
+    "accountDelay": {
+        "min": "1min",
+        "max": "3min"
+    },
     "workers": {
         "doDailySet": true,
         "doClaimBonusPoints": true,

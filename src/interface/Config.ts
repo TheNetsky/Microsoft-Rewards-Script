@@ -6,6 +6,7 @@ export interface Config {
     ensureStreakProtection: boolean
     autoClaimPunchcardRewards: boolean
     skipNonPointTasks: boolean
+    accountDelay: ConfigDelay
     workers: ConfigWorkers
     activities: ConfigActivities
     searchOnBingLocalQueries: boolean

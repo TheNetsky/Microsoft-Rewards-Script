@@ -1,4 +1,4 @@
-import { envStrFrom } from '../env.js'
+import { accountIndexesFromEnv, envStrFrom } from '../env.js'
 
 function sanitizeProxyUrl(value) {
     try {
@@ -19,11 +19,9 @@ function sanitizeProxyUrl(value) {
 export function loadAccounts(sourceEnv = process.env) {
     const accounts = []
 
-    // Match the bot's loader exactly: account slots are contiguous and
-    // discovery stops at the first missing ACCOUNT_N_EMAIL.
-    for (let i = 1; ; i++) {
+    for (const i of accountIndexesFromEnv(sourceEnv)) {
         const email = envStrFrom(sourceEnv, `ACCOUNT_${i}_EMAIL`)
-        if (!email) break
+        if (!email) continue
 
         const proxyUrl = envStrFrom(sourceEnv, `ACCOUNT_${i}_PROXY_URL`)
         accounts.push({
@@ -51,9 +49,8 @@ export function loadAccounts(sourceEnv = process.env) {
 
 /**
  * Builds a child-process-only environment override that runs exactly one
- * configured account. The selected slot is remapped to ACCOUNT_1_* because the
- * bot reads account slots sequentially and stops at the first missing email.
- * No secret values leave the API process.
+ * configured account. The selected slot is remapped to ACCOUNT_1_* in the
+ * isolated child environment. No secret values leave the API process.
  */
 export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
     const index = Number(accountIndex)
@@ -95,8 +92,7 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
 
 /**
  * Builds a dense child-process account environment with selected configured
- * slots excluded. Remaining slots are remapped to ACCOUNT_1..N so gaps never
- * make the bot stop discovering accounts early.
+ * slots excluded. Remaining slots are remapped to ACCOUNT_1..N.
  */
 export function buildExcludedAccountsEnv(excludedAccountIndexes, sourceEnv = process.env) {
     if (!Array.isArray(excludedAccountIndexes)) {

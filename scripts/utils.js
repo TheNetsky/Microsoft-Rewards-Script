@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { DatabaseSync } from 'node:sqlite'
-import { envBool, envInt, envStr } from './env.js'
+import { accountIndexesFromEnv, envBool, envInt, envStr } from './env.js'
 
 export function getDirname(importMetaUrl) {
     const __filename = fileURLToPath(importMetaUrl)
@@ -160,11 +160,10 @@ export function loadAccountsFromEnv(projectRoot) {
     loadEnvFile(projectRoot)
 
     const accounts = []
-    for (let i = 1; ; i++) {
-        const idx = String(i)
+    for (const index of accountIndexesFromEnv()) {
+        const idx = String(index)
         const email = envStr(`ACCOUNT_${idx}_EMAIL`)
-
-        if (!email) break
+        if (!email) continue
 
         accounts.push({
             email,
