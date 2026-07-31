@@ -830,6 +830,8 @@ const { data } = await api.get('/accounts')
 console.log(data.accounts)
 ```
 
+Valid account locale values are normalized in this response: language uses canonical BCP 47 casing and explicit two-letter countries use uppercase. The bot applies the same values to its browser and HTTP profiles.
+
 ```jsonc
 {
     "accounts": [

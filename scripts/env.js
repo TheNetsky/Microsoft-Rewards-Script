@@ -31,3 +31,17 @@ export function accountIndexesFromEnv(sourceEnv = process.env) {
         .map(Number)
         .sort((a, b) => a - b)
 }
+
+export function normalizeLanguageCode(value = 'en') {
+    const trimmed = String(value).trim()
+    try {
+        return new Intl.Locale(trimmed).toString()
+    } catch {
+        return trimmed
+    }
+}
+
+export function normalizeGeoLocale(value = 'auto') {
+    const trimmed = String(value).trim()
+    return trimmed.toLowerCase() === 'auto' ? 'auto' : trimmed.toUpperCase()
+}

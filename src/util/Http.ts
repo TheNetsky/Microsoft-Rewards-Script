@@ -23,6 +23,21 @@ export interface HttpResponse<T = unknown> {
     config: HttpRequestConfig
 }
 
+export function mergeRequestHeaders(
+    defaultHeaders: Record<string, unknown>,
+    requestHeaders: Record<string, unknown> = {}
+): Record<string, unknown> {
+    const merged = { ...defaultHeaders }
+
+    for (const [key, value] of Object.entries(requestHeaders)) {
+        const existingKey = Object.keys(merged).find(name => name.toLowerCase() === key.toLowerCase())
+        if (existingKey) delete merged[existingKey]
+        merged[key] = value
+    }
+
+    return merged
+}
+
 function toInit(config: HttpRequestConfig): { url: string; init: ImpitRequestInit } {
     let url = config.url ?? ''
     if (config.params) {
@@ -151,24 +166,34 @@ class HttpClient {
     private instance: Impit
     private bypass?: Impit
     private account: AccountProxy
+    private defaultHeaders: Record<string, unknown>
 
-    constructor(account: AccountProxy) {
+    constructor(account: AccountProxy, defaultHeaders: Record<string, unknown> = {}) {
         this.account = account
+        this.defaultHeaders = { ...defaultHeaders }
 
         const proxyUrl = this.account.url && this.account.proxyHttp ? this.buildProxyUrl(this.account) : undefined
 
         this.instance = new Impit({ browser: 'chrome', proxyUrl, timeout: DEFAULT_TIMEOUT })
     }
 
+    public setDefaultHeaders(headers: Record<string, unknown>): void {
+        this.defaultHeaders = mergeRequestHeaders(this.defaultHeaders, headers)
+    }
+
     public async request<T = unknown>(config: HttpRequestConfig, bypassProxy = false): Promise<HttpResponse<T>> {
-        const { url, init } = toInit(config)
+        const requestConfig: HttpRequestConfig = {
+            ...config,
+            headers: mergeRequestHeaders(this.defaultHeaders, config.headers)
+        }
+        const { url, init } = toInit(requestConfig)
 
         if (bypassProxy) {
             if (!this.bypass) this.bypass = new Impit({ browser: 'chrome', timeout: DEFAULT_TIMEOUT })
-            return send<T>(this.bypass, url, init, config, 3)
+            return send<T>(this.bypass, url, init, requestConfig, 3)
         }
 
-        return send<T>(this.instance, url, init, config, 5)
+        return send<T>(this.instance, url, init, requestConfig, 5)
     }
 
     private buildProxyUrl(proxyConfig: AccountProxy): string {

@@ -5,6 +5,7 @@ import pkg from '../../package.json'
 
 import { Config } from '../interface/Config'
 import { Account } from '../interface/Account'
+import { normalizeCountry, normalizeLanguageTag } from './Locale'
 
 const NumberOrString = z.union([z.number(), z.string()])
 
@@ -47,6 +48,29 @@ const QueryEngineSchema = z.union([
         .string()
         .regex(/^rss(\.[A-Za-z0-9_-]+){0,2}$/, 'Invalid rss selector (use rss, rss.<site>, or rss.<site>.<endpoint>)')
 ])
+
+const AccountLanguageSchema = z
+    .string()
+    .trim()
+    .min(1)
+    .refine(value => {
+        try {
+            normalizeLanguageTag(value)
+            return true
+        } catch {
+            return false
+        }
+    }, 'Expected a valid BCP 47 language tag')
+    .transform(normalizeLanguageTag)
+
+const AccountCountrySchema = z
+    .string()
+    .trim()
+    .transform(value => (value.toLowerCase() === 'auto' ? 'auto' : value.toUpperCase()))
+    .refine(
+        value => value === 'auto' || normalizeCountry(value) !== undefined,
+        'Expected "auto" or a two-letter country code'
+    )
 
 // Webhook
 const WebhookSchema = z.object({
@@ -141,8 +165,8 @@ export const AccountSchema = z.object({
     password: z.string(),
     totpSecret: z.string().optional(),
     recoveryEmail: z.string(),
-    geoLocale: z.string(),
-    langCode: z.string(),
+    geoLocale: AccountCountrySchema,
+    langCode: AccountLanguageSchema,
     proxy: z.object({
         proxyHttp: z.boolean(),
         url: z.string(),

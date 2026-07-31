@@ -115,6 +115,16 @@ export default class ReactFunc {
         )
     }
 
+    public availablePointsFromPayload(payload: unknown): number | null {
+        if (typeof payload !== 'string') return null
+
+        const normalized = payload.replace(/\\"/g, '"')
+        const matches = [...normalized.matchAll(/"availablePoints"\s*:\s*(\d+)/g)]
+        const value = Number(matches.at(-1)?.[1])
+
+        return Number.isSafeInteger(value) && value >= 0 ? value : null
+    }
+
     private concatFlightChunks(html: string | readonly string[]): string {
         try {
             const pushRe = /self\.__next_f\.push\(\[1,\s*"((?:[^"\\]|\\.)*)"\]\)/g

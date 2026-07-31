@@ -4,6 +4,7 @@ import { BrowserFingerprintWithHeaders, FingerprintGenerator } from 'fingerprint
 
 import type { MicrosoftRewardsBot } from '../index'
 import { loadSession, saveFingerprint } from '../util/SessionStore'
+import { fingerprintMatchesLocale } from '../util/Locale'
 import { UserAgentManager } from './UserAgent'
 
 import type { Account, AccountProxy } from '../interface/Account'
@@ -86,7 +87,6 @@ class Browser {
 
         try {
             const session = loadSession(this.bot.config.sessionPath, account.email, this.bot.isMobile)
-            this.bot.setCurrentSessionRestored(Boolean(session?.storageState))
 
             if (session?.storageState) {
                 const ageMinutes = Math.max(0, Math.floor((Date.now() - session.updatedAt) / 60000))
@@ -107,8 +107,20 @@ class Browser {
                 ? account.saveFingerprint.mobile
                 : account.saveFingerprint.desktop
 
+            const savedFingerprint = shouldUseFingerprint ? session?.fingerprint : null
+            const reuseFingerprint =
+                savedFingerprint && fingerprintMatchesLocale(savedFingerprint, this.bot.accountLocale)
+
+            if (savedFingerprint && !reuseFingerprint) {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'BROWSER-FINGERPRINT',
+                    `Saved fingerprint locale does not match ${this.bot.accountLocale.locale}; generating a replacement`
+                )
+            }
+
             const fingerprint =
-                (shouldUseFingerprint && session?.fingerprint) || (await this.generateFingerprint(this.bot.isMobile))
+                (reuseFingerprint && savedFingerprint) || (await this.generateFingerprint(this.bot.isMobile))
 
             const screen = fingerprint.fingerprint.screen
 
@@ -182,7 +194,7 @@ class Browser {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'BROWSER',
-                `Created context | User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`
+                `Created context | locale=${this.bot.accountLocale.locale} | Accept-Language="${this.bot.accountLocale.acceptLanguage}" | User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`
             )
             this.bot.logger.debug(this.bot.isMobile, 'BROWSER-FINGERPRINT', JSON.stringify(fingerprint))
 
@@ -210,7 +222,8 @@ class Browser {
         const fingerPrintData = new FingerprintGenerator().getFingerprint({
             devices: isMobile ? ['mobile'] : ['desktop'],
             operatingSystems: isMobile ? ['android'] : [hostOs],
-            browsers: [{ name: 'edge' }]
+            browsers: [{ name: 'edge' }],
+            locales: this.bot.accountLocale.acceptedLocales
         })
 
         const userAgentManager = new UserAgentManager(this.bot)

@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { DatabaseSync } from 'node:sqlite'
-import { accountIndexesFromEnv, envBool, envInt, envStr } from './env.js'
+import { accountIndexesFromEnv, envBool, envInt, envStr, normalizeGeoLocale, normalizeLanguageCode } from './env.js'
 
 export function getDirname(importMetaUrl) {
     const __filename = fileURLToPath(importMetaUrl)
@@ -170,8 +170,8 @@ export function loadAccountsFromEnv(projectRoot) {
             password: envStr(`ACCOUNT_${idx}_PASSWORD`) ?? '',
             totpSecret: envStr(`ACCOUNT_${idx}_TOTP_SECRET`),
             recoveryEmail: envStr(`ACCOUNT_${idx}_RECOVERY_EMAIL`) ?? '',
-            geoLocale: envStr(`ACCOUNT_${idx}_GEO_LOCALE`) ?? 'auto',
-            langCode: envStr(`ACCOUNT_${idx}_LANG_CODE`) ?? 'en',
+            geoLocale: normalizeGeoLocale(envStr(`ACCOUNT_${idx}_GEO_LOCALE`) ?? 'auto'),
+            langCode: normalizeLanguageCode(envStr(`ACCOUNT_${idx}_LANG_CODE`) ?? 'en'),
             proxy: {
                 proxyHttp: envBoolWithLegacy(`ACCOUNT_${idx}_PROXY_HTTP`, `ACCOUNT_${idx}_PROXY_AXIOS`, false),
                 url: envStr(`ACCOUNT_${idx}_PROXY_URL`) ?? '',
@@ -282,6 +282,14 @@ export function clearSessionRows(db, email) {
     const info = email
         ? db.prepare('DELETE FROM sessions WHERE LOWER(email) = LOWER(?)').run(email)
         : db.prepare('DELETE FROM sessions').run()
+
+    try {
+        if (email) {
+            db.prepare('DELETE FROM account_metadata WHERE LOWER(email) = LOWER(?)').run(email)
+        } else {
+            db.prepare('DELETE FROM account_metadata').run()
+        }
+    } catch {}
 
     try {
         db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
