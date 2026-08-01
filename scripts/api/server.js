@@ -6,7 +6,14 @@ import { fileURLToPath } from 'node:url'
 
 import { ProcessManager } from './processManager.js'
 import { buildExcludedAccountsEnv, buildSingleAccountEnv, loadAccounts, mergeAccountStats } from './accounts.js'
-import { validateConfig, deepMerge, readConfig, writeConfigAtomic, diffConfig, syncMissingDefaults } from './configEditor.js'
+import {
+    validateConfig,
+    deepMerge,
+    readConfig,
+    writeConfigAtomic,
+    diffConfig,
+    syncMissingDefaults
+} from './configEditor.js'
 import { readSchedule, writeSchedule } from './scheduleStore.js'
 import { deleteStoredSessions, listStoredSessions } from './sessionStore.js'
 import { resolveRunCommand } from './runCommand.js'
