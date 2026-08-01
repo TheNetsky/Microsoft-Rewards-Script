@@ -559,17 +559,19 @@ export class Login {
 
                 this.bot.logger.debug(this.bot.isMobile, 'LOGIN-BING', `Verification loop ${i + 1}/${loopMax}`)
 
-                const state = await this.detectCurrentState(page)
-                if (state === 'PASSKEY_ERROR') {
-                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Dismissing Passkey error state')
-                    await this.bot.browser.utils.ghostClick(page, this.selectors.secondaryButton)
-                }
-
-                // Handle stats in case of password etc
-                await this.handleState(state, page, account)
-
                 const u = new URL(page.url())
                 const atBingHome = u.hostname === 'www.bing.com' && u.pathname === '/'
+                if (!atBingHome) {
+                    const state = await this.detectCurrentState(page)
+                    if (state === 'PASSKEY_ERROR') {
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Dismissing Passkey error state')
+                        await this.bot.browser.utils.ghostClick(page, this.selectors.secondaryButton)
+                    }
+
+                    // Handle stats in case of password etc
+                    await this.handleState(state, page, account)
+                }
+
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-BING',
