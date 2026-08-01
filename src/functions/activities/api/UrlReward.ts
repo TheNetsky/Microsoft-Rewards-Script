@@ -62,7 +62,7 @@ export class UrlReward extends Workers {
         )
 
         try {
-            const { status, acknowledged } = await this.bot.browser.func.reportServerAction(
+            const { status, acknowledged, availablePoints } = await this.bot.browser.func.reportServerAction(
                 actionId,
                 [
                     live.hash,
@@ -80,7 +80,16 @@ export class UrlReward extends Workers {
                 }
             )
 
-            const newBalance = await this.bot.browser.func.getCurrentPoints()
+            if (!acknowledged) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'URL-REWARD',
+                    `UrlReward request was not acknowledged | offerId=${offerId} | status=${status}`
+                )
+                if (await this.retryAfterRequestFailure(promotion, allowSessionRepair)) return
+            }
+
+            const newBalance = availablePoints ?? (await this.bot.browser.func.getCurrentPoints())
             const gainedPoints = newBalance - oldBalance
 
             this.bot.logger.debug(
@@ -113,19 +122,6 @@ export class UrlReward extends Workers {
                     'URL-REWARD',
                     `UrlReward credited no points | offerId=${offerId} | acknowledged=${acknowledged} | expected=${expectedPoints} | pointsGained=0 | currentBalance=${newBalance}`
                 )
-
-                if (allowSessionRepair && !acknowledged && expectedPoints > 0 && this.bot.currentSessionWasRestored) {
-                    const repaired = await this.bot.repairCurrentBrowserSession(`URL-REWARD:${offerId}`)
-                    if (repaired) {
-                        this.bot.logger.info(
-                            this.bot.isMobile,
-                            'URL-REWARD',
-                            `Retrying UrlReward once with the refreshed session | offerId=${offerId}`
-                        )
-                        await this.runUrlReward(promotion, false)
-                        return
-                    }
-                }
             }
 
             await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))
@@ -135,7 +131,23 @@ export class UrlReward extends Workers {
                 'URL-REWARD',
                 `Error in doUrlReward | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
             )
+            await this.retryAfterRequestFailure(promotion, allowSessionRepair)
         }
+    }
+
+    private async retryAfterRequestFailure(promotion: BasePromotion, allowSessionRepair: boolean): Promise<boolean> {
+        if (!allowSessionRepair) return false
+
+        const refreshed = await this.bot.refreshCurrentRewardsContext(`URL-REWARD:${promotion.offerId}`)
+        if (!refreshed) return false
+
+        this.bot.logger.info(
+            this.bot.isMobile,
+            'URL-REWARD',
+            `Retrying UrlReward once with refreshed cookies and bootstrap data | offerId=${promotion.offerId}`
+        )
+        await this.runUrlReward(promotion, false)
+        return true
     }
 
     private isNonCrediting(points: number, subtype: string | null, title: string): boolean {

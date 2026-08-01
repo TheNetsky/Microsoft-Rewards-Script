@@ -100,7 +100,7 @@ export class DailyCheckIn extends Workers {
                     'X-Rewards-AppId': 'SAIOS/33.4.440603001',
                     'X-Rewards-PartnerId': 'startapp',
                     'X-Rewards-Country': this.bot.userData.geoLocale,
-                    'X-Rewards-Language': 'en',
+                    'X-Rewards-Language': this.bot.userData.langCode,
                     'X-Rewards-Flights': 'rwgobig',
                     'X-Rewards-IsMobile': 'true'
                 },

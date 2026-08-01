@@ -101,6 +101,7 @@ export class Search extends Workers {
                 `Query queue ready | mainTopics=${topicCount} | clusterSearch=${this.bot.config.searchSettings.clusterSearch}`
             )
 
+            await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-COOKIE-SEED', true)
             await page.goto(URLs.bing.origin)
             await page.waitForLoadState('domcontentloaded', { timeout: 8000 }).catch(() => {})
             await this.bot.browser.utils.tryDismissAllMessages(page)
@@ -112,9 +113,11 @@ export class Search extends Workers {
                     break
                 }
 
+                await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-COOKIE-SEED', true)
                 await this.bingSearch(page, query, isMobile)
                 stats.performed++
 
+                await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-COOKIE-CAPTURE')
                 const gained = await tracker.measure()
                 if (gained > 0) {
                     stats.stagnant = 0

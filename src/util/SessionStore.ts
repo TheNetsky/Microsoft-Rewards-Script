@@ -46,6 +46,13 @@ function getDb(sessionPath: string): DatabaseSync {
             PRIMARY KEY (email, platform)
         )
     `)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS account_metadata (
+            email           TEXT PRIMARY KEY COLLATE NOCASE,
+            resolved_region TEXT,
+            updated_at      INTEGER NOT NULL
+        )
+    `)
 
     return db
 }
@@ -113,6 +120,29 @@ export function saveFingerprint(
              DO UPDATE SET fingerprint = excluded.fingerprint, updated_at = excluded.updated_at`
         )
         .run(email, platformOf(isMobile), JSON.stringify(fingerprint), Date.now())
+}
+
+export function loadResolvedRegion(sessionPath: string, email: string): string | undefined {
+    const row = getDb(sessionPath)
+        .prepare('SELECT resolved_region FROM account_metadata WHERE email = ?')
+        .get(email) as { resolved_region?: string | null } | undefined
+
+    return row?.resolved_region ?? undefined
+}
+
+export function saveResolvedRegion(sessionPath: string, email: string, region: string): void {
+    if (!/^[A-Z]{2}$/.test(region)) {
+        throw new Error(`Invalid resolved account region: ${region}`)
+    }
+
+    getDb(sessionPath)
+        .prepare(
+            `INSERT INTO account_metadata (email, resolved_region, updated_at)
+             VALUES (?, ?, ?)
+             ON CONFLICT(email)
+             DO UPDATE SET resolved_region = excluded.resolved_region, updated_at = excluded.updated_at`
+        )
+        .run(email, region, Date.now())
 }
 
 export function closeSessionStore(): void {

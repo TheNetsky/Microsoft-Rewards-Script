@@ -7,7 +7,7 @@ import type { HttpRequestConfig } from '../util/Http'
 
 import type { MicrosoftRewardsBot } from '../index'
 import type { PageSnapshot, ParsedOffer } from './ReactFunc'
-import { clearStorageState, loadSession, saveStorageState } from '../util/SessionStore'
+import { loadSession, saveStorageState } from '../util/SessionStore'
 import { isBrowserClosedError } from '../util/Utils'
 
 import type { Counters, DashboardData } from './../interface/DashboardData'
@@ -34,33 +34,16 @@ export default class BrowserFunc {
 
     async getDashboardData(cookies?: Cookie[]): Promise<DashboardData> {
         try {
-            const page = this.getActivePage()
             const fingerprintHeaders = { ...(this.bot.fingerprint?.headers ?? {}) }
             delete fingerprintHeaders['Cookie']
             delete fingerprintHeaders['cookie']
-
-            if (page && !cookies) {
-                const response = await page.request.get(URLs.rewards.userInfoApi, {
-                    headers: {
-                        ...fingerprintHeaders,
-                        Referer: URLs.rewards.referer,
-                        Origin: URLs.rewards.origin
-                    },
-                    timeout: 20000
-                })
-
-                if (!response.ok()) throw new Error(`Request failed with status code ${response.status()}`)
-
-                await this.syncActiveCookies(page, 'GET-DASHBOARD-DATA')
-                return (await response.json()) as DashboardData
-            }
 
             const response = await this.bot.http.request<DashboardData>({
                 url: URLs.rewards.userInfoApi,
                 method: 'GET',
                 headers: {
                     ...fingerprintHeaders,
-                    Cookie: this.buildCookieHeader(await this.getRequestCookies(cookies, URLs.rewards.userInfoApi)),
+                    Cookie: this.buildCookieHeader(this.getCachedCookies(cookies, URLs.rewards.userInfoApi)),
                     Referer: URLs.rewards.referer,
                     Origin: URLs.rewards.origin
                 }
@@ -86,7 +69,10 @@ export default class BrowserFunc {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${this.bot.accessToken}`,
-                    'User-Agent': BING_APP_USER_AGENT
+                    'User-Agent': BING_APP_USER_AGENT,
+                    'X-Rewards-Country': this.bot.userData.geoLocale,
+                    'X-Rewards-Language': this.bot.userData.langCode,
+                    'X-Rewards-IsMobile': 'true'
                 }
             }
 
@@ -185,7 +171,7 @@ export default class BrowserFunc {
                 headers: {
                     Authorization: `Bearer ${this.bot.accessToken}`,
                     'X-Rewards-Country': this.bot.userData.geoLocale,
-                    'X-Rewards-Language': 'en',
+                    'X-Rewards-Language': this.bot.userData.langCode,
                     'X-Rewards-ismobile': 'true'
                 }
             }
@@ -521,8 +507,11 @@ export default class BrowserFunc {
     }
 
     async getRewardsPageHtml(url: string, route: string): Promise<string | null> {
+        const direct = await this.fetchRewardsHtml(url, route)
+        if (direct !== null) return direct
+
         const page = this.getActivePage()
-        if (!page) return await this.fetchRewardsHtml(url, route)
+        if (!page) return null
 
         try {
             const response = await page.request.get(url, { timeout: 20000 })
@@ -544,33 +533,12 @@ export default class BrowserFunc {
             )
         }
 
-        return await this.fetchRewardsHtml(url, route)
+        return null
     }
 
-    private async getRequestCookies(explicitCookies?: Cookie[], targetUrl?: string): Promise<Cookie[]> {
-        if (explicitCookies) return targetUrl ? this.filterCookiesForUrl(explicitCookies, targetUrl) : explicitCookies
-
-        const cachedCookies = this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop
-        const page = this.getActivePage()
-
-        if (!page) return targetUrl ? this.filterCookiesForUrl(cachedCookies, targetUrl) : cachedCookies
-
-        try {
-            const context = page.context()
-            const liveCookies = await context.cookies()
-            if (!liveCookies.length)
-                return targetUrl ? this.filterCookiesForUrl(cachedCookies, targetUrl) : cachedCookies
-
-            this.updateCookieCache(liveCookies, 'COOKIE-SYNC')
-            return targetUrl ? await context.cookies(targetUrl) : liveCookies
-        } catch (error) {
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'COOKIE-SYNC',
-                `Using cached cookies because the active browser context could not be read | error=${error instanceof Error ? error.message : String(error)}`
-            )
-            return targetUrl ? this.filterCookiesForUrl(cachedCookies, targetUrl) : cachedCookies
-        }
+    private getCachedCookies(explicitCookies?: Cookie[], targetUrl?: string): Cookie[] {
+        const cookies = explicitCookies ?? (this.bot.isMobile ? this.bot.cookies.mobile : this.bot.cookies.desktop)
+        return targetUrl ? this.filterCookiesForUrl(cookies, targetUrl) : cookies
     }
 
     async checkpointActiveSession(source = 'SESSION-CHECKPOINT'): Promise<boolean> {
@@ -597,52 +565,29 @@ export default class BrowserFunc {
         }
     }
 
-    async clearActiveSessionState(page: Page, email: string, source = 'SESSION-RESET'): Promise<void> {
-        const context = page.context()
-        const previousState = await context.storageState().catch(() => ({ cookies: [], origins: [] }))
+    async synchronizeActiveBrowserCookies(source: string, applyCached = false): Promise<boolean> {
+        const page = this.getActivePage()
+        if (!page) return false
 
-        await context.clearCookies()
-
-        // Clear origin-bound browser storage as well. This makes the recovery path
-        // equivalent to deleting the saved session, without replacing the fingerprint.
         try {
-            await page.evaluate(() => {
-                localStorage.clear()
-                sessionStorage.clear()
-            })
-        } catch {}
-
-        let clearedOrigins = 0
-        try {
-            const client = await context.newCDPSession(page)
-            for (const entry of previousState.origins) {
-                await client
-                    .send('Storage.clearDataForOrigin', {
-                        origin: entry.origin,
-                        storageTypes: 'local_storage,indexeddb,websql,service_workers,cache_storage'
-                    })
-                    .catch(() => {})
-                clearedOrigins++
+            const context = page.context()
+            if (applyCached) {
+                const cached = this.getCachedCookies().filter(
+                    cookie => cookie.expires === -1 || cookie.expires > Date.now() / 1000
+                )
+                if (cached.length) await context.addCookies(cached)
             }
-            await client.detach().catch(() => {})
+
+            this.updateCookieCache(await context.cookies(), source)
+            return true
         } catch (error) {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 source,
-                `Origin-storage cleanup was only partially available | error=${error instanceof Error ? error.message : String(error)}`
+                `Could not synchronize active browser cookies | error=${error instanceof Error ? error.message : String(error)}`
             )
+            return false
         }
-
-        clearStorageState(this.bot.config.sessionPath, email, this.bot.isMobile)
-        if (this.bot.isMobile) this.bot.cookies.mobile = []
-        else this.bot.cookies.desktop = []
-        this.resetHttpJars()
-
-        this.bot.logger.debug(
-            this.bot.isMobile,
-            source,
-            `Cleared active session state | cookies=${previousState.cookies.length} | origins=${clearedOrigins}`
-        )
     }
 
     private updateCookieCache(liveCookies: Cookie[], source: string): boolean {
@@ -873,7 +818,7 @@ export default class BrowserFunc {
         actionId: string,
         body: unknown[],
         opts?: { url?: string; referer?: string; routerStateTree?: string }
-    ): Promise<{ status: number; acknowledged: boolean }> {
+    ): Promise<{ status: number; acknowledged: boolean; availablePoints: number | null }> {
         const url = opts?.url ?? URLs.rewards.earn
         const referer = opts?.referer ?? url
         const routerStateTree = opts?.routerStateTree ?? this.bot.nextRouterStateTree
@@ -893,28 +838,12 @@ export default class BrowserFunc {
             ...(this.rewardsDeploymentId ? { 'X-Deployment-Id': this.rewardsDeploymentId } : {})
         }
 
-        const page = this.getActivePage()
-        if (page) {
-            const response = await page.request.post(url, {
-                headers,
-                data: JSON.stringify(body),
-                timeout: 20000
-            })
-            const responseBody = await response.text()
-            await this.syncActiveCookies(page, 'SERVER-ACTION')
-
-            return {
-                status: response.status(),
-                acknowledged: this.bot.utils.serverActionAcknowledged(responseBody)
-            }
-        }
-
         const response = await this.bot.http.request({
             url,
             method: 'POST',
             headers: {
                 ...headers,
-                Cookie: this.buildCookieHeader(await this.getRequestCookies(undefined, url))
+                Cookie: this.buildCookieHeader(this.getCachedCookies(undefined, url))
             },
             data: JSON.stringify(body)
         })
@@ -922,7 +851,8 @@ export default class BrowserFunc {
 
         return {
             status: response.status,
-            acknowledged: this.bot.utils.serverActionAcknowledged(response.data)
+            acknowledged: this.bot.utils.serverActionAcknowledged(response.data),
+            availablePoints: this.bot.browser.react.availablePointsFromPayload(response.data)
         }
     }
 
@@ -1198,7 +1128,9 @@ export default class BrowserFunc {
 
         try {
             const res = await page.request.get(
-                `${URLs.bing.origin}/HPImageArchive.aspx?format=js&idx=${idx}&n=1&mkt=en-US`,
+                `${URLs.bing.origin}/HPImageArchive.aspx?format=js&idx=${idx}&n=1&mkt=${encodeURIComponent(
+                    this.bot.accountLocale.locale
+                )}`,
                 { timeout: 10000 }
             )
 
@@ -1255,7 +1187,7 @@ export default class BrowserFunc {
                 method: 'GET',
                 headers: {
                     ...headers,
-                    Cookie: this.buildCookieHeader(await this.getRequestCookies(undefined, url)),
+                    Cookie: this.buildCookieHeader(this.getCachedCookies(undefined, url)),
                     Referer: URLs.rewards.referer,
                     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
                 },

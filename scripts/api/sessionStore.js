@@ -89,6 +89,9 @@ export function deleteStoredSessions(projectRoot, sessionPath, email) {
 
         const result = db.prepare('DELETE FROM sessions WHERE LOWER(email) = LOWER(?)').run(email)
         try {
+            db.prepare('DELETE FROM account_metadata WHERE LOWER(email) = LOWER(?)').run(email)
+        } catch {}
+        try {
             db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
         } catch {}
 

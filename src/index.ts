@@ -14,8 +14,10 @@ import type { PageSnapshot } from './browser/ReactFunc'
 import { IpcLog, Logger } from './logging/Logger'
 import Utils, { isBrowserClosedError } from './util/Utils'
 import { loadAccounts, loadConfig } from './util/Load'
-import { clearStorageState, closeSessionStore } from './util/SessionStore'
+import { closeSessionStore, loadResolvedRegion, saveResolvedRegion } from './util/SessionStore'
 import { checkNodeVersion } from './util/Validator'
+import { normalizeCountry, resolveAccountLocale } from './util/Locale'
+import type { AccountLocale } from './util/Locale'
 
 import { Login } from './browser/auth/Login'
 import { Workers } from './functions/Workers'
@@ -88,6 +90,7 @@ export class MicrosoftRewardsBot {
     public mainDesktopPage!: Page
 
     public userData: UserData
+    public accountLocale: AccountLocale
 
     public nextActions: Record<string, string> = {}
     public nextRouterStateTree = ''
@@ -95,7 +98,6 @@ export class MicrosoftRewardsBot {
 
     public accessToken = ''
     public cookies: { mobile: Cookie[]; desktop: Cookie[] }
-    public restoredSession: { mobile: boolean; desktop: boolean } = { mobile: false, desktop: false }
     private fingerprintMobile?: BrowserFingerprintWithHeaders
     private fingerprintDesktop?: BrowserFingerprintWithHeaders
 
@@ -125,6 +127,7 @@ export class MicrosoftRewardsBot {
             currentPoints: 0,
             gainedPoints: 0
         }
+        this.accountLocale = resolveAccountLocale({ langCode: 'en', geoLocale: 'US' })
         this.logger = new Logger(this)
         this.accounts = []
         this.cookies = { mobile: [], desktop: [] }
@@ -150,27 +153,18 @@ export class MicrosoftRewardsBot {
         return getCurrentContext().account?.email || null
     }
 
-    get currentSessionWasRestored(): boolean {
-        return this.isMobile ? this.restoredSession.mobile : this.restoredSession.desktop
-    }
-
-    setCurrentSessionRestored(restored: boolean): void {
-        if (this.isMobile) this.restoredSession.mobile = restored
-        else this.restoredSession.desktop = restored
-    }
-
-    async repairCurrentBrowserSession(reason: string): Promise<boolean> {
+    async refreshCurrentRewardsContext(reason: string): Promise<boolean> {
         const context = getCurrentContext()
         const account = context.account
         let page = context.isMobile ? this.mainMobilePage : this.mainDesktopPage
         let recoverySession: BrowserSession | null = null
-        let repairSucceeded = false
+        let refreshSucceeded = false
 
         if (!account?.email) {
             this.logger.debug(
                 this.isMobile,
-                'SESSION-REPAIR',
-                `Cannot repair session | reason=${reason} | account=unavailable`
+                'CONTEXT-REFRESH',
+                `Cannot refresh rewards context | reason=${reason} | account=unavailable`
             )
             return false
         }
@@ -178,18 +172,11 @@ export class MicrosoftRewardsBot {
         try {
             this.logger.warn(
                 this.isMobile,
-                'SESSION-REPAIR',
-                `Restored session appears stale | reason=${reason} | clearing restored browser state and signing in again`
+                'CONTEXT-REFRESH',
+                `Refreshing rewards browser context after request failure | reason=${reason}`
             )
 
-            if (page && !page.isClosed()) {
-                await this.browser.func.clearActiveSessionState(page, account.email, 'SESSION-REPAIR')
-            } else {
-                clearStorageState(this.config.sessionPath, account.email, context.isMobile)
-                if (context.isMobile) this.cookies.mobile = []
-                else this.cookies.desktop = []
-                this.browser.func.resetHttpJars()
-
+            if (!page || page.isClosed()) {
                 recoverySession = await this.browserFactory.createBrowser(account)
                 page = await recoverySession.context.newPage()
                 if (context.isMobile) {
@@ -199,35 +186,41 @@ export class MicrosoftRewardsBot {
                     this.mainDesktopPage = page
                     this.fingerprintDesktop = recoverySession.fingerprint
                 }
+
+                await this.login.login(page, account)
+            } else {
+                this.nextActions = {}
+                this.nextRouterStateTree = ''
+                this.reactSnapshot = null
+                await this.browser.func.synchronizeActiveBrowserCookies('CONTEXT-REFRESH-COOKIE-SEED', true)
+                try {
+                    await this.browser.func.bootstrap(page)
+                } catch {
+                    await this.login.login(page, account)
+                }
             }
 
-            this.nextActions = {}
-            this.nextRouterStateTree = ''
-            this.reactSnapshot = null
-
-            await this.login.login(page, account)
-            await this.browser.func.checkpointActiveSession('SESSION-REPAIR')
+            await this.browser.func.checkpointActiveSession('CONTEXT-REFRESH')
 
             const refreshedCookies = await page.context().cookies()
-            this.setCurrentSessionRestored(false)
             this.logger.info(
                 this.isMobile,
-                'SESSION-REPAIR',
-                `Session repaired successfully | cookies=${refreshedCookies.length}`,
+                'CONTEXT-REFRESH',
+                `Rewards context refreshed successfully | cookies=${refreshedCookies.length}`,
                 'green'
             )
-            repairSucceeded = true
+            refreshSucceeded = true
             return true
         } catch (error) {
             this.logger.error(
                 this.isMobile,
-                'SESSION-REPAIR',
-                `Session repair failed | reason=${reason} | message=${error instanceof Error ? error.message : String(error)}`
+                'CONTEXT-REFRESH',
+                `Rewards context refresh failed | reason=${reason} | message=${error instanceof Error ? error.message : String(error)}`
             )
             return false
         } finally {
             if (recoverySession) {
-                await this.browser.func.closeBrowser(recoverySession.context, account.email, repairSucceeded)
+                await this.browser.func.closeBrowser(recoverySession.context, account.email, refreshSucceeded)
             }
         }
     }
@@ -288,7 +281,7 @@ export class MicrosoftRewardsBot {
 
         for (const [chunkIndex, chunk] of accountChunks.entries()) {
             if (chunkIndex > 0) {
-                await this.accountDelay()
+                await this.waitBeforeNextAccount()
             }
 
             const worker = cluster.fork()
@@ -404,23 +397,32 @@ export class MicrosoftRewardsBot {
 
         for (const [accountIndex, account] of accounts.entries()) {
             if (accountIndex > 0) {
-                await this.accountDelay()
+                await this.waitBeforeNextAccount()
             }
 
             const accountStartTime = Date.now()
             const accountEmail = account.email
             this.userData.userName = this.utils.getEmailUsername(accountEmail)
             this.userData.timezoneOffset = String(new Date().getTimezoneOffset())
-            this.userData.langCode = account.langCode ?? 'en'
 
             try {
+                const cachedRegion =
+                    account.geoLocale === 'auto' ? loadResolvedRegion(this.config.sessionPath, accountEmail) : undefined
+                this.accountLocale = resolveAccountLocale(account, cachedRegion)
+                this.userData.langCode = this.accountLocale.language
+                this.userData.geoLocale = this.accountLocale.country ?? 'US'
+
                 this.logger.info(
                     'main',
                     'ACCOUNT-START',
-                    `Starting account: ${accountEmail} | geoLocale: ${account.geoLocale}`
+                    `Starting account: ${accountEmail} | geoLocale: ${account.geoLocale} | locale: ${this.accountLocale.locale}${
+                        cachedRegion ? ` | cachedRegion: ${cachedRegion}` : ''
+                    }`
                 )
 
-                this.http = new HttpClient(account.proxy)
+                this.http = new HttpClient(account.proxy, {
+                    'Accept-Language': this.accountLocale.acceptLanguage
+                })
 
                 const result: { initialPoints: number; collectedPoints: number } | undefined = await this.Main(
                     account
@@ -506,7 +508,7 @@ export class MicrosoftRewardsBot {
         return accountStats
     }
 
-    private async accountDelay(): Promise<void> {
+    private async waitBeforeNextAccount(): Promise<void> {
         const { min, max } = this.config.accountDelay
         const minMs = typeof min === 'number' ? min : this.utils.stringToNumber(min)
         const maxMs = typeof max === 'number' ? max : this.utils.stringToNumber(max)
@@ -610,6 +612,29 @@ export class MicrosoftRewardsBot {
                 }
 
                 const data: DashboardData = await this.browser.func.getDashboardData()
+                const profileCountry = normalizeCountry(data.dashboard.userProfile.attributes.country)
+
+                if (account.geoLocale === 'auto') {
+                    if (profileCountry) {
+                        saveResolvedRegion(this.config.sessionPath, accountEmail, profileCountry)
+                    } else {
+                        this.logger.warn(
+                            'main',
+                            'GEO-LOCALE',
+                            `Microsoft profile returned an invalid country; retaining ${
+                                this.accountLocale.country ?? 'US fallback'
+                            }`
+                        )
+                    }
+                }
+
+                this.accountLocale = resolveAccountLocale(account, profileCountry ?? this.accountLocale.country)
+                this.userData.langCode = this.accountLocale.language
+                this.userData.geoLocale = this.accountLocale.country ?? 'US'
+                this.http.setDefaultHeaders({
+                    'Accept-Language': this.accountLocale.acceptLanguage
+                })
+
                 let appData: AppDashboardData | null = null
 
                 if (this.accessToken) {
@@ -623,18 +648,6 @@ export class MicrosoftRewardsBot {
                         )
                         this.accessToken = ''
                     }
-                }
-
-                this.userData.geoLocale =
-                    account.geoLocale === 'auto'
-                        ? data.dashboard.userProfile.attributes.country
-                        : account.geoLocale.toLowerCase()
-                if (this.userData.geoLocale.length > 2) {
-                    this.logger.warn(
-                        'main',
-                        'GEO-LOCALE',
-                        `The provided geoLocale is longer than 2 (${this.userData.geoLocale} | auto=${account.geoLocale === 'auto'}), this is likely invalid and can cause errors!`
-                    )
                 }
 
                 this.userData.initialPoints = data.dashboard.userStatus.availablePoints

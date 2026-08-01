@@ -58,7 +58,7 @@ export class ReadToEarn extends Workers {
                         'User-Agent': BING_APP_USER_AGENT,
                         'Content-Type': 'application/json',
                         'X-Rewards-Country': this.bot.userData.geoLocale,
-                        'X-Rewards-Language': 'en',
+                        'X-Rewards-Language': this.bot.userData.langCode,
                         'X-Rewards-ismobile': 'true'
                     },
                     data: JSON.stringify(jsonData)

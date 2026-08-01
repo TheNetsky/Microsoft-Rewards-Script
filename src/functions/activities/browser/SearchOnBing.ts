@@ -71,6 +71,7 @@ export class SearchOnBing extends Workers {
             `Starting search loop | queriesCount=${queries.length} | targetPoints=${promotion.pointProgressMax} | currentBalance=${this.oldBalance}`
         )
 
+        await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-ON-BING-COOKIE-SEED', true)
         await this.ensureSearchReady(page)
 
         let lastBalance = this.oldBalance
@@ -80,10 +81,12 @@ export class SearchOnBing extends Workers {
             try {
                 this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `Processing query | query="${query}"`)
 
+                await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-ON-BING-COOKIE-SEED', true)
                 await this.typeSearch(page, query)
 
                 await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 7000))
 
+                await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-ON-BING-COOKIE-CAPTURE')
                 const dashboard = (await this.bot.browser.func.getDashboardData()).dashboard
                 const newBalance = dashboard.userStatus.availablePoints
                 const offer = findSearchOnBingOffer(dashboard, offerId)
