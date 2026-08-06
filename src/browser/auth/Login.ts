@@ -18,6 +18,8 @@ type LoginState =
     | 'PASSWORD_INPUT'
     | 'SIGN_IN_ANOTHER_WAY'
     | 'SIGN_IN_ANOTHER_WAY_EMAIL'
+    | 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS'
+    | 'PASSWORDLESS_CONFIRMATION'
     | 'PASSKEY_ERROR'
     | 'PASSKEY_VIDEO'
     | 'KMSI_PROMPT'
@@ -47,6 +49,10 @@ export class Login {
         secondaryButton: 'button[data-testid="secondaryButton"]',
         emailIcon: '[data-testid="tile"]:has(svg path[d*="M5.25 4h13.5a3.25"])',
         emailIconOld: 'img[data-testid="accessibleImg"][src*="picker_verify_email"]',
+        passwordlessOption: '[data-testid="tile"]:has-text("Microsoft Authenticator")',
+        passwordlessOptionOld: 'img[data-testid="accessibleImg"][src*="picker_remote_ngc"]',
+        passwordlessConfirmation:
+            '[data-testid="subtitle"]:has-text("Microsoft Authenticator"), [data-testid="description"]:has-text("Microsoft Authenticator"), #idDiv_SAOTCAS_Description:has-text("Microsoft Authenticator")',
         recoveryEmail: '[data-testid="proof-confirmation"]',
         passwordIcon: '[data-testid="tile"]:has(svg path[d*="M11.78 10.22a.75.75"])',
         accountLocked: '#serviceAbuseLandingTitle',
@@ -57,6 +63,7 @@ export class Login {
         passKeyVideo: '[data-testid="biometricVideo"]',
         passKeyError: '[data-testid="registrationImg"]',
         passwordlessCheck: '[data-testid="deviceShieldCheckmarkVideo"]',
+        passwordlessNumber: '[data-testid="displaySign"]',
         totpInput: 'input[name="otc"]',
         totpInputOld: 'form[name="OneTimeCodeViewForm"]',
         identityBanner: '[data-testid="identityBanner"]',
@@ -190,10 +197,14 @@ export class Login {
             [this.selectors.kmsiVideo, 'KMSI_PROMPT'],
             [this.selectors.passKeyVideo, 'PASSKEY_VIDEO'],
             [this.selectors.passKeyError, 'PASSKEY_ERROR'],
+            [this.selectors.passwordlessConfirmation, 'PASSWORDLESS_CONFIRMATION'],
+            [this.selectors.passwordlessOption, 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS'],
+            [this.selectors.passwordlessOptionOld, 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS'],
             [this.selectors.passwordIcon, 'SIGN_IN_ANOTHER_WAY'],
             [this.selectors.emailIcon, 'SIGN_IN_ANOTHER_WAY_EMAIL'],
             [this.selectors.emailIconOld, 'SIGN_IN_ANOTHER_WAY_EMAIL'],
             [this.selectors.passwordlessCheck, 'LOGIN_PASSWORDLESS'],
+            [this.selectors.passwordlessNumber, 'LOGIN_PASSWORDLESS'],
             [this.selectors.totpInput, '2FA_TOTP'],
             [this.selectors.totpInputOld, '2FA_TOTP'],
             [this.selectors.otpCodeEntry, 'OTP_CODE_ENTRY'],
@@ -251,14 +262,16 @@ export class Login {
             'PASSKEY_VIDEO',
             'PASSKEY_ERROR',
             'KMSI_PROMPT',
+            'LOGIN_PASSWORDLESS',
+            'PASSWORDLESS_CONFIRMATION',
             'PASSWORD_INPUT',
             'EMAIL_INPUT',
+            'SIGN_IN_ANOTHER_WAY_PASSWORDLESS',
             'SIGN_IN_ANOTHER_WAY', // Prefer password option over email code
             'SIGN_IN_ANOTHER_WAY_EMAIL',
             'OTP_CODE_ENTRY',
             'GET_A_CODE',
             'GET_A_CODE_2',
-            'LOGIN_PASSWORDLESS',
             '2FA_TOTP'
         ]
 
@@ -357,6 +370,69 @@ export class Login {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Initiating code login handler')
                 await this.codeLogin.handle(page)
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Code login handler completed successfully')
+                return true
+            }
+
+            case 'PASSWORDLESS_CONFIRMATION': {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Sending Microsoft Authenticator notification')
+                const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
+                if (!clicked) {
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        'Could not send Microsoft Authenticator notification'
+                    )
+                    return false
+                }
+                await this.waitForIdle(page, 'after passwordless notification confirmation')
+                return true
+            }
+
+            case 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS': {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Selecting Microsoft Authenticator passwordless login')
+
+                const [passwordlessOptionFound, passwordlessOptionOldFound] = await Promise.all([
+                    this.checkSelector(page, this.selectors.passwordlessOption),
+                    this.checkSelector(page, this.selectors.passwordlessOptionOld)
+                ])
+
+                const passwordlessSelector = passwordlessOptionFound
+                    ? this.selectors.passwordlessOption
+                    : passwordlessOptionOldFound
+                      ? this.selectors.passwordlessOptionOld
+                      : null
+
+                if (!passwordlessSelector) {
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Microsoft Authenticator option not found')
+                    return false
+                }
+
+                const clicked = await this.bot.browser.utils.ghostClick(page, passwordlessSelector)
+                if (!clicked) {
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Could not select Microsoft Authenticator')
+                    return false
+                }
+
+                await this.waitForIdle(page, 'after Microsoft Authenticator selection')
+
+                const passwordlessChallengeVisible =
+                    (await this.checkSelector(page, this.selectors.passwordlessCheck)) ||
+                    (await this.checkSelector(page, this.selectors.passwordlessNumber))
+
+                if (!passwordlessChallengeVisible && (await this.checkSelector(page, this.selectors.primaryButton))) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Confirming Microsoft Authenticator notification')
+                    const confirmed = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
+                    if (!confirmed) {
+                        this.bot.logger.warn(
+                            this.bot.isMobile,
+                            'LOGIN',
+                            'Could not confirm Microsoft Authenticator notification'
+                        )
+                        return false
+                    }
+                    await this.waitForIdle(page, 'after Microsoft Authenticator notification confirmation')
+                }
+
                 return true
             }
 
