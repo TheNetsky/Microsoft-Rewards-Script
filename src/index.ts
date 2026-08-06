@@ -281,7 +281,7 @@ export class MicrosoftRewardsBot {
 
         for (const [chunkIndex, chunk] of accountChunks.entries()) {
             if (chunkIndex > 0) {
-                await this.waitBeforeNextAccount()
+                await this.waitBeforeNextAccount(chunk[0]?.email)
             }
 
             const worker = cluster.fork()
@@ -397,7 +397,7 @@ export class MicrosoftRewardsBot {
 
         for (const [accountIndex, account] of accounts.entries()) {
             if (accountIndex > 0) {
-                await this.waitBeforeNextAccount()
+                await this.waitBeforeNextAccount(account.email)
             }
 
             const accountStartTime = Date.now()
@@ -508,7 +508,7 @@ export class MicrosoftRewardsBot {
         return accountStats
     }
 
-    private async waitBeforeNextAccount(): Promise<void> {
+    private async waitBeforeNextAccount(nextEmail?: string): Promise<void> {
         const { min, max } = this.config.accountDelay
         const minMs = typeof min === 'number' ? min : this.utils.stringToNumber(min)
         const maxMs = typeof max === 'number' ? max : this.utils.stringToNumber(max)
@@ -521,7 +521,9 @@ export class MicrosoftRewardsBot {
         this.logger.info(
             'main',
             'ACCOUNT-DELAY',
-            `Waiting ${(delayMs / 1000).toFixed(1)} seconds before starting the next account`
+            `Waiting ${(delayMs / 1000).toFixed(1)} seconds before starting the next account${
+                nextEmail ? ` (${nextEmail})` : ''
+            }`
         )
         await this.utils.wait(delayMs)
     }

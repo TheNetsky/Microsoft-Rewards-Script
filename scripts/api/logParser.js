@@ -59,7 +59,8 @@ export function createRunState() {
         order: [], // emails in the order they started
         accounts: {}, // email -> account summary
         errors: [], // recent error/warn messages { ts, level, title, message }
-        finished: false
+        finished: false,
+        pendingDelay: null // { seconds, nextEmail, sinceTs } while waiting between accounts/workers
     }
 }
 
@@ -102,6 +103,11 @@ const RE = {
     runEnd: /^Completed all accounts \| accountsProcessed=(\d+) \| pointsGained=(-?\d+) \| previousBalance=(\d+) \| currentBalance=(\d+) \| runtimeMinutes=([\d.]+)/,
     accountError: /^(\S+@\S+): ([\s\S]+)$/,
     flowFailed: /flow failed for (\S+@\S+):/i,
+    // index.ts's waitBeforeNextAccount() appends the upcoming account's email
+    // in parentheses when it's known (it always is, on both the single-worker
+    // and cluster-fork paths). The email is optional in the regex only to
+    // stay forward-compatible with older/foreign log lines that lack it.
+    accountDelay: /^Waiting ([\d.]+) seconds before starting the next account(?: \((\S+@\S+)\))?$/,
 
     searchStart: /^Starting Bing searches \| currentBalance=(\d+)/,
     flowCollected: /^Points collected \| pointsGained=(-?\d+) \| currentBalance=(\d+) \| account=(\S+@\S+)/
@@ -242,6 +248,7 @@ export function applyLogToRunState(state, entry) {
                 state.accountsTotal = Number(m[2])
                 state.clusters = Number(m[3])
                 state.finished = false
+                state.pendingDelay = null
                 return 'run-start'
             }
             break
@@ -252,7 +259,19 @@ export function applyLogToRunState(state, entry) {
                 if (acc) acc.geoLocale = m[2]
                 state.currentEmail = m[1]
                 if (entry.user) state.userToEmail[entry.user] = m[1] // map localpart -> full email
+                state.pendingDelay = null
                 return 'account-start'
+            }
+            break
+
+        case 'ACCOUNT-DELAY':
+            if ((m = msg.match(RE.accountDelay))) {
+                state.pendingDelay = {
+                    seconds: Number(m[1]),
+                    nextEmail: m[2] || null,
+                    sinceTs: entry.ts
+                }
+                return 'account-delay'
             }
             break
 
@@ -333,6 +352,7 @@ export function applyLogToRunState(state, entry) {
                     runtimeMinutes: Number(m[5])
                 }
                 state.finished = true
+                state.pendingDelay = null
                 return 'run-end'
             }
             break
@@ -367,6 +387,7 @@ export function summarizeRunState(state) {
         collected,
         totals: state.totals,
         finished: state.finished,
+        pendingDelay: state.pendingDelay,
         live: {
             currentAccount: state.currentEmail,
             currentBalance: current?.live?.balance ?? null,
