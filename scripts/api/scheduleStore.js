@@ -2,15 +2,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 
-// Kept in sync with rewards-dashboard/lib/cron.js's isValidCron - same
-// 5-field grammar. Duplicated here because the bot and dashboard are
-// separate projects that don't share a package.
+// 与 rewards-dashboard/lib/cron.js 的 isValidCron 保持同步，使用相同的五字段语法。
+// 由于机器人和仪表盘是两个不共享软件包的独立项目，因此在此重复实现。
 const CRON_FIELD_RANGES = [
-    { min: 0, max: 59 }, // minute
-    { min: 0, max: 23 }, // hour
-    { min: 1, max: 31 }, // day of month
-    { min: 1, max: 12 }, // month
-    { min: 0, max: 7 } // day of week (7 == Sunday)
+    { min: 0, max: 59 }, // 分钟
+    { min: 0, max: 23 }, // 小时
+    { min: 1, max: 31 }, // 每月日期
+    { min: 1, max: 12 }, // 月份
+    { min: 0, max: 7 } // 星期（7 表示星期日）
 ]
 
 function validateField(expr, { min, max }) {
@@ -51,19 +50,17 @@ export function isValidCron(expr) {
     return parts.every((part, i) => validateField(part, CRON_FIELD_RANGES[i]))
 }
 
-// The override file lives inside the ./config bind mount already configured
-// by compose.yaml, so no new volume is required to persist it
-// across container restarts.
+// 覆盖文件位于 compose.yaml 已配置的 ./config 绑定挂载中，
+// 因此无需新增卷即可使其跨容器重启持久保留。
 export function scheduleFilePath(projectRoot) {
     return process.env.SCHEDULE_FILE || path.join(projectRoot, 'config', 'schedule.json')
 }
 
 /**
- * Returns the effective schedule: the persisted override if one has been
- * written via PUT /schedule, otherwise the CRON_SCHEDULE env var as set at
- * container start (so a bot with no frontend attached still reports something
- * sensible, and reports it as `source: 'env'` so callers know it isn't live-editable
- * without first calling PUT).
+ * 返回实际生效的计划：如果已通过 PUT /schedule 写入持久化覆盖，则返回该覆盖；
+ * 否则返回容器启动时设置的 CRON_SCHEDULE 环境变量。
+ * 这样即使机器人没有连接前端也能报告合理信息，并将其标记为 `source: 'env'`，
+ * 让调用方知道在先调用 PUT 之前无法实时编辑。
  */
 export function readSchedule(projectRoot) {
     const file = scheduleFilePath(projectRoot)
@@ -188,23 +185,22 @@ const CRON_FILE = '/etc/cron.d/microsoft-rewards-cron'
 const CRON_TEMPLATE = '/etc/cron.d/microsoft-rewards-cron.template'
 
 /**
- * Renders the crontab template with the given schedule and loads it live via
- * `crontab <file>` - the same mechanism entrypoint.sh uses at startup, which
- * is why cron picks it up without a container restart. Note the template has
- * no `user` field, so it's only valid when loaded via `crontab`, not via
- * cron.d's own directory auto-scan.
+ * 使用给定计划渲染 crontab 模板，并通过 `crontab <file>` 实时加载。
+ * 这与 entrypoint.sh 启动时使用的机制相同，因此 cron 无需重启容器即可读取。
+ * 请注意，模板没有 `user` 字段，所以只能通过 `crontab` 加载，
+ * 不能由 cron.d 自身的目录自动扫描加载。
  */
 export function applyCrontab({ enabled, cron }) {
     if (!enabled || !cron) {
         try {
             execFileSync('crontab', ['-r'], { stdio: 'ignore' })
         } catch {
-            // nothing to remove - fine
+            // 没有需要移除的内容，属于正常情况
         }
         try {
             fs.unlinkSync(CRON_FILE)
         } catch {
-            // already gone - fine
+            // 已经不存在，属于正常情况
         }
         return
     }

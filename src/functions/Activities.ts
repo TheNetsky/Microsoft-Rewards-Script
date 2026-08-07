@@ -1,6 +1,6 @@
 import type { MicrosoftRewardsBot } from '../index'
 
-// App
+// 应用
 import { DailyCheckIn } from './activities/app/DailyCheckIn'
 import { ReadToEarn } from './activities/app/ReadToEarn'
 import { AppReward } from './activities/app/AppReward'
@@ -13,11 +13,11 @@ import { ClaimReward } from './activities/api/ClaimReward'
 import { ActivateSearchPerk } from './activities/api/ActivateSearchPerk'
 import { VisualSearch } from './activities/api/VisualSearch'
 
-// Browser
+// 浏览器
 import { Search as BrowserSearch } from './activities/browser/Search'
 import { SearchOnBing as BrowserSearchOnBing } from './activities/browser/SearchOnBing'
 
-// Experimental
+// 实验性功能
 import { Search as ApiSearch } from './activities/api/Search'
 import { SearchOnBing as ApiSearchOnBing } from './activities/api/SearchOnBing'
 
@@ -33,7 +33,7 @@ export default class Activities {
         this.bot = bot
     }
 
-    // Search activities
+// 搜索活动
     doSearch = async (page: Page, isMobile: boolean): Promise<number> => {
         if (this.bot.config.experimental.apiSearch) {
             return await new ApiSearch(this.bot).doSearch(isMobile)
@@ -87,7 +87,7 @@ export default class Activities {
         return await visualSearch.doVisualSearch(data)
     }
 
-    // App
+// 应用
     doAppReward = async (promotion: Promotion): Promise<void> => {
         const urlReward = new AppReward(this.bot)
         await urlReward.doAppReward(promotion)

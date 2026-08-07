@@ -12,9 +12,8 @@ function sanitizeProxyUrl(value) {
 }
 
 /**
- * Returns the configured accounts without exposing passwords, recovery
- * addresses, TOTP secrets, or proxy credentials. This API is intended for the
- * local dashboard, so account email addresses are returned in full.
+ * 返回已配置账号，但不公开密码、恢复地址、TOTP 密钥或代理凭据。
+ * 此 API 面向本地仪表盘，因此会完整返回账号邮箱地址。
  */
 export function loadAccounts(sourceEnv = process.env) {
     const accounts = []
@@ -27,7 +26,7 @@ export function loadAccounts(sourceEnv = process.env) {
         accounts.push({
             index: i,
             email,
-            emailKey: email, // internal history join key; removed before returning the response
+            emailKey: email, // 内部历史关联键；返回响应前会移除
             geoLocale: normalizeGeoLocale(envStrFrom(sourceEnv, `ACCOUNT_${i}_GEO_LOCALE`) ?? 'auto'),
             langCode: normalizeLanguageCode(envStrFrom(sourceEnv, `ACCOUNT_${i}_LANG_CODE`) ?? 'en'),
             hasRecoveryEmail: Boolean(envStrFrom(sourceEnv, `ACCOUNT_${i}_RECOVERY_EMAIL`)),
@@ -48,9 +47,9 @@ export function loadAccounts(sourceEnv = process.env) {
 }
 
 /**
- * Builds a child-process-only environment override that runs exactly one
- * configured account. The selected slot is remapped to ACCOUNT_1_* in the
- * isolated child environment. No secret values leave the API process.
+ * 构建仅对子进程生效的环境变量覆盖，使其只运行一个已配置账号。
+ * 选中的槽位会在隔离的子进程环境中重新映射为 ACCOUNT_1_*。
+ * 任何机密值都不会离开 API 进程。
  */
 export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
     const index = Number(accountIndex)
@@ -71,14 +70,14 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
 
     const env = {}
 
-    // Blank every configured account variable in the child environment first.
-    // Empty strings are treated as unset by the bot's env parser.
+    // 先清空子进程环境中的所有已配置账号变量。
+    // 机器人的环境变量解析器会将空字符串视为未设置。
     for (const key of Object.keys(sourceEnv)) {
         if (/^ACCOUNT_\d+_/.test(key)) env[key] = ''
     }
 
-    // Copy the chosen slot into slot 1, including any future ACCOUNT_N_* fields
-    // not known by this API yet (password, browser settings, proxy fields, etc.).
+    // 将选定槽位复制到槽位 1，包括此 API 尚不了解的未来 ACCOUNT_N_* 字段
+    // （密码、浏览器设置、代理字段等）。
     for (const [key, value] of selected) {
         const suffix = key.slice(selectedPrefix.length)
         env[`ACCOUNT_1_${suffix}`] = value
@@ -91,8 +90,8 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
 }
 
 /**
- * Builds a dense child-process account environment with selected configured
- * slots excluded. Remaining slots are remapped to ACCOUNT_1..N.
+ * 构建排除所选已配置槽位的连续子进程账号环境。
+ * 剩余槽位会重新映射为 ACCOUNT_1..N。
  */
 export function buildExcludedAccountsEnv(excludedAccountIndexes, sourceEnv = process.env) {
     if (!Array.isArray(excludedAccountIndexes)) {
@@ -151,7 +150,7 @@ export function buildExcludedAccountsEnv(excludedAccountIndexes, sourceEnv = pro
 }
 
 export function mergeAccountStats(accounts, runs) {
-    // Index history results by email.
+    // 按邮箱为历史结果建立索引。
     const byEmail = new Map()
     for (const run of runs) {
         const when = run.endedAt || run.startedAt || null
@@ -162,14 +161,14 @@ export function mergeAccountStats(accounts, runs) {
     }
 
     return accounts.map(a => {
-        const results = byEmail.get(a.emailKey) || [] // already most-recent-first
+        const results = byEmail.get(a.emailKey) || [] // 已按最近优先排序
         const last = results[0] || null
         const streakProtection = results.find(result => result.streakProtection != null)?.streakProtection ?? null
 
         let totalCollected = 0
         for (const r of results) totalCollected += r.collected || 0
 
-        // Consecutive successes from the most recent run backwards.
+        // 从最近一次运行开始向前统计连续成功次数。
         let successStreak = 0
         for (const r of results) {
             if (r.success === true) successStreak++

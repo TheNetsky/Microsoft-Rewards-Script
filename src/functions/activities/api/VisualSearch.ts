@@ -5,7 +5,7 @@ import type { DashboardData } from '../../../interface/DashboardData'
 
 const VISUAL_SEARCH_ACTIVATION_OFFER = 'visualsearch_streak_activation_v2'
 
-// 11 is confirmed for the July banner and carried over to the v2 offer, verify before trusting it there
+// 已确认 11 适用于七月横幅，并沿用到 v2 优惠；使用前需再次验证
 const VERIFIED_ACTIVITY_TYPES = new Map<string, number>([
     ['ww_visualsearch_summerjuly26_activation_banner', 11],
     ['visualsearch_streak_activation_v2', 11]
@@ -353,7 +353,7 @@ export class VisualSearch extends Workers {
         return 0
     }
 
-    // bcid is derived from the image bytes, so a repeated seed produces a blob bing already credited
+        // bcid 由图像字节生成，因此重复种子会产生 Bing 已计入积分的 Blob
     private async acquireFreshVisualSearch(
         seen: Set<string>,
         attempt: number

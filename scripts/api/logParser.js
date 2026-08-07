@@ -54,11 +54,11 @@ export function createRunState() {
         clusters: null,
         accountsTotal: null,
         currentEmail: null,
-        userToEmail: {}, // log "user" (email localpart) -> full email, for attributing live lines
+        userToEmail: {}, // 日志中的“用户”（邮箱本地部分）-> 完整邮箱，用于归属实时行
         totals: null, // { collected, oldTotal, newTotal, runtimeMinutes, accountsProcessed }
-        order: [], // emails in the order they started
-        accounts: {}, // email -> account summary
-        errors: [], // recent error/warn messages { ts, level, title, message }
+        order: [], // 按启动顺序排列的邮箱
+        accounts: {}, // 邮箱 -> 账号摘要
+        errors: [], // 最近的错误/警告消息 { ts, level, title, message }
         finished: false,
         pendingDelay: null // { seconds, nextEmail, sinceTs } while waiting between accounts/workers
     }
@@ -80,9 +80,9 @@ function ensureAccount(state, email) {
             success: null,
             error: null,
             live: {
-                balance: null, // latest known available-points balance
-                gained: 0, // points earned so far this run (per this account)
-                bySource: {}, // keyed by normalized activity source
+                balance: null, // 已知的最新可用积分余额
+                gained: 0, // 本次运行目前获得的积分（按账号计）
+                bySource: {}, // 以规范化活动来源为键
                 lastUpdateTs: null
             }
         }
@@ -103,10 +103,9 @@ const RE = {
     runEnd: /^Completed all accounts \| accountsProcessed=(\d+) \| pointsGained=(-?\d+) \| previousBalance=(\d+) \| currentBalance=(\d+) \| runtimeMinutes=([\d.]+)/,
     accountError: /^(\S+@\S+): ([\s\S]+)$/,
     flowFailed: /flow failed for (\S+@\S+):/i,
-    // index.ts's waitBeforeNextAccount() appends the upcoming account's email
-    // in parentheses when it's known (it always is, on both the single-worker
-    // and cluster-fork paths). The email is optional in the regex only to
-    // stay forward-compatible with older/foreign log lines that lack it.
+    // index.ts 的 waitBeforeNextAccount() 在已知下一个账号邮箱时会将其追加到括号中
+    // （单工作器和集群派生路径始终如此）。正则中的邮箱设为可选，
+    // 只是为了兼容缺少邮箱的旧日志或外部日志行。
     accountDelay: /^Waiting ([\d.]+) seconds before starting the next account(?: \((\S+@\S+)\))?$/,
 
     searchStart: /^Starting Bing searches \| currentBalance=(\d+)/,
@@ -258,7 +257,7 @@ export function applyLogToRunState(state, entry) {
                 const acc = ensureAccount(state, m[1])
                 if (acc) acc.geoLocale = m[2]
                 state.currentEmail = m[1]
-                if (entry.user) state.userToEmail[entry.user] = m[1] // map localpart -> full email
+                if (entry.user) state.userToEmail[entry.user] = m[1] // 将本地部分映射到完整邮箱
                 state.pendingDelay = null
                 return 'account-start'
             }

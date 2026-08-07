@@ -28,7 +28,7 @@ export class UserAgentManager {
     private readonly appComponents = new Map<boolean, Promise<AppComponents>>()
 
     private static readonly MOBILE_MODELS = [
-        // Samsung Galaxy S series
+        // Samsung Galaxy S 系列
         'SM-S948B', // Galaxy S26 Ultra
         'SM-S947B', // Galaxy S26+
         'SM-S942B', // Galaxy S26
@@ -43,7 +43,7 @@ export class UserAgentManager {
         'SM-S916B', // Galaxy S23+
         'SM-S911B', // Galaxy S23
 
-        // Samsung Galaxy Z series
+        // Samsung Galaxy Z 系列
         'SM-F966B', // Galaxy Z Fold7
         'SM-F956B', // Galaxy Z Fold6
         'SM-F946B', // Galaxy Z Fold5
@@ -125,7 +125,7 @@ export class UserAgentManager {
 
         const platformVersion = isMobile ? `${androidVersion}.0.0` : `${Math.floor(Math.random() * 15) + 1}.0.0`
 
-        // Keep the UA-CH platform aligned with the UA string's OS token
+        // 保持 UA-CH 平台与 UA 字符串中的操作系统标记一致
         const desktopPlatform =
             process.platform === 'darwin' ? 'macOS' : process.platform === 'linux' ? 'Linux' : 'Windows'
 
@@ -274,7 +274,7 @@ export class UserAgentManager {
             const componentData = await this.getAppComponents(isMobile)
             const meta = userAgentData.userAgentMetadata
 
-            //@ts-expect-error Errors due it not exactly matching
+            //@ts-expect-error 类型并非完全匹配，因此会报错
             fingerprint.fingerprint.navigator.userAgentData = meta
             fingerprint.fingerprint.navigator.userAgent = userAgentData.userAgent
             fingerprint.fingerprint.navigator.appVersion = userAgentData.userAgent.replace(

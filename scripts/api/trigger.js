@@ -1,11 +1,9 @@
 /**
- * Triggers a run via the local API server and waits for it to finish.
+ * 通过本地 API 服务器触发运行并等待其完成。
  *
- * Called by scripts/docker/run_daily.sh when API_MODE=true so that cron
- * delegates to the API server rather than running npm start directly.  The
- * API server has full visibility over every run, scheduled or
- * manually triggered, and the dashboard can stream logs, stop a run, or
- * inspect history regardless of how it was started.
+ * API_MODE=true 时由 scripts/docker/run_daily.sh 调用，使 cron 将任务交给 API 服务器，
+ * 而不是直接运行 npm start。API 服务器可以完整查看计划运行和手动触发的所有任务，
+ * 仪表盘也可以无论任务如何启动，都流式读取日志、停止运行或查看历史记录。
  *
  */
 
@@ -70,11 +68,10 @@ function sleep(ms) {
     return new Promise(r => setTimeout(r, ms))
 }
 
-// Scheduled runs (cron -> run_daily.sh -> here) honor whichever accounts are
-// currently excluded in config/schedule.json, if the dashboard (or a manual
-// PUT /schedule call) has ever saved one. RUN_ON_START's initial kickoff goes
-// through this same path, so it respects exclusions too rather than always
-// running every account regardless of the saved schedule.
+// 计划运行（cron -> run_daily.sh -> 此处）会遵守 config/schedule.json 中当前排除的账号，
+// 前提是仪表盘（或手动的 PUT /schedule 调用）曾保存过计划。
+// RUN_ON_START 的初始启动也经过同一路径，因此同样会遵守排除项，
+// 不会无视已保存计划而始终运行所有账号。
 function buildStartBody() {
     try {
         const schedule = readSchedule(projectRoot)
@@ -87,8 +84,8 @@ function buildStartBody() {
     return {}
 }
 
-// Wait for the API server to be ready.  Handles the RUN_ON_START race where
-// trigger.js is launched in the background before the API server has started.
+// 等待 API 服务器就绪。处理 API 服务器尚未启动时 trigger.js 已在后台启动的
+// RUN_ON_START 竞态。
 let ready = false
 for (let i = 0; i < STARTUP_ATTEMPTS; i++) {
     try {
@@ -102,7 +99,7 @@ for (let i = 0; i < STARTUP_ATTEMPTS; i++) {
             process.exit(1)
         }
     } catch {
-        /* server not up yet */
+        /* 服务器尚未启动 */
     }
     if (i < STARTUP_ATTEMPTS - 1) {
         console.log(`[trigger] Waiting for API server (attempt ${i + 1}/${STARTUP_ATTEMPTS})…`)
@@ -115,12 +112,12 @@ if (!ready) {
     process.exit(1)
 }
 
-// Trigger the run.
+// 触发运行。
 const { status, body } = await request('POST', '/start', buildStartBody())
 
 if (status === 409) {
-    // A run is already in progress - the dashboard or a previous cron invocation
-    // beat us to it.  Exit cleanly so the lockfile is released.
+    // 已有运行正在进行，说明仪表盘或之前的 cron 调用已经先触发了任务。
+    // 正常退出，以便释放锁文件。
     console.log('[trigger] A run is already in progress (409 Conflict). Skipping.')
     process.exit(0)
 }
@@ -132,7 +129,7 @@ if (status !== 202) {
 
 console.log('[trigger] Run started. Waiting for completion…')
 
-// Poll /status until the run finishes or the timeout is reached.
+// 轮询 /status，直到运行完成或达到超时时间。
 const deadline = Date.now() + TIMEOUT_MS
 while (Date.now() < deadline) {
     await sleep(POLL_MS)
@@ -148,7 +145,7 @@ while (Date.now() < deadline) {
             process.exit(1)
         }
     } catch {
-        /* momentary blip - keep polling */
+        /* 短暂波动，继续轮询 */
     }
 }
 

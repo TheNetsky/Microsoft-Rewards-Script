@@ -23,8 +23,8 @@
             typescript
             playwright-test
 
-            # fixes "waiting until load" issue compared to
-            # setting headless in config.json
+          # 与在 config.json 中设置 headless 相比，
+          # 此方式可修复“等待加载完成”的问题
             xvfb-run
           ];
 

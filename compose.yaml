@@ -1,7 +1,7 @@
 services:
     microsoft-rewards-script:
         image: ghcr.io/thenetsky/microsoft-rewards-script:4
-        # To build locally instead of pulling the prebuilt image, use the build section below.
+        # 如需在本地构建而不是拉取预构建镜像，请使用下方 build 段。
         #build:
         #    context: .
         container_name: microsoft-rewards-script
@@ -10,41 +10,40 @@ services:
             - ./config:/usr/src/microsoft-rewards-script/config
             - ./sessions:/usr/src/microsoft-rewards-script/sessions
         env_file:
-            # Load account credentials from the .env file (ACCOUNT_1_EMAIL, ACCOUNT_1_PASSWORD, etc.)
+            # 从 .env 文件加载账号凭据（ACCOUNT_1_EMAIL、ACCOUNT_1_PASSWORD 等）
             - path: .env
         environment:
-            # ── Scheduler ──────────────────────────────────────
+            # ── 调度器 ─────────────────────────────────────────
             TZ: 'America/Toronto'
             NODE_ENV: 'production'
-            # CRON_SCHEDULE is the *initial* default. It will run as default unless changed by the API
-            # API schedule changes are saved to ./config/schedule.json, delete
-            # that file to revert to the base CRON_SCHEDULE again.
-            CRON_SCHEDULE: '0 7 * * *' # use crontab.guru to customize your schedule
-            RUN_ON_START: 'true' # run script immediately on container start
+            # CRON_SCHEDULE 是初始默认值。除非通过 API 更改，否则将按此计划运行。
+            # API 计划变更保存在 ./config/schedule.json 中；删除该文件即可恢复使用基础 CRON_SCHEDULE。
+            CRON_SCHEDULE: '0 7 * * *' # 使用 crontab.guru 自定义计划
+            RUN_ON_START: 'true' # 容器启动时立即运行脚本
             SKIP_RANDOM_SLEEP: 'false'
             #MIN_SLEEP_MINUTES: "5"
             #MAX_SLEEP_MINUTES: "50"
             #STUCK_PROCESS_TIMEOUT_HOURS: "8"
 
-            # ── API mode ──────────────────────────────────────
-            # Set API_MODE=true to run the API server for additional control options
+            # ── API 模式 ───────────────────────────────────────
+            # 设置 API_MODE=true 可运行 API 服务器并启用更多控制选项
             #API_MODE: 'true'
-            #API_TOKEN: '${API_TOKEN}'             # required for API mode, see example.env
-            # API write/reveal capabilities are separate opt-ins and are off by default.
+            #API_TOKEN: '${API_TOKEN}'             # API 模式必需，参见 env.example
+            # API 写入/公开能力需要分别显式启用，默认均为关闭。
             #API_ALLOW_SCHEDULE_WRITE: 'true'
             #API_ALLOW_ENV_OVERRIDES: 'true'
             #API_ALLOW_CONFIG_REVEAL: 'true'
             #API_ALLOW_CONFIG_WRITE: 'true'
 
-            #  ── Configuration ──────────────────────────────────────
-            # Uncomment to override defaults, a full list of configuration options are in the README.
+            # ── 配置 ───────────────────────────────────────────
+            # 取消注释即可覆盖默认值，完整配置选项列表请参阅 README。
             #CONFIG_CLUSTERS: '1'
             #CONFIG_ACCOUNT_DELAY_MIN: '1min'
             #CONFIG_ACCOUNT_DELAY_MAX: '3min'
-            #... add additional configuration overrides as needed
+            #……根据需要添加其他配置覆盖
 
-        # ── API mode port mapping ──────────────────────────────────────
-        # Uncomment when API_MODE=true
+        # ── API 模式端口映射 ────────────────────────────────────
+        # API_MODE=true 时取消注释
         #ports:
         #    - '3010:3010'
 

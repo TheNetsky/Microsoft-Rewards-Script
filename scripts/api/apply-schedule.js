@@ -1,9 +1,8 @@
 /**
- * Applies a persisted config/schedule.json override to the live crontab at
- * container startup. Called by entrypoint.sh in API_MODE=true, only when
- * schedule.json exists (i.e. the dashboard has saved a remote schedule at
- * least once) - bots that only ever use CRON_SCHEDULE never touch this file
- * and take the existing envsubst path in entrypoint.sh instead.
+ * 容器启动时，将持久化的 config/schedule.json 覆盖配置应用到当前 crontab。
+ * 当 API_MODE=true 时由 entrypoint.sh 调用，但仅在 schedule.json 存在时执行
+ *（即仪表板至少保存过一次远程计划）。始终只使用 CRON_SCHEDULE 的机器人
+ * 不会访问此文件，而是继续使用 entrypoint.sh 中现有的 envsubst 流程。
  */
 
 import path from 'node:path'

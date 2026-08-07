@@ -216,7 +216,7 @@ export class CodeLogin {
                 await this.bot.utils.wait(500)
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
-                // Check if wrong code was entered
+        // 检查是否输入了错误的验证码
                 const errorMessage = await getErrorMessage(page)
                 if (errorMessage) {
                     this.bot.logger.warn(
@@ -229,7 +229,7 @@ export class CodeLogin {
                         throw new Error(`Maximum attempts reached: ${errorMessage}`)
                     }
 
-                    // Clear the input field before retrying
+        // 重试前清空输入框
                     const inputToClear = await page.$(this.textInputSelector).catch(() => null)
                     if (inputToClear) {
                         await inputToClear.click()

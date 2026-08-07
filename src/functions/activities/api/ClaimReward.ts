@@ -2,7 +2,7 @@ import type { QuestChild } from '../../../browser/ReactFunc'
 import { Workers } from '../../Workers'
 import { URLs } from '../../../constants/urls'
 
-// This is still very much WIP!
+// 此功能仍在积极开发中！
 export class ClaimReward extends Workers {
     public async claimReward(child: QuestChild, parentId: string) {
         const offerId = child.offerId

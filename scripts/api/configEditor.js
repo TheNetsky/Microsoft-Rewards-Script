@@ -212,7 +212,7 @@ export async function validateConfig(cfg, { projectRoot, validatorModule } = {})
 }
 
 export function deepMerge(base, patch) {
-    if (Array.isArray(patch)) return patch // arrays replace wholesale
+    if (Array.isArray(patch)) return patch // 数组整体替换
     if (typeof patch !== 'object' || patch === null) return patch
     const out = { ...(typeof base === 'object' && base !== null ? base : {}) }
     for (const [k, v] of Object.entries(patch)) {
@@ -224,10 +224,10 @@ export function deepMerge(base, patch) {
     return out
 }
 
-// Compares the current config.json against config.example.json.
-// Returns dotted key-paths present in the example but missing from the
-// user's file - the same check entrypoint.sh runs on container start, now
-// available on demand from the API/dashboard (e.g. GET /config/diff).
+// 将当前 config.json 与 config.example.json 进行比较。
+// 返回示例中存在但用户文件中缺少的点分隔键路径。此检查与容器启动时
+// entrypoint.sh 执行的检查相同，现在可通过 API/仪表板按需调用
+//（例如 GET /config/diff）。
 export async function diffConfig(projectRoot, { validatorModule } = {}) {
     const mod = await loadConfigSync(projectRoot, validatorModule)
     if (!mod) throw new Error('ConfigSync module not found - run `npm run build`.')
@@ -236,10 +236,9 @@ export async function diffConfig(projectRoot, { validatorModule } = {}) {
     return { addedKeys: mod.diffKeyPaths(config, example) }
 }
 
-// Fills in any keys missing from config.json using config.example.json's
-// values, without touching existing user values, and writes the result back
-// (with a .bak backup via writeConfigAtomic). Intended for a gated endpoint
-// like POST /config/sync, behind API_ALLOW_CONFIG_WRITE.
+// 使用 config.example.json 中的值补充 config.json 缺少的键，
+// 不改动用户已有值，并将结果写回（通过 writeConfigAtomic 创建 .bak 备份）。
+// 用于受 API_ALLOW_CONFIG_WRITE 限制的端点，例如 POST /config/sync。
 export async function syncMissingDefaults(projectRoot, { validatorModule } = {}) {
     const mod = await loadConfigSync(projectRoot, validatorModule)
     if (!mod) throw new Error('ConfigSync module not found - run `npm run build`.')
@@ -263,7 +262,7 @@ export function writeConfigAtomic(projectRoot, cfg) {
         try {
             fs.copyFileSync(target, `${target}.bak`)
         } catch {
-            // best-effort backup
+        // 尽力创建备份
         }
     }
     const tmp = `${target}.${process.pid}.tmp`

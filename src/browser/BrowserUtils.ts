@@ -62,7 +62,7 @@ export default class BrowserUtils {
                 await this.bot.utils.wait(300)
             }
 
-            // Overlay
+        // 遮罩层
             const overlay = await page.$('#bnp_overlay_wrapper')
             if (overlay) {
                 const rejected = await this.ghostClick(page, '#bnp_btn_reject, button[aria-label*="Reject" i]')
@@ -147,13 +147,13 @@ export default class BrowserUtils {
                 `Found ${tabs.length} tab(s) open (min: ${config.minTabs}, max: ${config.maxTabs})`
             )
 
-            // Check if valid
+        // 检查是否有效
             if (config.minTabs < 1 || config.maxTabs < config.minTabs) {
                 this.bot.logger.warn(this.bot.isMobile, 'SEARCH-CLOSE-TABS', 'Invalid config, using defaults')
                 config = { minTabs: 1, maxTabs: 1 }
             }
 
-            // Close if more than max config
+        // 超过配置的最大数量时关闭
             if (tabs.length > config.maxTabs) {
                 const tabsToClose = tabs.slice(config.maxTabs)
 
@@ -166,7 +166,7 @@ export default class BrowserUtils {
                     `Closed ${closedCount}/${tabsToClose.length} excess tab(s) to reach max of ${config.maxTabs}`
                 )
 
-                // Open more tabs
+        // 打开更多标签页
             } else if (tabs.length < config.minTabs) {
                 const tabsNeeded = config.minTabs - tabs.length
                 this.bot.logger.debug(
@@ -213,10 +213,10 @@ export default class BrowserUtils {
                 `Trying to click selector: ${selector}, options: ${JSON.stringify(options)}`
             )
 
-            // Wait for selector to exist before clicking
+        // 点击前等待选择器对应的元素出现
             await page.waitForSelector(selector, { timeout: 1000 }).catch(() => {})
 
-            // ghost-cursor expects its own Playwright Page type from a different
+        // ghost-cursor 需要使用来自另一依赖包的 Playwright Page 类型
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cursor = createCursor(page as any)
             await cursor.click(selector, options)

@@ -20,7 +20,7 @@ export function detectSearchMultiplierPerk(dashboard: Dashboard): SearchMultipli
         const multiplierAttr = attributes?.searchMultiplier
         const multiplierFromAttr = multiplierAttr != null ? Number(multiplierAttr) : NaN
 
-        // Date-agnostic fallbacks
+// 与日期无关的后备值
         const fromDescription = /search\s*(\d+)\s*x\s*more/i.exec(description)
         const fromOfferId = /optin[_-]?(\d+)x(?:[_-]|$)/i.exec(offerId)
 

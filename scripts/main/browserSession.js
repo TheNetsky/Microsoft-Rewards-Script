@@ -55,7 +55,7 @@ if (!account) {
 function platformsToTry() {
     const p = typeof args.platform === 'string' ? args.platform.toLowerCase() : ''
     if (p === 'mobile' || p === 'desktop') return [p]
-    return ['desktop', 'mobile'] // prefer desktop, fall back to mobile
+    return ['desktop', 'mobile'] // 优先使用桌面端，失败时回退到移动端
 }
 
 async function main() {

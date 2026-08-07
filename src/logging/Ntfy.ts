@@ -16,7 +16,7 @@ export async function sendNtfy(config: WebhookNtfyConfig, content: string, level
 
     switch (level) {
         case 'error':
-            config.priority = 5 // Highest
+            config.priority = 5 // 最高优先级
             break
 
         case 'warn':

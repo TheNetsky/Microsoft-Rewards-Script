@@ -5,7 +5,7 @@ const LOGIN_LIVE = 'https://login.live.com'
 const LOGIN_MS = 'https://login.microsoftonline.com'
 const EDGE = 'https://edgeupdates.microsoft.com'
 
-// Query-engine
+    // 查询引擎
 const GOOGLE_TRENDS = 'https://trends.google.com'
 const BING_API = 'https://api.bing.com'
 const BING_APIS = 'https://www.bingapis.com'
@@ -14,7 +14,7 @@ const REDDIT = 'https://www.reddit.com'
 const HACKER_NEWS = 'https://hn.algolia.com'
 const CHROME_FOR_TESTING = 'https://googlechromelabs.github.io'
 
-// Public Bing API app id, gotten from mitm, but bound to change?
+    // 通过 MITM 获取的公共 Bing API 应用 ID，但以后可能会变化
 const BING_SUGGESTIONS_APPID = '6D0A9B8C5100E9ECC7E11A104ADD76C10219804B'
 
 export const URLs = {
@@ -25,9 +25,9 @@ export const URLs = {
     rewards: {
         origin: REWARDS,
         referer: `${REWARDS}/`,
-        // Legacy, avoid!
+    // 旧版，请避免使用！
         userInfoApi: `${REWARDS}/api/getuserinfo`,
-        // Offers page
+    // 优惠页面
         earn: `${REWARDS}/earn`,
         earnStreaks: `${REWARDS}/earn?section=streaks`,
         dashboard: `${REWARDS}/dashboard`,

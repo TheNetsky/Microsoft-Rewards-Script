@@ -90,7 +90,7 @@ export class ReadToEarn extends Workers {
                     break
                 }
 
-                // Update point tracking
+            // 更新积分跟踪
                 this.bot.userData.currentPoints = newBalance
                 this.bot.userData.gainedPoints = (this.bot.userData.gainedPoints ?? 0) + gainedPoints
                 totalGained += gainedPoints
@@ -104,7 +104,7 @@ export class ReadToEarn extends Workers {
                     'green'
                 )
 
-                // Wait random delay between articles
+            // 在文章之间随机等待
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'READ-TO-EARN',

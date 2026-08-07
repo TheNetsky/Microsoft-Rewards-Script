@@ -148,7 +148,7 @@ export class Logger {
     }
 
     private shouldPassFilter(filter: LogFilter | undefined, level: LogLevel, message: string): boolean {
-        // If disabled or not, let all logs pass
+        // 无论是否禁用，都允许所有日志通过
         if (!filter || !filter.enabled) {
             return true
         }
@@ -176,7 +176,7 @@ export class Logger {
             }
         }
 
-        // Fancy regex filtering if set!
+            // 如果已设置，则使用正则表达式进行高级过滤！
         if (!isMatch && hasPatternRule) {
             for (const pattern of regexPatterns!) {
                 try {

@@ -180,7 +180,7 @@ export class Workers {
     }
 
     public async doClaimBonusPoints() {
-        // Let's just always try to do this
+        // 始终尝试执行此操作
         await this.bot.activities.doClaimBonusPoints()
     }
 
@@ -347,7 +347,7 @@ export class Workers {
                     case 'urlreward': {
                         const basePromotion = activity as BasePromotion
 
-                        // Search on Bing are subtypes of "urlreward"
+            // Bing 搜索是“urlreward”的子类型
                         const isSearchOnBing = name.includes('exploreonbing')
 
                         if (isSearchOnBing && !this.bot.config.activities.searchOnBing) {
@@ -409,7 +409,7 @@ export class Workers {
         }
     }
 
-    // Util
+    // 工具
     private isSearchQuotaChild(offerId: string, api?: BasePromotion): boolean {
         if (api) {
             const type = (api.promotionType ?? '').toLowerCase()

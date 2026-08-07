@@ -115,10 +115,10 @@ jobs:
                   VER="${{ steps.version.outputs.current }}"
                   MAJOR="${VER%%.*}"
 
-                  # Always tag the exact version and the moving major tag (e.g. :3.1.7 and :3)
+                  # 始终标记精确版本和动态更新的主版本标签（例如 :3.1.7 和 :3）
                   TAGS="$IMAGE:$VER"$'\n'"$IMAGE:$MAJOR"
 
-                  # Only the current line (v4) moves :latest
+                  # 只有当前版本线（v4）会更新 :latest
                   if [ "${{ github.ref_name }}" = "v4" ]; then
                     TAGS="$TAGS"$'\n'"$IMAGE:latest"
                   fi

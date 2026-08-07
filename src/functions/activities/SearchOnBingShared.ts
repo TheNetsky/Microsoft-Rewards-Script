@@ -126,7 +126,7 @@ function fallbackQueries(promotion: BasePromotion): string[] {
     return [...new Set([derived, title, description].map(value => value.trim()).filter(Boolean))]
 }
 
-// Microsoft currently supplies English instruction prefixes for this fallback path.
+// Microsoft 当前为此后备流程提供英文指令前缀。
 function extractSearchTerm(description: string): string {
     if (!description) return ''
 

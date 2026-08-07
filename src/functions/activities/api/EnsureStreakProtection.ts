@@ -52,7 +52,7 @@ export class EnsureStreakProtection extends Workers {
         )
 
         try {
-            // Fired from the streaks page, so url/referer point there
+        // 从连续奖励页面触发，因此 url/referer 指向该页面
             const { status, acknowledged } = await this.bot.browser.func.reportServerAction(resolved.id, [true], {
                 url: URLs.rewards.earnStreaks,
                 referer: URLs.rewards.earnStreaks

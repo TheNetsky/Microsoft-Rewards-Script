@@ -154,7 +154,7 @@ export class UrlReward extends Workers {
         if (points > 0) return false
         const haystack = `${subtype ?? ''} ${title ?? ''}`.toLowerCase()
 
-        // Make proper language independant
+        // 正确实现语言无关处理
         return points === 0 || /free trial|trial|subscription|sign up|sign-up|signup/.test(haystack)
     }
 }

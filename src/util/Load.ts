@@ -21,7 +21,7 @@ function getProjectRoot(): string {
     return cwd
 }
 
-// Check root -> dist -> src (not in dist, but root)
+// 按 root -> dist -> src 的顺序检查（不在 dist 中，而是在 root 中）
 function resolveProjectFile(filename: string): string | undefined {
     const root = getProjectRoot()
     const candidates = [
@@ -37,7 +37,7 @@ function ensureEnvLoaded(): void {
     if (envLoaded) return
     envLoaded = true
 
-    // Check root -> dist -> src (not in dist, but root)
+    // 按 root -> dist -> src 的顺序检查（不在 dist 中，而是在 root 中）
     const envFile = resolveProjectFile('.env')
     if (!envFile) return
 
@@ -164,7 +164,7 @@ export function loadConfig(): Config {
             return configCache
         }
 
-        // Check root -> dist -> src (not in dist, but root)
+        // 按 root -> dist -> src 的顺序检查（不在 dist 中，而是在 root 中）
         const configPath = resolveProjectFile('config.json')
         if (!configPath) {
             throw new Error(

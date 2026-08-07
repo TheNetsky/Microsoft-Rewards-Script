@@ -15,11 +15,11 @@ import type { AppUserData } from '../interface/AppUserData'
 import type { AppEarnablePoints, BrowserEarnablePoints, MissingSearchPoints } from '../interface/Points'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
 
-// Fallback seed only. bcid is derived from the image BYTES, so a fixed seed produces the same blob each time
-// Bing treats same search as a repeat search and credits nothing.
+// 仅作为后备种子。bcid 由图像字节生成，因此固定种子每次都会产生相同的 Blob
+// Bing 会将相同搜索视为重复搜索，因此不会计入积分。
 const VISUAL_SEARCH_IMAGE_URL = 'https://th.bing.com/th?id=OMR.VisualSearch.VNext.BackgroundImage.png&pid=Rewards'
 
-// Bing's own wallpaper archive, used to rotate the seed. idx 0-7 covers the last 8 days
+// Bing 自有壁纸归档，用于轮换种子。idx 0-7 对应最近 8 天
 const VISUAL_SEARCH_ARCHIVE_SIZE = 8
 
 export default class BrowserFunc {
@@ -89,7 +89,7 @@ export default class BrowserFunc {
     }
 
     async getSearchPoints(): Promise<Counters> {
-        const dashboardData = await this.getDashboardData() // Always fetch newest data
+        const dashboardData = await this.getDashboardData() // 始终获取最新数据
 
         return dashboardData.dashboard.userStatus.counters
     }
@@ -238,7 +238,7 @@ export default class BrowserFunc {
 
     async bootstrap(page: Page): Promise<void> {
         try {
-            // /earn is the offers page
+        // /earn 是优惠页面
             await page.goto(URLs.rewards.earn, { waitUntil: 'domcontentloaded' })
 
             const earnDom = await page.content()
@@ -248,13 +248,13 @@ export default class BrowserFunc {
 
             this.bot.nextRouterStateTree = this.bot.browser.react.routerStateTree('earn')
 
-            // pull /dashboard HTML to capture chunks that /earn doesn't show
+        // 拉取 /dashboard HTML，以获取 /earn 中未显示的代码块
             const dashboardHtml = await this.fetchBootstrapHtml(page, URLs.rewards.dashboard, '/dashboard')
 
             const sources = [earnRaw, earnDom, dashboardHtml].filter(Boolean)
             this.bot.reactSnapshot = this.bot.browser.react.snapshotPage(sources)
 
-            // discovered from chunks referenced by either page
+        // 从任一页面引用的代码块中发现
             this.bot.nextActions = await this.resolveActionIds(page, sources)
 
             const dashboardRendered = /<section\b[^>]*\bid=["']dailyset["']/i.test(sources.join('\n'))
@@ -347,7 +347,7 @@ export default class BrowserFunc {
             this.bot.logger.debug(this.bot.isMobile, 'BOOTSTRAP', `Fetching ${initialChunks.size} initial JS chunks`)
             const jsByPath = await this.fetchJsChunks(page, [...initialChunks])
 
-            // dynamically-imported chunks, server actions inside popover
+            // 动态导入的代码块，以及弹出框中的服务器操作
             const dynamicPaths: string[] = []
             for (const js of jsByPath.values()) {
                 for (const path of this.extractDynamicChunkPaths(js)) {
@@ -444,7 +444,7 @@ export default class BrowserFunc {
             }
         }
 
-        // If the builder shape changes, scan id:hash pairs globally
+        // 如果构建器结构发生变化，则全局扫描 id:hash 对
         if (!seen.size) {
             for (const [, id, hash] of js.matchAll(/\b(\d{2,6}):"([a-f0-9]{12,})"/g)) {
                 seen.add(`/_next/static/chunks/${id}-${hash}.js`)
@@ -813,7 +813,7 @@ export default class BrowserFunc {
             .join('; ')
     }
 
-    // Fire a nextjs RSC server action shared by UrlReward / ClaimReward / ClaimBonusPoints
+        // 触发 UrlReward / ClaimReward / ClaimBonusPoints 共用的 Next.js RSC 服务器操作
     async reportServerAction(
         actionId: string,
         body: unknown[],

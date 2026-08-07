@@ -127,7 +127,7 @@ export enum MorePromotionShowcaseTitle {
 export type PromotionText = string | null
 
 export interface BasePromotion<
-    TAttributes = Record<string, any> | null, // Keep any
+    TAttributes = Record<string, any> | null, // 保留 any 类型
     TTitleStyle = string,
     TDescriptionStyle = string,
     TLegalLinkText = string,

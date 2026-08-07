@@ -230,7 +230,7 @@ export class MicrosoftRewardsBot {
         this.warnExperimental()
     }
 
-    // Move to utils
+        // 移至工具模块
     private warnExperimental(): void {
         const exp = this.config.experimental
         const enabled = [exp.apiSearch && 'apiSearch', exp.apiSearchOnBing && 'apiSearchOnBing'].filter(
@@ -546,7 +546,7 @@ export class MicrosoftRewardsBot {
         const accountEmail = account.email
         this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
 
-        // Drop cookies and app credentials from the previous account
+            // 清除上一个账号的 Cookie 和应用凭据
         this.browser.func.resetHttpJars()
         this.accessToken = ''
 

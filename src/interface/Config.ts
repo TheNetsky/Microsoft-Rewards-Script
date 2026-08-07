@@ -21,8 +21,8 @@ export interface Config {
 
 export type QueryEngine = 'google' | 'wikipedia' | 'wikirandom' | 'hackernews' | 'reddit' | 'local'
 
-// RSS feeds are selected with a dotted path: 'rss' (every catalogued feed),
-// 'rss.<site>' (every feed for that site), or 'rss.<site>.<endpoint>' (one feed).
+    // 使用点分隔路径选择 RSS 订阅源：'rss'（所有已收录的订阅源）、
+    // 'rss.<site>'（该站点的所有订阅源）或 'rss.<site>.<endpoint>'（单个订阅源）。
 export type RssFeedSelector = 'rss' | `rss.${string}`
 export type QueryEngineEntry = QueryEngine | RssFeedSelector
 
@@ -73,7 +73,7 @@ export interface ConfigActivities {
     searchOnBing: boolean
 }
 
-// Webhooks
+    // Webhook 配置
 export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig

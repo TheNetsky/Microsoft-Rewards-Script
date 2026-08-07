@@ -75,7 +75,7 @@ export default class ReactFunc {
         this.bot = bot
     }
 
-    // Parse all available data from the provided pages into one snapshot
+    // 将提供页面中的所有可用数据解析为一个快照
     public snapshotPage(html: string | readonly string[]): PageSnapshot {
         const combined = this.concatFlightChunks(html)
 
@@ -139,7 +139,7 @@ export default class ReactFunc {
 
                 for (const match of page.matchAll(pushRe)) {
                     try {
-                        // Re-wrap in quotes so JSON.parse decodes
+                        // 重新加上引号，以便 JSON.parse 解码
                         combined += JSON.parse(`"${match[1]}"`)
                         count++
                         pageChunks++
@@ -181,7 +181,7 @@ export default class ReactFunc {
         }
     }
 
-    // Find every object containing "anchor" and return them as parsed JSON
+    // 查找所有包含 "anchor" 的对象，并以解析后的 JSON 返回
     private extractObjects(combined: string, anchor: string): Record<string, unknown>[] {
         const out: Record<string, unknown>[] = []
         const anchorKey = anchor.replace(/^"|"$/g, '')
@@ -258,7 +258,7 @@ export default class ReactFunc {
         return out
     }
 
-    // Section parsers
+    // 各部分解析器
     private parseOffers(combined: string): ParsedOffer[] {
         try {
             const today = this.todayStamp()
@@ -283,7 +283,7 @@ export default class ReactFunc {
                     promotionalValue === true ||
                     (typeof promotionalValue === 'string' && promotionalValue.toLowerCase() === 'true')
 
-                // Never try future-dated offers, lol
+                // 永远不要尝试日期在未来的优惠
                 const reportable = !!hash && !isCompleted && !isLocked && (date === null || date <= today)
 
                 const candidate: ParsedOffer = {
@@ -369,7 +369,7 @@ export default class ReactFunc {
                     dailyPoints: o.dailyPoints as number[]
                 }))
 
-            // de-dupe on partner
+            // 按合作伙伴去重
             const byPartner = new Map(streaks.map(s => [s.partner, s]))
             const unique = [...byPartner.values()]
 
@@ -395,7 +395,7 @@ export default class ReactFunc {
             const carriers = this.extractObjects(combined, '"isProtectionOn"').filter(o => 'isProtectionOn' in o)
             if (!carriers.length) return null
 
-            // The flag and remainingDays
+            // 标志和剩余天数
             const withDays = carriers.find(o => 'remainingDays' in o && typeof o.remainingDays === 'number')
             const withFlag = carriers.find(o => typeof o.isProtectionOn === 'boolean')
             const withStreakCounter = carriers.find(o => 'streakCounter' in o && typeof o.streakCounter === 'number')
@@ -438,7 +438,7 @@ export default class ReactFunc {
                     o => 'pointsRemaining' in o || 'lifetimeEarn' in o
                 ) ?? {}
 
-            // availablePoints renders in a separate header object
+            // availablePoints 会渲染在单独的标题对象中
             const header = this.extractObjects(combined, '"availablePoints"').find(o => 'availablePoints' in o) ?? {}
 
             const account: AccountState = {
@@ -456,7 +456,7 @@ export default class ReactFunc {
             )
 
             if (account.level === null && account.availablePoints === null) {
-                // Common error! Keep however for debugging!
+                // 常见错误！保留它以便调试！
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'REACT-PARSE',
@@ -539,7 +539,7 @@ export default class ReactFunc {
         return encodeURIComponent(JSON.stringify(tree))
     }
 
-    // Pull server-action ids out of a JS chunk
+    // 从 JS 分块中提取服务器操作 ID
     public extractActionIds(jsText: string): {
         byName: Record<string, string>
         all: string[]
@@ -547,14 +547,14 @@ export default class ReactFunc {
         const byName: Record<string, string> = {}
         const all = new Set<string>()
 
-        // SHA-1 today (40 hex), allow growth to SHA-256 (64 hex)
+        // 当前为 SHA-1（40 位十六进制），允许扩展到 SHA-256（64 位十六进制）
         const HEX = '[a-f0-9]{40,64}'
 
-        // Framework args that share the call shape but aren't the action name
+        // 与调用形状相同但并非操作名称的框架参数
         const KNOWN_NON_NAMES = new Set(['callServer', 'findSourceMapURL', 'encodeFormAction'])
 
         try {
-            // I hate this so much honestly
+            // 这部分确实令人头疼
             const callRegex = new RegExp(`createServerReference\\s*\\)?\\s*\\(\\s*"(${HEX})"([\\s\\S]{0,400}?)\\)`, 'g')
             const strLitRe = /"([A-Za-z_$][\w$]*)"/g
 
@@ -569,7 +569,7 @@ export default class ReactFunc {
                 if (candidates.length) byName[candidates[candidates.length - 1]!] = id
             }
 
-            // bare reference without a name arg, still record the id
+            // 没有名称参数的裸引用仍然记录其 ID
             const bareRegex = new RegExp(`createServerReference\\s*\\)?\\s*\\(\\s*"(${HEX})"`, 'g')
             for (const m of jsText.matchAll(bareRegex)) all.add(m[1]!)
 
@@ -600,7 +600,7 @@ export default class ReactFunc {
         return { byName, all: [...all] }
     }
 
-    // Quest pages (punchcards)
+    // 任务页面（打卡卡片）
     public snapshotQuestPage(html: string): QuestChild[] {
         try {
             const combined = this.concatFlightChunks(html)
@@ -694,7 +694,7 @@ export default class ReactFunc {
                 const taskM = region.match(/(\d+)\s*\/\s*(\d+)\s*tasks/)
                 const complete = !!taskM && Number(taskM[1]) >= Number(taskM[2]!) && Number(taskM[2]) > 0
 
-                // First wins for title/points
+                // 标题/积分采用首次出现的值
                 const prev = byId.get(id)
                 byId.set(id, {
                     offerId: id,
@@ -740,7 +740,7 @@ export default class ReactFunc {
         return id.includes('pcparent') || id.includes('punchcard')
     }
 
-    // Utils
+    // 工具函数
     private todayStamp(): string {
         const d = new Date()
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

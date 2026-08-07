@@ -21,12 +21,12 @@ function truncate(text: string) {
     return text.length <= DISCORD_LIMIT ? text : text.slice(0, DISCORD_LIMIT - 14) + ' …(truncated)'
 }
 
-// Embed accent colour by severity so errors/warnings stand out in the channel
+// 按严重级别设置嵌入消息的强调色，使错误和警告在频道中更醒目
 const LEVEL_COLOR: Record<LogLevel, number> = {
-    error: 0xed4245, // red
-    warn: 0xfee75c, // amber
-    info: 0x5865f2, // blurple
-    debug: 0x4f545c // grey
+    error: 0xed4245, // 红色
+    warn: 0xfee75c, // 琥珀色
+    info: 0x5865f2, // 蓝紫色
+    debug: 0x4f545c // 灰色
 }
 
 export async function sendDiscord(discordUrl: string, content: string, level: LogLevel): Promise<void> {

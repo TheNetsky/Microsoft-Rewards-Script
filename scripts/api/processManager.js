@@ -38,7 +38,7 @@ export class ProcessManager extends EventEmitter {
         this.name = name
         this.version = version
 
-        this.state = 'idle' // idle | starting | running | stopping
+        this.state = 'idle' // 状态：idle | starting | running | stopping
         this.child = null
         this.pid = null
         this.startedAt = null
@@ -83,7 +83,7 @@ export class ProcessManager extends EventEmitter {
                 cwd: this.cwd,
                 env,
                 stdio: ['ignore', 'pipe', 'pipe'],
-                detached: !IS_WIN, // own process group on POSIX so we can signal the whole tree
+                detached: !IS_WIN, // 在 POSIX 上使用独立进程组，以便向整个进程树发送信号
                 windowsHide: true
             })
         } catch (error) {

@@ -59,7 +59,7 @@ export class Search extends Workers {
 
         const stats = await this.runSearchSession(page, isMobile, tracker)
 
-        // No active offer (or the feature is off): prepare() already logged why
+            // 没有有效优惠（或功能已关闭）：prepare() 已记录原因
         if (!tracker.started) return 0
 
         const done = tracker.done() && !tracker.offerLost

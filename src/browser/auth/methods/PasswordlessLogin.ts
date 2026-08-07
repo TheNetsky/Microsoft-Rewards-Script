@@ -41,7 +41,7 @@ export class PasswordlessLogin {
                     return true
                 }
 
-                // Every 5 seconds to show it's still waiting
+                // 每 5 秒提示一次仍在等待
                 if (attempt % 5 === 0) {
                     this.bot.logger.info(
                         this.bot.isMobile,

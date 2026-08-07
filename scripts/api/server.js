@@ -56,9 +56,8 @@ const STOP_TIMEOUT_MS = integerSetting('API_STOP_TIMEOUT_MS', envStr('API_STOP_T
 const ALLOW_ENV_OVERRIDES = envBool('API_ALLOW_ENV_OVERRIDES', false)
 const REVEAL_ENABLED = envBool('API_ALLOW_CONFIG_REVEAL', false)
 const ALLOW_CONFIG_WRITE = envBool('API_ALLOW_CONFIG_WRITE', false)
-// Writing to the crontab is a meaningfully different trust level than
-// starting/stopping a run, so it gets its own opt-in flag rather than
-// riding along with API_MODE=true for free.
+// 写入 crontab 与启动/停止运行所需的信任级别明显不同，
+// 因此它使用独立的显式启用标志，而不会随 API_MODE=true 自动开启。
 const ALLOW_SCHEDULE_WRITE = envBool('API_ALLOW_SCHEDULE_WRITE', false)
 
 const RUN_HISTORY = integerSetting('API_RUN_HISTORY', envStr('API_RUN_HISTORY'), 20)
@@ -91,10 +90,10 @@ if (containsControlCharacters(HOST) || containsControlCharacters(CORS_ORIGIN)) {
     process.exit(1)
 }
 
-// Forward bot stdout/stderr to the API server's own output streams so that
-// container logs (docker logs) continue to show the bot's output regardless
-// of which mode started the run. Controller messages (run start/stop lifecycle
-// events from ProcessManager) are included - they are low-volume and useful.
+// 将机器人的 stdout/stderr 转发到 API 服务器自身的输出流，
+// 使容器日志（docker logs）无论通过哪种模式启动运行都能继续显示机器人输出。
+// 同时包含控制器消息（ProcessManager 发出的运行启动/停止生命周期事件），
+// 这些消息数量很少且很有用。
 pm.on('log', entry => {
     const line = (entry.raw ?? entry.message ?? '') + '\n'
     if (entry.source === 'stderr') process.stderr.write(line)
@@ -280,7 +279,7 @@ const requestHandler = async (req, res) => {
     }
 
     try {
-        // index
+        // 索引
         if (method === 'GET' && pathname === '/') {
             return sendJson(res, 200, {
                 name: pkgName,
@@ -314,7 +313,7 @@ const requestHandler = async (req, res) => {
             })
         }
 
-        // health
+        // 健康状态
         if (method === 'GET' && pathname === '/health') {
             return sendJson(res, 200, {
                 ok: true,
@@ -326,17 +325,17 @@ const requestHandler = async (req, res) => {
             })
         }
 
-        // status
+        // 状态
         if (method === 'GET' && pathname === '/status') {
             return sendJson(res, 200, pm.getStatus())
         }
 
-        // point read live
+        // 读取实时积分
         if (method === 'GET' && pathname === '/points') {
             return sendJson(res, 200, pm.getPoints())
         }
 
-        // log read
+        // 读取日志
         if (method === 'GET' && pathname === '/logs') {
             const limit = clampInt(url.searchParams.get('limit'), 1, LOG_BUFFER, 200)
             const afterId = url.searchParams.has('afterId') ? Number(url.searchParams.get('afterId')) : null
@@ -354,27 +353,27 @@ const requestHandler = async (req, res) => {
             )
         }
 
-        // error read
+        // 读取错误
         if (method === 'GET' && pathname === '/errors') {
             const limit = clampInt(url.searchParams.get('limit'), 1, LOG_BUFFER, 100)
             const includeWarnings = url.searchParams.get('warnings') !== 'false'
             return sendJson(res, 200, pm.getErrors({ limit, includeWarnings }))
         }
 
-        // history
+        // 历史记录
         if (method === 'GET' && pathname === '/history') {
             const limit = clampInt(url.searchParams.get('limit'), 1, RUN_HISTORY, RUN_HISTORY)
             const runs = pm.getHistory().slice(0, limit).map(toHistoryRecord)
             return sendJson(res, 200, { runs, count: runs.length, inMemoryOnly: true })
         }
 
-        // account overview
+        // 账号概览
         if (method === 'GET' && pathname === '/accounts') {
             const accounts = mergeAccountStats(loadAccounts(), pm.getHistory().map(toHistoryRecord))
             return sendJson(res, 200, { accounts, count: accounts.length })
         }
 
-        // session list
+        // 会话列表
         if (method === 'GET' && pathname === '/sessions') {
             const loaded = loadConfigSafe(projectRoot)
             if (!loaded) return sendJson(res, 404, { error: 'config.json not found' })
@@ -385,7 +384,7 @@ const requestHandler = async (req, res) => {
             return sendJson(res, 200, listStoredSessions(projectRoot, sessionPath))
         }
 
-        // account-specific session delete; intentionally no delete-all route
+        // 删除指定账号的会话；有意不提供全部删除路由
         if (method === 'DELETE' && pathname === '/sessions') {
             return sendJson(res, 400, {
                 error: 'An account email is required. Use DELETE /sessions/:email.',
@@ -432,17 +431,17 @@ const requestHandler = async (req, res) => {
             return sendJson(res, 200, { deleted: true, ...result })
         }
 
-        // diag list
+        // 诊断列表
         if (method === 'GET' && pathname === '/diagnostics') {
             return sendJson(res, 200, listDiagnostics())
         }
 
-        // diag read
+        // 读取诊断内容
         if (method === 'GET' && pathname.startsWith('/diagnostics/')) {
             return serveDiagnosticFile(res, pathname)
         }
 
-        // conf read
+        // 读取配置
         if (method === 'GET' && pathname === '/config') {
             const loaded = loadConfigSafe(projectRoot)
             if (!loaded) return sendJson(res, 404, { error: 'config.json not found' })
@@ -453,11 +452,10 @@ const requestHandler = async (req, res) => {
             return sendJson(res, 200, { path: loaded.path, redacted: !reveal, config: data })
         }
 
-        // conf diff - lists keys present in config.example.json but missing
-        // from the live config.json. Same check entrypoint.sh runs on
-        // container start, exposed here so a dashboard can surface it
-        // without waiting for the next restart. Always readable; no write
-        // gate needed since it doesn't touch the file.
+        // 配置差异：列出 config.example.json 中存在但当前 config.json 中缺失的键。
+        // 这与 entrypoint.sh 在容器启动时执行的检查相同；在此公开后，
+        // 仪表盘无需等待下次重启即可展示结果。此操作不修改文件，
+        // 因此始终可读，无需写入权限开关。
         if (method === 'GET' && pathname === '/config/diff') {
             try {
                 const { addedKeys } = await diffConfig(projectRoot, {
@@ -469,10 +467,9 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // conf sync - patches missing keys into config.json using
-        // config.example.json's defaults, without touching values the user
-        // already set. Same trust level as PUT/PATCH /config, so it rides
-        // the same flag.
+        // 配置同步：使用 config.example.json 的默认值将缺失键补入 config.json，
+        // 不修改用户已设置的值。其信任级别与 PUT/PATCH /config 相同，
+        // 因此共用同一个权限标志。
         if (method === 'POST' && pathname === '/config/sync') {
             if (!ALLOW_CONFIG_WRITE) {
                 return sendJson(res, 403, {
@@ -495,7 +492,7 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // sched read
+        // 读取计划
         if (method === 'GET' && pathname === '/schedule') {
             try {
                 return sendJson(res, 200, { ...readSchedule(projectRoot), writable: ALLOW_SCHEDULE_WRITE })
@@ -504,7 +501,7 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // sched write
+        // 写入计划
         if ((method === 'PUT' || method === 'PATCH') && pathname === '/schedule') {
             if (!ALLOW_SCHEDULE_WRITE) {
                 return sendJson(res, 403, {
@@ -528,12 +525,12 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // sse
+        // SSE
         if (method === 'GET' && pathname === '/events') {
             return handleEventStream(req, res, url)
         }
 
-        // start
+        // 启动
         if (method === 'POST' && pathname === '/start') {
             const body = await readJsonObject(req)
             const overrides = {}
@@ -573,7 +570,7 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // kill proc
+        // 终止进程
         if (method === 'POST' && pathname === '/stop') {
             const body = await readJsonObject(req)
             const force = readForce(body)
@@ -587,7 +584,7 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // restart
+        // 重启
         if (method === 'POST' && pathname === '/restart') {
             const body = await readJsonObject(req)
             const overrides = { force: readForce(body) }
@@ -626,7 +623,7 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // conf
+        // 配置
         if ((method === 'PUT' || method === 'PATCH') && pathname === '/config') {
             if (!ALLOW_CONFIG_WRITE) {
                 return sendJson(res, 403, {
@@ -663,7 +660,7 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // stop api
+        // 停止 API
         if (method === 'POST' && pathname === '/shutdown') {
             const body = await readJsonObject(req)
             const force = readForce(body)
@@ -688,7 +685,7 @@ function clampInt(value, min, max, fallback) {
     return Math.max(min, Math.min(max, n))
 }
 
-// diagn
+// 诊断
 const DIAG_FILES = {
     'screenshot.png': 'image/png',
     'error.txt': 'text/plain; charset=utf-8',
@@ -757,7 +754,7 @@ function serveDiagnosticFile(res, pathname) {
     fs.createReadStream(full).pipe(res)
 }
 
-// startup
+// 启动
 const server = http.createServer(requestHandler)
 
 server.on('error', err => {
@@ -813,7 +810,7 @@ async function shutdown(signal, { force = false } = {}) {
             await pm.stop({ force })
         }
     } catch {
-        // ignore
+        // 忽略
     }
     process.exit(0)
 }

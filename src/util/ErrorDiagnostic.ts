@@ -50,7 +50,7 @@ export async function errorDiagnostic(page: Page, error: Error): Promise<void> {
             return
         }
 
-        // Error log content
+            // 错误日志内容
         const errorLog = `
 Name: ${error.name}
 Message: ${error.message}

@@ -267,7 +267,7 @@ export class Login {
             'PASSWORD_INPUT',
             'EMAIL_INPUT',
             'SIGN_IN_ANOTHER_WAY_PASSWORDLESS',
-            'SIGN_IN_ANOTHER_WAY', // Prefer password option over email code
+            'SIGN_IN_ANOTHER_WAY', // 优先选择密码登录，而不是电子邮件验证码
             'SIGN_IN_ANOTHER_WAY_EMAIL',
             'OTP_CODE_ENTRY',
             'GET_A_CODE',
@@ -348,7 +348,7 @@ export class Login {
             case 'GET_A_CODE': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Attempting to bypass "Get code" page')
 
-                // Try each bypass option in order
+        // 按顺序尝试每个绕过选项
                 if (await this.tryClick(page, this.selectors.otherWaysToSignIn, 'Other ways to sign in', 3000)) {
                     return true
                 }
@@ -551,11 +551,11 @@ export class Login {
                     'OTP code entry page detected, attempting to find password option'
                 )
 
-                // Prefer the "Use your password"
+        // 优先选择“使用密码”
                 if (await this.tryClick(page, this.selectors.viewFooter, 'Footer link')) {
-                    // clicked
+            // 已点击
                 } else if (await this.tryClick(page, this.selectors.backButton, 'Back button')) {
-                    // clicked
+            // 已点击
                 } else {
                     this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'No navigation option found on OTP page')
                 }
@@ -600,7 +600,7 @@ export class Login {
             this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Could not verify Rewards Dashboard, assuming login valid')
         }
 
-        // Dismiss at rewards dashboard
+        // 在 Rewards 仪表板中关闭提示
         await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => {})
 
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Starting Bing session verification')
@@ -644,7 +644,7 @@ export class Login {
                         await this.bot.browser.utils.ghostClick(page, this.selectors.secondaryButton)
                     }
 
-                    // Handle stats in case of password etc
+        // 处理密码等情况下的状态统计
                     await this.handleState(state, page, account)
                 }
 

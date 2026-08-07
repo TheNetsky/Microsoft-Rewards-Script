@@ -1,66 +1,66 @@
-# Microsoft Rewards Script Control API
+# Microsoft Rewards 脚本控制 API
 
-A small, dependency-free HTTP API that lets a dashboard or another local tool
-control and observe the Microsoft Rewards Script.
+这是一个轻量且零依赖的 HTTP API，可供仪表盘或其他本地工具
+控制和监视 Microsoft Rewards 脚本。
 
-The API can:
+此 API 可以：
 
-- start, stop, restart, and remotely shut down the bot process;
-- run every configured account, one specific account, or all accounts except a
-  selected set;
-- expose live process status and point totals;
-- stream structured logs over Server-Sent Events (SSE);
-- return recent errors, in-memory run history, configured account summaries,
-  and diagnostic captures;
-- list stored session metadata and delete the mobile/desktop sessions belonging
-  to one account;
-- read `config.json` and, when explicitly enabled, validate and update it;
-- read the effective cron schedule and, in Docker API mode, persist and apply
-  schedule changes without restarting the container.
+- 启动、停止、重启机器人进程，以及远程关闭该进程；
+- 运行所有已配置账号、某个指定账号，或运行除
+  所选账号之外的所有账号；
+- 提供实时进程状态和积分总数；
+- 通过服务器发送事件（SSE）流式传输结构化日志；
+- 返回最近的错误、内存中的运行历史、已配置账号摘要
+  以及诊断捕获内容；
+- 列出已保存的会话元数据，并删除属于某个账号的
+  移动端和桌面端会话；
+- 读取 `config.json`，并在明确启用后验证和更新该文件；
+- 读取实际生效的 cron 计划，并在 Docker API 模式下持久化和应用
+  计划变更，无需重启容器。
 
-It uses only Node.js built-ins and follows the same ESM `.js` convention as the
-other scripts in the project.
-
----
-
-## Table of Contents
-
-- [Architecture and persistence](#architecture-and-persistence)
-- [Requirements](#requirements)
-- [Quick Setup](#quick-setup)
-    - [Build the bot](#build-the-bot)
-    - [Run without authentication](#run-without-authentication)
-    - [Run with authentication from the command line](#run-with-authentication-from-the-command-line)
-    - [Run with authentication from `.env`](#run-with-authentication-from-env)
-    - [Connect a dashboard](#connect-a-dashboard)
-    - [Verify the API](#verify-the-api)
-- [Authentication](#authentication)
-- [HTTP conventions](#http-conventions)
-- [Axios setup](#axios-setup)
-- [Endpoint overview](#endpoint-overview)
-- [Reading API state](#reading-api-state)
-- [Session management](#session-management)
-- [Reading diagnostics](#reading-diagnostics)
-- [Starting and controlling runs](#starting-and-controlling-runs)
-- [Live event stream with SSE](#live-event-stream-with-sse)
-- [Reading and editing configuration](#reading-and-editing-configuration)
-- [Reading and editing the schedule](#reading-and-editing-the-schedule)
-- [Axios response and error handling](#axios-response-and-error-handling)
-- [PowerShell examples](#powershell-examples)
-- [HTTP status codes](#http-status-codes)
-- [Environment variables](#environment-variables)
-- [Security guidance](#security-guidance)
-- [Keeping the API running](#keeping-the-api-running)
-- [Startup readiness](#startup-readiness)
-- [File layout](#file-layout)
+它仅使用 Node.js 内置模块，并遵循项目中其他脚本使用的
+ESM `.js` 约定。
 
 ---
 
-## Architecture and persistence
+## 目录
 
-The API is designed as a lightweight runtime controller between the bot and a
-dashboard. It launches the normal bot command as a child process and parses its
-output without maintaining a runtime database.
+- [架构与持久化](#架构与持久化)
+- [环境要求](#环境要求)
+- [快速设置](#快速设置)
+    - [构建机器人](#构建机器人)
+    - [无认证运行](#无认证运行)
+    - [通过命令行启用认证](#通过命令行启用认证)
+    - [通过 `.env` 启用认证](#通过-env-启用认证)
+    - [连接仪表盘](#连接仪表盘)
+    - [验证 API](#验证-api)
+- [认证](#认证)
+- [HTTP 约定](#http-约定)
+- [Axios 设置](#axios-设置)
+- [端点概览](#端点概览)
+- [读取 API 状态](#读取-api-状态)
+- [会话管理](#会话管理)
+- [读取诊断信息](#读取诊断信息)
+- [启动和控制运行](#启动和控制运行)
+- [使用 SSE 获取实时事件流](#使用-sse-获取实时事件流)
+- [读取和编辑配置](#读取和编辑配置)
+- [读取和编辑计划](#读取和编辑计划)
+- [Axios 响应和错误处理](#axios-响应和错误处理)
+- [PowerShell 示例](#powershell-示例)
+- [HTTP 状态码](#http-状态码)
+- [环境变量](#环境变量)
+- [安全建议](#安全建议)
+- [保持 API 运行](#保持-api-运行)
+- [启动就绪状态](#启动就绪状态)
+- [文件布局](#文件布局)
+
+---
+
+## 架构与持久化
+
+此 API 是机器人与仪表盘之间的轻量运行时控制器。它将常规机器人命令
+作为子进程启动并解析其输出，
+但不维护运行时数据库。
 
 ```text
 bot repository                               dashboard or other client
@@ -72,124 +72,124 @@ bot repository                               dashboard or other client
 └───────────────────────────────┘            └────────────────────────┘
 ```
 
-The following data exists only in memory and is reset whenever the API process
-restarts:
+以下数据仅存在于内存中，并会在 API 进程
+每次重启时重置：
 
-- buffered logs;
-- live run state;
-- parsed errors;
-- completed run history;
-- account statistics calculated from that history.
+- 缓冲日志；
+- 实时运行状态；
+- 已解析的错误；
+- 已完成的运行历史；
+- 根据该历史计算的账号统计信息。
 
-The API does not create its own database. Config and schedule writes are both
-disabled by default and require separate opt-in environment variables:
+此 API 不创建自己的数据库。配置和计划写入功能默认均为禁用，
+且需要通过各自的环境变量明确启用：
 
-- `PUT` or `PATCH /config` updates `config.json`. The previous file is copied to
-  `config.json.bak` on a best-effort basis before replacement.
-- `PUT` or `PATCH /schedule` writes `config/schedule.json` atomically and applies
-  the cron change immediately. The file lives in the existing Docker `./config`
-  volume, so it survives container restarts and takes precedence over
-  `CRON_SCHEDULE`.
-- `DELETE /sessions/:email` removes only the matching account rows from the
-  bot's existing `sessions.db`. The API never exposes stored cookies or
-  fingerprint contents and has no delete-all session route.
+- `PUT` 或 `PATCH /config` 会更新 `config.json`。替换前会尽力将原文件
+  复制到 `config.json.bak`。
+- `PUT` 或 `PATCH /schedule` 会以原子方式写入 `config/schedule.json`，并立即
+  应用 cron 变更。该文件位于现有 Docker `./config`
+  卷中，因此容器重启后仍会保留，且优先级高于
+  `CRON_SCHEDULE`。
+- `DELETE /sessions/:email` 只会从机器人现有的 `sessions.db` 中删除
+  匹配该账号的记录。API 从不公开已保存的 Cookie 或
+  指纹内容，也不提供删除全部会话的路由。
 
-All live logs, parsed run state, errors, history, and calculated account
-statistics remain memory-only. A dashboard can store those results separately
-when durable history is needed.
+所有实时日志、已解析运行状态、错误、历史和计算所得的账号
+统计信息仍只保存在内存中。需要持久历史时，仪表盘可以单独
+保存这些结果。
 
-## Requirements
+## 环境要求
 
-- Node.js 24 or newer;
-- a built bot, normally with `dist/index.js` available;
-- the API files located under `scripts/api/` in the bot repository.
+- Node.js 24 或更高版本；
+- 已完成构建的机器人，通常应存在 `dist/index.js`；
+- 机器人仓库的 `scripts/api/` 目录中包含 API 文件。
 
-The implementation is platform-independent. Process-tree termination uses
-`taskkill` on Windows and process-group signals on Linux and macOS.
+此实现与平台无关。终止进程树时，Windows 使用
+`taskkill`，Linux 和 macOS 使用进程组信号。
 
-## Quick Setup
+## 快速设置
 
-### Build the bot
+### 构建机器人
 
-Install and build the project before starting the Control API:
+启动控制 API 前，请先安装并构建项目：
 
 ```bash
 npm install
 npm run build
 ```
 
-`npm run api` starts the API server, not an immediate rewards run. Use
-`POST /start` or a connected dashboard to start the bot after the API is
-listening.
+`npm run api` 会启动 API 服务器，而不会立即运行奖励任务。API 开始
+监听后，请使用 `POST /start` 或已连接的仪表盘
+启动机器人。
 
-### Run without authentication
+### 无认证运行
 
-Start the API without a token:
+不使用令牌启动 API：
 
 ```bash
 npm run api
 ```
 
-The equivalent direct command is:
+等效的直接命令为：
 
 ```bash
 node scripts/api/server.js
 ```
 
-This starts an unauthenticated API at:
+这会在以下地址启动无认证 API：
 
 ```text
 http://127.0.0.1:3010
 ```
 
 > [!IMPORTANT]
-> This is unauthenticated only when `API_TOKEN` is absent or empty in both the
-> current process environment and the loaded `.env` file. If `.env` already
-> contains `API_TOKEN`, remove or comment out that line and restart the API.
+> 仅当当前进程环境和已加载的 `.env` 文件中都不存在 `API_TOKEN`，
+> 或其值为空时，API 才处于无认证状态。如果 `.env` 已包含
+> `API_TOKEN`，请删除或注释该行，然后重启 API。
 
 > [!WARNING]
-> Run without authentication only while `API_HOST` is `127.0.0.1`, `localhost`,
-> or `::1` on a trusted machine. Never expose an unauthenticated API through a
-> LAN address, published container port, reverse proxy, or the public internet.
+> 仅当 `API_HOST` 为 `127.0.0.1`、`localhost`
+> 或受信任计算机上的 `::1` 时，才能无认证运行。切勿通过局域网地址、
+> 已发布的容器端口、反向代理或公网暴露无认证 API。
 
-### Run with authentication from the command line
+### 通过命令行启用认证
 
-Pass a token through npm for a one-time authenticated launch:
+通过 npm 传入令牌，执行一次经过认证的启动：
 
 ```bash
 npm run api -- --token "YOUR_API_TOKEN"
 ```
 
-The first `--` belongs to npm. It tells npm to forward the remaining arguments
-to `scripts/api/server.js`. The API itself receives
-`--token "YOUR_API_TOKEN"`.
+第一个 `--` 属于 npm，用于告诉 npm 将剩余参数转发给
+`scripts/api/server.js`。API 本身收到的参数是
+`--token "YOUR_API_TOKEN"`。
 
-The equivalent direct command is:
+等效的直接命令为：
 
 ```bash
 node scripts/api/server.js --token "YOUR_API_TOKEN"
 ```
 
 > [!NOTE]
-> The supported option is `--token`, not `--auth`. If `API_TOKEN` is already set
-> in the environment or `.env`, that value takes precedence over the command-line
-> token.
+> 支持的选项是 `--token`，而不是 `--auth`。如果环境或 `.env` 中已设置
+> `API_TOKEN`，该值的优先级高于命令行
+> 令牌。
 
-Generate a strong token instead of using a short example value:
+请生成高强度令牌，不要使用简短的示例值：
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-You can also set the listen address and port for the same launch:
+也可以为同一次启动设置监听地址和端口：
 
 ```bash
 npm run api -- --host 127.0.0.1 --port 3010 --token "YOUR_API_TOKEN"
 ```
 
-### Run with authentication from `.env`
+### 通过 `.env` 启用认证
 
-For normal or repeated use, configure authentication in the project `.env`:
+对于常规或重复使用，请在项目的 `.env` 中配置认证：
 
 ```dotenv
 API_HOST=127.0.0.1
@@ -198,38 +198,38 @@ API_TOKEN=replace-with-a-long-random-token
 API_CORS_ORIGIN=http://127.0.0.1:3000
 ```
 
-Then start the API normally:
+然后正常启动 API：
 
 ```bash
 npm run api
 ```
 
-The API automatically loads the first available `.env` from the current working
-directory, repository root, or `dist/` directory. Authentication mode is chosen
-at startup, so restart the API after adding, changing, or removing `API_TOKEN`.
+API 会自动加载当前工作目录、仓库根目录或 `dist/` 目录中
+第一个可用的 `.env`。认证模式在启动时确定，因此添加、更改或删除
+`API_TOKEN` 后请重启 API。
 
-### Connect a dashboard
+### 连接仪表盘
 
-Give the dashboard the same base URL and token used by the API:
+向仪表盘提供 API 使用的同一基础 URL 和令牌：
 
 ```dotenv
 CONTROL_API_URL=http://127.0.0.1:3010
 CONTROL_API_TOKEN=replace-with-the-same-token
 ```
 
-Leave `CONTROL_API_TOKEN` empty only when the API is intentionally running
-without authentication.
+仅当 API 有意以无认证模式运行时，才将 `CONTROL_API_TOKEN`
+留空。
 
-### Verify the API
+### 验证 API
 
-For an unauthenticated server:
+对于无认证服务器：
 
 ```bash
 curl --request GET \
   --url http://127.0.0.1:3010/health
 ```
 
-For an authenticated server:
+对于已认证服务器：
 
 ```bash
 curl --request GET \
@@ -237,7 +237,7 @@ curl --request GET \
   --header 'Authorization: Bearer YOUR_API_TOKEN'
 ```
 
-A successful response looks like:
+成功响应示例：
 
 ```json
 {
@@ -250,27 +250,27 @@ A successful response looks like:
 }
 ```
 
-If authentication is enabled, the same request without a valid token returns
-`401 Unauthorized`. The exact package name and version are read from the
-repository's `package.json`.
+如果已启用认证，同一请求在缺少有效令牌时会返回
+`401 Unauthorized`。确切的软件包名称和版本读取自仓库的
+`package.json`。
 
-## Authentication
+## 认证
 
-When `API_TOKEN` is unset, every endpoint is open. This is acceptable only when
-the API is bound to a trusted loopback interface.
+未设置 `API_TOKEN` 时，所有端点都处于开放状态。只有当 API
+绑定到受信任的环回接口时，这才是可接受的。
 
-When `API_TOKEN` is set, **every endpoint** requires the token, including `/`,
-`/health`, diagnostic files, and the SSE stream.
+设置 `API_TOKEN` 后，**每个端点**都需要令牌，包括 `/`、
+`/health`、诊断文件和 SSE 事件流。
 
-The server token can be configured either persistently with `API_TOKEN` or for
-a one-time launch with `npm run api -- --token "YOUR_API_TOKEN"`. An environment
-or `.env` value takes precedence when both are present. The token is fixed for
-the lifetime of the API process; restart the server to change authentication
-mode or use a different token.
+服务器令牌既可以通过 `API_TOKEN` 持久配置，也可以使用
+`npm run api -- --token "YOUR_API_TOKEN"` 仅为单次启动配置。当两者同时存在时，
+环境变量或 `.env` 中的值优先。令牌在 API 进程的整个生命周期内保持不变；
+如需更改认证模式或改用其他令牌，请重启
+服务器。
 
-The token can be supplied in one of three ways.
+可以通过以下三种方式之一提供令牌。
 
-### Bearer token
+### Bearer 令牌
 
 ```bash
 curl --request GET \
@@ -278,7 +278,7 @@ curl --request GET \
   --header 'Authorization: Bearer YOUR_API_TOKEN'
 ```
 
-### API key header
+### API key 请求头
 
 ```bash
 curl --request GET \
@@ -286,18 +286,18 @@ curl --request GET \
   --header 'X-API-Key: YOUR_API_TOKEN'
 ```
 
-### SSE query parameter
+### SSE 查询参数
 
 ```text
 http://127.0.0.1:3010/events?token=<API_TOKEN>
 ```
 
-The query form is accepted only by `/events` and is intended for browser
-`EventSource`, which cannot set custom authorization headers. Use a header for
-every other request because URLs can be stored in browser history and proxy
-logs.
+查询参数形式只允许用于 `/events`，主要供无法设置自定义认证请求头的浏览器
+`EventSource` 使用。其他请求都应使用请求头，因为 URL 可能被保存在浏览器历史和代理
+日志中。
 
-An invalid or missing token returns:
+
+令牌无效或缺失时返回：
 
 ```http
 HTTP/1.1 401 Unauthorized
@@ -311,36 +311,36 @@ Content-Type: application/json
 }
 ```
 
-## HTTP conventions
+## HTTP 约定
 
-- The base URL is `http://<API_HOST>:<API_PORT>`.
-- Request and response bodies are JSON unless the endpoint returns SSE or a
-  diagnostic file.
-- JSON requests should include `Content-Type: application/json`.
-- An omitted or empty JSON body is treated as `{}`.
-- The maximum accepted request body is 1,000,000 bytes.
-- Unknown routes return `404` with a JSON error.
-- CORS is enabled according to `API_CORS_ORIGIN`.
-- `OPTIONS` preflight requests return `204 No Content`.
+- 基础 URL 为 `http://<API_HOST>:<API_PORT>`。
+- 除返回 SSE 或诊断文件的端点外，请求体和响应体均为 JSON。
 
-All examples below use these placeholders:
+- JSON 请求应包含 `Content-Type: application/json`。
+- 省略或为空的 JSON 请求体按 `{}` 处理。
+- 接受的请求体最大为 1,000,000 字节。
+- 未知路由返回带 JSON 错误信息的 `404`。
+- CORS 根据 `API_CORS_ORIGIN` 启用。
+- `OPTIONS` 预检请求返回 `204 No Content`。
 
-- `http://127.0.0.1:3010` is the API base URL;
-- `YOUR_API_TOKEN` is the value configured as `API_TOKEN`.
+下方所有示例都使用这些占位值：
 
-The cURL examples are deliberately self-contained, similar to public API
-reference documentation, so any individual request can be copied without first
-defining shell variables.
+- `http://127.0.0.1:3010` 是 API 基础 URL；
+- `YOUR_API_TOKEN` 是配置为 `API_TOKEN` 的值。
 
-## Axios setup
+cURL 示例特意写成自包含形式，风格类似公开 API
+参考文档，因此无需预先定义 shell 变量即可复制
+任意单个请求。
 
-Install Axios in the dashboard or other client project:
+## Axios 设置
+
+在仪表盘或其他客户端项目中安装 Axios：
 
 ```bash
 npm install axios
 ```
 
-Create one reusable client:
+创建一个可复用的客户端：
 
 ```js
 import axios from 'axios'
@@ -354,55 +354,55 @@ export const api = axios.create({
 })
 ```
 
-The Axios examples below assume this client is imported:
+下方 Axios 示例假定已导入此客户端：
 
 ```js
 import { api } from './apiClient.js'
 ```
 
-Axios is required only by the consuming dashboard or client. The control API
-server itself remains dependency-free.
+只有使用 API 的仪表盘或客户端需要 Axios。控制 API
+服务器本身仍然零依赖。
 
-## Endpoint overview
+## 端点概览
 
-### Read endpoints
+### 读取端点
 
-| Method | Path                            | Purpose                                                           |
+| 方法 | 路径                            | 用途                                                               |
 | ------ | ------------------------------- | ----------------------------------------------------------------- |
-| `GET`  | `/`                             | API name, version, authentication state, and endpoint index.      |
-| `GET`  | `/health`                       | Lightweight liveness and process-state check.                     |
-| `GET`  | `/status`                       | Complete process and parsed run state.                            |
-| `GET`  | `/points`                       | Simplified live point totals for dashboard polling.               |
-| `GET`  | `/logs`                         | Buffered structured logs.                                         |
-| `GET`  | `/errors`                       | Recent warning/error logs and per-account failures.               |
-| `GET`  | `/history`                      | Completed runs retained by this API process.                      |
-| `GET`  | `/accounts`                     | Safe summaries of configured accounts and recent run statistics.  |
-| `GET`  | `/sessions`                     | Stored account/platform session metadata without secret contents. |
-| `GET`  | `/diagnostics`                  | List available error-capture directories.                         |
-| `GET`  | `/diagnostics/<capture>/<file>` | Download or view one diagnostic artifact.                         |
-| `GET`  | `/config`                       | Read `config.json`, redacted by default.                          |
-| `GET`  | `/schedule`                     | Read the effective cron schedule and its source.                  |
-| `GET`  | `/events`                       | SSE stream containing live logs and status updates.               |
+| `GET`  | `/`                             | API 名称、版本、认证状态和端点索引。                               |
+| `GET`  | `/health`                       | 轻量存活状态和进程状态检查。                                       |
+| `GET`  | `/status`                       | 完整的进程状态和已解析运行状态。                                   |
+| `GET`  | `/points`                       | 供仪表盘轮询的简化实时积分总数。                                   |
+| `GET`  | `/logs`                         | 已缓冲的结构化日志。                                               |
+| `GET`  | `/errors`                       | 最近的警告/错误日志和各账号失败信息。                              |
+| `GET`  | `/history`                      | 当前 API 进程保留的已完成运行记录。                                |
+| `GET`  | `/accounts`                     | 已配置账号的安全摘要和最近运行统计信息。                           |
+| `GET`  | `/sessions`                     | 不含机密内容的已保存账号/平台会话元数据。                          |
+| `GET`  | `/diagnostics`                  | 列出可用的错误捕获目录。                                           |
+| `GET`  | `/diagnostics/<capture>/<file>` | 下载或查看一项诊断产物。                                           |
+| `GET`  | `/config`                       | 读取 `config.json`，默认隐藏敏感值。                               |
+| `GET`  | `/schedule`                     | 读取实际生效的 cron 计划及其来源。                                 |
+| `GET`  | `/events`                       | 包含实时日志和状态更新的 SSE 事件流。                              |
 
-### Control and write endpoints
+### 控制和写入端点
 
-| Method   | Path               | Purpose                                                 |
+| 方法     | 路径               | 用途                                                   |
 | -------- | ------------------ | ------------------------------------------------------- |
-| `POST`   | `/start`           | Start a bot run.                                        |
-| `POST`   | `/stop`            | Request graceful or forced process termination.         |
-| `POST`   | `/restart`         | Stop an active run, then start a new one.               |
-| `POST`   | `/shutdown`        | Stop the bot if needed and terminate the API process.   |
-| `DELETE` | `/sessions/:email` | Delete only one account's mobile and desktop sessions.  |
-| `PUT`    | `/config`          | Replace the complete config after validation.           |
-| `PATCH`  | `/config`          | Deep-merge a partial config after validation.           |
-| `PUT`    | `/schedule`        | Persist and immediately apply supplied schedule fields. |
-| `PATCH`  | `/schedule`        | Persist and immediately apply supplied schedule fields. |
+| `POST`   | `/start`           | 启动一次机器人运行。                                   |
+| `POST`   | `/stop`            | 请求正常或强制终止进程。                               |
+| `POST`   | `/restart`         | 停止当前运行，然后启动新的运行。                       |
+| `POST`   | `/shutdown`        | 必要时停止机器人，并终止 API 进程。                    |
+| `DELETE` | `/sessions/:email` | 只删除一个账号的移动端和桌面端会话。                   |
+| `PUT`    | `/config`          | 验证后替换完整配置。                                   |
+| `PATCH`  | `/config`          | 验证后深度合并部分配置。                               |
+| `PUT`    | `/schedule`        | 持久化并立即应用提供的计划字段。                       |
+| `PATCH`  | `/schedule`        | 持久化并立即应用提供的计划字段。                       |
 
-## Reading API state
+## 读取 API 状态
 
 ### `GET /`
 
-Returns a machine-readable endpoint index:
+返回机器可读的端点索引：
 
 **cURL**
 
@@ -452,8 +452,8 @@ console.log(data)
 
 ### `GET /health`
 
-Use this for a simple liveness check. It does not include account or point
-details.
+用于简单的存活状态检查。响应不包含账号或积分
+详情。
 
 **cURL**
 
@@ -470,16 +470,16 @@ const { data } = await api.get('/health')
 console.log(data)
 ```
 
-Important fields:
+重要字段：
 
-- `ok`: always `true` when the API can answer;
-- `state`: `idle`, `starting`, `running`, or `stopping`;
-- `uptimeSec`: API process uptime, not bot-run duration;
-- `authRequired`: whether `API_TOKEN` is configured.
+- `ok`：API 能够响应时始终为 `true`；
+- `state`：`idle`、`starting`、`running` 或 `stopping`；
+- `uptimeSec`：API 进程运行时间，而非机器人任务运行时长；
+- `authRequired`：是否已配置 `API_TOKEN`。
 
 ### `GET /status`
 
-Returns the full controller and parsed run state:
+返回完整的控制器状态和已解析运行状态：
 
 **cURL**
 
@@ -496,7 +496,7 @@ const { data } = await api.get('/status')
 console.log(data)
 ```
 
-Representative response:
+典型响应：
 
 ```jsonc
 {
@@ -554,13 +554,13 @@ Representative response:
 }
 ```
 
-While idle, `pid` and `startedAt` are `null`. `lastExit` contains information
-about the most recently finished child process.
+空闲时，`pid` 和 `startedAt` 为 `null`。`lastExit` 包含最近一次
+结束的子进程信息。
 
 ### `GET /points`
 
-This is the preferred polling endpoint for a live points widget. It presents a
-smaller, point-focused view than `/status`.
+这是实时积分组件的推荐轮询端点。与 `/status` 相比，它提供更小、
+更聚焦积分的视图。
 
 **cURL**
 
@@ -614,26 +614,26 @@ console.log(data)
 }
 ```
 
-The API updates point totals from stable machine-facing log fields such as
-`pointsGained`, `currentBalance`, and `previousBalance`. When an account emits
-its final `ACCOUNT-END` line, the live estimate is replaced by the bot's final
-authoritative numbers.
+API 会根据 `pointsGained`、`currentBalance` 和 `previousBalance` 等稳定的、
+面向机器的日志字段更新积分总数。当账号发出最终的
+`ACCOUNT-END` 行时，实时估算值会替换为机器人最终的
+权威数值。
 
 ### `GET /logs`
 
-Returns structured logs from the in-memory ring buffer.
+返回内存环形缓冲区中的结构化日志。
 
-Query parameters:
+查询参数：
 
-| Parameter | Default | Behavior                                                                           |
+| 参数      | 默认值 | 行为                                                                       |
 | --------- | ------: | ---------------------------------------------------------------------------------- |
-| `limit`   |   `200` | Number of most recent entries to return. Clamped between `1` and `API_LOG_BUFFER`. |
-| `afterId` |   unset | Return entries whose numeric `id` is greater than this value. Useful for polling.  |
-| `level`   |   unset | Minimum severity: `debug`, `info`, `warn`, or `error`.                             |
+| `limit`   |   `200` | 返回的最近条目数量。在 `1` 和 `API_LOG_BUFFER` 之间限制。                |
+| `afterId` |   未设置 | 返回数值 `id` 大于此值的条目。适用于轮询。                                |
+| `level`   |   未设置 | 最低严重级别：`debug`、`info`、`warn` 或 `error`。                        |
 
-Examples:
+示例：
 
-**cURL - last 50 entries**
+**cURL - 最近 50 条记录**
 
 ```bash
 curl --request GET \
@@ -641,7 +641,7 @@ curl --request GET \
   --header 'Authorization: Bearer YOUR_API_TOKEN'
 ```
 
-**Axios - last 50 entries**
+**Axios - 最近 50 条记录**
 
 ```js
 const { data } = await api.get('/logs', {
@@ -650,21 +650,21 @@ const { data } = await api.get('/logs', {
 console.log(data.logs)
 ```
 
-Other useful Axios queries:
+其他实用的 Axios 查询：
 
 ```js
-// Warning and error entries only
+    // 仅包含警告和错误条目
 const warnings = await api.get('/logs', {
     params: { level: 'warn', limit: 100 }
 })
 
-// Entries created after log ID 418
+    // 仅包含日志 ID 418 之后创建的条目
 const newerLogs = await api.get('/logs', {
     params: { afterId: 418 }
 })
 ```
 
-Response:
+响应：
 
 ```jsonc
 {
@@ -688,19 +688,19 @@ Response:
 }
 ```
 
-When `afterId` is supplied, the API returns all newer entries still available in
-the ring buffer instead of applying the normal tail behavior.
+提供 `afterId` 时，API 会返回环形缓冲区中仍可用的所有较新条目，
+而不是应用通常的尾部返回行为。
 
 ### `GET /errors`
 
-Returns warning/error log entries and the current run's account failures.
+返回警告/错误日志条目，以及当前运行中各账号的失败信息。
 
-Query parameters:
+查询参数：
 
-| Parameter  | Default | Behavior                                     |
+| 参数       | 默认值 | 行为                                       |
 | ---------- | ------: | -------------------------------------------- |
-| `limit`    |   `100` | Maximum warning/error log entries to return. |
-| `warnings` |  `true` | Use `warnings=false` to return errors only.  |
+| `limit`    |   `100` | 要返回的警告/错误日志条目的最大数量。      |
+| `warnings` |  `true` | 使用 `warnings=false` 时仅返回错误。       |
 
 **cURL**
 
@@ -744,13 +744,13 @@ console.log(data)
 
 ### `GET /history`
 
-Returns completed runs launched by the current API process, newest first.
+返回当前 API 进程启动的已完成运行记录，按最新优先排序。
 
-Query parameter:
+查询参数：
 
-| Parameter |           Default | Behavior                                                            |
+| 参数      | 默认值             | 行为                                                   |
 | --------- | ----------------: | ------------------------------------------------------------------- |
-| `limit`   | `API_RUN_HISTORY` | Number of records to return, capped at the configured history size. |
+| `limit`   | `API_RUN_HISTORY` | 要返回的记录数量，不超过配置的历史记录大小。          |
 
 **cURL**
 
@@ -803,17 +803,17 @@ console.log(data.runs)
 }
 ```
 
-This history is not durable. A dashboard that needs charts or long-term history
-should store the returned completion data in its own database.
+此历史记录不具备持久性。需要图表或长期历史记录的仪表盘
+应将返回的完成数据保存到自己的数据库中。
 
 ### `GET /accounts`
 
-Returns every configured account slot discovered from `ACCOUNT_<N>_EMAIL`
-variables in `.env`, matching the bot's own loader. Missing slot numbers are
-allowed and results are returned in ascending slot order.
-Email addresses are returned in full for the local dashboard. Passwords,
-recovery addresses, TOTP secrets, and separate proxy username/password values
-are not returned; the configured proxy URL and port are included in the summary.
+返回从 `.env` 中的 `ACCOUNT_<N>_EMAIL` 变量发现的所有已配置账号槽位，
+与机器人自身的加载器保持一致。允许缺少槽位编号，结果按槽位编号
+升序返回。
+对于本地仪表盘，邮箱地址会完整返回。不会返回密码、
+恢复地址、TOTP 密钥以及单独的代理用户名/密码值；摘要中会包含已配置的代理 URL 和端口。
+
 
 **cURL**
 
@@ -830,7 +830,7 @@ const { data } = await api.get('/accounts')
 console.log(data.accounts)
 ```
 
-Valid account locale values are normalized in this response: language uses canonical BCP 47 casing and explicit two-letter countries use uppercase. The bot applies the same values to its browser and HTTP profiles.
+此响应会规范化有效的账号区域设置值：语言使用规范的 BCP 47 大小写形式，明确指定的两字母国家代码使用大写。机器人会将相同值应用到浏览器和 HTTP 配置中。
 
 ```jsonc
 {
@@ -866,23 +866,23 @@ Valid account locale values are normalized in this response: language uses canon
 }
 ```
 
-The `runs`, `totalCollected`, `successStreak`, and `last*` fields are calculated
-from this API process's in-memory history and therefore reset after an API
-restart.
+`runs`、`totalCollected`、`successStreak` 和 `last*` 字段根据此 API 进程的
+内存历史记录计算，因此会在 API
+重启后重置。
 
-## Session management
+## 会话管理
 
-The session endpoints use the `sessions.db` located under the configured
-`sessionPath`. They require the normal API token whenever `API_TOKEN` is set.
+会话端点使用配置的 `sessionPath` 下的 `sessions.db`。当设置了 `API_TOKEN` 时，
+这些端点也需要正常的 API 令牌。
 
-Session contents are authentication material. The API deliberately returns only
-safe metadata such as account, platform, update time, cookie count, and whether
-storage/fingerprint data exists. Cookie values, storage state, and fingerprint
-contents are never returned.
+会话内容属于认证材料。API 会有意只返回账号、平台、更新时间、Cookie 数量以及
+是否存在存储/指纹数据等安全元数据。Cookie 值、存储状态和指纹
+内容永远不会返回。
+
 
 ### `GET /sessions`
 
-Lists every stored mobile and desktop session.
+列出所有已保存的移动端和桌面端会话。
 
 **cURL**
 
@@ -925,19 +925,19 @@ console.log(data.sessions)
 }
 ```
 
-When no session database exists, the endpoint still returns `200 OK` with
-`databaseExists: false`, empty `sessions`, and zero counts. A `cookieCount` of
-`null` means the stored JSON could not be parsed; no cookie data is disclosed.
+不存在会话数据库时，该端点仍返回 `200 OK`，其中
+`databaseExists: false`、空的 `sessions` 以及计数值 0。`cookieCount` 为
+`null` 表示无法解析已保存的 JSON；不会公开任何 Cookie 数据。
 
 ### `DELETE /sessions/:email`
 
-Deletes all stored platforms for one case-insensitive, exact account email. The
-email must be URL-encoded as one path value. There is intentionally no API
-endpoint for deleting all sessions.
+删除与一个不区分大小写且完全匹配的账号邮箱对应的所有已保存平台。
+邮箱必须作为一个路径值进行 URL 编码。API 特意不提供删除所有会话的
+端点。
 
-The bot must be idle. Deleting while a run is starting, running, or stopping
-returns `409 Conflict`, because an active process could otherwise write the
-session back after deletion.
+机器人必须处于空闲状态。在运行启动、运行中或停止过程中删除会话时，
+会返回 `409 Conflict`，因为活动进程可能在删除后再次写回
+会话。
 
 **cURL**
 
@@ -965,15 +965,15 @@ console.log(data)
 }
 ```
 
-If the account has no stored sessions, the endpoint returns `404 Not Found`
-with code `SESSION_NOT_FOUND`. `DELETE /sessions` without an email and invalid
-email paths return `400 Bad Request`. The endpoint accepts no JSON body.
+如果账号没有已保存的会话，端点会返回 `404 Not Found`，
+并附带代码 `SESSION_NOT_FOUND`。不带邮箱的 `DELETE /sessions` 和无效的
+邮箱路径会返回 `400 Bad Request`。端点不接受 JSON 请求体。
 
-## Reading diagnostics
+## 读取诊断信息
 
 ### `GET /diagnostics`
 
-Lists diagnostic capture directories found under `API_DIAGNOSTICS_DIR`.
+列出 `API_DIAGNOSTICS_DIR` 下发现的诊断捕获目录。
 
 **cURL**
 
@@ -1007,15 +1007,15 @@ console.log(data.entries)
 }
 ```
 
-Each capture can expose only these filenames:
+每个捕获目录只能公开以下文件名：
 
-- `screenshot.png`;
-- `error.txt`;
-- `dump.html`.
+- `screenshot.png`；
+- `error.txt`；
+- `dump.html`。
 
-Examples:
+示例：
 
-**cURL - download a screenshot**
+**cURL - 下载屏幕截图**
 
 ```bash
 curl --request GET \
@@ -1024,7 +1024,7 @@ curl --request GET \
   --output screenshot.png
 ```
 
-**Axios - download a screenshot in Node.js**
+**Axios - 在 Node.js 中下载屏幕截图**
 
 ```js
 import { writeFile } from 'node:fs/promises'
@@ -1036,33 +1036,33 @@ const response = await api.get('/diagnostics/error-2026-07-14T09:35:10.000Z/scre
 await writeFile('screenshot.png', response.data)
 ```
 
-Use the same URL pattern with `error.txt` or `dump.html`. In a browser, request
-binary files with `responseType: 'blob'` instead of `arraybuffer`.
+使用相同的 URL 格式请求 `error.txt` 或 `dump.html`。在浏览器中请求
+二进制文件时，应使用 `responseType: 'blob'`，而不是 `arraybuffer`。
 
-`dump.html` is returned as a download rather than rendered inline.
+`dump.html` 会作为下载文件返回，而不是在页面内直接渲染。
 
-## Starting and controlling runs
+## 启动和控制运行
 
-All control endpoints accept JSON. Always send `Content-Type: application/json`
-for consistent behavior across clients and proxies.
+所有控制端点都接受 JSON。为确保客户端和代理行为一致，始终发送
+`Content-Type: application/json`。
 
 ### `POST /start`
 
-Starts the bot and returns `202 Accepted` once the child process has been
-created. The run may still briefly be in the `starting` state.
+启动机器人，并在子进程创建后返回 `202 Accepted`。运行可能仍会短暂处于
+`starting` 状态。
 
-Supported body fields:
+支持的请求体字段：
 
-| Field                    | Type                   | Description                                                                            |
+| 字段                     | 类型                   | 说明                                                                                 |
 | ------------------------ | ---------------------- | -------------------------------------------------------------------------------------- |
-| `accountIndex`           | positive integer       | Run only one configured `ACCOUNT_<N>` slot.                                            |
-| `excludedAccountIndexes` | positive integer array | Run every configured account except these slots.                                       |
-| `args`                   | string array           | Replace the API's default child-process arguments for this run.                        |
-| `env`                    | object                 | Add child-process-only environment overrides. Requires `API_ALLOW_ENV_OVERRIDES=true`. |
+| `accountIndex`           | 正整数                 | 只运行一个已配置的 `ACCOUNT_<N>` 槽位。                                             |
+| `excludedAccountIndexes` | 正整数数组             | 运行除这些槽位之外的所有已配置账号。                                                |
+| `args`                   | 字符串数组             | 替换本 API 为本次运行配置的默认子进程参数。                                         |
+| `env`                    | 对象                   | 添加仅对子进程生效的环境变量覆盖。需要 `API_ALLOW_ENV_OVERRIDES=true`。              |
 
-`accountIndex` and `excludedAccountIndexes` are mutually exclusive.
+`accountIndex` 和 `excludedAccountIndexes` 不能同时使用。
 
-#### Start all configured accounts
+#### 启动所有已配置账号
 
 **cURL**
 
@@ -1093,10 +1093,10 @@ console.log(data)
 }
 ```
 
-#### Start only one account
+#### 只启动一个账号
 
-The index refers to its original `.env` slot, not its position in the
-`/accounts` response.
+索引指向账号在 `.env` 中的原始槽位，而不是该账号在
+`/accounts` 响应中的位置。
 
 **cURL**
 
@@ -1132,11 +1132,11 @@ console.log(data)
 }
 ```
 
-Internally, the selected account's complete `ACCOUNT_2_*` environment is copied
-to `ACCOUNT_1_*` only for the new child process. Credentials remain inside the
-API process and are not included in the HTTP response.
+在内部，选中账号完整的 `ACCOUNT_2_*` 环境只会在新子进程中复制为
+`ACCOUNT_1_*`。凭据会保留在 API 进程中，不会包含在 HTTP 响应里。
 
-#### Start all except selected accounts
+
+#### 启动除所选账号之外的所有账号
 
 **cURL**
 
@@ -1157,15 +1157,15 @@ const { data } = await api.post('/start', {
 console.log(data)
 ```
 
-Remaining accounts are densely remapped in the child environment. For example,
-if slots 1, 2, and 3 exist and slot 2 is excluded, original slots 1 and 3 become
-child slots 1 and 2. The original indexes are still used by the API request and
-response.
+剩余账号会在子进程环境中重新连续编号。例如，如果存在槽位 1、2、3，且排除槽位 2，
+原始槽位 1 和 3 会变为子进程槽位 1 和 2。API 请求和响应仍使用
+原始索引。
 
-Unknown slots and attempts to exclude every configured account return
-`400 Bad Request`.
 
-#### Override launch arguments
+未知槽位，以及尝试排除所有已配置账号的请求，会返回
+`400 Bad Request`。
+
+#### 覆盖启动参数
 
 **cURL**
 
@@ -1186,18 +1186,18 @@ const { data } = await api.post('/start', {
 console.log(data)
 ```
 
-The `args` array replaces the configured/default argument array; it is not
-appended to it. Every element must be a string.
+`args` 数组会替换已配置/默认的参数数组，而不是附加到其后。每个元素都必须是字符串。
 
-#### Add per-run environment variables
 
-First enable the feature:
+#### 添加单次运行的环境变量
+
+先启用此功能：
 
 ```dotenv
 API_ALLOW_ENV_OVERRIDES=true
 ```
 
-Then send an `env` object:
+然后发送 `env` 对象：
 
 **cURL**
 
@@ -1221,23 +1221,23 @@ const { data } = await api.post('/start', {
 console.log(data)
 ```
 
-String, number, and boolean values are converted to strings and exist only in
-the child process; `null` values are ignored. Arrays and objects are rejected.
-The following launch-hijacking keys are always discarded, case-insensitively:
+字符串、数字和布尔值会被转换为字符串，并且只存在于子进程中；`null` 值会被忽略。
+数组和对象会被拒绝。以下可能劫持启动过程的键始终会被丢弃（不区分大小写）：
 
-- `NODE_OPTIONS`;
-- `NODE_PATH`;
-- `LD_PRELOAD`;
-- `DYLD_INSERT_LIBRARIES`;
-- `ELECTRON_RUN_AS_NODE`.
 
-Account selection also uses a child-only environment override and works even
-when arbitrary `env` overrides are disabled.
+- `NODE_OPTIONS`；
+- `NODE_PATH`；
+- `LD_PRELOAD`；
+- `DYLD_INSERT_LIBRARIES`；
+- `ELECTRON_RUN_AS_NODE`。
 
-#### Start errors
+账号选择也使用仅对子进程生效的环境变量覆盖，即使禁用了任意 `env` 覆盖，仍然有效。
 
-A second start request while a run is `starting`, `running`, or `stopping`
-returns:
+
+#### 启动错误
+
+当运行处于 `starting`、`running` 或 `stopping` 状态时再次发起启动请求，
+会返回：
 
 ```http
 HTTP/1.1 409 Conflict
@@ -1252,9 +1252,9 @@ HTTP/1.1 409 Conflict
 
 ### `POST /stop`
 
-Requests termination of the active bot process.
+请求终止当前活动的机器人进程。
 
-Graceful stop:
+正常停止：
 
 **cURL**
 
@@ -1273,7 +1273,7 @@ const { data } = await api.post('/stop', {})
 console.log(data)
 ```
 
-Forced stop:
+强制停止：
 
 **cURL**
 
@@ -1294,7 +1294,7 @@ const { data } = await api.post('/stop', {
 console.log(data)
 ```
 
-Response:
+响应：
 
 ```json
 {
@@ -1303,18 +1303,18 @@ Response:
 }
 ```
 
-The endpoint returns `202 Accepted` immediately after requesting termination.
-A normal stop sends `SIGTERM`; if the process is still alive after
-`API_STOP_TIMEOUT_MS`, the API escalates to `SIGKILL`. On Windows,
-`taskkill /T /F` terminates the process tree.
+请求终止后，该端点会立即返回 `202 Accepted`。
+正常停止会发送 `SIGTERM`；如果进程在 `API_STOP_TIMEOUT_MS` 后仍然存活，
+API 会升级为 `SIGKILL`。在 Windows 上，`taskkill /T /F` 会终止整个进程树。
 
-Stopping while idle returns `409 Conflict` with code `NOT_RUNNING`.
+
+空闲时执行停止会返回带有代码 `NOT_RUNNING` 的 `409 Conflict`。
 
 ### `POST /restart`
 
-Stops the current run if necessary and then starts a new run. It accepts the
-same `accountIndex`, `excludedAccountIndexes`, `args`, and `env` fields as
-`/start`, plus `force` for the stop phase.
+如有必要，先停止当前运行，再启动新的运行。它接受与
+`/start` 相同的 `accountIndex`、`excludedAccountIndexes`、`args` 和 `env` 字段，
+并额外接受用于停止阶段的 `force`。
 
 **cURL**
 
@@ -1351,12 +1351,12 @@ console.log(data)
 }
 ```
 
-When the API is already idle, `/restart` simply starts a new run.
+如果 API 已经处于空闲状态，`/restart` 会直接启动新的运行。
 
 ### `POST /shutdown`
 
-Terminates the API itself after sending a `202 Accepted` response. If the bot is
-running, the API stops it first.
+发送 `202 Accepted` 响应后终止 API 本身。如果机器人正在运行，API 会先停止它。
+
 
 **cURL**
 
@@ -1384,31 +1384,31 @@ console.log(data)
 }
 ```
 
-Use this carefully: after the response, the API port becomes unavailable until
-the service is started again by the terminal, PM2, systemd, Docker, or another
-supervisor.
+请谨慎使用：响应发出后，API 端口将不可用，直到终端、PM2、systemd、Docker 或其他
+监管程序再次启动该服务。
 
-## Live event stream with SSE
+
+## 使用 SSE 获取实时事件流
 
 ### `GET /events`
 
-The endpoint returns `text/event-stream` and emits three named event types:
+该端点返回 `text/event-stream`，并发出三种命名事件类型：
 
-- `hello`: one complete `/status` snapshot immediately after connection;
-- `log`: one structured log entry, including a numeric SSE `id`;
-- `status`: a complete status snapshot after process-state changes and parsed
-  run milestones.
+- `hello`：连接后立即发送一份完整的 `/status` 快照；
+- `log`：一条结构化日志条目，其中包含数字形式的 SSE `id`；
+- `status`：进程状态发生变化以及解析到运行里程碑后，发送完整的状态快照。
 
-A comment-only keep-alive frame is sent every 15 seconds.
 
-Query parameters:
+每 15 秒发送一帧仅包含注释的保活消息。
 
-| Parameter | Default | Behavior                                                                                           |
+查询参数：
+
+| 参数      | 默认值 | 行为                                                                                         |
 | --------- | ------: | -------------------------------------------------------------------------------------------------- |
-| `replay`  |   `100` | Number of recent log entries replayed on a fresh connection. Clamped from `0` to `API_LOG_BUFFER`. |
-| `token`   |   unset | Token for clients such as browser `EventSource` that cannot send headers.                          |
+| `replay`  |   `100` | 新连接时重放的最近日志条目数量。限制在 `0` 到 `API_LOG_BUFFER` 之间。                  |
+| `token`   |   未设置 | 供无法发送请求头的浏览器 `EventSource` 等客户端使用的令牌。                            |
 
-### Terminal stream
+### 终端流
 
 ```bash
 curl --request GET \
@@ -1417,7 +1417,7 @@ curl --request GET \
   --no-buffer
 ```
 
-Example frames:
+示例帧：
 
 ```text
 event: hello
@@ -1431,9 +1431,9 @@ event: status
 data: {"reason":"points","state":"running",...}
 ```
 
-### Node.js stream with Axios
+### 使用 Axios 获取 Node.js 流
 
-Axios can expose the raw SSE connection as a Node.js readable stream:
+Axios 可以将原始 SSE 连接公开为 Node.js 可读流：
 
 ```js
 const response = await api.get('/events', {
@@ -1452,10 +1452,10 @@ response.data.on('error', error => {
 })
 ```
 
-This exposes the raw SSE frames. Use an SSE parser when the client needs named
-events, event IDs, or automatic reconnection behavior.
+这会公开原始 SSE 帧。客户端需要命名事件、事件 ID 或自动重连行为时，
+请使用 SSE 解析器。
 
-### Browser `EventSource`
+### 浏览器 `EventSource`
 
 ```js
 const baseUrl = 'http://127.0.0.1:3010'
@@ -1482,18 +1482,18 @@ events.onerror = error => {
 }
 ```
 
-Browsers automatically send `Last-Event-ID` when reconnecting after receiving
-an event with an `id`. The API then replays only newer buffered log entries. If
-the requested entries have already fallen out of the ring buffer, they cannot
-be recovered from this stateless API.
+浏览器在收到带有 `id` 的事件后重新连接时，会自动发送 `Last-Event-ID`。API 随后只会重放
+较新的缓冲日志条目。如果请求的条目已经从环形缓冲区中移出，
+这个无状态 API 无法恢复这些条目。
 
-## Reading and editing configuration
+
+## 读取和编辑配置
 
 ### `GET /config`
 
-Reads the first available `config.json` from the supported repository paths.
-Webhook URLs, tokens, and chat identifiers handled by the redactor are replaced
-with `***REDACTED***` by default.
+从支持的仓库路径中读取第一个可用的 `config.json`。
+默认情况下，脱敏器处理的 webhook URL、令牌和聊天标识符会替换为 `***REDACTED***`。
+
 
 **cURL**
 
@@ -1529,12 +1529,12 @@ console.log(data.config)
 }
 ```
 
-To permit an unredacted response, all of these conditions must be true:
+要允许返回未脱敏的响应，以下所有条件必须同时满足：
 
-1. `API_ALLOW_CONFIG_REVEAL=true`;
-2. `API_TOKEN` is configured;
-3. the request is authenticated;
-4. the request includes `?reveal=1`.
+1. `API_ALLOW_CONFIG_REVEAL=true`；
+2. 已配置 `API_TOKEN`；
+3. 请求已通过认证；
+4. 请求包含 `?reveal=1`。
 
 **cURL**
 
@@ -1553,19 +1553,19 @@ const { data } = await api.get('/config', {
 console.log(data.config)
 ```
 
-Do not expose this endpoint over an untrusted network merely because token auth
-is enabled. Treat an unredacted config response as secret material.
+不要仅因为启用了令牌认证，就通过不受信任的网络暴露此端点。
+请将未脱敏的配置响应视为机密材料。
 
 ### `PATCH /config`
 
-Enable writes first:
+先启用写入功能：
 
 ```dotenv
 API_ALLOW_CONFIG_WRITE=true
 ```
 
-A patch is recursively merged into the existing config. Nested objects are
-merged; arrays replace the existing array as a whole.
+补丁会递归合并到现有配置中。嵌套对象会合并；数组会整体替换现有数组。
+
 
 **cURL**
 
@@ -1588,7 +1588,7 @@ const { data } = await api.patch('/config', {
 console.log(data)
 ```
 
-Successful response:
+成功响应：
 
 ```json
 {
@@ -1599,13 +1599,13 @@ Successful response:
 }
 ```
 
-The changed config is used by the next bot run. It does not mutate a child
-process that is already running.
+变更后的配置会在下一次机器人运行时使用，不会修改已经运行的子进程。
+
 
 ### `PUT /config`
 
-`PUT` replaces the complete config, so the body must contain every required
-field:
+`PUT` 会替换完整配置，因此请求体必须包含所有必填字段：
+
 
 **cURL**
 
@@ -1628,13 +1628,13 @@ const { data } = await api.put('/config', config)
 console.log(data)
 ```
 
-The API prefers the bot's strict compiled `ConfigSchema` from
-`dist/util/Validator.js`, then falls back to `validateConfig` when a custom
-validator module exposes only that function. `API_VALIDATOR_MODULE` can point
-to another compiled module. If no bot validator is available, a structural
-fallback checks the current core field types.
+API 优先使用机器人严格编译后的 `ConfigSchema`（位于
+`dist/util/Validator.js`），如果自定义验证器模块只公开该函数，则回退到
+`validateConfig`。`API_VALIDATOR_MODULE` 可以指向其他编译后的模块。
+如果没有可用的机器人验证器，则使用结构化回退逻辑检查当前核心字段类型。
 
-Validation failures return `422 Unprocessable Entity`:
+
+验证失败会返回 `422 Unprocessable Entity`：
 
 ```jsonc
 {
@@ -1644,26 +1644,26 @@ Validation failures return `422 Unprocessable Entity`:
 }
 ```
 
-When writes are disabled, `PUT` and `PATCH` return `403 Forbidden`.
+禁用写入功能时，`PUT` 和 `PATCH` 会返回 `403 Forbidden`。
 
-## Reading and editing the schedule
+## 读取和编辑计划
 
-The schedule endpoints expose the cron schedule used by the Docker-integrated
-API mode. Reading is always available. Writing must be explicitly enabled and
-is intended for the Docker image, where the cron template and `crontab` command
-are present.
+计划端点公开 Docker 集成 API 模式所使用的 cron 计划。
+读取功能始终可用。写入功能必须明确启用，并且主要用于包含 cron 模板和
+`crontab` 命令的 Docker 镜像。
 
-The effective schedule comes from one of two sources:
 
-1. `config/schedule.json`, after a schedule has been written through the API;
-2. `CRON_SCHEDULE`, when no persisted override exists.
+实际生效的计划来自以下两个来源之一：
 
-A persisted override takes precedence over `CRON_SCHEDULE` across container
-restarts because the file is stored in the existing `./config` volume.
+1. 通过 API 写入计划后生成的 `config/schedule.json`；
+2. 不存在持久化覆盖时使用 `CRON_SCHEDULE`。
+
+由于该文件保存在现有 `./config` 卷中，持久化覆盖在容器重启后仍然
+优先于 `CRON_SCHEDULE`。
 
 ### `GET /schedule`
 
-Returns the effective schedule and whether this API instance permits changes.
+返回实际生效的计划，以及当前 API 实例是否允许更改计划。
 
 **cURL**
 
@@ -1680,7 +1680,7 @@ const { data } = await api.get('/schedule')
 console.log(data)
 ```
 
-Response when the schedule still comes from the container environment:
+计划仍来自容器环境时的响应：
 
 ```json
 {
@@ -1695,48 +1695,48 @@ Response when the schedule still comes from the container environment:
 }
 ```
 
-Fields:
+字段：
 
-- `enabled`: whether a cron job should be installed;
-- `cron`: the effective five-field cron expression, or `null` when none exists;
-- `skipIfRunning`: stored scheduler preference. The integrated Docker trigger
-  already exits cleanly when another run is active;
-- `excludedAccountIndexes`: original `ACCOUNT_<N>` slots omitted from scheduled
-  runs;
-- `updatedAt`: time the persisted override was last written, otherwise `null`;
-- `timezone`: the active `TZ` value. Change `TZ` in the container environment,
-  not through this endpoint;
-- `source`: `env` for `CRON_SCHEDULE` or `override` for
-  `config/schedule.json`;
-- `writable`: whether `API_ALLOW_SCHEDULE_WRITE=true` is active.
+- `enabled`：是否应安装 cron 任务；
+- `cron`：实际生效的五字段 cron 表达式；不存在时为 `null`；
+- `skipIfRunning`：持久保存的调度器偏好。集成的 Docker 触发器
+  在另一项运行处于活动状态时已经会正常退出；
+- `excludedAccountIndexes`：计划运行时忽略的原始 `ACCOUNT_<N>`
+  槽位；
+- `updatedAt`：最后写入持久化覆盖的时间，否则为 `null`；
+- `timezone`：当前使用的 `TZ` 值。请在容器环境中更改 `TZ`，
+  而不是通过此端点更改；
+- `source`：使用 `CRON_SCHEDULE` 时为 `env`，使用
+  `config/schedule.json` 时为 `override`；
+- `writable`：`API_ALLOW_SCHEDULE_WRITE=true` 是否已生效。
 
-### `PUT /schedule` and `PATCH /schedule`
+### `PUT /schedule` 和 `PATCH /schedule`
 
-Enable schedule writes in the API process first:
+先在 API 进程中启用计划写入功能：
 
 ```dotenv
 API_ALLOW_SCHEDULE_WRITE=true
 ```
 
-For this endpoint, `PUT` and `PATCH` have the same partial-update behavior: only
-fields present in the JSON body are changed. The result is written atomically to
-`config/schedule.json`, then the live crontab is replaced immediately. A
-container restart is not required.
+对于此端点，`PUT` 和 `PATCH` 具有相同的部分更新行为：只更改 JSON 请求体中
+存在的字段。结果会以原子方式写入 `config/schedule.json`，随后立即替换当前
+crontab，无需重启容器。
 
-Supported body fields:
 
-| Field                    | Type                   | Description                                                                |
+支持的请求体字段：
+
+| 字段                     | 类型                   | 说明                                                                         |
 | ------------------------ | ---------------------- | -------------------------------------------------------------------------- |
-| `enabled`                | boolean                | Install or remove the cron job. Enabling requires a valid `cron` value.    |
-| `cron`                   | string                 | Numeric five-field cron expression, such as `0 7 * * *`.                   |
-| `skipIfRunning`          | boolean                | Scheduler preference retained in the persisted schedule.                   |
-| `excludedAccountIndexes` | positive integer array | Account slots excluded when cron or `RUN_ON_START` triggers a run via API. |
+| `enabled`                | 布尔值                 | 安装或移除 cron 任务。启用时需要有效的 `cron` 值。                           |
+| `cron`                   | 字符串                 | 数字形式的五字段 cron 表达式，例如 `0 7 * * *`。                            |
+| `skipIfRunning`          | 布尔值                 | 保留在持久化计划中的调度器偏好。                                             |
+| `excludedAccountIndexes` | 正整数数组             | cron 或 `RUN_ON_START` 通过 API 触发运行时要排除的账号槽位。                 |
 
-The cron parser accepts `*`, numeric values, comma-separated values, ranges,
-and steps within the normal five-field ranges. Named months/weekdays and macros
-such as `@daily` are not accepted.
+cron 解析器接受 `*`、数字值、逗号分隔值、范围和步长，
+但必须位于常规五字段范围内。不接受命名月份/星期和
+`@daily` 等宏。
 
-**cURL - enable a daily 07:00 schedule and exclude `ACCOUNT_2`**
+**cURL - 启用每天 07:00 执行的计划并排除 `ACCOUNT_2`**
 
 ```bash
 curl --request PATCH \
@@ -1772,26 +1772,26 @@ console.log(data)
 }
 ```
 
-Disable the saved schedule without deleting its other settings:
+禁用已保存的计划，但不删除其他设置：
 
 ```js
 await api.patch('/schedule', { enabled: false })
 ```
 
-Disabling removes the live crontab, but the override file remains authoritative.
-To return to the original `CRON_SCHEDULE` environment default, delete
-`config/schedule.json` and restart the container. There is no `DELETE /schedule`
-endpoint.
+禁用操作会移除当前 crontab，但覆盖文件仍是权威来源。
+要恢复原始 `CRON_SCHEDULE` 环境默认值，请删除
+`config/schedule.json` 并重启容器。不存在 `DELETE /schedule`
+端点。
 
-Invalid cron expressions, non-array exclusions, non-positive indexes, or
-enabling without a cron expression return `400 Bad Request`. When writes are
-disabled, both methods return `403 Forbidden`. Outside the supplied Docker
-image, a write can return `500` if the cron template or `crontab` executable is
-not available.
+无效 cron 表达式、非数组形式的排除项、非正数索引，或在没有 cron 表达式时启用计划，
+都会返回 `400 Bad Request`。禁用写入功能时，两种方法都返回
+`403 Forbidden`。在所提供的 Docker 镜像之外写入时，如果 cron 模板或
+`crontab` 可执行文件不可用，可能返回 `500`。
 
-## Axios response and error handling
 
-Axios places a successful JSON response in `response.data`:
+## Axios 响应和错误处理
+
+Axios 会将成功的 JSON 响应放在 `response.data` 中：
 
 ```js
 const response = await api.get('/points')
@@ -1800,7 +1800,7 @@ console.log(response.status) // 200
 console.log(response.data) // parsed JSON response
 ```
 
-For API errors, inspect `error.response.status` and `error.response.data`:
+对于 API 错误，请检查 `error.response.status` 和 `error.response.data`：
 
 ```js
 import axios from 'axios'
@@ -1821,22 +1821,22 @@ try {
 }
 ```
 
-Do not use a normal Axios JSON request for browser SSE. Use `EventSource` for
-`/events`. For diagnostic files, set `responseType` to `blob` in browsers or
-`arraybuffer` in Node.js.
+不要对浏览器 SSE 使用常规 Axios JSON 请求。访问 `/events` 时请使用
+`EventSource`。对于诊断文件，在浏览器中将 `responseType` 设为 `blob`，
+在 Node.js 中设为 `arraybuffer`。
 
-## PowerShell examples
+## PowerShell 示例
 
-PowerShell's `Invoke-RestMethod` is convenient on Windows:
+在 Windows 上使用 PowerShell 的 `Invoke-RestMethod` 很方便：
 
 ```powershell
 $BaseUrl = 'http://127.0.0.1:3010'
 $Headers = @{ Authorization = "Bearer $env:API_TOKEN" }
 
-# Health
+# 健康检查
 Invoke-RestMethod -Uri "$BaseUrl/health" -Headers $Headers
 
-# Start only ACCOUNT_2
+# 仅启动 ACCOUNT_2
 $Body = @{ accountIndex = 2 } | ConvertTo-Json
 Invoke-RestMethod `
     -Method Post `
@@ -1845,7 +1845,7 @@ Invoke-RestMethod `
     -ContentType 'application/json' `
     -Body $Body
 
-# Exclude ACCOUNT_2 and ACCOUNT_4
+# 排除 ACCOUNT_2 和 ACCOUNT_4
 $Body = @{ excludedAccountIndexes = @(2, 4) } | ConvertTo-Json
 Invoke-RestMethod `
     -Method Post `
@@ -1854,7 +1854,7 @@ Invoke-RestMethod `
     -ContentType 'application/json' `
     -Body $Body
 
-# Stop gracefully
+# 优雅停止
 Invoke-RestMethod `
     -Method Post `
     -Uri "$BaseUrl/stop" `
@@ -1863,8 +1863,8 @@ Invoke-RestMethod `
     -Body '{}'
 ```
 
-For raw SSE output in a Windows terminal, use `curl.exe` rather than PowerShell's
-`curl` alias:
+要在 Windows 终端中查看原始 SSE 输出，请使用 `curl.exe`，不要使用 PowerShell 的
+`curl` 别名：
 
 ```powershell
 curl.exe -sN `
@@ -1872,22 +1872,22 @@ curl.exe -sN `
   "http://127.0.0.1:3010/events?replay=50"
 ```
 
-## HTTP status codes
+## HTTP 状态码
 
-|                      Status | Meaning in this API                                                                  |
+|                      状态 | 在此 API 中的含义                                                                  |
 | --------------------------: | ------------------------------------------------------------------------------------ |
-|                    `200 OK` | Successful read, config/schedule update, or account session deletion.                |
-|              `202 Accepted` | Start, stop, restart, or shutdown request accepted.                                  |
-|            `204 No Content` | Successful CORS preflight.                                                           |
-|           `400 Bad Request` | Invalid JSON, account/email selection, arguments, schedule, oversized body, or path. |
-|          `401 Unauthorized` | Token required and missing or incorrect.                                             |
-|             `403 Forbidden` | Config writes, schedule writes, or arbitrary environment overrides are disabled.     |
-|             `404 Not Found` | Unknown endpoint, missing config/session, capture, or artifact.                      |
-|              `409 Conflict` | Conflicting run state, including session deletion while a run is active.             |
-|  `422 Unprocessable Entity` | Proposed config failed validation.                                                   |
-| `500 Internal Server Error` | Unexpected process, file, cron, validator, or request-handling failure.              |
+|                    `200 OK` | 成功读取、更新配置/计划或删除账号会话。                                            |
+|              `202 Accepted` | 已接受启动、停止、重启或关闭请求。                                                 |
+|            `204 No Content` | CORS 预检成功。                                                                    |
+|           `400 Bad Request` | JSON、账号/邮箱选择、参数、计划、请求体大小或路径无效。                            |
+|          `401 Unauthorized` | 需要令牌，但令牌缺失或不正确。                                                     |
+|             `403 Forbidden` | 配置写入、计划写入或任意环境变量覆盖已禁用。                                       |
+|             `404 Not Found` | 端点未知，或配置/会话、捕获目录、产物不存在。                                      |
+|              `409 Conflict` | 运行状态冲突，包括运行期间删除会话。                                               |
+|  `422 Unprocessable Entity` | 提交的配置未通过验证。                                                             |
+| `500 Internal Server Error` | 进程、文件、cron、验证器或请求处理发生意外错误。                                   |
 
-Most errors use this shape:
+大多数错误采用以下结构：
 
 ```json
 {
@@ -1896,36 +1896,36 @@ Most errors use this shape:
 }
 ```
 
-## Environment variables
+## 环境变量
 
-All variables are optional.
+所有变量均为可选。
 
-| Variable                   | Default                       | Purpose                                                                                     |
+| 变量                       | 默认值                        | 用途                                                                                         |
 | -------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
-| `API_HOST`                 | `127.0.0.1`                   | Interface to bind. Use `0.0.0.0` only when remote/container access is required.             |
-| `API_PORT`                 | `3010`                        | HTTP listen port.                                                                           |
-| `API_TOKEN`                | unset                         | Shared token required by every endpoint when configured.                                    |
-| `API_CORS_ORIGIN`          | `*`                           | Value returned in `Access-Control-Allow-Origin`.                                            |
-| `API_LOG_BUFFER`           | `2000`                        | Maximum structured log entries kept in memory.                                              |
-| `API_RUN_HISTORY`          | `20`                          | Maximum completed runs kept in memory.                                                      |
-| `API_STOP_TIMEOUT_MS`      | `15000`                       | Graceful-stop window before forced termination.                                             |
-| `API_RUN_COMMAND`          | auto                          | Override the executable used to launch the bot.                                             |
-| `API_RUN_ARGS`             | none                          | Default arguments for `API_RUN_COMMAND`; accepts whitespace-separated text or a JSON array. |
-| `API_DIAGNOSTICS_DIR`      | `<repo>/diagnostics`          | Read-only diagnostics directory.                                                            |
-| `API_ALLOW_CONFIG_WRITE`   | `false`                       | Permit `PUT` and `PATCH /config`.                                                           |
-| `API_ALLOW_SCHEDULE_WRITE` | `false`                       | Permit `PUT` and `PATCH /schedule`.                                                         |
-| `API_ALLOW_ENV_OVERRIDES`  | `false`                       | Permit arbitrary `env` fields in `/start` and `/restart`.                                   |
-| `API_ALLOW_CONFIG_REVEAL`  | `false`                       | Permit authenticated `GET /config?reveal=1`.                                                |
-| `API_VALIDATOR_MODULE`     | auto                          | Path to a compiled module exporting `validateConfig` or `ConfigSchema`.                     |
-| `SCHEDULE_FILE`            | `<repo>/config/schedule.json` | Override the persisted schedule file path.                                                  |
-| `CRON_SCHEDULE`            | unset                         | Base schedule reported and used when no persisted schedule override exists.                 |
-| `TZ`                       | `UTC`                         | Timezone used by cron and returned by `/schedule`.                                          |
+| `API_HOST`                 | `127.0.0.1`                   | 要绑定的接口。仅在需要远程/容器访问时使用 `0.0.0.0`。                                       |
+| `API_PORT`                 | `3010`                        | HTTP 监听端口。                                                                               |
+| `API_TOKEN`                | 未设置                        | 配置后每个端点都需要的共享令牌。                                                             |
+| `API_CORS_ORIGIN`          | `*`                           | 在 `Access-Control-Allow-Origin` 中返回的值。                                                |
+| `API_LOG_BUFFER`           | `2000`                        | 内存中保留的结构化日志条目上限。                                                             |
+| `API_RUN_HISTORY`          | `20`                          | 内存中保留的已完成运行记录上限。                                                             |
+| `API_STOP_TIMEOUT_MS`      | `15000`                       | 强制终止前等待正常停止的时间窗口。                                                           |
+| `API_RUN_COMMAND`          | 自动                          | 覆盖用于启动机器人的可执行文件。                                                             |
+| `API_RUN_ARGS`             | 无                            | `API_RUN_COMMAND` 的默认参数；接受空格分隔文本或 JSON 数组。                                |
+| `API_DIAGNOSTICS_DIR`      | `<repo>/diagnostics`          | 只读诊断目录。                                                                               |
+| `API_ALLOW_CONFIG_WRITE`   | `false`                       | 允许 `PUT` 和 `PATCH /config`。                                                             |
+| `API_ALLOW_SCHEDULE_WRITE` | `false`                       | 允许 `PUT` 和 `PATCH /schedule`。                                                           |
+| `API_ALLOW_ENV_OVERRIDES`  | `false`                       | 允许在 `/start` 和 `/restart` 中使用任意 `env` 字段。                                      |
+| `API_ALLOW_CONFIG_REVEAL`  | `false`                       | 允许经过认证的 `GET /config?reveal=1`。                                                    |
+| `API_VALIDATOR_MODULE`     | 自动                          | 指向导出 `validateConfig` 或 `ConfigSchema` 的编译模块。                                    |
+| `SCHEDULE_FILE`            | `<repo>/config/schedule.json` | 覆盖持久化计划文件路径。                                                                     |
+| `CRON_SCHEDULE`            | 未设置                        | 不存在持久化计划覆盖时报告和使用的基础计划。                                                 |
+| `TZ`                       | `UTC`                         | cron 使用并由 `/schedule` 返回的时区。                                                      |
 
-The Docker entrypoint also uses `API_MODE=true` to run this API as the main
-container process. In that mode, scheduled and `RUN_ON_START` executions are
-routed through `POST /start`, so the API can observe and control them.
+Docker 入口点还会使用 `API_MODE=true` 将此 API 作为容器主进程运行。
+在该模式下，计划运行和 `RUN_ON_START` 运行都通过 `POST /start` 路由，
+因此 API 可以观察和控制这些运行。
 
-The equivalent CLI flags are `--host`, `--port`, and `--token`:
+等效的 CLI 标志为 `--host`、`--port` 和 `--token`：
 
 ```bash
 node scripts/api/server.js \
@@ -1934,51 +1934,51 @@ node scripts/api/server.js \
   --token "YOUR_API_TOKEN"
 ```
 
-Through npm, include npm's argument separator:
+通过 npm 使用时，请包含 npm 的参数分隔符：
 
 ```bash
 npm run api -- --host 0.0.0.0 --port 3010 --token "YOUR_API_TOKEN"
 ```
 
-`API_HOST` and `API_TOKEN` take precedence over their CLI equivalents when they
-are already defined in the process environment or loaded `.env`. The `--port`
-flag takes precedence over `API_PORT`; invalid port values are rejected at
-startup.
+如果进程环境或已加载的 `.env` 中已经定义了 `API_HOST` 和 `API_TOKEN`，
+它们的优先级高于对应的 CLI 参数。`--port` 标志的优先级高于 `API_PORT`；
+无效端口值会在启动时被拒绝。
 
-The API normally launches `dist/index.js` with the current Node executable. If
-that file is missing, it falls back to the local `ts-node` CLI and
-`src/index.ts`.
 
-An explicit `API_RUN_COMMAND=npm.cmd` is redirected through npm's JavaScript CLI
-to avoid Windows `spawn EINVAL` problems. Other `.cmd` and `.bat` overrides are
-rejected because the API intentionally does not use an injection-prone shell.
+API 通常使用当前 Node 可执行文件启动 `dist/index.js`。如果该文件不存在，
+则回退到本地 `ts-node` CLI 和 `src/index.ts`。
 
-## Security guidance
 
-This service can start and stop processes, read logs and session metadata,
-delete an account's sessions, and potentially reveal or update configuration.
-Treat it as an administrative API.
+显式设置 `API_RUN_COMMAND=npm.cmd` 时，会通过 npm 的 JavaScript CLI 重定向，
+以避免 Windows `spawn EINVAL` 问题。其他 `.cmd` 和 `.bat` 覆盖会被拒绝，
+因为 API 有意不使用容易引发注入的 shell。
 
-- Keep `API_HOST=127.0.0.1` when only local applications need access.
-- Always set `API_TOKEN` before binding to `0.0.0.0` or another non-loopback
-  address.
-- Use a reverse proxy such as Caddy, nginx, or Traefik for TLS when traffic can
-  leave the machine.
-- Restrict `API_CORS_ORIGIN` to the actual dashboard origin instead of `*` when
-  a browser accesses the API directly.
-- Leave config writes, schedule writes, config reveal, and arbitrary environment
-  overrides disabled unless they are required.
-- Avoid putting the API token in URLs except where browser SSE requires it.
-- Do not expose the port directly to the public internet.
+## 安全建议
 
-The token is compared using a constant-time comparison after verifying equal
-length.
+此服务可以启动和停止进程、读取日志和会话元数据、删除账号会话，并且可能公开或更新配置。
 
-## Keeping the API running
+请将其视为管理 API。
 
-Run it under a process supervisor for long-lived use.
+- 仅本地应用需要访问时，保持 `API_HOST=127.0.0.1`。
+- 绑定到 `0.0.0.0` 或其他非环回地址之前，始终设置 `API_TOKEN`。
 
-### Development terminal
+- 当流量可能离开本机时，使用 Caddy、nginx 或 Traefik 等反向代理提供 TLS。
+
+- 浏览器直接访问 API 时，将 `API_CORS_ORIGIN` 限制为实际仪表盘来源，
+  不要使用 `*`。
+- 除非确有需要，否则保持配置写入、计划写入、配置公开和任意环境变量覆盖功能为禁用状态。
+
+- 除浏览器 SSE 确实需要外，避免将 API 令牌放入 URL。
+- 不要将端口直接暴露到公网。
+
+令牌会先验证长度相等，再使用恒定时间比较。
+
+
+## 保持 API 运行
+
+长期使用时，请在进程监管程序下运行。
+
+### 开发终端
 
 ```bash
 npm run api
@@ -1993,7 +1993,7 @@ pm2 save
 
 ### systemd
 
-Example service commands:
+服务命令示例：
 
 ```ini
 WorkingDirectory=/opt/microsoft-rewards-script
@@ -2004,7 +2004,7 @@ Restart=on-failure
 
 ### Docker
 
-Enable API mode, authenticate it, and publish the port in `compose.yaml`:
+在 `compose.yaml` 中启用 API 模式、配置认证并发布端口：
 
 ```yaml
 services:
@@ -2018,43 +2018,43 @@ services:
             - '3010:3010'
 ```
 
-Put the matching token in `.env`:
+在 `.env` 中设置匹配的令牌：
 
 ```dotenv
 API_TOKEN=replace-with-a-long-random-token
 ```
 
-The supplied Docker entrypoint defaults `API_HOST` to `0.0.0.0` in API mode so
-the published port is reachable. `CRON_SCHEDULE` remains the base schedule until
-`PUT` or `PATCH /schedule` creates `./config/schedule.json`. Cron-triggered and
-`RUN_ON_START` executions call the local API, so they appear in `/status`,
-`/logs`, `/points`, `/events`, and `/history` just like manual runs.
+所提供的 Docker 入口点在 API 模式下默认将 `API_HOST` 设为 `0.0.0.0`，
+以便访问已发布端口。在 `PUT` 或 `PATCH /schedule` 创建
+`./config/schedule.json` 之前，`CRON_SCHEDULE` 始终是基础计划。由 cron 和
+`RUN_ON_START` 触发的运行会调用本地 API，因此与手动运行一样，会显示在
+`/status`、`/logs`、`/points`、`/events` 和 `/history` 中。
 
-## Startup readiness
+## 启动就绪状态
 
-After the HTTP server begins listening, it writes one machine-readable line to
-stdout:
+HTTP 服务器开始监听后，会向标准输出写入一行机器可读内容：
+
 
 ```text
 __API_READY__ {"host":"127.0.0.1","port":3010,"pid":1234,"name":"microsoft-rewards-script","version":"4.1.0","auth":true}
 ```
 
-A launcher can wait for this line rather than relying on a fixed startup delay.
-If the port is already occupied, the API exits with an error instead of silently
-starting a second unusable instance.
+启动器可以等待此行，而不必依赖固定的启动延迟。
+如果端口已被占用，API 会报错退出，而不是悄悄启动第二个不可用实例。
 
-## File layout
 
-| File                | Responsibility                                                                        |
+## 文件布局
+
+| 文件                | 职责                                                                                |
 | ------------------- | ------------------------------------------------------------------------------------- |
-| `server.js`         | HTTP routing, authentication, CORS, SSE, diagnostics, config, and schedule endpoints. |
-| `processManager.js` | Child-process lifecycle, process-tree termination, log buffering, and status events.  |
-| `logParser.js`      | Structured log parsing and live run/point accumulation.                               |
-| `accounts.js`       | Safe account summaries and child-only account selection/remapping.                    |
-| `configEditor.js`   | Config loading, validation, deep merge, backup, and atomic replacement.               |
-| `scheduleStore.js`  | Schedule validation, persistence, reads, and live crontab application.                |
-| `sessionStore.js`   | Safe session metadata reads and account-specific SQLite session deletion.             |
-| `apply-schedule.js` | Restores a persisted schedule override during Docker startup.                         |
-| `trigger.js`        | Routes Docker cron and `RUN_ON_START` executions through the local API.               |
-| `runCommand.js`     | Cross-platform resolution of the command used to launch the bot.                      |
-| `lib.js`            | Environment, project-root, logging, config-redaction, and argument helpers.           |
+| `server.js`         | HTTP 路由、认证、CORS、SSE、诊断、配置和计划端点。                                  |
+| `processManager.js` | 子进程生命周期、进程树终止、日志缓冲和状态事件。                                    |
+| `logParser.js`      | 结构化日志解析和实时运行/积分累计。                                                  |
+| `accounts.js`       | 安全账号摘要和仅对子进程生效的账号选择/重映射。                                     |
+| `configEditor.js`   | 配置加载、验证、深度合并、备份和原子替换。                                          |
+| `scheduleStore.js`  | 计划验证、持久化、读取和实时 crontab 应用。                                          |
+| `sessionStore.js`   | 安全读取会话元数据，并按账号删除 SQLite 会话。                                      |
+| `apply-schedule.js` | 在 Docker 启动期间恢复持久化的计划覆盖。                                             |
+| `trigger.js`        | 将 Docker cron 和 `RUN_ON_START` 运行通过本地 API 路由。                             |
+| `runCommand.js`     | 跨平台解析用于启动机器人的命令。                                                     |
+| `lib.js`            | 环境变量、项目根目录、日志记录、配置脱敏和参数辅助函数。                             |

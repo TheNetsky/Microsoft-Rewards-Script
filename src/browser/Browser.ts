@@ -9,7 +9,7 @@ import { UserAgentManager } from './UserAgent'
 
 import type { Account, AccountProxy } from '../interface/Account'
 
-/* Test Stuff
+/* 测试工具
 https://abrahamjuliot.github.io/creepjs/
 https://botcheck.luminati.io/
 https://fv.pro/
@@ -124,13 +124,13 @@ class Browser {
 
             const screen = fingerprint.fingerprint.screen
 
-            //@ts-expect-error It doesn't like the browser instance from different packages
+            //@ts-expect-error 此处不接受来自不同包的浏览器实例
             const injected = await newInjectedContext(browser, {
                 fingerprint,
                 newContextOptions: {
                     permissions: [],
                     ignoreHTTPSErrors: hasProxy,
-                    // Restore cookies
+                    // 恢复 Cookie
                     ...(session?.storageState ? { storageState: session.storageState } : {}),
                     ...(this.bot.isMobile
                         ? {
@@ -169,12 +169,12 @@ class Browser {
                     }
                 } catch {}
 
-                // Block WebRTC so the real ip can't leak past the proxy
-                // @ts-expect-error Removing since it might potentionally, kinda unsurely leak the machine's details to browser
+                // 阻止 WebRTC 绕过代理泄露真实 IP
+                // @ts-expect-error 删除此项，因为它可能会向浏览器泄露本机信息
                 delete window.RTCPeerConnection
-                // @ts-expect-error Same as above
+                // @ts-expect-error 原因同上
                 delete window.webkitRTCPeerConnection
-                // @ts-expect-error if you read this, Netsky was here struggling :(
+                // @ts-expect-error 如果你看到了这里，说明 Netsky 曾为此苦苦挣扎 :(
                 delete window.RTCDataChannel
             })
 

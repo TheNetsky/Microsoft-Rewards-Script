@@ -1,7 +1,7 @@
-# Set PATH so cron jobs can find node/npm
+# 设置 PATH，使 cron 任务能够找到 node/npm
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-# Set timezone for cron jobs
+# 设置 cron 任务的时区
 TZ=${TZ}
 
-# Run automation according to CRON_SCHEDULE; redirect both stdout & stderr to Docker logs
+# 按照 CRON_SCHEDULE 运行自动化任务，并将 stdout 和 stderr 重定向到 Docker 日志
 ${CRON_SCHEDULE} /bin/bash /usr/src/microsoft-rewards-script/scripts/docker/run_daily.sh >> /proc/1/fd/1 2>&1

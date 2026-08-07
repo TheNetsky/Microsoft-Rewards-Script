@@ -1,16 +1,15 @@
 /**
  * ConfigEnvOverrides.ts
  *
- * Single source of truth for the CONFIG_* environment variable overrides
- * applied to config.json on every docker container start. Previously this
- * mapping existed twice in entrypoint.sh: once as a hand-written doc comment
- * and once as the actual `_cfg`/`_cfg_array` call list - the two had to be
- * kept in sync by hand. Now there's one table (ENV_OVERRIDES) that both the
- * apply logic and `list` output are generated from.
+ * CONFIG_* 环境变量覆盖的唯一事实来源；每次 Docker 容器启动时，
+ * 这些覆盖都会应用到 config.json。此前该映射在 entrypoint.sh 中存在两份：
+ * 一份是手写的文档注释，另一份是实际的 `_cfg`/`_cfg_array` 调用列表，
+ * 两者必须手动保持同步。现在只保留一个表（ENV_OVERRIDES），
+ * 应用逻辑和 `list` 输出均由此生成。
  *
- * Not used by bare metal at all - Load.ts/Validator.ts are untouched.
+ * 裸机运行完全不使用此模块，Load.ts/Validator.ts 不受影响。
  *
- * Usage:
+ * 用法：
  *   node dist/util/ConfigEnvOverrides.js apply --config <path>
  *   node dist/util/ConfigEnvOverrides.js list [--format table|env]
  */
@@ -21,12 +20,12 @@ export type OverrideType = 'string' | 'bool' | 'number' | 'array'
 
 export interface EnvOverrideEntry {
     env: string
-    path: string // dotted path into config.json
+    path: string // config.json 中以点分隔的路径
     type: OverrideType
 }
 
 export const ENV_OVERRIDES: EnvOverrideEntry[] = [
-    // General
+    // 常规
     { env: 'CONFIG_CLUSTERS', path: 'clusters', type: 'number' },
     { env: 'CONFIG_DEBUG_LOGS', path: 'debugLogs', type: 'bool' },
     { env: 'CONFIG_ERROR_DIAGNOSTICS', path: 'errorDiagnostics', type: 'bool' },
@@ -37,7 +36,7 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_ACCOUNT_DELAY_MIN', path: 'accountDelay.min', type: 'string' },
     { env: 'CONFIG_ACCOUNT_DELAY_MAX', path: 'accountDelay.max', type: 'string' },
 
-    // Workers
+    // 工作器
     { env: 'CONFIG_WORKER_DAILY_SET', path: 'workers.doDailySet', type: 'bool' },
     { env: 'CONFIG_WORKER_CLAIM_BONUS_POINTS', path: 'workers.doClaimBonusPoints', type: 'bool' },
     { env: 'CONFIG_WORKER_MORE_PROMOTIONS', path: 'workers.doMorePromotions', type: 'bool' },
@@ -51,7 +50,7 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_WORKER_ACTIVATE_SEARCH_PERK', path: 'workers.doActivateSearchPerk', type: 'bool' },
     { env: 'CONFIG_WORKER_VISUAL_SEARCH', path: 'workers.doVisualSearch', type: 'bool' },
 
-    // Search settings
+    // 搜索设置
     { env: 'CONFIG_SEARCH_SCROLL_RANDOM', path: 'searchSettings.scrollRandomResults', type: 'bool' },
     { env: 'CONFIG_SEARCH_CLICK_RANDOM', path: 'searchSettings.clickRandomResults', type: 'bool' },
     { env: 'CONFIG_SEARCH_PARALLEL', path: 'searchSettings.parallelSearching', type: 'bool' },
@@ -66,33 +65,33 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_SEARCH_QUERY_ENGINES', path: 'searchSettings.queryEngines', type: 'array' },
     { env: 'CONFIG_SEARCH_ON_BING_LOCAL', path: 'searchOnBingLocalQueries', type: 'bool' },
 
-    // Activities
+    // 活动
     { env: 'CONFIG_ACTIVITY_URL_REWARD', path: 'activities.urlReward', type: 'bool' },
     { env: 'CONFIG_ACTIVITY_SEARCH_ON_BING', path: 'activities.searchOnBing', type: 'bool' },
 
-    // Experimental
+    // 实验性功能
     { env: 'CONFIG_EXPERIMENTAL_API_SEARCH', path: 'experimental.apiSearch', type: 'bool' },
     { env: 'CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING', path: 'experimental.apiSearchOnBing', type: 'bool' },
 
-    // Proxy
+    // 代理
     { env: 'CONFIG_PROXY_QUERY_ENGINE', path: 'proxy.queryEngine', type: 'bool' },
 
-    // Console log filter (levels/keywords are comma-separated)
+    // 控制台日志过滤器（级别/关键词以逗号分隔）
     { env: 'CONFIG_LOG_FILTER_ENABLED', path: 'consoleLogFilter.enabled', type: 'bool' },
     { env: 'CONFIG_LOG_FILTER_MODE', path: 'consoleLogFilter.mode', type: 'string' },
     { env: 'CONFIG_LOG_FILTER_LEVELS', path: 'consoleLogFilter.levels', type: 'array' },
     { env: 'CONFIG_LOG_FILTER_KEYWORDS', path: 'consoleLogFilter.keywords', type: 'array' },
 
-    // Discord webhook
+    // Discord Webhook 配置
     { env: 'CONFIG_DISCORD_ENABLED', path: 'webhook.discord.enabled', type: 'bool' },
     { env: 'CONFIG_DISCORD_URL', path: 'webhook.discord.url', type: 'string' },
 
-    // Telegram webhook
+    // Telegram Webhook 配置
     { env: 'CONFIG_TELEGRAM_ENABLED', path: 'webhook.telegram.enabled', type: 'bool' },
     { env: 'CONFIG_TELEGRAM_BOTTOKEN', path: 'webhook.telegram.botToken', type: 'string' },
     { env: 'CONFIG_TELEGRAM_CHATID', path: 'webhook.telegram.chatId', type: 'string' },
 
-    // ntfy webhook (tags are comma-separated e.g. "bot,notify")
+    // ntfy webhook（标签以逗号分隔，例如 "bot,notify"）
     { env: 'CONFIG_NTFY_ENABLED', path: 'webhook.ntfy.enabled', type: 'bool' },
     { env: 'CONFIG_NTFY_URL', path: 'webhook.ntfy.url', type: 'string' },
     { env: 'CONFIG_NTFY_TOPIC', path: 'webhook.ntfy.topic', type: 'string' },
@@ -101,15 +100,15 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_NTFY_PRIORITY', path: 'webhook.ntfy.priority', type: 'number' },
     { env: 'CONFIG_NTFY_TAGS', path: 'webhook.ntfy.tags', type: 'array' },
 
-    // Webhook log filter
+    // Webhook 日志过滤器
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_ENABLED', path: 'webhook.webhookLogFilter.enabled', type: 'bool' },
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_MODE', path: 'webhook.webhookLogFilter.mode', type: 'string' },
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_LEVELS', path: 'webhook.webhookLogFilter.levels', type: 'array' },
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_KEYWORDS', path: 'webhook.webhookLogFilter.keywords', type: 'array' }
 ]
 
-// headless is always forced true in docker - not env-var driven, so it isn't
-// in the table above, but it's applied the same way every start.
+// Docker 中始终强制将 headless 设为 true；它不由环境变量驱动，因此不在上表中，
+// 但每次启动时会以相同方式应用。
 const FORCED_OVERRIDES: { path: string; value: unknown }[] = [{ path: 'headless', value: true }]
 
 function setDeep(obj: Record<string, unknown>, dottedPath: string, value: unknown): void {
@@ -156,10 +155,10 @@ export interface OverrideError {
 }
 
 /**
- * Reads ENV_OVERRIDES against `env` and returns the values to apply.
- * Matches the previous bash semantics: a scalar var that's unset OR set to
- * an empty string is skipped (no way to distinguish the two in `_cfg`); an
- * array var that's unset is skipped, but set-to-empty applies `[]`.
+ * 根据 `env` 读取 ENV_OVERRIDES，并返回要应用的值。
+ * 与之前的 bash 语义一致：未设置或设为空字符串的标量变量会被跳过
+ * （`_cfg` 无法区分这两种情况）；未设置的数组变量会被跳过，
+ * 但设为空字符串时会应用 `[]`。
  */
 export function computeOverrides(env: NodeJS.ProcessEnv = process.env): {
     applied: ComputedOverride[]
@@ -198,10 +197,9 @@ export interface ApplyReport {
 }
 
 /**
- * Applies FORCED_OVERRIDES + ENV_OVERRIDES to config.json in one atomic
- * write. Unlike the old bash version (which wrote incrementally per
- * variable, so an invalid value left partial changes on disk), this
- * validates everything first and only writes if there are no errors.
+ * 通过一次原子写入，将 FORCED_OVERRIDES 和 ENV_OVERRIDES 应用到 config.json。
+ * 与旧版 bash 实现不同（旧版会按变量逐个写入，因此无效值会在磁盘上留下部分更改），
+ * 此实现会先验证全部内容，只有不存在错误时才写入。
  */
 export function applyEnvOverrides(configPath: string, env: NodeJS.ProcessEnv = process.env): ApplyReport {
     const { applied, errors } = computeOverrides(env)
@@ -213,14 +211,14 @@ export function applyEnvOverrides(configPath: string, env: NodeJS.ProcessEnv = p
     for (const { path: p, value } of FORCED_OVERRIDES) setDeep(config, p, value)
     for (const { path: p, value } of applied) setDeep(config, p, value)
 
-    // No .bak here - this runs on every container start, unlike the rarer
-    // default-sync patch, so a backup per boot would just be noise.
+    // 此处不生成 .bak：它会在每次容器启动时运行，不同于较少执行的默认值同步补丁，
+    // 因此每次启动都备份只会产生无用文件。
     writeConfigAtomic(configPath, config, { backup: false })
 
     return { configPath, forced: FORCED_OVERRIDES, applied, errors: [] }
 }
 
-// ── CLI entry point, used by entrypoint.sh ──
+// ── entrypoint.sh 使用的 CLI 入口点 ──
 if (require.main === module) {
     const args = process.argv.slice(2)
     const command = args[0]

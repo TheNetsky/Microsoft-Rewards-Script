@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Ensure Playwright uses preinstalled browsers
+# 确保 Playwright 使用预安装的浏览器
 export PLAYWRIGHT_BROWSERS_PATH=0
 
 SCRIPT_DIR="/usr/src/microsoft-rewards-script"
 
-# 1. Timezone: default to UTC if not provided
+# 1. 时区：未提供时默认使用 UTC
 : "${TZ:=UTC}"
 ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
 echo "$TZ" > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
 
-# 2. Validate CRON_SCHEDULE (not required in API mode)
+# 2. 验证 CRON_SCHEDULE（API 模式下不需要）
 if [ "${API_MODE:-false}" != "true" ]; then
   if [ -z "${CRON_SCHEDULE:-}" ]; then
     echo "ERROR: CRON_SCHEDULE environment variable is not set." >&2
@@ -22,14 +22,14 @@ if [ "${API_MODE:-false}" != "true" ]; then
   fi
 fi
 
-# 3. Accounts: read directly from ACCOUNT_N_* env vars by the app at runtime.
+# 3. 账号：应用在运行时直接读取 ACCOUNT_N_* 环境变量。
 #
-#    Add one numbered block per account in .env:
+#    在 .env 中为每个账号添加一个编号配置块：
 #      ACCOUNT_1_EMAIL, ACCOUNT_1_PASSWORD, ...
 #      ACCOUNT_2_EMAIL, ACCOUNT_2_PASSWORD, ...
 #
-#    No accounts.json is generated anymore - loadAccounts() parses the
-#    environment. This is just a fail-fast presence check.
+#    不再生成 accounts.json，loadAccounts() 会解析环境变量。
+#    此处仅执行快速失败的存在性检查。
 mapfile -t account_indexes < <(
   compgen -e | sed -n 's/^ACCOUNT_\([1-9][0-9]*\)_EMAIL$/\1/p' | sort -n -u
 )
@@ -54,31 +54,28 @@ else
   echo "[entrypoint] Found $acct_count account(s) in environment"
 fi
 
-# 4. Config: generate/sync config.json
+# 4. 配置：生成/同步 config.json
 #
-#    Generation and drift-detection are delegated to dist/util/ConfigSync.js
-#    (built from src/util/ConfigSync.ts), the same module the API's config
-#    editor uses, so this logic lives in exactly one place. See that file for
-#    the diff/merge implementation.
+#    生成和偏差检测委托给 dist/util/ConfigSync.js
+#    （由 src/util/ConfigSync.ts 构建），API 配置编辑器也使用同一模块，
+#    因此该逻辑只维护一份。差异比较/合并实现请参阅该文件。
 #
-#    Behaviour:
-#      - No config.json       → generated from config.example.json
-#      - config.json exists   → compared against config.example.json;
-#                               CONFIG_* overrides always applied afterward
-#      - Schema drift         → missing keys are reported. Set
-#                               CONFIG_AUTO_SYNC=true to patch them into the
-#                               file automatically (a .bak backup is kept);
-#                               default is report-only, matching prior
-#                               behaviour.
-#      - Corrupt config.json  → fails loudly instead of being silently
-#                               overwritten.
+#    行为：
+#      - 没有 config.json       → 根据 config.example.json 生成
+#      - config.json 已存在     → 与 config.example.json 比较；
+#                                 随后始终应用 CONFIG_* 覆盖配置
+#      - 配置结构发生偏差       → 报告缺少的键。设置
+#                                 CONFIG_AUTO_SYNC=true 可自动补充到文件中
+#                                 （同时保留 .bak 备份）；默认仅报告，
+#                                 与此前行为一致。
+#      - config.json 已损坏     → 明确失败，而不是静默覆盖。
 #
-#    headless is always forced true - it is not optional in Docker.
+#    headless 始终强制设为 true，在 Docker 中不可选。
 #
-#    CONFIG_* env var overrides (applied on every startup) are defined once,
-#    in src/util/ConfigEnvOverrides.ts (ENV_OVERRIDES table) - not here.
-#    Run `node dist/util/ConfigEnvOverrides.js list` for the full current
-#    list of supported variables and the config path each maps to.
+#    CONFIG_* 环境变量覆盖配置（每次启动时应用）统一定义在
+#    src/util/ConfigEnvOverrides.ts（ENV_OVERRIDES 表）中，而不是此处。
+#    运行 `node dist/util/ConfigEnvOverrides.js list` 可查看当前支持的
+#    完整变量列表及每个变量映射的配置路径。
 #
 CONFIG_FILE="$SCRIPT_DIR/config/config.json"
 CONFIG_EXAMPLE="$SCRIPT_DIR/config.example.json"
@@ -88,8 +85,8 @@ if ! [ -f "$CONFIG_EXAMPLE" ]; then
   exit 1
 fi
 
-# A single-file bind mount whose host path did not exist makes Docker create a
-# *directory* at config.json. Fail clearly instead of writing a broken config.
+# 如果单文件绑定挂载的主机路径不存在，Docker 会在 config.json 位置创建
+# 一个目录。此时明确失败，避免写入损坏的配置。
 if [ -d "$CONFIG_FILE" ]; then
   echo "ERROR: $CONFIG_FILE is a directory, not a file." >&2
   echo "       ./config.json likely did not exist on the host when the container" >&2
@@ -107,9 +104,9 @@ if ! node "$SCRIPT_DIR/dist/util/ConfigSync.js" sync "${SYNC_ARGS[@]}"; then
   exit 1
 fi
 
-# Apply CONFIG_* env var overrides (always runs, regardless of config
-# source). Delegates to dist/util/ConfigEnvOverrides.js (built from
-# src/util/ConfigEnvOverrides.ts) - see that file for the full mapping table.
+# 应用 CONFIG_* 环境变量覆盖配置（无论配置来源如何，始终执行）。
+# 此操作委托给 dist/util/ConfigEnvOverrides.js（由
+# src/util/ConfigEnvOverrides.ts 构建），完整映射表请参阅该文件。
 echo "[entrypoint] Applying CONFIG_* environment variable overrides..."
 if ! node "$SCRIPT_DIR/dist/util/ConfigEnvOverrides.js" apply --config "$CONFIG_FILE"; then
   echo "ERROR: applying CONFIG_* overrides failed - see above." >&2
@@ -118,20 +115,19 @@ fi
 
 echo "[entrypoint] Config ready."
 
-# Link the generated config back to the root so the app script can find it
+# 将生成的配置链接回根目录，以便应用脚本找到它
 ln -sf "$CONFIG_FILE" "$SCRIPT_DIR/config.json"
 
-# Snapshot the full container environment for cron-spawned runs
+# 保存完整的容器环境，供 cron 启动的任务使用
 export -p > /etc/container_env
 chmod 600 /etc/container_env
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Initial run without sleep if RUN_ON_START=true
+# 5. 当 RUN_ON_START=true 时立即执行首次任务，不进行等待
 # ─────────────────────────────────────────────────────────────────────────────
 if [ "${RUN_ON_START:-false}" = "true" ]; then
-  # Always go through run_daily.sh so the lockfile is acquired and the same
-  # code path runs regardless of mode.  In API mode, run_daily.sh calls
-  # trigger.js which waits for the API server to be ready before firing.
+  # 始终通过 run_daily.sh 执行，以获取锁文件并确保所有模式使用相同代码路径。
+  # 在 API 模式下，run_daily.sh 会调用 trigger.js，后者等待 API 服务器就绪后再触发任务。
   echo "[entrypoint] Starting initial run in background at $(date)"
   (
     cd "$SCRIPT_DIR" || {
@@ -145,28 +141,26 @@ if [ "${RUN_ON_START:-false}" = "true" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Start: scheduler-only (default) or API-integrated mode
+# 6. 启动：仅调度器（默认）或 API 集成模式
 # ─────────────────────────────────────────────────────────────────────────────
-# Default API_HOST to 0.0.0.0 so Docker port-mapping works out of the box.
+# API_HOST 默认为 0.0.0.0，使 Docker 端口映射无需额外配置即可工作。
 : "${API_HOST:=0.0.0.0}"
 export API_HOST
 
 if [ "${API_MODE:-false}" = "true" ]; then
-  # API-integrated mode:
-  #   - The API server is the main (foreground) process and becomes PID 1.
-  #   - The cron schedule can come from two places, checked in this order:
-  #       1. config/schedule.json - a persisted override written by
-  #          PUT /schedule (e.g. from the dashboard). Present only if that
-  #          endpoint has been used at least once; survives restarts because
-  #          it lives in the ./config bind mount.
-  #       2. CRON_SCHEDULE - the env var, exactly as before. This remains the
-  #          only thing that matters for anyone not using PUT /schedule.
-  #   - Either way, if a schedule is active, cron runs as a background daemon;
-  #     run_daily.sh detects API_MODE=true and calls POST /start via
-  #     scripts/api/trigger.js instead of running npm start directly, so the
-  #     API server has full visibility and control over every run.
-  #   - With neither source configured, runs must be triggered manually via
-  #     POST /start.
+  # API 集成模式：
+  #   - API 服务器是主进程（前台进程），并成为 PID 1。
+  #   - cron 计划可以来自两个位置，并按以下顺序检查：
+  #       1. config/schedule.json：由 PUT /schedule（例如通过仪表板）写入的
+  #          持久化覆盖配置。仅当该端点至少使用过一次时存在；由于文件位于
+  #          ./config 绑定挂载中，因此重启后仍会保留。
+  #       2. CRON_SCHEDULE：与此前完全相同的环境变量。对于未使用
+  #          PUT /schedule 的用户，仍然只需关注此项。
+  #   - 无论使用哪种来源，只要计划有效，cron 就会作为后台守护进程运行；
+  #     run_daily.sh 检测到 API_MODE=true 后，会通过 scripts/api/trigger.js
+  #     调用 POST /start，而不是直接运行 npm start，使 API 服务器能够完整
+  #     查看并控制每次任务。
+  #   - 如果两个来源都未配置，则必须通过 POST /start 手动触发任务。
   export TZ
 
   SCHEDULE_OVERRIDE="${SCHEDULE_FILE:-$SCRIPT_DIR/config/schedule.json}"
@@ -197,7 +191,7 @@ if [ "${API_MODE:-false}" = "true" ]; then
   exec node scripts/api/server.js
 fi
 
-# Scheduler-only mode (default): cron calls npm start directly.
+# 仅调度器模式（默认）：cron 直接调用 npm start。
 if [ ! -f /etc/cron.d/microsoft-rewards-cron.template ]; then
   echo "ERROR: Cron template /etc/cron.d/microsoft-rewards-cron.template not found." >&2
   exit 1
@@ -210,5 +204,5 @@ crontab /etc/cron.d/microsoft-rewards-cron
 
 echo "[entrypoint] Cron configured with schedule: $CRON_SCHEDULE and timezone: $TZ; starting cron at $(date)"
 
-# 7. Start cron in foreground (PID 1)
+# 7. 在前台启动 cron（PID 1）
 exec cron -f

@@ -116,7 +116,7 @@ export class TotpLogin {
                 await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector)
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
-                // Check if wrong code was entered
+        // 检查是否输入了错误的验证码
                 const errorMessage = await getErrorMessage(page)
                 if (errorMessage) {
                     this.bot.logger.warn(

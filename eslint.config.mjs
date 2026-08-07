@@ -25,6 +25,6 @@ export default tseslint.config(
             'preserve-caught-error': 'off'
         }
     },
-    // Must come last: disables ESLint rules that conflict with Prettier formatting
+    // 必须放在最后：禁用与 Prettier 格式化冲突的 ESLint 规则
     prettier
 )
