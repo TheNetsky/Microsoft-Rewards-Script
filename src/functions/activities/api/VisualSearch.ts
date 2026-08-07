@@ -11,9 +11,9 @@ const VERIFIED_ACTIVITY_TYPES = new Map<string, number>([
     ['visualsearch_streak_activation_v2', 11]
 ])
 
-const MAX_ATTEMPTS = 3
-
-const MAX_SEED_ROLLS = 3
+const MAX_ATTEMPTS = 4
+const MAX_ACQUISITION_FAILURES_PER_ATTEMPT = 3
+const REGISTRATION_CHECKS = 3
 
 type ActivationResult = 'activated' | 'already-active' | 'absent' | 'failed'
 
@@ -294,9 +294,10 @@ export class VisualSearch extends Workers {
 
     private async performDailySearch(): Promise<number> {
         const seenBcids = new Set<string>()
+        const candidateSeeds = await this.bot.browser.func.getVisualSearchSeedUrls()
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            const visual = await this.acquireFreshVisualSearch(seenBcids, attempt)
+            const visual = await this.acquireFreshVisualSearch(seenBcids, candidateSeeds, attempt)
             if (!visual) {
                 await this.bot.utils.wait(this.bot.utils.randomDelay(3000, 6000))
                 continue
@@ -318,7 +319,7 @@ export class VisualSearch extends Workers {
                 return gained
             }
 
-            if (await this.dayRegistered()) {
+            if (await this.waitForDayRegistration()) {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'VISUAL-SEARCH',
@@ -328,7 +329,7 @@ export class VisualSearch extends Workers {
                 return 0
             }
 
-            if (res.ig) {
+            if (res.acknowledged) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'VISUAL-SEARCH',
@@ -356,17 +357,25 @@ export class VisualSearch extends Workers {
     // bcid is derived from the image bytes, so a repeated seed produces a blob bing already credited
     private async acquireFreshVisualSearch(
         seen: Set<string>,
+        candidateSeeds: string[],
         attempt: number
     ): Promise<{ bcid: string; query: string; serpUrl: string } | null> {
-        for (let roll = 1; roll <= MAX_SEED_ROLLS; roll++) {
-            const visual = await this.bot.browser.func.acquireVisualSearch()
+        let acquisitionFailures = 0
+
+        while (candidateSeeds.length) {
+            const seed = candidateSeeds.shift()
+            if (!seed) continue
+
+            const visual = await this.bot.browser.func.acquireVisualSearch(seed)
             if (!visual) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'VISUAL-SEARCH',
-                    `Could not obtain a visual search (attempt ${attempt}/${MAX_ATTEMPTS})`
+                    `Could not obtain a visual search from one candidate (attempt ${attempt}/${MAX_ATTEMPTS})`
                 )
-                return null
+                acquisitionFailures++
+                if (acquisitionFailures >= MAX_ACQUISITION_FAILURES_PER_ATTEMPT) return null
+                continue
             }
 
             if (!seen.has(visual.bcid)) {
@@ -377,7 +386,7 @@ export class VisualSearch extends Workers {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'VISUAL-SEARCH',
-                `Seed produced an already-used bcid=${visual.bcid.slice(0, 14)} - re-rolling (${roll}/${MAX_SEED_ROLLS})`
+                `Skipping already-tried bcid=${visual.bcid.slice(0, 14)} | candidatesRemaining=${candidateSeeds.length}`
             )
             await this.bot.utils.wait(this.bot.utils.randomDelay(1000, 2000))
         }
@@ -385,9 +394,20 @@ export class VisualSearch extends Workers {
         this.bot.logger.warn(
             this.bot.isMobile,
             'VISUAL-SEARCH',
-            `Seed rotation is not varying the bcid (attempt ${attempt}/${MAX_ATTEMPTS}) - check the image source`
+            `No unused visual-search seed remains (attempt ${attempt}/${MAX_ATTEMPTS})`
         )
         return null
+    }
+
+    private async waitForDayRegistration(): Promise<boolean> {
+        for (let check = 1; check <= REGISTRATION_CHECKS; check++) {
+            if (check > 1) {
+                await this.bot.utils.wait(this.bot.utils.randomDelay(2000, 4000))
+            }
+            if (await this.dayRegistered()) return true
+        }
+
+        return false
     }
 
     private async dayRegistered(): Promise<boolean> {

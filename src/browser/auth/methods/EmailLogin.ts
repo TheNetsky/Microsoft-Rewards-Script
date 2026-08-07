@@ -31,9 +31,19 @@ export class EmailLogin {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Email prefilled')
             }
 
-            await page.waitForSelector(this.submitButton, { state: 'visible', timeout: 2000 }).catch(() => {})
+            const submitButton = await page
+                .waitForSelector(this.submitButton, { state: 'visible', timeout: 2000 })
+                .catch(() => null)
+            if (!submitButton) {
+                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Submit button not found')
+                return 'error'
+            }
 
-            await this.bot.browser.utils.ghostClick(page, this.submitButton)
+            const clicked = await this.bot.browser.utils.ghostClick(page, this.submitButton)
+            if (!clicked) {
+                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Could not submit email')
+                return 'error'
+            }
             this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Email submitted')
 
             return 'ok'
@@ -68,10 +78,17 @@ export class EmailLogin {
                 .waitForSelector(this.submitButton, { state: 'visible', timeout: 2000 })
                 .catch(() => null)
 
-            if (submitButton) {
-                await this.bot.browser.utils.ghostClick(page, this.submitButton)
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Password submitted')
+            if (!submitButton) {
+                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Submit button not found')
+                return 'error'
             }
+
+            const clicked = await this.bot.browser.utils.ghostClick(page, this.submitButton)
+            if (!clicked) {
+                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Could not submit password')
+                return 'error'
+            }
+            this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Password submitted')
 
             return 'ok'
         } catch (error) {

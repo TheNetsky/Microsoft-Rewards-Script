@@ -55,6 +55,7 @@ export function createRunState() {
         accountsTotal: null,
         currentEmail: null,
         userToEmail: {}, // log "user" (email localpart) -> full email, for attributing live lines
+        lastPointUpdateAt: null,
         totals: null, // { collected, oldTotal, newTotal, runtimeMinutes, accountsProcessed }
         order: [], // emails in the order they started
         accounts: {}, // email -> account summary
@@ -70,6 +71,8 @@ function ensureAccount(state, email) {
         state.accounts[email] = {
             email,
             geoLocale: null,
+            locale: null,
+            cachedRegion: null,
             initialPoints: null,
             collectedPoints: null,
             finalPoints: null,
@@ -93,8 +96,9 @@ function ensureAccount(state, email) {
 
 const RE = {
     runStart: /^Starting Microsoft Rewards Script \| v(\S+) \| Accounts: (\d+) \| Clusters: (\d+)/,
-    accountStart: /^Starting account: (\S+) \| geoLocale: (.+?)\s*$/,
-    earnable: /^Earnable today \| Mobile: (\d+) \| Browser: (\d+) \| App: (\d+) \| (\S+) \| locale: (\S+)/,
+    accountStart:
+        /^Starting account: (\S+) \| geoLocale: ([^|]+?)(?: \| locale: (\S+))?(?: \| cachedRegion: (\S+))?\s*$/,
+    earnable: /^Earnable today \| Mobile: (\d+) \| Browser: (\d+) \| App: (\d+) \| (\S+) \| locale: (\S+)\s*$/,
     searchSummary: /^Search summary \| mobile=(-?\d+) \| desktop=(-?\d+) \| bonus=(-?\d+) \| total=(-?\d+)/,
     streakProtection:
         /^Snapshot complete \| offers=(\d+) \| reportable=(\d+) \| streaks=(\d+) \| streakProtectionEnabled=(true|false|null) \| streakProtectionRemainingDays=(\d+|null) \| streakCounter=(\d+|null) \| level=([^|]+) \| account=(\S+@\S+)$/,
@@ -116,6 +120,14 @@ const RE = {
 function numericField(message, name) {
     const match = message.match(new RegExp(`(?:^| \\| )${name}=(-?\\d+)(?= \\| |$)`))
     return match ? Number(match[1]) : null
+}
+
+function eventTime(entry) {
+    return entry.receivedAt ?? entry.ts ?? null
+}
+
+function accountEmailForEntry(state, entry) {
+    return (entry.user && state.userToEmail[entry.user]) || state.currentEmail || null
 }
 
 function pointEventSource(title, message) {
@@ -156,14 +168,15 @@ function pointEventSource(title, message) {
 function applyLivePoints(state, entry) {
     const msg = entry.message ?? ''
 
-    const emailFromUser = user => (user ? state.userToEmail[user] : null)
-    const target = email => ensureAccount(state, email || emailFromUser(entry.user) || state.currentEmail)
+    const target = email => ensureAccount(state, email || accountEmailForEntry(state, entry))
     const num = s => {
         const n = Number(s)
         return Number.isFinite(n) ? n : null
     }
     const touch = acc => {
-        acc.live.lastUpdateTs = entry.ts
+        const at = eventTime(entry)
+        acc.live.lastUpdateTs = at
+        state.lastPointUpdateAt = at
     }
     const setBalance = (acc, balance) => {
         if (!acc || balance == null) return false
@@ -256,7 +269,11 @@ export function applyLogToRunState(state, entry) {
         case 'ACCOUNT-START':
             if ((m = msg.match(RE.accountStart))) {
                 const acc = ensureAccount(state, m[1])
-                if (acc) acc.geoLocale = m[2]
+                if (acc) {
+                    acc.geoLocale = m[2].trim()
+                    acc.locale = m[3] || null
+                    acc.cachedRegion = m[4] || null
+                }
                 state.currentEmail = m[1]
                 if (entry.user) state.userToEmail[entry.user] = m[1] // map localpart -> full email
                 state.pendingDelay = null
@@ -269,7 +286,7 @@ export function applyLogToRunState(state, entry) {
                 state.pendingDelay = {
                     seconds: Number(m[1]),
                     nextEmail: m[2] || null,
-                    sinceTs: entry.ts
+                    sinceTs: eventTime(entry)
                 }
                 return 'account-delay'
             }
@@ -281,14 +298,15 @@ export function applyLogToRunState(state, entry) {
                 const acc = ensureAccount(state, email)
                 if (acc) {
                     acc.earnable = { mobile: Number(m[1]), browser: Number(m[2]), app: Number(m[3]) }
+                    acc.locale ??= m[5]
                 }
                 state.currentEmail = email
             }
             break
 
         case 'SEARCH-MANAGER':
-            if ((m = msg.match(RE.searchSummary)) && state.currentEmail) {
-                const acc = ensureAccount(state, state.currentEmail)
+            if ((m = msg.match(RE.searchSummary))) {
+                const acc = ensureAccount(state, accountEmailForEntry(state, entry))
                 if (acc) {
                     acc.searchSummary = {
                         mobile: Number(m[1]),
@@ -308,7 +326,7 @@ export function applyLogToRunState(state, entry) {
                         enabled: m[4] === 'null' ? null : m[4] === 'true',
                         remainingDays: m[5] === 'null' ? null : Number(m[5]),
                         streakCounter: m[6] === 'null' ? null : Number(m[6]),
-                        updatedAt: entry.ts
+                        updatedAt: eventTime(entry)
                     }
                 }
                 return 'streak-protection'
@@ -326,6 +344,9 @@ export function applyLogToRunState(state, entry) {
                     acc.success = true
                     acc.live.gained = Number(m[2])
                     acc.live.balance = Number(m[4])
+                    const at = eventTime(entry)
+                    acc.live.lastUpdateTs = at
+                    state.lastPointUpdateAt = at
                 }
                 return 'account-end'
             }
@@ -374,11 +395,6 @@ export function summarizeRunState(state) {
     const collected = state.totals?.collected ?? accounts.reduce((sum, a) => sum + accountCollected(a), 0)
 
     const current = state.currentEmail ? state.accounts[state.currentEmail] : null
-    let lastUpdateTs = null
-    for (const a of accounts) {
-        if (a.live?.lastUpdateTs) lastUpdateTs = a.live.lastUpdateTs
-    }
-
     return {
         version: state.version,
         clusters: state.clusters,
@@ -392,7 +408,7 @@ export function summarizeRunState(state) {
             currentAccount: state.currentEmail,
             currentBalance: current?.live?.balance ?? null,
             gained: collected,
-            updatedAt: lastUpdateTs
+            updatedAt: state.lastPointUpdateAt
         },
         accounts
     }

@@ -29,9 +29,16 @@ function getDb(sessionPath: string): DatabaseSync {
     if (db) return db
 
     const dir = path.resolve(process.cwd(), sessionPath)
-    fs.mkdirSync(dir, { recursive: true })
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
+    try {
+        fs.chmodSync(dir, 0o700)
+    } catch {}
 
-    db = new DatabaseSync(path.join(dir, 'sessions.db'))
+    const dbPath = path.join(dir, 'sessions.db')
+    db = new DatabaseSync(dbPath)
+    try {
+        fs.chmodSync(dbPath, 0o600)
+    } catch {}
 
     db.exec('PRAGMA journal_mode = WAL')
     db.exec('PRAGMA busy_timeout = 5000')

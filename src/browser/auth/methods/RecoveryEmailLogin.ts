@@ -1,6 +1,6 @@
 import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../../../index'
-import { getErrorMessage, promptInput } from './LoginUtils'
+import { canPromptForInput, getErrorMessage, promptInput } from './LoginUtils'
 
 export class RecoveryLogin {
     private readonly textInputSelector = '[data-testid="proof-confirmation"]'
@@ -11,7 +11,7 @@ export class RecoveryLogin {
 
     private async fillEmail(page: Page, email: string): Promise<boolean> {
         try {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', `Attempting to fill email: ${email}`)
+            this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Filling recovery email')
 
             const visibleInput = await page
                 .waitForSelector(this.textInputSelector, { state: 'visible', timeout: 500 })
@@ -45,11 +45,7 @@ export class RecoveryLogin {
             this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Email recovery authentication flow initiated')
 
             if (recoveryEmail) {
-                this.bot.logger.info(
-                    this.bot.isMobile,
-                    'LOGIN-RECOVERY',
-                    `Using provided recovery email: ${recoveryEmail}`
-                )
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Using configured recovery email')
 
                 const filled = await this.fillEmail(page, recoveryEmail)
                 if (!filled) {
@@ -69,6 +65,10 @@ export class RecoveryLogin {
 
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Email authentication completed successfully')
                 return
+            }
+
+            if (!canPromptForInput()) {
+                throw new Error('Recovery email is required because interactive stdin is unavailable')
             }
 
             this.bot.logger.info(
@@ -122,7 +122,7 @@ export class RecoveryLogin {
                     continue
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', `Valid email received from user: ${email}`)
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Valid recovery email received from user')
 
                 const filled = await this.fillEmail(page, email)
                 if (!filled) {

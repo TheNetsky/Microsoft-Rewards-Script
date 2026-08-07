@@ -293,6 +293,12 @@ Opt-in features that may change. Disabled by default.
 | ------------------------------ | ------- | ------- | ----------------------------------------------------------------- | ---------------------------------------- |
 | `experimental.apiSearch`       | boolean | `false` | Perform Bing searches over HTTP instead of driving a browser page | `CONFIG_EXPERIMENTAL_API_SEARCH`         |
 | `experimental.apiSearchOnBing` | boolean | `false` | Complete ExploreOnBing offers over HTTP instead of the browser    | `CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING` |
+| `experimental.blockMedia`      | boolean | `false` | Block browser `image` and `media` requests to reduce traffic      | `CONFIG_EXPERIMENTAL_BLOCK_MEDIA`        |
+
+When `experimental.blockMedia` is enabled, document, stylesheet, script, font, XHR, and fetch requests are left untouched. This keeps login and Rewards application traffic available while avoiding image, video, and audio downloads. It also applies to `npm run open-session`.
+
+> [!NOTE]
+> [Playwright documents](https://playwright.dev/docs/api/class-browsercontext#browser-context-route) that request routing disables the browser HTTP cache while routing is active. Image-heavy pages will usually transfer substantially less data with media blocking enabled, but cache-heavy sites are not guaranteed to use less total bandwidth or load faster. Keep this option disabled if a site depends on image/media load events.
 
 > [!NOTE]
 > The API paths are faster but depend on the modern dashboard's endpoints. If an ExploreOnBing offer ever fails to be credited, turn `apiSearchOnBing` off to fall back to the browser path.
@@ -315,9 +321,16 @@ Regardless of the experimental search settings, normal Rewards actions use the c
 
 ### Proxy
 
-| Setting             | Type    | Default | Description                 | Docker environment variable |
-| ------------------- | ------- | ------- | --------------------------- | --------------------------- |
-| `proxy.queryEngine` | boolean | `true`  | Proxy query engine requests | `CONFIG_PROXY_QUERY_ENGINE` |
+| Setting                         | Type    | Default | Description                                                        | Docker environment variable              |
+| ------------------------------- | ------- | ------- | ------------------------------------------------------------------ | ---------------------------------------- |
+| `proxy.queryEngine`             | boolean | `true`  | Proxy query engine requests                                        | `CONFIG_PROXY_QUERY_ENGINE`              |
+| `proxy.ignoreCertificateErrors` | boolean | `false` | Disable browser TLS certificate verification for intercept proxies | `CONFIG_PROXY_IGNORE_CERTIFICATE_ERRORS` |
+
+Leave `proxy.ignoreCertificateErrors` disabled for normal HTTP(S)/SOCKS proxies. Enabling it weakens TLS protection for the entire browser context and should only be used when a trusted intercepting proxy cannot otherwise present a valid certificate.
+
+`proxy.queryEngine` controls whether query-source HTTP requests use the account HTTP proxy. Set the corresponding `ACCOUNT_N_PROXY_HTTP=true` (and configure `ACCOUNT_N_PROXY_*`) for those HTTP requests to have a proxy available; browser traffic uses `ACCOUNT_N_PROXY_URL` independently.
+
+Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5://` (a bare hostname is treated as HTTP). HTTP(S) proxies may use `ACCOUNT_N_PROXY_USERNAME` and `ACCOUNT_N_PROXY_PASSWORD`; Patchright does not support browser authentication for SOCKS4/SOCKS5 proxies. Invalid protocols, ports, partial credentials, and authenticated SOCKS proxy configurations are rejected during account validation before the browser starts.
 
 ### Webhooks
 

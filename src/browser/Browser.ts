@@ -5,9 +5,10 @@ import { BrowserFingerprintWithHeaders, FingerprintGenerator } from 'fingerprint
 import type { MicrosoftRewardsBot } from '../index'
 import { loadSession, saveFingerprint } from '../util/SessionStore'
 import { fingerprintMatchesLocale } from '../util/Locale'
+import { formatBrowserProxyServer } from '../util/Proxy'
 import { UserAgentManager } from './UserAgent'
 
-import type { Account, AccountProxy } from '../interface/Account'
+import type { Account } from '../interface/Account'
 
 /* Test Stuff
 https://abrahamjuliot.github.io/creepjs/
@@ -24,20 +25,20 @@ interface BrowserCreationResult {
 
 class Browser {
     private readonly bot: MicrosoftRewardsBot
+    private static readonly BLOCKED_MEDIA_RESOURCE_TYPES = new Set(['image', 'media'])
     private static readonly BROWSER_ARGS = [
         '--mute-audio',
         '--no-first-run',
         '--no-default-browser-check',
         '--disable-web-authentication-ui',
         '--disable-external-intent-requests',
-        '--disable-blink-features=AutomationControlled,Attestation',
+        '--disable-blink-features=AutomationControlled',
         '--disable-features=WebAuthentication,PasswordManagerOnboarding,PasswordManager,EnablePasswordsAccountStorage,Passkeys,WebAuthenticationProxy,U2F',
         '--disable-save-password-bubble',
         '--disable-dev-shm-usage',
         '--disable-background-networking',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-component-update'
+        '--disable-renderer-backgrounding'
     ] as const
 
     constructor(bot: MicrosoftRewardsBot) {
@@ -48,12 +49,13 @@ class Browser {
         const headless = this.bot.config.headless
 
         const hasProxy = Boolean(account.proxy.url)
+        const ignoreCertificateErrors = hasProxy && this.bot.config.proxy.ignoreCertificateErrors
 
         let browser: rebrowser.Browser
         try {
             const proxyConfig = account.proxy.url
                 ? {
-                      server: this.formatProxyServer(account.proxy),
+                      server: formatBrowserProxyServer(account.proxy.url, account.proxy.port),
                       ...(account.proxy.username &&
                           account.proxy.password && {
                               username: account.proxy.username,
@@ -62,16 +64,26 @@ class Browser {
                   }
                 : undefined
 
-            const sandboxArgs = process.platform === 'win32' ? [] : ['--no-sandbox', '--disable-setuid-sandbox']
+            const runningAsRoot = typeof process.getuid === 'function' && process.getuid() === 0
+            const sandboxDisabled = process.platform === 'linux' && runningAsRoot
+            const sandboxArgs = sandboxDisabled ? ['--no-sandbox', '--disable-setuid-sandbox'] : []
 
-            const certArgs = hasProxy
+            const certArgs = ignoreCertificateErrors
                 ? ['--ignore-certificate-errors', '--ignore-certificate-errors-spki-list', '--ignore-ssl-errors']
                 : []
+
+            if (ignoreCertificateErrors) {
+                this.bot.logger.warn(
+                    this.bot.isMobile,
+                    'BROWSER-SECURITY',
+                    'TLS certificate verification is disabled by proxy.ignoreCertificateErrors'
+                )
+            }
 
             this.bot.logger.info(
                 this.bot.isMobile,
                 'BROWSER',
-                `Launching bundled patched Chromium (Edge UA) | headless: ${headless} | platform: ${process.platform} | proxy: ${hasProxy ? 'yes (TLS errors ignored)' : 'no (TLS validated)'}`
+                `Launching bundled patched Chromium (Edge UA) | headless=${headless} | platform=${process.platform} | proxy=${hasProxy ? 'yes' : 'no'} | tls=${ignoreCertificateErrors ? 'verification-disabled' : 'verified'} | sandbox=${sandboxDisabled ? 'disabled-root' : 'enabled'}`
             )
 
             browser = await rebrowser.chromium.launch({
@@ -129,7 +141,7 @@ class Browser {
                 fingerprint,
                 newContextOptions: {
                     permissions: [],
-                    ignoreHTTPSErrors: hasProxy,
+                    ignoreHTTPSErrors: ignoreCertificateErrors,
                     // Restore cookies
                     ...(session?.storageState ? { storageState: session.storageState } : {}),
                     ...(this.bot.isMobile
@@ -145,38 +157,21 @@ class Browser {
             })
             const context = injected as unknown as BrowserContext
 
-            await context.addInitScript(() => {
-                try {
-                    Object.defineProperty(navigator, 'webdriver', { configurable: true, get: () => false })
-                } catch {}
+            // Only alter WebRTC when a proxy is in use. Removing these APIs on direct connections
+            // adds an unnecessary fingerprint difference; behind a proxy it prevents local/direct
+            // ICE candidates from exposing an address outside the configured proxy path.
+            if (hasProxy) {
+                await context.addInitScript(() => {
+                    // @ts-expect-error Chromium-specific runtime globals
+                    delete window.RTCPeerConnection
+                    // @ts-expect-error Legacy Chromium runtime global
+                    delete window.webkitRTCPeerConnection
+                    // @ts-expect-error Chromium-specific runtime global
+                    delete window.RTCDataChannel
+                })
+            }
 
-                const rejectWebAuthn = () => Promise.reject(new DOMException('WebAuthn disabled', 'NotAllowedError'))
-                try {
-                    Object.defineProperty(navigator, 'credentials', {
-                        configurable: true,
-                        get: () => ({
-                            create: rejectWebAuthn,
-                            get: rejectWebAuthn,
-                            preventSilentAccess: () => Promise.resolve()
-                        })
-                    })
-                } catch {}
-
-                try {
-                    if (window.PublicKeyCredential) {
-                        window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable = () =>
-                            Promise.resolve(false)
-                    }
-                } catch {}
-
-                // Block WebRTC so the real ip can't leak past the proxy
-                // @ts-expect-error Removing since it might potentionally, kinda unsurely leak the machine's details to browser
-                delete window.RTCPeerConnection
-                // @ts-expect-error Same as above
-                delete window.webkitRTCPeerConnection
-                // @ts-expect-error if you read this, Netsky was here struggling :(
-                delete window.RTCDataChannel
-            })
+            await this.configureMediaBlocking(context)
 
             context.on('page', p => {
                 p.on('crash', () =>
@@ -205,14 +200,26 @@ class Browser {
         }
     }
 
-    private formatProxyServer(proxy: AccountProxy): string {
-        try {
-            const urlObj = new URL(proxy.url)
-            const protocol = urlObj.protocol.replace(':', '')
-            return `${protocol}://${urlObj.hostname}:${proxy.port}`
-        } catch {
-            return `${proxy.url}:${proxy.port}`
-        }
+    private async configureMediaBlocking(context: BrowserContext): Promise<void> {
+        if (!this.bot.config.experimental.blockMedia) return
+
+        await context.route('**/*', async route => {
+            const resourceType = route.request().resourceType()
+            if (Browser.BLOCKED_MEDIA_RESOURCE_TYPES.has(resourceType)) {
+                await route.abort()
+                return
+            }
+
+            // Fall through instead of continuing directly so fingerprint-injector or
+            // future context-level route handlers still get a chance to process it.
+            await route.fallback()
+        })
+
+        this.bot.logger.info(
+            this.bot.isMobile,
+            'BROWSER',
+            'Media loading disabled | blockedResourceTypes=image,media | httpCache=disabled-by-routing'
+        )
     }
 
     async generateFingerprint(isMobile: boolean): Promise<BrowserFingerprintWithHeaders> {

@@ -19,6 +19,7 @@
         "create-docker": "docker build -t microsoft-rewards-script-docker .",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
+        "test:log-parser": "node --test scripts/api/logParser.test.js",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "clear-diagnostics": "rimraf diagnostics",
@@ -49,18 +50,15 @@
     "dependencies": {
         "chalk": "^4.1.2",
         "fast-xml-parser": "^5.9.3",
-        "fingerprint-generator": "^2.1.82",
-        "fingerprint-injector": "^2.1.82",
+        "fingerprint-generator": "^2.1.88",
+        "fingerprint-injector": "^2.1.88",
         "ghost-cursor-playwright-port": "^1.4.3",
-        "http-proxy-agent": "^9.0.0",
-        "https-proxy-agent": "^9.0.0",
         "impit": "^0.14.2",
         "ms": "^2.1.3",
         "otpauth": "^9.5.1",
         "p-queue": "^9.3.0",
         "patchright": "^1.61.1",
         "semver": "^7.8.1",
-        "socks-proxy-agent": "^10.0.0",
         "ts-node": "^10.9.2",
         "zod": "^4.4.3"
     }

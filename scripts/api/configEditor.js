@@ -161,8 +161,12 @@ function structuralValidate(cfg) {
 
     if ('proxy' in cfg) {
         if (!isObject(cfg.proxy)) errors.push('proxy must be an object')
-        else if ('queryEngine' in cfg.proxy && typeof cfg.proxy.queryEngine !== 'boolean') {
-            errors.push('proxy.queryEngine must be a boolean')
+        else {
+            for (const key of ['queryEngine', 'ignoreCertificateErrors']) {
+                if (key in cfg.proxy && typeof cfg.proxy[key] !== 'boolean') {
+                    errors.push(`proxy.${key} must be a boolean`)
+                }
+            }
         }
     }
     if ('consoleLogFilter' in cfg) validateLogFilter(cfg.consoleLogFilter, 'consoleLogFilter', errors)

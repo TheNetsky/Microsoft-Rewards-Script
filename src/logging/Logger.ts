@@ -42,7 +42,16 @@ function consoleOut(level: LogLevel, msg: string, chalkFn: ChalkFn | null): void
 }
 
 function formatMessage(message: string | Error): string {
-    return message instanceof Error ? `${message.message}\n${message.stack || ''}` : message
+    if (!(message instanceof Error)) return message.replace(/\r?\n/g, '\\n')
+
+    const stackFrames = message.stack
+        ?.split(/\r?\n/)
+        .slice(1)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .join(' <- ')
+
+    return stackFrames ? `${message.message} | stack=${stackFrames}` : message.message
 }
 
 export class Logger {

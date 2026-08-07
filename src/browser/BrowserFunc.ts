@@ -19,7 +19,7 @@ import type { AppDashboardData } from '../interface/AppDashBoardData'
 // Bing treats same search as a repeat search and credits nothing.
 const VISUAL_SEARCH_IMAGE_URL = 'https://th.bing.com/th?id=OMR.VisualSearch.VNext.BackgroundImage.png&pid=Rewards'
 
-// Bing's own wallpaper archive, used to rotate the seed. idx 0-7 covers the last 8 days
+// Bing's own wallpaper archive, used to rotate the seed. idx 0-7 covers the last 8 days.
 const VISUAL_SEARCH_ARCHIVE_SIZE = 8
 
 export default class BrowserFunc {
@@ -950,6 +950,7 @@ export default class BrowserFunc {
     }
 
     async reportVisualSearchActivity(visual: { bcid: string; query: string; serpUrl: string }): Promise<{
+        acknowledged: boolean
         ig: string | null
         balance: number | null
         previousBalance: number | null
@@ -959,6 +960,7 @@ export default class BrowserFunc {
     }> {
         const { bcid, query, serpUrl } = visual
         const empty = {
+            acknowledged: false,
             ig: null,
             balance: null,
             previousBalance: null,
@@ -1011,6 +1013,7 @@ export default class BrowserFunc {
 
             const responseUrl = new URL(reportResponse.url())
             const ig = responseUrl.searchParams.get('IG')
+            const acknowledged = reportResponse.ok()
             const parsed = this.parseReportResponse(await reportResponse.text())
             const gained =
                 parsed.balance != null && parsed.previousBalance != null
@@ -1020,10 +1023,10 @@ export default class BrowserFunc {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-REPORT',
-                `Browser reported "${query}" | status=${reportResponse.status()} | ig=${ig ?? 'n/a'} | bcid=${bcid.slice(0, 12)} | pointsGained=${gained ?? 'n/a'} | currentBalance=${parsed.balance ?? 'n/a'} | searchPts=${parsed.searchPointsEarned ?? 'n/a'}/${parsed.searchPointsLimit ?? 'n/a'}`
+                `Browser reported "${query}" | status=${reportResponse.status()} | acknowledged=${acknowledged} | ig=${ig ?? 'n/a'} | bcid=${bcid.slice(0, 12)} | pointsGained=${gained ?? 'n/a'} | currentBalance=${parsed.balance ?? 'n/a'} | searchPts=${parsed.searchPointsEarned ?? 'n/a'}/${parsed.searchPointsLimit ?? 'n/a'}`
             )
 
-            return { ig, ...parsed, gained }
+            return { acknowledged, ig, ...parsed, gained }
         } catch (error) {
             this.bot.logger.warn(
                 this.bot.isMobile,
@@ -1048,7 +1051,7 @@ export default class BrowserFunc {
                 return null
             }
 
-            const seed = imageUrl ?? (await this.resolveVisualSearchImage(page))
+            const seed = imageUrl ?? (await this.getVisualSearchSeedUrls())[0] ?? VISUAL_SEARCH_IMAGE_URL
 
             const base = { ...(this.bot.fingerprint?.headers ?? {}) }
             delete base['Cookie']
@@ -1123,12 +1126,20 @@ export default class BrowserFunc {
         }
     }
 
-    private async resolveVisualSearchImage(page: Page): Promise<string> {
-        const idx = Math.floor(Math.random() * VISUAL_SEARCH_ARCHIVE_SIZE)
+    async getVisualSearchSeedUrls(): Promise<string[]> {
+        const page = this.bot.mainDesktopPage
+        if (!page || page.isClosed()) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'VISUAL-SEARCH-BCID',
+                'Desktop page is unavailable - using the static visual-search seed'
+            )
+            return [VISUAL_SEARCH_IMAGE_URL]
+        }
 
         try {
             const res = await page.request.get(
-                `${URLs.bing.origin}/HPImageArchive.aspx?format=js&idx=${idx}&n=1&mkt=${encodeURIComponent(
+                `${URLs.bing.origin}/HPImageArchive.aspx?format=js&idx=0&n=${VISUAL_SEARCH_ARCHIVE_SIZE}&mkt=${encodeURIComponent(
                     this.bot.accountLocale.locale
                 )}`,
                 { timeout: 10000 }
@@ -1136,16 +1147,30 @@ export default class BrowserFunc {
 
             if (res.ok()) {
                 const payload = (await res.json()) as { images?: { url?: unknown }[] }
-                const url = payload?.images?.[0]?.url
-                if (typeof url === 'string' && url) {
-                    return new URL(url, URLs.bing.origin).toString()
+                const seeds = (payload.images ?? []).flatMap(image => {
+                    if (typeof image.url !== 'string' || !image.url) return []
+                    try {
+                        return [new URL(image.url, URLs.bing.origin).toString()]
+                    } catch {
+                        return []
+                    }
+                })
+                const uniqueSeeds = [...new Set(seeds)]
+                if (uniqueSeeds.length) {
+                    this.bot.utils.shuffleArray(uniqueSeeds)
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'VISUAL-SEARCH-BCID',
+                        `Prepared ${uniqueSeeds.length} randomized Bing wallpaper seed(s)`
+                    )
+                    return uniqueSeeds
                 }
             }
 
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-BCID',
-                `HPImageArchive returned no usable url | idx=${idx} | status=${res.status()} - using the static seed`
+                `HPImageArchive returned no usable urls | status=${res.status()} - using the static seed`
             )
         } catch (error) {
             this.bot.logger.debug(
@@ -1155,7 +1180,7 @@ export default class BrowserFunc {
             )
         }
 
-        return VISUAL_SEARCH_IMAGE_URL
+        return [VISUAL_SEARCH_IMAGE_URL]
     }
 
     async refreshEarnSnapshot(): Promise<PageSnapshot | null> {

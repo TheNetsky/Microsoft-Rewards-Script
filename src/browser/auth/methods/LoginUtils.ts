@@ -8,7 +8,13 @@ export interface PromptOptions {
     transform?: (input: string) => string
 }
 
+export function canPromptForInput(): boolean {
+    return process.stdin.isTTY === true
+}
+
 export function promptInput(options: PromptOptions): Promise<string | null> {
+    if (!canPromptForInput()) return Promise.resolve(null)
+
     const { question, timeoutSeconds = 60, validate, transform } = options
 
     return new Promise(resolve => {

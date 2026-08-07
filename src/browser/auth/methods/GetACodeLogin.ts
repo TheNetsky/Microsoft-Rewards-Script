@@ -1,6 +1,6 @@
 import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../../../index'
-import { getErrorMessage, getSubtitleMessage, promptInput } from './LoginUtils'
+import { canPromptForInput, getErrorMessage, getSubtitleMessage, promptInput } from './LoginUtils'
 
 export class CodeLogin {
     private readonly textInputSelector = '[data-testid="codeInputWrapper"]'
@@ -26,7 +26,7 @@ export class CodeLogin {
                 if (stilOnPage) {
                     await page.keyboard.press('Enter')
                 }
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', `Filled code input: "${code}" `)
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', 'Filled code input')
                 return true
             }
 
@@ -42,7 +42,7 @@ export class CodeLogin {
                     await page.keyboard.press('Enter')
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', `Filled code input: "${code}" `)
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', 'Filled code input')
                 return true
             }
 
@@ -67,7 +67,7 @@ export class CodeLogin {
             if (visibleInput) {
                 await page.keyboard.type(email, { delay: 50 })
                 await page.keyboard.press('Enter')
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', `Submitted verification email: ${email}`)
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', 'Submitted verification email')
                 return true
             }
 
@@ -86,6 +86,10 @@ export class CodeLogin {
     async handle(page: Page): Promise<void> {
         try {
             this.bot.logger.info(this.bot.isMobile, 'LOGIN-CODE', 'Code login authentication requested')
+
+            if (!canPromptForInput()) {
+                throw new Error('Email-code authentication requires interactive stdin; unavailable in background mode')
+            }
 
             const emailMessage = await getSubtitleMessage(page)
             if (emailMessage) {

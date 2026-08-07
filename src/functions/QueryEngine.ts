@@ -18,6 +18,8 @@ import type { MicrosoftRewardsBot } from '../index'
 
 const GOOGLE_TRENDS_RPC_ID = 'i0OFE'
 const MAX_CLUSTER_SUGGESTIONS = 8
+const MAX_RSS_XML_BYTES = 2 * 1024 * 1024
+const XML_DECLARATION_RE = /<!\s*(?:DOCTYPE|ENTITY)\b/i
 
 interface QueryManagerOptions {
     shuffle?: boolean
@@ -512,6 +514,7 @@ export class QueryCore {
 
     private parseRssTitles(xml: string): string[] {
         if (!xml) return []
+        if (Buffer.byteLength(xml, 'utf8') > MAX_RSS_XML_BYTES || XML_DECLARATION_RE.test(xml)) return []
 
         let doc: RssDocument
         try {

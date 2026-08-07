@@ -197,26 +197,63 @@ export function findAccountByEmail(accounts, email) {
     )
 }
 
+const browserProxyProtocols = new Set(['http:', 'https:', 'socks4:', 'socks5:'])
+const explicitProxyProtocolPattern = /^[a-z][a-z\d+.-]*:\/\//i
+
+function parseBrowserProxyUrl(value) {
+    const input = String(value ?? '').trim()
+    if (!input) throw new Error('Proxy URL is empty')
+
+    let url
+    try {
+        url = new URL(explicitProxyProtocolPattern.test(input) ? input : `http://${input}`)
+    } catch {
+        throw new Error(`Invalid proxy URL: ${value}`)
+    }
+
+    const protocol = url.protocol.toLowerCase()
+    if (!browserProxyProtocols.has(protocol)) {
+        throw new Error(
+            `Unsupported browser proxy protocol "${protocol.slice(0, -1)}"; supported: http, https, socks4, socks5`
+        )
+    }
+    if (!url.hostname) throw new Error(`Invalid proxy URL: ${value}`)
+    return url
+}
+
 export function buildProxyConfig(account) {
-    if (!account?.proxy?.url || !account.proxy.port) {
+    const settings = account?.proxy
+    if (!settings?.url) {
+        if (settings && (settings.proxyHttp || settings.port || settings.username || settings.password)) {
+            throw new Error('Proxy URL is required when other proxy settings are configured')
+        }
         return null
     }
 
-    let server
-    try {
-        const url = new URL(account.proxy.url)
-        server = `${url.protocol}//${url.hostname}:${account.proxy.port}`
-    } catch {
-        server = `${account.proxy.url}:${account.proxy.port}`
+    if (!Number.isInteger(settings.port) || settings.port < 1 || settings.port > 65535) {
+        throw new Error('Proxy port must be an integer from 1 to 65535')
     }
 
-    const proxy = {
-        server
+    const url = parseBrowserProxyUrl(settings.url)
+    if (url.username || url.password) {
+        throw new Error('Put proxy credentials in ACCOUNT_N_PROXY_USERNAME/PASSWORD, not in ACCOUNT_N_PROXY_URL')
     }
 
-    if (account.proxy.username && account.proxy.password) {
-        proxy.username = account.proxy.username
-        proxy.password = account.proxy.password
+    const hasUsername = Boolean(settings.username)
+    const hasPassword = Boolean(settings.password)
+    if (hasUsername !== hasPassword) {
+        throw new Error('Proxy username and password must be configured together')
+    }
+    if ((url.protocol === 'socks4:' || url.protocol === 'socks5:') && (hasUsername || hasPassword)) {
+        throw new Error(
+            `${url.protocol.slice(0, -1).toUpperCase()} proxy authentication is not supported by Patchright`
+        )
+    }
+
+    const proxy = { server: `${url.protocol}//${url.hostname}:${settings.port}` }
+    if (hasUsername && hasPassword) {
+        proxy.username = settings.username
+        proxy.password = settings.password
     }
 
     return proxy

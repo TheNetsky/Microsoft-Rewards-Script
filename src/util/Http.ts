@@ -1,7 +1,7 @@
 import { Impit } from 'impit'
 import type { HttpMethod, ImpitResponse, RequestInit as ImpitRequestInit } from 'impit'
-import { URL } from 'url'
 import type { AccountProxy } from '../interface/Account'
+import { parseBrowserProxyUrl } from './Proxy'
 
 const DEFAULT_TIMEOUT = 20000
 
@@ -164,7 +164,7 @@ async function send<T>(
 
 class HttpClient {
     private instance: Impit
-    private bypass?: Impit
+    private direct?: Impit
     private account: AccountProxy
     private defaultHeaders: Record<string, unknown>
 
@@ -181,16 +181,16 @@ class HttpClient {
         this.defaultHeaders = mergeRequestHeaders(this.defaultHeaders, headers)
     }
 
-    public async request<T = unknown>(config: HttpRequestConfig, bypassProxy = false): Promise<HttpResponse<T>> {
+    public async request<T = unknown>(config: HttpRequestConfig, useProxy = true): Promise<HttpResponse<T>> {
         const requestConfig: HttpRequestConfig = {
             ...config,
             headers: mergeRequestHeaders(this.defaultHeaders, config.headers)
         }
         const { url, init } = toInit(requestConfig)
 
-        if (bypassProxy) {
-            if (!this.bypass) this.bypass = new Impit({ browser: 'chrome', timeout: DEFAULT_TIMEOUT })
-            return send<T>(this.bypass, url, init, requestConfig, 3)
+        if (!useProxy) {
+            if (!this.direct) this.direct = new Impit({ browser: 'chrome', timeout: DEFAULT_TIMEOUT })
+            return send<T>(this.direct, url, init, requestConfig, 3)
         }
 
         return send<T>(this.instance, url, init, requestConfig, 5)
@@ -199,21 +199,8 @@ class HttpClient {
     private buildProxyUrl(proxyConfig: AccountProxy): string {
         const { url: baseUrl, port, username, password } = proxyConfig
 
-        let urlObj: URL
-        try {
-            urlObj = new URL(baseUrl)
-        } catch {
-            try {
-                urlObj = new URL(`http://${baseUrl}`)
-            } catch {
-                throw new Error(`Invalid proxy URL format: ${baseUrl}`)
-            }
-        }
-
+        const urlObj = parseBrowserProxyUrl(baseUrl)
         const protocol = urlObj.protocol.toLowerCase()
-        if (!['http:', 'https:', 'socks4:', 'socks5:'].includes(protocol)) {
-            throw new Error(`Unsupported proxy protocol: ${protocol}. Only HTTP(S) and SOCKS4/5 are supported!`)
-        }
 
         if (username && password) {
             urlObj.username = encodeURIComponent(username)

@@ -1,7 +1,7 @@
 import type { Page } from 'patchright'
 import * as OTPAuth from 'otpauth'
 import type { MicrosoftRewardsBot } from '../../../index'
-import { getErrorMessage, promptInput } from './LoginUtils'
+import { canPromptForInput, getErrorMessage, promptInput } from './LoginUtils'
 
 export class TotpLogin {
     private readonly textInputSelector =
@@ -63,7 +63,9 @@ export class TotpLogin {
                 }
 
                 await this.bot.utils.wait(500)
-                await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector)
+                if (!(await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector))) {
+                    throw new Error('Unable to submit TOTP code')
+                }
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
                 const errorMessage = await getErrorMessage(page)
@@ -74,6 +76,10 @@ export class TotpLogin {
 
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP authentication completed successfully')
                 return
+            }
+
+            if (!canPromptForInput()) {
+                throw new Error('TOTP secret is required because interactive stdin is unavailable')
             }
 
             this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'No TOTP secret provided, awaiting manual input')
@@ -113,7 +119,9 @@ export class TotpLogin {
                 }
 
                 await this.bot.utils.wait(500)
-                await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector)
+                if (!(await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector))) {
+                    throw new Error('Unable to submit TOTP code')
+                }
                 await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
                 // Check if wrong code was entered

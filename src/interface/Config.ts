@@ -47,10 +47,12 @@ export interface ConfigDelay {
 export interface ConfigExperimental {
     apiSearch: boolean
     apiSearchOnBing: boolean
+    blockMedia: boolean
 }
 
 export interface ConfigProxy {
     queryEngine: boolean
+    ignoreCertificateErrors: boolean
 }
 
 export interface ConfigWorkers {

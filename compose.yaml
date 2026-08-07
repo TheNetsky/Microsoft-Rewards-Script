@@ -41,6 +41,10 @@ services:
             #CONFIG_CLUSTERS: '1'
             #CONFIG_ACCOUNT_DELAY_MIN: '1min'
             #CONFIG_ACCOUNT_DELAY_MAX: '3min'
+            # Block browser image/video/audio requests to reduce transferred media bytes.
+            #CONFIG_EXPERIMENTAL_BLOCK_MEDIA: 'false'
+            # Only enable for a TLS-intercepting proxy whose certificate cannot be trusted normally.
+            #CONFIG_PROXY_IGNORE_CERTIFICATE_ERRORS: 'false'
             #... add additional configuration overrides as needed
 
         # ── API mode port mapping ──────────────────────────────────────

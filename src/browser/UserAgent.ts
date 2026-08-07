@@ -8,7 +8,7 @@ import type { MicrosoftRewardsBot } from '../index'
 
 interface EdgeVersions {
     android: string
-    windows: string
+    desktop: string
 }
 
 interface AppComponents {
@@ -197,23 +197,29 @@ export class UserAgentManager {
                 ? response.data.find(product => product.Product === 'Stable')
                 : undefined
             const android = stable?.Releases.find(release => release.Platform === 'Android')?.ProductVersion
-            const windows = stable?.Releases.find(
-                release => release.Platform === 'Windows' && release.Architecture === 'x64'
-            )?.ProductVersion
+            const desktopPlatform =
+                process.platform === 'darwin' ? 'MacOS' : process.platform === 'linux' ? 'Linux' : 'Windows'
+            const preferredArchitecture =
+                desktopPlatform === 'MacOS' ? 'universal' : process.arch === 'arm64' ? 'arm64' : 'x64'
+            const desktop =
+                stable?.Releases.find(
+                    release => release.Platform === desktopPlatform && release.Architecture === preferredArchitecture
+                )?.ProductVersion ??
+                stable?.Releases.find(release => release.Platform === desktopPlatform)?.ProductVersion
 
-            if (!UserAgentManager.isValidVersion(android) || !UserAgentManager.isValidVersion(windows)) {
+            if (!UserAgentManager.isValidVersion(android) || !UserAgentManager.isValidVersion(desktop)) {
                 throw new Error('Stable Edge versions were missing or invalid')
             }
 
-            return { android, windows }
+            return { android, desktop }
         } catch (error) {
             const fallback = BROWSER_VERSION_FALLBACKS.edge
             this.bot.logger.warn(
                 isMobile,
                 'USERAGENT-EDGE-VERSION',
-                `Version lookup unavailable (${error instanceof Error ? error.message : String(error)}); using bundled fallbacks Android ${fallback.android}, Windows ${fallback.windows}`
+                `Version lookup unavailable (${error instanceof Error ? error.message : String(error)}); using bundled fallbacks Android ${fallback.android}, Desktop ${fallback.windows}`
             )
-            return fallback
+            return { android: fallback.android, desktop: fallback.windows }
         }
     }
 
@@ -246,7 +252,7 @@ export class UserAgentManager {
             this.getEdgeVersions(isMobile),
             this.getChromeVersion(isMobile)
         ])
-        const edgeVersion = isMobile ? versions.android : versions.windows
+        const edgeVersion = isMobile ? versions.android : versions.desktop
         const edgeMajorVersion = edgeVersion.split('.')[0]!
         const chromeMajorVersion = chromeVersion.split('.')[0]!
 

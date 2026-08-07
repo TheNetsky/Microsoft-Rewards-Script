@@ -62,7 +62,8 @@
     },
     "experimental": {
         "apiSearch": false,
-        "apiSearchOnBing": false
+        "apiSearchOnBing": false,
+        "blockMedia": false
     },
     "debugLogs": false,
     "consoleLogFilter": {
@@ -73,7 +74,8 @@
         "regexPatterns": []
     },
     "proxy": {
-        "queryEngine": true
+        "queryEngine": true,
+        "ignoreCertificateErrors": false
     },
     "webhook": {
         "discord": {

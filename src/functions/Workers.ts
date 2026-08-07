@@ -48,7 +48,7 @@ export class Workers {
                 if (x.exclusiveLockedFeatureStatus === 'locked') return false
                 if (!x.promotionType) return false
                 if (x.priority < 0 && x.exclusiveLockedFeatureStatus !== 'unlocked') return false
-                if (x.attributes?.promotional === 'True') return false
+                if (this.getPromotionAttribute(x, 'promotional') === 'True') return false
                 return true
             }) ?? []
 
@@ -410,10 +410,16 @@ export class Workers {
     }
 
     // Util
+    private getPromotionAttribute(promotion: BasePromotion, key: string): unknown {
+        const attributes = promotion.attributes
+        if (!attributes || typeof attributes !== 'object') return undefined
+        return (attributes as Record<string, unknown>)[key]
+    }
+
     private isSearchQuotaChild(offerId: string, api?: BasePromotion): boolean {
         if (api) {
             const type = (api.promotionType ?? '').toLowerCase()
-            const attrType = String(api.attributes?.type ?? '').toLowerCase()
+            const attrType = String(this.getPromotionAttribute(api, 'type') ?? '').toLowerCase()
             const progressMax = Number(api.activityProgressMax ?? 0)
             if (type === 'search' || attrType === 'search' || progressMax > 1) {
                 return true

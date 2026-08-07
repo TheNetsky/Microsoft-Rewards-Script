@@ -1,7 +1,7 @@
 export const BROWSER_VERSION_FALLBACKS = {
-    chrome: '151.0.7922.47',
+    chrome: '151.0.7922.76',
     edge: {
-        android: '150.0.4078.96',
-        windows: '150.0.4078.105'
+        android: '151.0.4129.59',
+        windows: '151.0.4129.59'
     }
 } as const

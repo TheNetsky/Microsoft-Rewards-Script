@@ -681,7 +681,7 @@ export class MicrosoftRewardsBot {
                     'POINTS',
                     `Earnable today | Mobile: ${pointsCanCollect} | Browser: ${
                         browserEarnable.mobileSearchPoints
-                    } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.userData.geoLocale}`
+                    } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.accountLocale.locale}`
                 )
 
                 const parallel = this.config.searchSettings.parallelSearching

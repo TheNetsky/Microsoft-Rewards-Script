@@ -27,14 +27,13 @@ const BROWSER_ARGS = [
     '--no-default-browser-check',
     '--disable-web-authentication-ui',
     '--disable-external-intent-requests',
-    '--disable-blink-features=AutomationControlled,Attestation',
+    '--disable-blink-features=AutomationControlled',
     '--disable-features=WebAuthentication,PasswordManagerOnboarding,PasswordManager,EnablePasswordsAccountStorage,Passkeys,WebAuthenticationProxy,U2F',
     '--disable-save-password-bubble',
     '--disable-dev-shm-usage',
     '--disable-background-networking',
     '--disable-backgrounding-occluded-windows',
-    '--disable-renderer-backgrounding',
-    '--disable-component-update'
+    '--disable-renderer-backgrounding'
 ]
 
 const __dirname = getDirname(import.meta.url)
@@ -56,6 +55,22 @@ function platformsToTry() {
     const p = typeof args.platform === 'string' ? args.platform.toLowerCase() : ''
     if (p === 'mobile' || p === 'desktop') return [p]
     return ['desktop', 'mobile'] // prefer desktop, fall back to mobile
+}
+
+async function configureMediaBlocking(context) {
+    if (!config.experimental?.blockMedia) return
+
+    await context.route('**/*', async route => {
+        const resourceType = route.request().resourceType()
+        if (resourceType === 'image' || resourceType === 'media') {
+            await route.abort()
+            return
+        }
+
+        await route.fallback()
+    })
+
+    log('INFO', 'Media loading disabled (image/media requests blocked; HTTP cache disabled by routing)')
 }
 
 async function main() {
@@ -113,8 +128,11 @@ async function main() {
     log('INFO', `  Updated: ${session.updatedAt ? new Date(session.updatedAt).toISOString() : 'unknown'}`)
     log('INFO', 'Launching browser...')
 
-    const sandboxArgs = process.platform === 'win32' ? [] : ['--no-sandbox', '--disable-setuid-sandbox']
-    const certArgs = proxy
+    const runningAsRoot = typeof process.getuid === 'function' && process.getuid() === 0
+    const sandboxArgs =
+        process.platform === 'linux' && runningAsRoot ? ['--no-sandbox', '--disable-setuid-sandbox'] : []
+    const ignoreCertificateErrors = Boolean(proxy && config.proxy?.ignoreCertificateErrors)
+    const certArgs = ignoreCertificateErrors
         ? ['--ignore-certificate-errors', '--ignore-certificate-errors-spki-list', '--ignore-ssl-errors']
         : []
 
@@ -130,7 +148,7 @@ async function main() {
             fingerprint,
             newContextOptions: {
                 permissions: [],
-                ignoreHTTPSErrors: Boolean(proxy),
+                ignoreHTTPSErrors: ignoreCertificateErrors,
                 ...(storageState ? { storageState } : {}),
                 ...(isMobile && screen
                     ? {
@@ -147,7 +165,7 @@ async function main() {
     } else {
         context = await browser.newContext({
             permissions: [],
-            ignoreHTTPSErrors: Boolean(proxy),
+            ignoreHTTPSErrors: ignoreCertificateErrors,
             ...(storageState ? { storageState } : {}),
             ...(isMobile
                 ? {
@@ -166,32 +184,15 @@ async function main() {
         })
     }
 
-    await context.addInitScript(() => {
-        try {
-            Object.defineProperty(navigator, 'webdriver', { configurable: true, get: () => false })
-        } catch {}
+    if (proxy) {
+        await context.addInitScript(() => {
+            delete window.RTCPeerConnection
+            delete window.webkitRTCPeerConnection
+            delete window.RTCDataChannel
+        })
+    }
 
-        const rejectWebAuthn = () => Promise.reject(new DOMException('WebAuthn disabled', 'NotAllowedError'))
-        try {
-            Object.defineProperty(navigator, 'credentials', {
-                configurable: true,
-                get: () => ({
-                    create: rejectWebAuthn,
-                    get: rejectWebAuthn,
-                    preventSilentAccess: () => Promise.resolve()
-                })
-            })
-        } catch {}
-        try {
-            if (window.PublicKeyCredential) {
-                window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable = () => Promise.resolve(false)
-            }
-        } catch {}
-
-        delete window.RTCPeerConnection
-        delete window.webkitRTCPeerConnection
-        delete window.RTCDataChannel
-    })
+    await configureMediaBlocking(context)
 
     const page = await context.newPage()
     await page.goto(REWARDS_URL, { waitUntil: 'domcontentloaded' })
