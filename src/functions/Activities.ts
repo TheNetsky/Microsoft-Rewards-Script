@@ -1,4 +1,4 @@
-import type { MicrosoftRewardsBot } from '../index'
+﻿import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 
 // App
 import { DailyCheckIn } from './activities/app/DailyCheckIn'

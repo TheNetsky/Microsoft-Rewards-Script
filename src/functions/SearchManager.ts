@@ -1,4 +1,5 @@
-import { MicrosoftRewardsBot, executionContext } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
+import { executionContext } from '../bot/ExecutionContextStore'
 import type { Account } from '../interface/Account'
 import { URLs } from '../constants/urls'
 

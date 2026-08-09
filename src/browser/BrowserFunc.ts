@@ -1,11 +1,11 @@
-import { randomBytes } from 'crypto'
+﻿import { randomBytes } from 'crypto'
 
 import { URLs } from '../constants/urls'
 import { BING_APP_USER_AGENT } from '../constants/userAgents'
 import type { BrowserContext, Cookie, Page } from 'patchright'
 import type { HttpRequestConfig } from '../util/Http'
 
-import type { MicrosoftRewardsBot } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 import type { PageSnapshot, ParsedOffer } from './ReactFunc'
 import { loadSession, saveStorageState } from '../util/SessionStore'
 import { isBrowserClosedError } from '../util/Utils'

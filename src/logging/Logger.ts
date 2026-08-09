@@ -1,9 +1,9 @@
-import chalk from 'chalk'
+﻿import chalk from 'chalk'
 import cluster from 'cluster'
 import { sendDiscord } from './Discord'
 import { sendNtfy } from './Ntfy'
 import { sendTelegram } from './Telegram'
-import type { MicrosoftRewardsBot } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
 import type { LogFilter } from '../interface/Config'
 

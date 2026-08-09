@@ -1,4 +1,4 @@
-import type { HttpRequestConfig } from '../util/Http'
+﻿import type { HttpRequestConfig } from '../util/Http'
 import * as fs from 'fs'
 import path from 'path'
 import { XMLParser } from 'fast-xml-parser'
@@ -14,7 +14,7 @@ import type {
     WikipediaTopResponse
 } from '../interface/Search'
 import type { QueryEngine, QueryEngineEntry } from '../interface/Config'
-import type { MicrosoftRewardsBot } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 
 const GOOGLE_TRENDS_RPC_ID = 'i0OFE'
 const MAX_CLUSTER_SUGGESTIONS = 8

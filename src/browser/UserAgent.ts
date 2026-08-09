@@ -1,10 +1,10 @@
-import { URLs } from '../constants/urls'
+﻿import { URLs } from '../constants/urls'
 import { httpRequest } from '../util/Http'
 import type { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 
 import { BROWSER_VERSION_FALLBACKS } from '../constants/browserVersions'
 import type { ChromeVersion, EdgeVersion } from '../interface/UserAgentUtil'
-import type { MicrosoftRewardsBot } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 
 interface EdgeVersions {
     android: string

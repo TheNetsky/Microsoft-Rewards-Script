@@ -1,4 +1,4 @@
-import type { MicrosoftRewardsBot } from '../index'
+﻿import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 import { normalizeQueryKey, QueryCore } from './QueryEngine'
 
 export class SearchQueryQueue {

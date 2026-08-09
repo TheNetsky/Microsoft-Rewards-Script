@@ -1,4 +1,4 @@
-import { MicrosoftRewardsBot } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 import type { DashboardData } from '../interface/DashboardData'
 
 export class PunchcardManager {

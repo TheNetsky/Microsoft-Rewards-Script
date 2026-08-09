@@ -1,8 +1,8 @@
-import { REWARDS_BASE_URL } from '../constants/urls'
+﻿import { REWARDS_BASE_URL } from '../constants/urls'
 import { type Page, type BrowserContext } from 'patchright'
 import { ClickOptions, createCursor } from 'ghost-cursor-playwright-port'
 
-import type { MicrosoftRewardsBot } from '../index'
+import type { MicrosoftRewardsBot } from '../bot/MicrosoftRewardsBot'
 
 export default class BrowserUtils {
     private bot: MicrosoftRewardsBot
