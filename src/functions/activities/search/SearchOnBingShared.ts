@@ -1,9 +1,9 @@
 import * as fs from 'fs'
 import path from 'path'
 
-import { URLs } from '../../constants/urls'
-import type { BasePromotion, Dashboard } from '../../interface/DashboardData'
-import type { MicrosoftRewardsBot } from '../../index'
+import { URLs } from '../../../constants/urls'
+import type { BasePromotion, Dashboard } from '../../../interface/DashboardData'
+import type { MicrosoftRewardsBot } from '../../../index'
 
 interface ActivityQueries {
     title: string
@@ -78,7 +78,7 @@ export async function getSearchOnBingQueries(bot: MicrosoftRewardsBot, promotion
         if (bot.config.searchOnBingLocalQueries) {
             bot.logger.debug(bot.isMobile, 'SEARCH-ON-BING-QUERY', 'Using local queries config file')
             activities = JSON.parse(
-                fs.readFileSync(path.join(__dirname, '../bing-search-activity-queries.json'), 'utf8')
+                fs.readFileSync(path.join(__dirname, '../../bing-search-activity-queries.json'), 'utf8')
             ) as ActivityQueries[]
         } else {
             bot.logger.debug(bot.isMobile, 'SEARCH-ON-BING-QUERY', 'Fetching queries config from remote repository')

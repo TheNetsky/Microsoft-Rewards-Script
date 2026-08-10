@@ -38,6 +38,7 @@ export const URLs = {
     platform: {
         origin: PLATFORM,
         me: (channel: string) => `${PLATFORM}/dapi/me?channel=${channel}&options=613`,
+        edgeProfile: `${PLATFORM}/dapi/me?channel=edge&options=Profile,Promotions`,
         activities: `${PLATFORM}/dapi/me/activities`
     },
     auth: {

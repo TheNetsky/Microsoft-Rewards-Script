@@ -188,6 +188,7 @@ export class ProcessManager extends EventEmitter {
             bySource: a.live.bySource,
             earnable: a.earnable,
             streakProtection: a.streakProtection,
+            edgeBrowsing: a.edgeBrowsing,
             done: a.success != null,
             success: a.success,
             error: a.error

@@ -1,6 +1,6 @@
-import type { Dashboard } from '../../interface/DashboardData'
-import type { SearchTracker } from '../../interface/Search'
-import type { MicrosoftRewardsBot } from '../../index'
+import type { Dashboard } from '../../../interface/DashboardData'
+import type { SearchTracker } from '../../../interface/Search'
+import type { MicrosoftRewardsBot } from '../../../index'
 
 const BONUS_STAGNANT_LIMIT = 20
 

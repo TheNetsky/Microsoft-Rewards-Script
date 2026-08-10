@@ -1,6 +1,6 @@
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
-export class ClaimBonusPoints extends Workers {
+export class ClaimBonusPoints extends BaseActivity {
     public async claimBonusPoints() {
         const actionId = this.bot.nextActions.reportClaimAllPoints
         if (!actionId) {

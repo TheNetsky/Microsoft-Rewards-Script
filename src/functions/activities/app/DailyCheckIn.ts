@@ -1,9 +1,9 @@
 import { URLs } from '../../../constants/urls'
 import type { HttpRequestConfig } from '../../../util/Http'
 import { randomUUID } from 'crypto'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
-export class DailyCheckIn extends Workers {
+export class DailyCheckIn extends BaseActivity {
     private gainedPoints: number = 0
 
     private oldBalance: number = this.bot.userData.currentPoints

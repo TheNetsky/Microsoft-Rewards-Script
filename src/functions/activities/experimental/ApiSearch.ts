@@ -1,11 +1,16 @@
 import { SearchQueryQueue } from '../../SearchQueryQueue'
-import { Workers } from '../../Workers'
-import { BonusTracker } from '../SearchBonus'
+import { BaseActivity } from '../BaseActivity'
+import { BonusTracker } from '../search/BonusTracker'
+import { SearchProgress } from '../search/SearchProgress'
+import { BingSearchApi } from './BingSearchApi'
 
 const STAGNANT_LIMIT = 10
 const MAX_SEARCHES = 60
 
-export class Search extends Workers {
+export class ApiSearch extends BaseActivity {
+    private readonly searchApi = new BingSearchApi(this.bot)
+    private readonly searchProgress = new SearchProgress(this.bot)
+
     public async doSearch(isMobile: boolean): Promise<number> {
         const startBalance = Number(this.bot.userData.currentPoints ?? 0)
         let totalGained = 0
@@ -13,10 +18,7 @@ export class Search extends Workers {
         this.bot.logger.info(isMobile, 'SEARCH-BING', `Starting Bing searches | currentBalance=${startBalance}`)
 
         try {
-            const missing = this.bot.browser.func.missingSearchPoints(
-                await this.bot.browser.func.getSearchPoints(),
-                isMobile
-            )
+            const missing = await this.searchProgress.getMissing(isMobile)
             this.bot.logger.info(
                 isMobile,
                 'SEARCH-BING',
@@ -26,6 +28,7 @@ export class Search extends Workers {
                 this.bot.logger.info(isMobile, 'SEARCH-BING', 'No search points to earn, skipping')
                 return 0
             }
+            let remainingPoints = missing.totalPoints
 
             const queryQueue = new SearchQueryQueue(this.bot)
             const topicCount = await queryQueue.prepare()
@@ -50,7 +53,7 @@ export class Search extends Workers {
                     break
                 }
 
-                const res = await this.bot.browser.func.reportSearchActivity(query)
+                const res = await this.searchApi.report(query)
                 performed++
 
                 if (!res.ig) {
@@ -62,12 +65,36 @@ export class Search extends Workers {
 
                 const earned = res.searchPointsEarned
                 const limit = res.searchPointsLimit
-                const capReached = earned != null && limit != null && limit > 0 && earned >= limit
+                const responseCapReached = earned != null && limit != null && limit > 0 && earned >= limit
                 const cap = earned != null && limit != null ? `${earned}/${limit}` : 'n/a'
 
                 const gained = res.gained ?? 0
-                const searchProgress = earned != null && lastEarned != null ? earned - lastEarned : gained
+                const responseProgress = earned != null && lastEarned != null ? earned - lastEarned : gained
                 if (earned != null) lastEarned = earned
+
+                let dashboardProgress: number | null = null
+                let dashboardChecked = false
+                try {
+                    const updated = await this.searchProgress.getMissing(isMobile)
+                    dashboardProgress = Math.max(0, remainingPoints - updated.totalPoints)
+                    remainingPoints = updated.totalPoints
+                    dashboardChecked = true
+                } catch (error) {
+                    this.bot.logger.debug(
+                        isMobile,
+                        'SEARCH-BING',
+                        `Could not refresh the ${isMobile ? 'mobile' : 'desktop'} search quota | ${
+                            error instanceof Error ? error.message : String(error)
+                        }`
+                    )
+                }
+
+                // The dashboard remains the source of truth for completion, but its
+                // counters can lag the API response by one request. Either signal is
+                // enough to reset the stagnant-search guard.
+                const searchProgress =
+                    dashboardProgress === null ? responseProgress : Math.max(dashboardProgress, responseProgress)
+                const capReached = dashboardChecked ? remainingPoints <= 0 : responseCapReached
 
                 if (gained > 0) {
                     totalGained += gained
@@ -79,7 +106,8 @@ export class Search extends Workers {
                     this.bot.logger.info(
                         isMobile,
                         'SEARCH-BING',
-                        `pointsGained=${gained} | currentBalance=${res.balance} | query="${query}" | searchPts=${cap}`,
+                        `pointsGained=${gained} | currentBalance=${res.balance} | query="${query}"` +
+                            ` | remaining=${remainingPoints} | searchPts=${cap}`,
                         'green'
                     )
                 } else {
@@ -87,7 +115,8 @@ export class Search extends Workers {
                     this.bot.logger.info(
                         isMobile,
                         'SEARCH-BING',
-                        `No points gained ${stagnant}/${STAGNANT_LIMIT} | query="${query}" | searchPts=${cap}`
+                        `No points gained ${stagnant}/${STAGNANT_LIMIT} | query="${query}"` +
+                            ` | remaining=${remainingPoints} | searchPts=${cap}`
                     )
                 }
 
@@ -95,7 +124,8 @@ export class Search extends Workers {
                     this.bot.logger.info(
                         isMobile,
                         'SEARCH-BING',
-                        `Search point cap reached (${cap}), stopping`,
+                        `${isMobile ? 'Mobile' : 'Desktop'} search quota complete` +
+                            ` | remaining=${remainingPoints} | responseSearchPts=${cap}`,
                         'green'
                     )
                     break
@@ -165,7 +195,7 @@ export class Search extends Workers {
                     break
                 }
 
-                const res = await this.bot.browser.func.reportSearchActivity(query)
+                const res = await this.searchApi.report(query)
                 performed++
 
                 if (!res.ig) {

@@ -113,7 +113,8 @@ function toHistoryRecord(entry) {
             collected: a.collectedPoints ?? a.live?.gained ?? 0,
             success: a.success,
             error: a.error,
-            streakProtection: a.streakProtection ?? null
+            streakProtection: a.streakProtection ?? null,
+            edgeBrowsing: a.edgeBrowsing ?? null
         }))
     }
 }

@@ -1,5 +1,5 @@
 import type { Dashboard, DashboardData } from '../../../interface/DashboardData'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
 export interface SearchMultiplierPerk {
     offerId: string
@@ -45,7 +45,7 @@ export function detectSearchMultiplierPerk(dashboard: Dashboard): SearchMultipli
     return null
 }
 
-export class ActivateSearchPerk extends Workers {
+export class ActivateSearchPerk extends BaseActivity {
     public async activate(data: DashboardData) {
         const perk = detectSearchMultiplierPerk(data.dashboard)
         if (!perk) {

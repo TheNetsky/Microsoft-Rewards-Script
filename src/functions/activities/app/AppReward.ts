@@ -3,9 +3,9 @@ import { BING_APP_USER_AGENT } from '../../../constants/userAgents'
 import type { HttpRequestConfig } from '../../../util/Http'
 import { randomUUID } from 'crypto'
 import type { Promotion } from '../../../interface/AppDashBoardData'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
-export class AppReward extends Workers {
+export class AppReward extends BaseActivity {
     private gainedPoints: number = 0
 
     private oldBalance: number = this.bot.userData.currentPoints

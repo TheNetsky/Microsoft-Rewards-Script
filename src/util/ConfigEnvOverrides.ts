@@ -74,6 +74,7 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_EXPERIMENTAL_API_SEARCH', path: 'experimental.apiSearch', type: 'bool' },
     { env: 'CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING', path: 'experimental.apiSearchOnBing', type: 'bool' },
     { env: 'CONFIG_EXPERIMENTAL_BLOCK_MEDIA', path: 'experimental.blockMedia', type: 'bool' },
+    { env: 'CONFIG_EXPERIMENTAL_EDGE_BROWSING', path: 'experimental.edgeBrowsing', type: 'bool' },
 
     // Proxy
     { env: 'CONFIG_PROXY_QUERY_ENGINE', path: 'proxy.queryEngine', type: 'bool' },

@@ -43,6 +43,8 @@ services:
             #CONFIG_ACCOUNT_DELAY_MAX: '3min'
             # Block browser image/video/audio requests to reduce transferred media bytes.
             #CONFIG_EXPERIMENTAL_BLOCK_MEDIA: 'false'
+            # Report the Edge browsing streak in the background (experimental).
+            #CONFIG_EXPERIMENTAL_EDGE_BROWSING: 'false'
             # Only enable for a TLS-intercepting proxy whose certificate cannot be trusted normally.
             #CONFIG_PROXY_IGNORE_CERTIFICATE_ERRORS: 'false'
             #... add additional configuration overrides as needed

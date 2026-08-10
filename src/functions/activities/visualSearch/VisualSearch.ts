@@ -1,7 +1,8 @@
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
 import type { ParsedOffer, StreakState } from '../../../browser/ReactFunc'
 import type { DashboardData } from '../../../interface/DashboardData'
+import { VisualSearchBrowser } from './VisualSearchBrowser'
 
 const VISUAL_SEARCH_ACTIVATION_OFFER = 'visualsearch_streak_activation_v2'
 
@@ -23,7 +24,9 @@ interface ActivationMetadata {
     isPromotional: boolean
 }
 
-export class VisualSearch extends Workers {
+export class VisualSearch extends BaseActivity {
+    private readonly browserFlow = new VisualSearchBrowser(this.bot)
+
     public async doVisualSearch(data: DashboardData): Promise<number> {
         if (this.bot.isMobile) {
             this.bot.logger.debug(this.bot.isMobile, 'VISUAL-SEARCH', 'Skipping on mobile - desktop-only activity')
@@ -294,7 +297,7 @@ export class VisualSearch extends Workers {
 
     private async performDailySearch(): Promise<number> {
         const seenBcids = new Set<string>()
-        const candidateSeeds = await this.bot.browser.func.getVisualSearchSeedUrls()
+        const candidateSeeds = await this.browserFlow.getSeedUrls()
 
         for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             const visual = await this.acquireFreshVisualSearch(seenBcids, candidateSeeds, attempt)
@@ -303,7 +306,7 @@ export class VisualSearch extends Workers {
                 continue
             }
 
-            const res = await this.bot.browser.func.reportVisualSearchActivity(visual)
+            const res = await this.browserFlow.report(visual)
 
             if (res.balance != null) this.bot.userData.currentPoints = res.balance
 
@@ -366,7 +369,7 @@ export class VisualSearch extends Workers {
             const seed = candidateSeeds.shift()
             if (!seed) continue
 
-            const visual = await this.bot.browser.func.acquireVisualSearch(seed)
+            const visual = await this.browserFlow.acquire(seed)
             if (!visual) {
                 this.bot.logger.warn(
                     this.bot.isMobile,

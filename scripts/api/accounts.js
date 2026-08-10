@@ -165,6 +165,7 @@ export function mergeAccountStats(accounts, runs) {
         const results = byEmail.get(a.emailKey) || [] // already most-recent-first
         const last = results[0] || null
         const streakProtection = results.find(result => result.streakProtection != null)?.streakProtection ?? null
+        const edgeBrowsing = results.find(result => result.edgeBrowsing != null)?.edgeBrowsing ?? null
 
         let totalCollected = 0
         for (const r of results) totalCollected += r.collected || 0
@@ -187,7 +188,8 @@ export function mergeAccountStats(accounts, runs) {
             lastCollected: last?.collected ?? null,
             lastSuccess: last ? last.success : null,
             lastError: last?.error ?? null,
-            streakProtection
+            streakProtection,
+            edgeBrowsing
         }
     })
 }

@@ -2,8 +2,9 @@ import type { Page } from 'patchright'
 
 import { URLs } from '../../../constants/urls'
 import { SearchQueryQueue } from '../../SearchQueryQueue'
-import { Workers } from '../../Workers'
-import { BonusTracker } from '../SearchBonus'
+import { BaseActivity } from '../BaseActivity'
+import { BonusTracker } from './BonusTracker'
+import { SearchProgress } from './SearchProgress'
 import type { SearchTracker } from '../../../interface/Search'
 import type { MissingSearchPoints } from '../../../interface/Points'
 import type { MicrosoftRewardsBot } from '../../../index'
@@ -23,7 +24,7 @@ interface SessionStats {
     stagnant: number
 }
 
-export class Search extends Workers {
+export class Search extends BaseActivity {
     private searchCount = 0
 
     public async doSearch(page: Page, isMobile: boolean): Promise<number> {
@@ -245,19 +246,18 @@ class PointsTracker implements SearchTracker {
 
     private missing: MissingSearchPoints = { mobilePoints: 0, desktopPoints: 0, edgePoints: 0, totalPoints: 0 }
     private readonly runOnZeroPoints: boolean
+    private readonly searchProgress: SearchProgress
 
     constructor(
         private bot: MicrosoftRewardsBot,
         private isMobile: boolean
     ) {
         this.runOnZeroPoints = this.bot.config.searchSettings.runOnZeroPoints ?? false
+        this.searchProgress = new SearchProgress(this.bot)
     }
 
     async prepare(): Promise<boolean> {
-        this.missing = this.bot.browser.func.missingSearchPoints(
-            await this.bot.browser.func.getSearchPoints(),
-            this.isMobile
-        )
+        this.missing = await this.searchProgress.getMissing(this.isMobile)
         this.bot.logger.info(
             this.isMobile,
             this.context,
@@ -283,10 +283,7 @@ class PointsTracker implements SearchTracker {
     }
 
     async measure(): Promise<number> {
-        const updated = this.bot.browser.func.missingSearchPoints(
-            await this.bot.browser.func.getSearchPoints(),
-            this.isMobile
-        )
+        const updated = await this.searchProgress.getMissing(this.isMobile)
         const gained = Math.max(0, this.missing.totalPoints - updated.totalPoints)
         this.missing = updated
 

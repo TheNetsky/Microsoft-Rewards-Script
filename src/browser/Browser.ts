@@ -9,6 +9,7 @@ import { formatBrowserProxyServer } from '../util/Proxy'
 import { UserAgentManager } from './UserAgent'
 
 import type { Account } from '../interface/Account'
+import { configureMediaBlocking } from './MediaBlocker'
 
 /* Test Stuff
 https://abrahamjuliot.github.io/creepjs/
@@ -25,7 +26,6 @@ interface BrowserCreationResult {
 
 class Browser {
     private readonly bot: MicrosoftRewardsBot
-    private static readonly BLOCKED_MEDIA_RESOURCE_TYPES = new Set(['image', 'media'])
     private static readonly BROWSER_ARGS = [
         '--mute-audio',
         '--no-first-run',
@@ -171,7 +171,7 @@ class Browser {
                 })
             }
 
-            await this.configureMediaBlocking(context)
+            await configureMediaBlocking(this.bot, context)
 
             context.on('page', p => {
                 p.on('crash', () =>
@@ -198,28 +198,6 @@ class Browser {
             await browser.close().catch(() => {})
             throw error
         }
-    }
-
-    private async configureMediaBlocking(context: BrowserContext): Promise<void> {
-        if (!this.bot.config.experimental.blockMedia) return
-
-        await context.route('**/*', async route => {
-            const resourceType = route.request().resourceType()
-            if (Browser.BLOCKED_MEDIA_RESOURCE_TYPES.has(resourceType)) {
-                await route.abort()
-                return
-            }
-
-            // Fall through instead of continuing directly so fingerprint-injector or
-            // future context-level route handlers still get a chance to process it.
-            await route.fallback()
-        })
-
-        this.bot.logger.info(
-            this.bot.isMobile,
-            'BROWSER',
-            'Media loading disabled | blockedResourceTypes=image,media | httpCache=disabled-by-routing'
-        )
     }
 
     async generateFingerprint(isMobile: boolean): Promise<BrowserFingerprintWithHeaders> {

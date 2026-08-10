@@ -1,5 +1,5 @@
 import { URLs } from '../../../constants/urls'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
 const STREAK_PROTECTION_ACTION_NAMES = [
     'reportSetStreakProtection',
@@ -9,7 +9,7 @@ const STREAK_PROTECTION_ACTION_NAMES = [
     'reportStreakProtection'
 ]
 
-export class EnsureStreakProtection extends Workers {
+export class EnsureStreakProtection extends BaseActivity {
     public async ensureStreakProtection() {
         const resolved = this.resolveActionId()
         if (!resolved) {

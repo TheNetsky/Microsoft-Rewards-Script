@@ -1,8 +1,8 @@
 import { URLs } from '../../../constants/urls'
 import type { BasePromotion } from '../../../interface/DashboardData'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
-export class UrlReward extends Workers {
+export class UrlReward extends BaseActivity {
     public async doUrlReward(promotion: BasePromotion) {
         await this.runUrlReward(promotion, true)
     }

@@ -2,9 +2,9 @@ import { URLs } from '../../../constants/urls'
 import { BING_APP_USER_AGENT } from '../../../constants/userAgents'
 import type { HttpRequestConfig } from '../../../util/Http'
 import { randomBytes } from 'crypto'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 
-export class ReadToEarn extends Workers {
+export class ReadToEarn extends BaseActivity {
     public async doReadToEarn() {
         if (!this.bot.accessToken) {
             this.bot.logger.warn(

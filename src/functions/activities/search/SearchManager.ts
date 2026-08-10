@@ -1,6 +1,7 @@
-import { MicrosoftRewardsBot, executionContext } from '../index'
-import type { Account } from '../interface/Account'
-import { URLs } from '../constants/urls'
+import { MicrosoftRewardsBot, executionContext } from '../../../index'
+import type { Account } from '../../../interface/Account'
+import { URLs } from '../../../constants/urls'
+import { SearchProgress, type SearchQuota } from './SearchProgress'
 
 interface SearchPlan {
     doMobile: boolean
@@ -10,12 +11,18 @@ interface SearchPlan {
 }
 
 export class SearchManager {
-    constructor(private bot: MicrosoftRewardsBot) {}
+    private readonly progress: SearchProgress
+
+    constructor(private bot: MicrosoftRewardsBot) {
+        this.progress = new SearchProgress(bot)
+    }
 
     async getSearchPoints(): Promise<SearchPlan> {
-        const counters = await this.bot.browser.func.getSearchPoints()
-        const mobileMissing = this.bot.browser.func.missingSearchPoints(counters, true).totalPoints
-        const desktopMissing = this.bot.browser.func.missingSearchPoints(counters, false).totalPoints
+        const counters = await this.progress.getCounters()
+        const quotas = this.progress.calculateQuotas(counters)
+        const mobileMissing = quotas.mobile.remaining
+        const desktopQuota = this.combineQuotas(quotas.desktop, quotas.edge)
+        const desktopMissing = desktopQuota.remaining
 
         const doMobile = this.bot.config.workers.doMobileSearch && mobileMissing > 0
         const doDesktop = this.bot.config.workers.doDesktopSearch && desktopMissing > 0
@@ -23,22 +30,29 @@ export class SearchManager {
         this.bot.logger.info(
             'main',
             'SEARCH-MANAGER',
-            `Mobile: ${
-                !this.bot.config.workers.doMobileSearch
-                    ? 'skip (disabled)'
-                    : mobileMissing <= 0
-                      ? 'skip (no points)'
-                      : `run (missing ${mobileMissing})`
-            } | Desktop: ${
-                !this.bot.config.workers.doDesktopSearch
-                    ? 'skip (disabled)'
-                    : desktopMissing <= 0
-                      ? 'skip (no points)'
-                      : `run (missing ${desktopMissing})`
-            }`
+            `Mobile: ${this.describeQuota(this.bot.config.workers.doMobileSearch, quotas.mobile)}` +
+                ` | Desktop: ${this.describeQuota(this.bot.config.workers.doDesktopSearch, desktopQuota)}` +
+                `${quotas.edge.max > 0 ? ` | Edge: ${quotas.edge.earned}/${quotas.edge.max}` : ''}`
         )
 
         return { doMobile, doDesktop, mobileMissing, desktopMissing }
+    }
+
+    private combineQuotas(...quotas: SearchQuota[]): SearchQuota {
+        return quotas.reduce(
+            (total, quota) => ({
+                earned: total.earned + quota.earned,
+                max: total.max + quota.max,
+                remaining: total.remaining + quota.remaining
+            }),
+            { earned: 0, max: 0, remaining: 0 }
+        )
+    }
+
+    private describeQuota(enabled: boolean, quota: SearchQuota): string {
+        if (!enabled) return `skip (disabled, ${quota.earned}/${quota.max})`
+        if (quota.remaining <= 0) return `skip (complete, ${quota.earned}/${quota.max})`
+        return `run (${quota.earned}/${quota.max}, missing ${quota.remaining})`
     }
 
     searchMobile(account: Account): Promise<number> {

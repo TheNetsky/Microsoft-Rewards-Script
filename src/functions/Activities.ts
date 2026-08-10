@@ -1,9 +1,15 @@
 import type { MicrosoftRewardsBot } from '../index'
 
+// Rewards
+import { DailySet } from './activities/rewards/DailySet'
+import { MorePromotions } from './activities/rewards/MorePromotions'
+import { PunchCards } from './activities/rewards/PunchCards'
+
 // App
 import { DailyCheckIn } from './activities/app/DailyCheckIn'
 import { ReadToEarn } from './activities/app/ReadToEarn'
 import { AppReward } from './activities/app/AppReward'
+import { AppPromotions } from './activities/app/AppPromotions'
 
 // API
 import { UrlReward } from './activities/api/UrlReward'
@@ -11,19 +17,20 @@ import { ClaimBonusPoints } from './activities/api/ClaimBonusPoints'
 import { EnsureStreakProtection } from './activities/api/EnsureStreakProtection'
 import { ClaimReward } from './activities/api/ClaimReward'
 import { ActivateSearchPerk } from './activities/api/ActivateSearchPerk'
-import { VisualSearch } from './activities/api/VisualSearch'
+import { VisualSearch } from './activities/visualSearch/VisualSearch'
 
 // Browser
-import { Search as BrowserSearch } from './activities/browser/Search'
-import { SearchOnBing as BrowserSearchOnBing } from './activities/browser/SearchOnBing'
+import { Search as BrowserSearch } from './activities/search/BrowserSearch'
+import { SearchOnBing as BrowserSearchOnBing } from './activities/search/BrowserSearchOnBing'
 
 // Experimental
-import { Search as ApiSearch } from './activities/api/Search'
-import { SearchOnBing as ApiSearchOnBing } from './activities/api/SearchOnBing'
+import { ApiSearch } from './activities/experimental/ApiSearch'
+import { ApiSearchOnBing } from './activities/experimental/ApiSearchOnBing'
+import { EdgeBrowsing } from './activities/experimental/EdgeBrowsing'
 
 import type { Page } from 'patchright'
 import type { BasePromotion, DashboardData } from '../interface/DashboardData'
-import type { Promotion } from '../interface/AppDashBoardData'
+import type { AppDashboardData, Promotion } from '../interface/AppDashBoardData'
 import type { QuestChild } from '../browser/ReactFunc'
 
 export default class Activities {
@@ -54,6 +61,23 @@ export default class Activities {
             return
         }
         await new BrowserSearchOnBing(this.bot).doSearchOnBing(promotion, page)
+    }
+
+    // Rewards
+    doDailySet = async (data: DashboardData): Promise<void> => {
+        await new DailySet(this.bot).run(data)
+    }
+
+    doMorePromotions = async (data: DashboardData): Promise<void> => {
+        await new MorePromotions(this.bot).run(data)
+    }
+
+    doPunchCardsMobile = async (data: DashboardData): Promise<void> => {
+        await new PunchCards(this.bot).runMobile(data)
+    }
+
+    doPunchCardsDesktop = async (): Promise<void> => {
+        await new PunchCards(this.bot).runDesktop()
     }
 
     // API
@@ -101,5 +125,15 @@ export default class Activities {
     doDailyCheckIn = async (): Promise<void> => {
         const dailyCheckIn = new DailyCheckIn(this.bot)
         await dailyCheckIn.doDailyCheckIn()
+    }
+
+    doAppPromotions = async (data: AppDashboardData): Promise<void> => {
+        await new AppPromotions(this.bot).run(data)
+    }
+
+    // Experimental
+    doEdgeBrowsing = async (signal?: AbortSignal): Promise<void> => {
+        const edgeBrowsing = new EdgeBrowsing(this.bot)
+        await edgeBrowsing.run(signal)
     }
 }

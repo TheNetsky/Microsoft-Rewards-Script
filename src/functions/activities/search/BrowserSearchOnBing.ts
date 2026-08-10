@@ -1,14 +1,16 @@
-import { Workers } from '../../Workers'
-import { activateSearchOnBing, findSearchOnBingOffer, getSearchOnBingQueries } from '../SearchOnBingShared'
+import type { Page } from 'patchright'
+import { BaseActivity } from '../BaseActivity'
+import { activateSearchOnBing, findSearchOnBingOffer, getSearchOnBingQueries } from './SearchOnBingShared'
+import { URLs } from '../../../constants/urls'
 
-import type { BasePromotion, Dashboard } from '../../../interface/DashboardData'
+import type { BasePromotion } from '../../../interface/DashboardData'
 
-export class SearchOnBing extends Workers {
+export class SearchOnBing extends BaseActivity {
     private gainedPoints = 0
     private success = false
     private oldBalance = 0
 
-    public async doSearchOnBing(promotion: BasePromotion) {
+    public async doSearchOnBing(promotion: BasePromotion, page: Page) {
         const offerId = promotion.offerId
         this.oldBalance = Number(this.bot.userData.currentPoints ?? 0)
         this.gainedPoints = 0
@@ -21,7 +23,8 @@ export class SearchOnBing extends Workers {
         )
 
         try {
-            if (!(await activateSearchOnBing(this.bot, promotion))) {
+            const activated = await activateSearchOnBing(this.bot, promotion)
+            if (!activated) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'SEARCH-ON-BING',
@@ -31,7 +34,7 @@ export class SearchOnBing extends Workers {
             }
 
             const queries = await getSearchOnBingQueries(this.bot, promotion)
-            await this.searchBing(queries, promotion)
+            await this.searchBing(page, queries, promotion)
 
             if (this.success) {
                 this.bot.logger.info(
@@ -53,22 +56,23 @@ export class SearchOnBing extends Workers {
                 'SEARCH-ON-BING',
                 `Error in doSearchOnBing | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
             )
+        } finally {
+            await page.goto(URLs.rewards.earn).catch(() => {})
         }
     }
 
-    private async searchBing(queries: string[], promotion: BasePromotion) {
+    private async searchBing(page: Page, queries: string[], promotion: BasePromotion) {
         queries = [...new Set(queries)]
         const offerId = promotion.offerId
-
-        const cgDashboard = (await this.bot.browser.func.getDashboardData()).dashboard
-        const cg = this.buildCategoryGroup(cgDashboard, offerId)
-        this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `Category group | cg=${cg || '(none)'}`)
 
         this.bot.logger.debug(
             this.bot.isMobile,
             'SEARCH-ON-BING-SEARCH',
             `Starting search loop | queriesCount=${queries.length} | targetPoints=${promotion.pointProgressMax} | currentBalance=${this.oldBalance}`
         )
+
+        await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-ON-BING-COOKIE-SEED', true)
+        await this.ensureSearchReady(page)
 
         let lastBalance = this.oldBalance
         let i = 0
@@ -77,18 +81,12 @@ export class SearchOnBing extends Workers {
             try {
                 this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `Processing query | query="${query}"`)
 
-                const { ig } = await this.bot.browser.func.reportSearchActivity(query, cg ? { cg } : undefined)
-                if (!ig) {
-                    this.bot.logger.warn(
-                        this.bot.isMobile,
-                        'SEARCH-ON-BING-SEARCH',
-                        `No IG returned for query="${query}" - skipping this query`
-                    )
-                    continue
-                }
+                await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-ON-BING-COOKIE-SEED', true)
+                await this.typeSearch(page, query)
 
                 await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 7000))
 
+                await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-ON-BING-COOKIE-CAPTURE')
                 const dashboard = (await this.bot.browser.func.getDashboardData()).dashboard
                 const newBalance = dashboard.userStatus.availablePoints
                 const offer = findSearchOnBingOffer(dashboard, offerId)
@@ -146,24 +144,28 @@ export class SearchOnBing extends Workers {
         )
     }
 
-    private buildCategoryGroup(dashboard: Dashboard, targetOfferId: string): string {
-        const pools = [
-            ...Object.values(dashboard.dailySetPromotions ?? {}).flat(),
-            ...(dashboard.morePromotions ?? []),
-            ...(dashboard.promotionalItems ?? []),
-            ...(dashboard.promotionalItem ? [dashboard.promotionalItem] : [])
-        ]
-        const categoryOf = (id: string): string | null => {
-            const m = id.match(/(?:^|_)([a-z0-9]+)_exploreonbing/i)
-            return m?.[1]?.toLowerCase() ?? null
-        }
-        const categories = new Set<string>()
-        const target = categoryOf(targetOfferId)
-        if (target) categories.add(target)
-        for (const offer of pools) {
-            const cat = categoryOf(offer.offerId ?? '')
-            if (cat) categories.add(cat)
-        }
-        return [...categories].join(',')
+    private async ensureSearchReady(page: Page) {
+        const searchBox = page.locator('#sb_form_q')
+        if (await searchBox.isVisible().catch(() => false)) return
+
+        await page.goto(URLs.bing.origin)
+        await page.waitForLoadState('domcontentloaded', { timeout: 8000 }).catch(() => {})
+        await this.bot.browser.utils.tryDismissAllMessages(page)
+    }
+
+    private async typeSearch(page: Page, query: string) {
+        await this.ensureSearchReady(page)
+
+        const selector = '#sb_form_q'
+        const searchBox = page.locator(selector)
+        await searchBox.waitFor({ state: 'visible', timeout: 15000 })
+
+        await this.bot.utils.wait(500)
+        await this.bot.browser.utils.ghostClick(page, selector, { clickCount: 3 })
+        await searchBox.fill('')
+
+        await page.keyboard.type(query, { delay: this.bot.utils.randomDelay(45, 90) })
+        await page.keyboard.press('Enter')
+        await page.waitForLoadState('domcontentloaded', { timeout: 8000 }).catch(() => {})
     }
 }

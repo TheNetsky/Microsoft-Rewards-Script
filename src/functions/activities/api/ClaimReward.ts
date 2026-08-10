@@ -1,9 +1,9 @@
 import type { QuestChild } from '../../../browser/ReactFunc'
-import { Workers } from '../../Workers'
+import { BaseActivity } from '../BaseActivity'
 import { URLs } from '../../../constants/urls'
 
 // This is still very much WIP!
-export class ClaimReward extends Workers {
+export class ClaimReward extends BaseActivity {
     public async claimReward(child: QuestChild, parentId: string) {
         const offerId = child.offerId
 

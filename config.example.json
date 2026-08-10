@@ -63,7 +63,8 @@
     "experimental": {
         "apiSearch": false,
         "apiSearchOnBing": false,
-        "blockMedia": false
+        "blockMedia": false,
+        "edgeBrowsing": false
     },
     "debugLogs": false,
     "consoleLogFilter": {

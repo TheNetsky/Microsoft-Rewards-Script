@@ -25,34 +25,75 @@ other scripts in the project.
 
 ## Table of Contents
 
-- [Architecture and persistence](#architecture-and-persistence)
-- [Requirements](#requirements)
-- [Quick Setup](#quick-setup)
-    - [Build the bot](#build-the-bot)
-    - [Run without authentication](#run-without-authentication)
-    - [Run with authentication from the command line](#run-with-authentication-from-the-command-line)
-    - [Run with authentication from `.env`](#run-with-authentication-from-env)
-    - [Connect a dashboard](#connect-a-dashboard)
-    - [Verify the API](#verify-the-api)
-- [Authentication](#authentication)
-- [HTTP conventions](#http-conventions)
-- [Axios setup](#axios-setup)
-- [Endpoint overview](#endpoint-overview)
-- [Reading API state](#reading-api-state)
-- [Session management](#session-management)
-- [Reading diagnostics](#reading-diagnostics)
-- [Starting and controlling runs](#starting-and-controlling-runs)
-- [Live event stream with SSE](#live-event-stream-with-sse)
-- [Reading and editing configuration](#reading-and-editing-configuration)
-- [Reading and editing the schedule](#reading-and-editing-the-schedule)
-- [Axios response and error handling](#axios-response-and-error-handling)
-- [PowerShell examples](#powershell-examples)
-- [HTTP status codes](#http-status-codes)
-- [Environment variables](#environment-variables)
-- [Security guidance](#security-guidance)
-- [Keeping the API running](#keeping-the-api-running)
-- [Startup readiness](#startup-readiness)
-- [File layout](#file-layout)
+- [Microsoft Rewards Script Control API](#microsoft-rewards-script-control-api)
+    - [Table of Contents](#table-of-contents)
+    - [Architecture and persistence](#architecture-and-persistence)
+    - [Requirements](#requirements)
+    - [Quick Setup](#quick-setup)
+        - [Build the bot](#build-the-bot)
+        - [Run without authentication](#run-without-authentication)
+        - [Run with authentication from the command line](#run-with-authentication-from-the-command-line)
+        - [Run with authentication from `.env`](#run-with-authentication-from-env)
+        - [Connect a dashboard](#connect-a-dashboard)
+        - [Verify the API](#verify-the-api)
+    - [Authentication](#authentication)
+        - [Bearer token](#bearer-token)
+        - [API key header](#api-key-header)
+        - [SSE query parameter](#sse-query-parameter)
+    - [HTTP conventions](#http-conventions)
+    - [Axios setup](#axios-setup)
+    - [Endpoint overview](#endpoint-overview)
+        - [Read endpoints](#read-endpoints)
+        - [Control and write endpoints](#control-and-write-endpoints)
+    - [Reading API state](#reading-api-state)
+        - [`GET /`](#get-)
+        - [`GET /health`](#get-health)
+        - [`GET /status`](#get-status)
+        - [`GET /points`](#get-points)
+        - [`GET /logs`](#get-logs)
+        - [`GET /errors`](#get-errors)
+        - [`GET /history`](#get-history)
+        - [`GET /accounts`](#get-accounts)
+    - [Session management](#session-management)
+        - [`GET /sessions`](#get-sessions)
+        - [`DELETE /sessions/:email`](#delete-sessionsemail)
+    - [Reading diagnostics](#reading-diagnostics)
+        - [`GET /diagnostics`](#get-diagnostics)
+    - [Starting and controlling runs](#starting-and-controlling-runs)
+        - [`POST /start`](#post-start)
+            - [Start all configured accounts](#start-all-configured-accounts)
+            - [Start only one account](#start-only-one-account)
+            - [Start all except selected accounts](#start-all-except-selected-accounts)
+            - [Override launch arguments](#override-launch-arguments)
+            - [Add per-run environment variables](#add-per-run-environment-variables)
+            - [Start errors](#start-errors)
+        - [`POST /stop`](#post-stop)
+        - [`POST /restart`](#post-restart)
+        - [`POST /shutdown`](#post-shutdown)
+    - [Live event stream with SSE](#live-event-stream-with-sse)
+        - [`GET /events`](#get-events)
+        - [Terminal stream](#terminal-stream)
+        - [Node.js stream with Axios](#nodejs-stream-with-axios)
+        - [Browser `EventSource`](#browser-eventsource)
+    - [Reading and editing configuration](#reading-and-editing-configuration)
+        - [`GET /config`](#get-config)
+        - [`PATCH /config`](#patch-config)
+        - [`PUT /config`](#put-config)
+    - [Reading and editing the schedule](#reading-and-editing-the-schedule)
+        - [`GET /schedule`](#get-schedule)
+        - [`PUT /schedule` and `PATCH /schedule`](#put-schedule-and-patch-schedule)
+    - [Axios response and error handling](#axios-response-and-error-handling)
+    - [PowerShell examples](#powershell-examples)
+    - [HTTP status codes](#http-status-codes)
+    - [Environment variables](#environment-variables)
+    - [Security guidance](#security-guidance)
+    - [Keeping the API running](#keeping-the-api-running)
+        - [Development terminal](#development-terminal)
+        - [PM2](#pm2)
+        - [systemd](#systemd)
+        - [Docker](#docker)
+    - [Startup readiness](#startup-readiness)
+    - [File layout](#file-layout)
 
 ---
 
@@ -539,6 +580,23 @@ Representative response:
                     "streakCounter": 9,
                     "updatedAt": "7/14/2026, 11:30:44 AM"
                 },
+                "edgeBrowsing": {
+                    "status": "running",
+                    "targetMinutes": 30,
+                    "serverIntervalMinutes": 5,
+                    "reportsCompleted": 2,
+                    "reportsTotal": 6,
+                    "reportsRemaining": 4,
+                    "scheduledMinutesCovered": 10,
+                    "nextReportInSeconds": 312.6,
+                    "estimatedRemainingMinutes": 20.8,
+                    "elapsedMinutes": 10.4,
+                    "accepted": 2,
+                    "duplicates": 0,
+                    "failed": 0,
+                    "waitingForBackground": false,
+                    "updatedAt": "7/14/2026, 11:30:44 AM"
+                },
                 "durationSeconds": null,
                 "success": null,
                 "error": null,
@@ -603,6 +661,23 @@ console.log(data)
                 "enabled": true,
                 "remainingDays": 1,
                 "streakCounter": 9,
+                "updatedAt": "7/14/2026, 11:30:44 AM"
+            },
+            "edgeBrowsing": {
+                "status": "running",
+                "targetMinutes": 30,
+                "serverIntervalMinutes": 5,
+                "reportsCompleted": 2,
+                "reportsTotal": 6,
+                "reportsRemaining": 4,
+                "scheduledMinutesCovered": 10,
+                "nextReportInSeconds": 312.6,
+                "estimatedRemainingMinutes": 20.8,
+                "elapsedMinutes": 10.4,
+                "accepted": 2,
+                "duplicates": 0,
+                "failed": 0,
+                "waitingForBackground": false,
                 "updatedAt": "7/14/2026, 11:30:44 AM"
             },
             "done": false,
@@ -793,6 +868,19 @@ console.log(data.runs)
                         "remainingDays": 1,
                         "streakCounter": 9,
                         "updatedAt": "7/14/2026, 11:30:44 AM"
+                    },
+                    "edgeBrowsing": {
+                        "status": "complete",
+                        "reportsCompleted": 6,
+                        "reportsTotal": 6,
+                        "reportsRemaining": 0,
+                        "scheduledMinutesCovered": 30,
+                        "estimatedRemainingMinutes": 0,
+                        "accepted": 6,
+                        "duplicates": 0,
+                        "failed": 0,
+                        "elapsedMinutes": 31.2,
+                        "updatedAt": "7/14/2026, 12:01:39 PM"
                     }
                 }
             ]
@@ -859,6 +947,19 @@ Valid account locale values are normalized in this response: language uses canon
                 "remainingDays": 1,
                 "streakCounter": 9,
                 "updatedAt": "7/14/2026, 11:30:44 AM"
+            },
+            "edgeBrowsing": {
+                "status": "complete",
+                "reportsCompleted": 6,
+                "reportsTotal": 6,
+                "reportsRemaining": 0,
+                "scheduledMinutesCovered": 30,
+                "estimatedRemainingMinutes": 0,
+                "accepted": 6,
+                "duplicates": 0,
+                "failed": 0,
+                "elapsedMinutes": 31.2,
+                "updatedAt": "7/14/2026, 12:01:39 PM"
             }
         }
     ],

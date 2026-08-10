@@ -29,6 +29,8 @@
     - [Search Settings](#search-settings)
         - [Query sources](#query-sources)
     - [Experimental](#experimental)
+        - [Edge browsing timing and progress](#edge-browsing-timing-and-progress)
+        - [Activity source layout](#activity-source-layout)
     - [Logging](#logging)
     - [Proxy](#proxy)
     - [Webhooks](#webhooks)
@@ -235,6 +237,8 @@ Edit `config.json` to customize behavior, or set `CONFIG_*` environment variable
 | `searchSettings.readDelay.min`         | string   | `"30sec"`                           | Minimum delay for reading                                 | `CONFIG_SEARCH_READ_DELAY_MIN`     |
 | `searchSettings.readDelay.max`         | string   | `"1min"`                            | Maximum delay for reading                                 | `CONFIG_SEARCH_READ_DELAY_MAX`     |
 
+Desktop and mobile search quotas are tracked independently from the dashboard counters. All `mobileSearch` entries are combined for the mobile quota, while all `pcSearch` entries are combined for desktop execution; a counter explicitly identified as Edge is also shown separately for diagnostics. The script skips only the completed platform, so a completed `60/60` mobile quota does not prevent an incomplete desktop quota from running. With `parallelSearching` enabled, both incomplete quotas can run concurrently in their own browser contexts.
+
 > [!NOTE]
 > \* Docker `CONFIG_*` array values are comma-separated strings e.g. `"error,warn"`. Regex patterns must be set directly in `config.json`.
 
@@ -289,13 +293,42 @@ Default:
 
 Opt-in features that may change. Disabled by default.
 
-| Setting                        | Type    | Default | Description                                                       | Docker environment variable              |
-| ------------------------------ | ------- | ------- | ----------------------------------------------------------------- | ---------------------------------------- |
-| `experimental.apiSearch`       | boolean | `false` | Perform Bing searches over HTTP instead of driving a browser page | `CONFIG_EXPERIMENTAL_API_SEARCH`         |
-| `experimental.apiSearchOnBing` | boolean | `false` | Complete ExploreOnBing offers over HTTP instead of the browser    | `CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING` |
-| `experimental.blockMedia`      | boolean | `false` | Block browser `image` and `media` requests to reduce traffic      | `CONFIG_EXPERIMENTAL_BLOCK_MEDIA`        |
+| Setting                        | Type    | Default | Description                                                           | Docker environment variable              |
+| ------------------------------ | ------- | ------- | --------------------------------------------------------------------- | ---------------------------------------- |
+| `experimental.apiSearch`       | boolean | `false` | Perform Bing searches over HTTP instead of driving a browser page     | `CONFIG_EXPERIMENTAL_API_SEARCH`         |
+| `experimental.apiSearchOnBing` | boolean | `false` | Complete ExploreOnBing offers over HTTP instead of the browser        | `CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING` |
+| `experimental.blockMedia`      | boolean | `false` | Block browser `image` and `media` requests to reduce traffic          | `CONFIG_EXPERIMENTAL_BLOCK_MEDIA`        |
+| `experimental.edgeBrowsing`    | boolean | `false` | Report the 30-minute Edge browsing activity as a background HTTP task | `CONFIG_EXPERIMENTAL_EDGE_BROWSING`      |
 
 When `experimental.blockMedia` is enabled, document, stylesheet, script, font, XHR, and fetch requests are left untouched. This keeps login and Rewards application traffic available while avoiding image, video, and audio downloads. It also applies to `npm run open-session`.
+
+When `experimental.edgeBrowsing` is enabled, the task starts before the normal activity sequence and runs as a separate Promise alongside Daily Set, promotions, app activities, and searches. If foreground work finishes first, the account remains open until this Promise settles. Accounts without the promotion, an access token, or remaining Edge work are skipped immediately.
+
+#### Edge browsing timing and progress
+
+This is tracked as scheduled reporting windows, not as a blind 30-minute sleep:
+
+1. The Edge profile supplies `report_per_minutes` (normally `5`). Invalid or absent values fall back to five minutes.
+2. The report count is `ceil(30 / interval)`. A five-minute interval therefore creates six report windows.
+3. Each window is scheduled for the server interval plus a pre-generated random 5-20 second offset. The positive offset avoids submitting before the advertised boundary.
+4. A monotonic clock tracks real elapsed runtime. The remaining schedule is recalculated after every report and retry, so the ETA can move later if a request is slow or retried.
+5. Each report gets one retry after a random 10-20 second delay for transient failures. Authentication and other non-retryable client errors stop the activity.
+6. `reportsCompleted` counts report windows processed. `accepted`, `duplicates`, and `failed` show their outcomes separately. `scheduledMinutesCovered` shows how much of the 30-minute schedule those processed windows represent.
+
+Normal `INFO` logs include the next report delay, processed and remaining reports, scheduled minutes covered, elapsed time. API mode exposes the same state as `accounts[].edgeBrowsing` in `/status`, `/points`, `/history`, and `/accounts`. A clean six-report run normally takes about 30.5-32 minutes; network latency or a retry can extend it.
+
+#### Activity source layout
+
+Standard activities live under `src/functions/activities`, grouped by responsibility:
+
+- `rewards`: Daily Set, More Promotions, Punch Cards, and shared promotion dispatch
+- `api`: individual Rewards API actions
+- `app`: individual mobile-app activities and App Promotions orchestration
+- `search`: browser search flows, search tracking, and shared SearchOnBing behavior
+- `visualSearch`: the visual-search activity and its browser transport
+- `experimental`: API Search, API SearchOnBing, Edge Browsing, and their supporting transports
+
+Experimental activities live with the other activities under `src/functions/activities/experimental`. The browser-only media blocker lives at `src/browser/MediaBlocker.ts`. `BrowserFunc` contains shared Rewards/browser/session transport only, rather than individual search or visual-search implementations.
 
 > [!NOTE]
 > [Playwright documents](https://playwright.dev/docs/api/class-browsercontext#browser-context-route) that request routing disables the browser HTTP cache while routing is active. Image-heavy pages will usually transfer substantially less data with media blocking enabled, but cache-heavy sites are not guaranteed to use less total bandwidth or load faster. Keep this option disabled if a site depends on image/media load events.

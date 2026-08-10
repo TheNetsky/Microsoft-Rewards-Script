@@ -150,9 +150,10 @@ export const ConfigSchema = z.object({
         .object({
             apiSearch: z.boolean().default(false),
             apiSearchOnBing: z.boolean().default(false),
-            blockMedia: z.boolean().default(false)
+            blockMedia: z.boolean().default(false),
+            edgeBrowsing: z.boolean().default(false)
         })
-        .default({ apiSearch: false, apiSearchOnBing: false, blockMedia: false }),
+        .default({ apiSearch: false, apiSearchOnBing: false, blockMedia: false, edgeBrowsing: false }),
     debugLogs: z.boolean(),
     proxy: z.object({
         queryEngine: z.boolean(),
@@ -290,7 +291,8 @@ const defaultConfig: Config = {
     experimental: {
         apiSearch: false,
         apiSearchOnBing: false,
-        blockMedia: false
+        blockMedia: false,
+        edgeBrowsing: false
     },
     debugLogs: false,
     proxy: { queryEngine: true, ignoreCertificateErrors: false },
