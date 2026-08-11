@@ -16,9 +16,7 @@ export class CodeLogin {
 
     private async findEmailVerificationInput(page: Page) {
         for (const selector of this.emailVerificationInputSelectors) {
-            const input = await page
-                .waitForSelector(selector, { state: 'visible', timeout: 500 })
-                .catch(() => null)
+            const input = await page.waitForSelector(selector, { state: 'visible', timeout: 500 }).catch(() => null)
 
             if (input) return { input, selector }
         }
