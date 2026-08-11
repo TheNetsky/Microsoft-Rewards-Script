@@ -6,10 +6,9 @@ import { VisualSearchBrowser } from './VisualSearchBrowser'
 
 const VISUAL_SEARCH_ACTIVATION_OFFER = 'visualsearch_streak_activation_v2'
 
-// 11 is confirmed for the July banner and carried over to the v2 offer, verify before trusting it there
 const VERIFIED_ACTIVITY_TYPES = new Map<string, number>([
     ['ww_visualsearch_summerjuly26_activation_banner', 11],
-    ['visualsearch_streak_activation_v2', 11]
+    ['visualsearch_streak_activation_v2', 714]
 ])
 
 const MAX_ATTEMPTS = 4
@@ -48,7 +47,7 @@ export class VisualSearch extends BaseActivity {
 
         const activation = await this.activate(data)
 
-        const available = !!streak || activation === 'activated' || activation === 'already-active'
+        const available = streak?.isEnabled === true || activation === 'activated' || activation === 'already-active'
         if (!available) {
             this.bot.logger.info(
                 this.bot.isMobile,
@@ -102,11 +101,11 @@ export class VisualSearch extends BaseActivity {
             return 'absent'
         }
 
-        if (!offer.reportable) {
+        if (offer.isCompleted) {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'VISUAL-SEARCH',
-                `Visual search already active (or not activatable) | offerId=${offer.offerId}`,
+                `Visual search activation offer already completed | offerId=${offer.offerId}`,
                 'green'
             )
             return 'already-active'
@@ -117,6 +116,15 @@ export class VisualSearch extends BaseActivity {
                 this.bot.isMobile,
                 'VISUAL-SEARCH',
                 `Activation offer present but missing a hash | offerId=${offer.offerId}`
+            )
+            return 'failed'
+        }
+
+        if (!offer.reportable && !offer.isLocked) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'VISUAL-SEARCH',
+                `Activation offer is not actionable | offerId=${offer.offerId}`
             )
             return 'failed'
         }
@@ -159,14 +167,16 @@ export class VisualSearch extends BaseActivity {
                 }
             ])
 
-            if (acknowledged) {
+            await this.bot.utils.wait(this.bot.utils.randomDelay(3000, 6000))
+            const confirmed = await this.confirmActivation(offer.offerId)
+
+            if (acknowledged || confirmed) {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'VISUAL-SEARCH',
-                    `Activated visual search | offerId=${offer.offerId}`,
+                    `Activated visual search | offerId=${offer.offerId} | acknowledged=${acknowledged} | confirmed=${confirmed}`,
                     'green'
                 )
-                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))
                 return 'activated'
             }
 
@@ -183,6 +193,26 @@ export class VisualSearch extends BaseActivity {
                 `Activation error | offerId=${offer.offerId} | ${error instanceof Error ? error.message : String(error)}`
             )
             return 'failed'
+        }
+    }
+
+    private async confirmActivation(offerId: string): Promise<boolean> {
+        try {
+            const snapshot = await this.bot.browser.func.refreshEarnSnapshot()
+            if (!snapshot) return false
+
+            this.bot.reactSnapshot = snapshot
+
+            const streak = this.findStreak(snapshot.streaks)
+            const activationOffer = snapshot.offers.find(o => o.offerId === offerId)
+            return streak?.isEnabled === true || activationOffer?.isCompleted === true
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'VISUAL-SEARCH',
+                `Could not verify activation state | offerId=${offerId} | ${error instanceof Error ? error.message : String(error)}`
+            )
+            return false
         }
     }
 

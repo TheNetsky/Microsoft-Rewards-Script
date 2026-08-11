@@ -276,7 +276,8 @@ export default class ReactFunc {
                     obj.attributes && typeof obj.attributes === 'object'
                         ? (obj.attributes as Record<string, unknown>)
                         : null
-                const activityTypeValue = obj.activityType ?? obj.activity_type ?? attributes?.activity_type
+                const activityTypeValue =
+                    obj.activityType ?? obj.activity_type ?? attributes?.activityType ?? attributes?.activity_type
                 const parsedActivityType = Number(activityTypeValue)
                 const promotionalValue = obj.isPromotional ?? attributes?.promotional
                 const isPromotional =
@@ -476,22 +477,29 @@ export default class ReactFunc {
     }
 
     public routerStateTree(segment: string): string {
+        const refreshFlag = 4096
         const tree = [
             '',
             {
                 children: [
                     '(nav)',
                     {
-                        children: [segment, { children: ['__PAGE__', {}, null, null, 0] }, null, null, 0]
+                        children: [
+                            segment,
+                            { children: ['PAGE', {}, null, null, refreshFlag] },
+                            null,
+                            null,
+                            refreshFlag
+                        ]
                     },
                     null,
                     null,
-                    0
+                    refreshFlag
                 ]
             },
             null,
             null,
-            16
+            refreshFlag + 16
         ]
         return encodeURIComponent(JSON.stringify(tree))
     }
