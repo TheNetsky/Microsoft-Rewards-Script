@@ -17,6 +17,7 @@ import type { Account } from '../../interface/Account'
 type LoginState =
     | 'EMAIL_INPUT'
     | 'PASSWORD_INPUT'
+    | 'USE_PASSWORD'
     | 'SIGN_IN_ANOTHER_WAY'
     | 'SIGN_IN_ANOTHER_WAY_EMAIL'
     | 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS'
@@ -55,6 +56,7 @@ export class Login {
     private readonly selectors = {
         primaryButton: 'button[data-testid="primaryButton"]',
         secondaryButton: 'button[data-testid="secondaryButton"]',
+        usePasswordOption: '[data-testid="viewFooter"] [role="button"]',
         signInTile: '[data-testid="tile"]',
         emailIcon: '[data-testid="tile"]:has(svg path[d*="M5.25 4h13.5a3.25"])',
         emailIconOld: 'img[data-testid="accessibleImg"][src*="picker_verify_email"]',
@@ -233,16 +235,30 @@ export class Login {
             results.push('SIGN_IN_ANOTHER_WAY_PASSWORDLESS')
         }
 
-        const [identityBanner, primaryButton, passwordEntry] = await Promise.all([
+        const [identityBanner, primaryButton, passwordEntry, usePasswordOption] = await Promise.all([
             this.checkSelector(page, this.selectors.identityBanner),
             this.checkSelector(page, this.selectors.primaryButton),
-            this.checkSelector(page, this.selectors.passwordEntry)
+            this.checkSelector(page, this.selectors.passwordEntry),
+            this.checkSelector(page, this.selectors.usePasswordOption)
         ])
 
-        // There is not much to be specifically seen on the "Send Notification" page that's specific on this page.
         if (
             identityBanner &&
             primaryButton &&
+            usePasswordOption &&
+            !passwordEntry &&
+            !results.includes('2FA_TOTP') &&
+            !results.includes('RECOVERY_EMAIL_INPUT') &&
+            !results.includes('EMAIL_VERIFICATION_INPUT')
+        ) {
+            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'Password sign-in fallback action detected')
+            results.push('USE_PASSWORD')
+        }
+
+        if (
+            identityBanner &&
+            primaryButton &&
+            !usePasswordOption &&
             !passwordEntry &&
             !results.includes('2FA_TOTP') &&
             !results.includes('RECOVERY_EMAIL_INPUT') &&
@@ -284,6 +300,7 @@ export class Login {
             'SIGN_IN_ANOTHER_WAY', // Prefer password option over email code
             'SIGN_IN_ANOTHER_WAY_EMAIL',
             'OTP_CODE_ENTRY',
+            'USE_PASSWORD',
             'PASSWORDLESS_SEND_CODE',
             '2FA_TOTP'
         ]
@@ -451,6 +468,17 @@ export class Login {
                 if (result === 'error') return false
                 await this.waitForIdle(page, 'after password entry')
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Password entered successfully')
+                return true
+            }
+
+            case 'USE_PASSWORD': {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Password sign-in option available, selecting it')
+                const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.usePasswordOption)
+                if (!clicked) {
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Could not select password sign-in option')
+                    return false
+                }
+                await this.waitForIdle(page, 'after selecting password sign-in')
                 return true
             }
 
@@ -699,9 +727,6 @@ export class Login {
                     'OTP code entry page detected; returning to sign-in method selection'
                 )
 
-                // Footer links are localized and their meaning changes between Microsoft login views.
-                // The back button has a stable id and safely returns us to method selection, where the
-                // structural priority logic can prefer Authenticator/password over an email code.
                 if (!(await this.tryClick(page, this.selectors.backButton, 'Back button'))) {
                     this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Back button not found on OTP page')
                     return false

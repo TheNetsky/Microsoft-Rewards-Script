@@ -222,7 +222,10 @@ export default class BrowserFunc {
             const dashboardHtml = await this.fetchBootstrapHtml(page, URLs.rewards.dashboard, '/dashboard')
 
             const sources = [earnRaw, earnDom, dashboardHtml].filter(Boolean)
-            this.bot.reactSnapshot = this.bot.browser.react.snapshotPage(sources)
+            const snapshot = this.bot.browser.react.snapshotPage(sources)
+            this.bot.reactSnapshot = snapshot
+            if (this.bot.isMobile) this.bot.reactSnapshots.mobile = snapshot
+            else this.bot.reactSnapshots.desktop = snapshot
 
             // discovered from chunks referenced by either page
             this.bot.nextActions = await this.resolveActionIds(page, sources)

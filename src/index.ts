@@ -93,6 +93,10 @@ export class MicrosoftRewardsBot {
     public nextActions: Record<string, string> = {}
     public nextRouterStateTree = ''
     public reactSnapshot: PageSnapshot | null = null
+    public reactSnapshots: { mobile: PageSnapshot | null; desktop: PageSnapshot | null } = {
+        mobile: null,
+        desktop: null
+    }
 
     public accessToken = ''
     public cookies: { mobile: Cookie[]; desktop: Cookie[] }
@@ -550,9 +554,11 @@ export class MicrosoftRewardsBot {
         const accountEmail = account.email
         this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
 
-        // Drop cookies and app credentials from the previous account
+        // Drop cookies, page snapshots and app credentials from the previous account
         this.accessToken = ''
         this.cookies = { mobile: [], desktop: [] }
+        this.reactSnapshot = null
+        this.reactSnapshots = { mobile: null, desktop: null }
 
         const apiSearch = this.config.experimental.apiSearch
         const apiSearchOnBing = this.config.experimental.apiSearchOnBing

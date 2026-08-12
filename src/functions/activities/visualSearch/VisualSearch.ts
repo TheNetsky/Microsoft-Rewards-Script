@@ -19,8 +19,12 @@ type ActivationResult = 'activated' | 'already-active' | 'absent' | 'failed'
 
 interface ActivationMetadata {
     activityType: number
-    activityTypeSource: 'react' | 'dashboard' | 'verified-fallback'
+    activityTypeSource: 'react' | 'streak' | 'dashboard' | 'verified-fallback'
     isPromotional: boolean
+}
+
+interface ActivationTarget extends ParsedOffer {
+    activationSource: 'streak' | 'offer'
 }
 
 export class VisualSearch extends BaseActivity {
@@ -61,8 +65,20 @@ export class VisualSearch extends BaseActivity {
     }
 
     private findStreak(streaks?: StreakState[]): StreakState | undefined {
-        const source = streaks ?? this.bot.reactSnapshot?.streaks ?? []
-        return source.find(s => /visual.?search/i.test(s.partner))
+        if (streaks) return streaks.find(s => /visual.?search/i.test(s.partner))
+
+        const snapshots = [
+            this.bot.reactSnapshot,
+            this.bot.reactSnapshots.desktop,
+            this.bot.reactSnapshots.mobile
+        ]
+
+        for (const snapshot of snapshots) {
+            const streak = snapshot?.streaks.find(s => /visual.?search/i.test(s.partner))
+            if (streak) return streak
+        }
+
+        return undefined
     }
 
     private logStreakState(streak: StreakState | undefined): void {
@@ -91,12 +107,12 @@ export class VisualSearch extends BaseActivity {
     }
 
     private async activate(data: DashboardData): Promise<ActivationResult> {
-        const offer = this.findActivationOffer()
+        const offer = this.findActivationTarget()
         if (!offer) {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'VISUAL-SEARCH',
-                'No visual-search activation offer present on the dashboard'
+                'No visual-search activation metadata present in the streak model or generic offers across the current, desktop, or cached mobile Rewards snapshots'
             )
             return 'absent'
         }
@@ -153,7 +169,7 @@ export class VisualSearch extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'VISUAL-SEARCH',
-            `Activating visual search | offerId=${offer.offerId} | activityType=${metadata.activityType} | activityTypeSource=${metadata.activityTypeSource} | promotional=${metadata.isPromotional} | geo=${this.bot.userData.geoLocale}`
+            `Activating visual search | offerId=${offer.offerId} | activationSource=${offer.activationSource} | activityType=${metadata.activityType} | activityTypeSource=${metadata.activityTypeSource} | promotional=${metadata.isPromotional} | geo=${this.bot.userData.geoLocale}`
         )
 
         try {
@@ -229,13 +245,13 @@ export class VisualSearch extends BaseActivity {
         }
     }
 
-    private resolveActivationMetadata(offer: ParsedOffer, data: DashboardData): ActivationMetadata | null {
+    private resolveActivationMetadata(offer: ActivationTarget, data: DashboardData): ActivationMetadata | null {
         const dashboardPromotion = this.findDashboardPromotion(data.dashboard, offer.offerId)
 
         if (offer.activityType !== null) {
             return {
                 activityType: offer.activityType,
-                activityTypeSource: 'react',
+                activityTypeSource: offer.activationSource === 'streak' ? 'streak' : 'react',
                 isPromotional: offer.isPromotional || this.dashboardPromotionIsPromotional(dashboardPromotion)
             }
         }
@@ -311,18 +327,88 @@ export class VisualSearch extends BaseActivity {
         return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
     }
 
-    private findActivationOffer(): ParsedOffer | null {
-        const offers = this.bot.reactSnapshot?.offers ?? []
+    private findActivationTarget(): ActivationTarget | null {
+        const snapshots = [
+            { source: 'current', snapshot: this.bot.reactSnapshot },
+            { source: 'desktop', snapshot: this.bot.reactSnapshots.desktop },
+            { source: 'mobile', snapshot: this.bot.reactSnapshots.mobile }
+        ] as const
 
-        const exact = offers.find(o => o.offerId === VISUAL_SEARCH_ACTIVATION_OFFER)
-        if (exact) return exact
+        const seen = new Set<unknown>()
 
-        return (
-            offers.find(o => {
+        // New Rewards format: activation metadata is carried directly by the streak model.
+        for (const { source, snapshot } of snapshots) {
+            if (!snapshot || seen.has(snapshot)) continue
+            seen.add(snapshot)
+
+            const streak = this.findStreak(snapshot.streaks)
+            if (!streak?.activationOfferId || !streak.activationHash) continue
+
+            if (source !== 'current') {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'VISUAL-SEARCH',
+                    `Activation metadata missing from the current snapshot; using cached ${source} streak snapshot | offerId=${streak.activationOfferId}`
+                )
+            } else {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'VISUAL-SEARCH',
+                    `Using visual-search activation metadata from streak model | offerId=${streak.activationOfferId}`
+                )
+            }
+
+            return {
+                offerId: streak.activationOfferId,
+                hash: streak.activationHash,
+                title: 'Visual Search Streak',
+                description: '',
+                points: 0,
+                promotionSubtype: null,
+                destination: streak.destinationUrl ?? '',
+                isCompleted: streak.isEnabled,
+                isPromotional: false,
+                isLocked: false,
+                unlockCriteria: null,
+                date: null,
+                activityType: streak.activationActivityType,
+                reportable: true,
+                activationSource: 'streak'
+            }
+        }
+
+        // Legacy/current alternate format: activation appears as a regular Rewards offer.
+        seen.clear()
+        for (const { source, snapshot } of snapshots) {
+            if (!snapshot || seen.has(snapshot)) continue
+            seen.add(snapshot)
+
+            const exact = snapshot.offers.find(o => o.offerId === VISUAL_SEARCH_ACTIVATION_OFFER)
+            const fuzzy = snapshot.offers.find(o => {
                 const id = o.offerId.toLowerCase()
                 return id.includes('visualsearch') && id.includes('activation')
-            }) ?? null
-        )
+            })
+            const offer = exact ?? fuzzy
+            if (!offer) continue
+
+            if (source !== 'current') {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'VISUAL-SEARCH',
+                    `Activation offer missing from the current snapshot; using cached ${source} offer snapshot | offerId=${offer.offerId}`
+                )
+            } else {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'VISUAL-SEARCH',
+                    `Using visual-search activation metadata from generic offer | offerId=${offer.offerId}`
+                )
+            }
+
+            return { ...offer, activationSource: 'offer' }
+        }
+
+        return null
     }
 
     private async performDailySearch(): Promise<number> {
