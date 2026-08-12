@@ -372,19 +372,22 @@ export default class ReactFunc {
                     isCurrentDayCompleted: (o.isCurrentDayCompleted as boolean | undefined) === true,
                     isEnabled: (o.isEnabled as boolean | undefined) === true,
                     dailyPoints: o.dailyPoints as number[],
-                    activationOfferId: typeof o.activationOfferId === 'string' && o.activationOfferId !== '$undefined'
-                        ? o.activationOfferId
-                        : null,
-                    activationHash: typeof o.activationHash === 'string' && o.activationHash !== '$undefined'
-                        ? o.activationHash
-                        : null,
+                    activationOfferId:
+                        typeof o.activationOfferId === 'string' && o.activationOfferId !== '$undefined'
+                            ? o.activationOfferId
+                            : null,
+                    activationHash:
+                        typeof o.activationHash === 'string' && o.activationHash !== '$undefined'
+                            ? o.activationHash
+                            : null,
                     activationActivityType: (() => {
                         const parsed = Number(o.activationActivityType)
                         return Number.isInteger(parsed) && parsed > 0 ? parsed : null
                     })(),
-                    destinationUrl: typeof o.destinationUrl === 'string' && o.destinationUrl !== '$undefined'
-                        ? o.destinationUrl
-                        : null
+                    destinationUrl:
+                        typeof o.destinationUrl === 'string' && o.destinationUrl !== '$undefined'
+                            ? o.destinationUrl
+                            : null
                 }))
 
             // de-dupe on partner
