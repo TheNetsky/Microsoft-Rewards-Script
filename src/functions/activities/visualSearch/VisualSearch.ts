@@ -67,11 +67,7 @@ export class VisualSearch extends BaseActivity {
     private findStreak(streaks?: StreakState[]): StreakState | undefined {
         if (streaks) return streaks.find(s => /visual.?search/i.test(s.partner))
 
-        const snapshots = [
-            this.bot.reactSnapshot,
-            this.bot.reactSnapshots.desktop,
-            this.bot.reactSnapshots.mobile
-        ]
+        const snapshots = [this.bot.reactSnapshot, this.bot.reactSnapshots.desktop, this.bot.reactSnapshots.mobile]
 
         for (const snapshot of snapshots) {
             const streak = snapshot?.streaks.find(s => /visual.?search/i.test(s.partner))
