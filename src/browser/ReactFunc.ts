@@ -584,9 +584,15 @@ export default class ReactFunc {
         try {
             // Support for both formats: (createServerReference)(id) and createServerReference(id)
             // The argument search window has been expanded to 800 characters for Turbopack
-            const createRegex = new RegExp(`createServerReference\\s*\\)?\\s*\\(\\s*"(${HEX})"([\\s\\S]{0,800}?)\\)`, 'g')
-            const registerRegex = new RegExp(`registerServerReference\\s*\\)?\\s*\\([^,]+,\\s*"(${HEX})"([\\s\\S]{0,800}?)\\)`, 'g')
-            
+            const createRegex = new RegExp(
+                `createServerReference\\s*\\)?\\s*\\(\\s*"(${HEX})"([\\s\\S]{0,800}?)\\)`,
+                'g'
+            )
+            const registerRegex = new RegExp(
+                `registerServerReference\\s*\\)?\\s*\\([^,]+,\\s*"(${HEX})"([\\s\\S]{0,800}?)\\)`,
+                'g'
+            )
+
             const strLitRe = /"([A-Za-z_$][\w$]*)"/g
 
             const processMatches = (matches: IterableIterator<RegExpMatchArray>) => {
@@ -598,7 +604,7 @@ export default class ReactFunc {
                     const candidates = [...argsBlock.matchAll(strLitRe)]
                         .map(x => x[1]!)
                         .filter(n => !KNOWN_NON_NAMES.has(n) && n.length > 3)
-                    
+
                     if (candidates.length) {
                         byName[candidates[candidates.length - 1]!] = id
                     }
@@ -610,7 +616,7 @@ export default class ReactFunc {
 
             const bareCreateRegex = new RegExp(`createServerReference\\s*\\)?\\s*\\(\\s*"(${HEX})"`, 'g')
             const bareRegisterRegex = new RegExp(`registerServerReference\\s*\\)?\\s*\\([^,]+,\\s*"(${HEX})"`, 'g')
-            
+
             for (const m of jsText.matchAll(bareCreateRegex)) all.add(m[1]!)
             for (const m of jsText.matchAll(bareRegisterRegex)) all.add(m[1]!)
 
@@ -622,7 +628,6 @@ export default class ReactFunc {
                 'REACT-PARSE',
                 `Extracted action ids | named=${Object.keys(byName).length} | total=${all.size}`
             )
-
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
