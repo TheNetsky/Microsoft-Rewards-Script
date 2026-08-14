@@ -85,6 +85,8 @@ export class EdgeBrowsing extends BaseActivity {
             let acceptedReports = 0
             let duplicateReports = 0
             let failedReports = 0
+            let reportsProcessed = 0
+            let serverComplete = false
 
             this.bot.logger.info(
                 this.bot.isMobile,
@@ -112,10 +114,23 @@ export class EdgeBrowsing extends BaseActivity {
 
                 const result = await this.submitWithRetry(accessToken, settings, reportNumber, reportCount, signal)
                 if (signal?.aborted) return
+                reportsProcessed = reportNumber
 
                 if (!result) {
                     failedReports += 1
                     this.logProgress(progress.snapshot(reportNumber), acceptedReports, duplicateReports, failedReports)
+
+                    serverComplete = await this.refreshServerCompletion(accessToken, reportNumber, reportCount)
+                    if (serverComplete) {
+                        this.logServerComplete(
+                            reportNumber,
+                            reportCount,
+                            acceptedReports,
+                            duplicateReports,
+                            failedReports
+                        )
+                        break
+                    }
                     continue
                 }
 
@@ -135,16 +150,31 @@ export class EdgeBrowsing extends BaseActivity {
 
                 if (result.duplicate) this.bot.logger.warn(this.bot.isMobile, LOG_TAG, message)
                 else this.bot.logger.info(this.bot.isMobile, LOG_TAG, message, 'green')
+
+                serverComplete = await this.refreshServerCompletion(accessToken, reportNumber, reportCount)
+                if (serverComplete) {
+                    this.logServerComplete(reportNumber, reportCount, acceptedReports, duplicateReports, failedReports)
+                    break
+                }
             }
 
-            const finished = progress.snapshot(reportCount)
-            const summary =
-                `Finished background Edge browsing activity | reports=${reportCount}` +
-                ` | scheduledMinutesCovered=${finished.scheduledMinutesCovered}/${TARGET_DURATION_MINUTES}` +
-                ` | accepted=${acceptedReports} | duplicates=${duplicateReports} | failed=${failedReports}` +
-                ` | elapsedMinutes=${finished.elapsedMinutes} | estimatedRemainingMinutes=0`
+            if (!serverComplete && !signal?.aborted) {
+                serverComplete = await this.refreshServerCompletion(accessToken, reportsProcessed, reportCount)
+            }
 
-            if (duplicateReports > 0 || failedReports > 0) {
+            const finished = progress.snapshot(reportsProcessed)
+            const summary =
+                `Finished background Edge browsing activity | reports=${reportsProcessed}` +
+                ` | reportsCompleted=${reportsProcessed}/${reportCount}` +
+                ` | reportsRemaining=${serverComplete ? 0 : finished.reportsRemaining}` +
+                ` | scheduledMinutesCovered=${finished.scheduledMinutesCovered}/${TARGET_DURATION_MINUTES}` +
+                ` | serverComplete=${serverComplete}` +
+                ` | accepted=${acceptedReports} | duplicates=${duplicateReports} | failed=${failedReports}` +
+                ` | elapsedMinutes=${finished.elapsedMinutes} | estimatedRemainingMinutes=${
+                    serverComplete ? 0 : finished.estimatedRemainingMinutes
+                }`
+
+            if (!serverComplete || duplicateReports > 0 || failedReports > 0) {
                 this.bot.logger.warn(this.bot.isMobile, LOG_TAG, summary)
             } else {
                 this.bot.logger.info(this.bot.isMobile, LOG_TAG, summary, 'green')
@@ -177,6 +207,57 @@ export class EdgeBrowsing extends BaseActivity {
         }
 
         return response.data
+    }
+
+    private async refreshServerCompletion(
+        accessToken: string,
+        reportNumber: number,
+        reportCount: number
+    ): Promise<boolean> {
+        try {
+            const profile = await this.getEdgeProfile(accessToken)
+            const promotion = profile.response?.promotions?.find(item => item.name === PROMOTION_NAME)
+            if (!promotion) {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    LOG_TAG,
+                    `Could not verify Edge browsing completion: promotion is absent | report=${reportNumber}/${reportCount}`
+                )
+                return false
+            }
+
+            const complete = promotion.attributes['complete']?.toLowerCase() === 'true'
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Refreshed Edge browsing server state | report=${reportNumber}/${reportCount} | complete=${complete}`
+            )
+            return complete
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Could not refresh Edge browsing server state | report=${reportNumber}/${reportCount}` +
+                    ` | message=${error instanceof Error ? error.message : String(error)}`
+            )
+            return false
+        }
+    }
+
+    private logServerComplete(
+        reportNumber: number,
+        reportCount: number,
+        acceptedReports: number,
+        duplicateReports: number,
+        failedReports: number
+    ): void {
+        this.bot.logger.info(
+            this.bot.isMobile,
+            LOG_TAG,
+            `Microsoft reports Edge browsing activity complete | report=${reportNumber}/${reportCount}` +
+                ` | accepted=${acceptedReports} | duplicates=${duplicateReports} | failed=${failedReports}`,
+            'green'
+        )
     }
 
     private resolveSettings(profile: AppDashboardData): EdgeBrowsingSettings | null {

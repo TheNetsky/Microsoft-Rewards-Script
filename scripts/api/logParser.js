@@ -282,8 +282,14 @@ function applyEdgeBrowsing(state, entry) {
     } else if (message.startsWith('Finished background Edge browsing activity')) {
         const duplicates = numericField(message, 'duplicates') ?? previous.duplicates
         const failed = numericField(message, 'failed') ?? previous.failed
-        previous.status = duplicates > 0 || failed > 0 ? 'partial' : 'complete'
-        previous.reportsRemaining = 0
+        const serverCompleteMatch = message.match(/(?:^| \| )serverComplete=(true|false)(?= \| |$)/)
+        const serverComplete = serverCompleteMatch ? serverCompleteMatch[1] === 'true' : null
+
+        if (serverComplete === true) previous.status = 'complete'
+        else if (serverComplete === false) previous.status = 'partial'
+        else previous.status = duplicates > 0 || failed > 0 ? 'partial' : 'complete'
+
+        previous.reportsRemaining = serverComplete === false ? previous.reportsRemaining : 0
         previous.nextReportInSeconds = null
         previous.estimatedRemainingMinutes = 0
         previous.waitingForBackground = false

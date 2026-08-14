@@ -179,9 +179,10 @@ export class Login {
         await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
 
         const url = new URL(page.url())
-        this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', `Current URL: ${url.hostname}${url.pathname}`)
+        const hostname = url.hostname.toLowerCase()
+        this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', `Current URL: ${hostname}${url.pathname}`)
 
-        if (url.hostname === 'chromewebdata') {
+        if (hostname === 'chromewebdata') {
             this.bot.logger.warn(this.bot.isMobile, 'DETECT-STATE', 'Detected chromewebdata error page')
             return 'CHROMEWEBDATA_ERROR'
         }
@@ -192,8 +193,8 @@ export class Login {
             return 'ACCOUNT_LOCKED'
         }
 
-        if (url.hostname === 'rewards.bing.com' || url.hostname === 'account.microsoft.com') {
-            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On rewards/account page, assuming logged in')
+        if (hostname === 'bing.com' || hostname.endsWith('.bing.com') || hostname === 'account.microsoft.com') {
+            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', 'On Bing/rewards/account page, assuming logged in')
             return 'LOGGED_IN'
         }
 
@@ -276,11 +277,11 @@ export class Login {
         }
 
         if (foundStates.includes('ERROR_ALERT')) {
-            const errorIsReal = url.hostname === 'login.live.com' && !foundStates.includes('2FA_TOTP')
+            const errorIsReal = hostname === 'login.live.com' && !foundStates.includes('2FA_TOTP')
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'DETECT-STATE',
-                `ERROR_ALERT found - hostname: ${url.hostname}, has 2FA: ${foundStates.includes('2FA_TOTP')}, treating as real: ${errorIsReal}`
+                `ERROR_ALERT found - hostname: ${hostname}, has 2FA: ${foundStates.includes('2FA_TOTP')}, treating as real: ${errorIsReal}`
             )
             if (errorIsReal) return 'ERROR_ALERT'
             foundStates = foundStates.filter(s => s !== 'ERROR_ALERT')
@@ -764,9 +765,19 @@ export class Login {
 
         await page.goto(REWARDS_BASE_URL, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
 
-        const loginRewardsSuccess = new URL(page.url()).hostname === 'rewards.bing.com'
+        const rewardsLanding = new URL(page.url())
+        const rewardsHostname = rewardsLanding.hostname.toLowerCase()
+        const loginRewardsSuccess = rewardsHostname === 'bing.com' || rewardsHostname.endsWith('.bing.com')
         if (loginRewardsSuccess) {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Logged into Microsoft Rewards successfully')
+            if (rewardsHostname === 'rewards.bing.com') {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Logged into Microsoft Rewards successfully')
+            } else {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'LOGIN',
+                    `Rewards sign-in redirected to Bing home (${rewardsHostname}); continuing verification`
+                )
+            }
         } else {
             this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Could not verify Rewards Dashboard, assuming login valid')
         }
@@ -807,8 +818,10 @@ export class Login {
                 this.bot.logger.debug(this.bot.isMobile, 'LOGIN-BING', `Verification loop ${i + 1}/${loopMax}`)
 
                 const u = new URL(page.url())
-                const atBingHome = u.hostname === 'www.bing.com' && u.pathname === '/'
-                if (!atBingHome) {
+                const hostname = u.hostname.toLowerCase()
+                const atBingPage =
+                    (hostname === 'bing.com' || hostname.endsWith('.bing.com')) && hostname !== 'rewards.bing.com'
+                if (!atBingPage) {
                     const state = await this.detectCurrentState(page)
                     if (state === 'PASSKEY_ERROR') {
                         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Dismissing Passkey error state')
@@ -822,10 +835,10 @@ export class Login {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-BING',
-                    `At Bing home: ${atBingHome} (${u.hostname}${u.pathname})`
+                    `At Bing page: ${atBingPage} (${hostname}${u.pathname})`
                 )
 
-                if (atBingHome) {
+                if (atBingPage) {
                     await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => {})
 
                     const signedIn = await page

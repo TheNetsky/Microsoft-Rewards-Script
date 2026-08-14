@@ -285,3 +285,79 @@ test('tracks background Edge browsing progress and ETA for the correct account',
     assert.equal(finished.elapsedMinutes, 31.2)
     assert.equal(finished.waitingForBackground, false)
 })
+
+test('marks Edge browsing complete when Microsoft completes before the local maximum report count', () => {
+    const state = createRunState()
+
+    apply(
+        state,
+        line('alpha', 'ACCOUNT-START', 'Starting account: alpha@example.com | geoLocale: US | locale: en-US'),
+        '2026-08-13T09:20:00.000Z'
+    )
+    apply(
+        state,
+        line(
+            'alpha',
+            'EDGE-BROWSING',
+            'Started background Edge browsing activity | offerId=DailyCheckIn_Edge | type=29 | targetMinutes=30 | reports=6 | serverDriven=true | serverIntervalMinutes=5 | jitterSeconds=5-20 | estimatedDurationMinutes=31.2',
+            'INFO',
+            'MOBILE'
+        ),
+        '2026-08-13T09:20:01.000Z'
+    )
+    apply(
+        state,
+        line(
+            'alpha',
+            'EDGE-BROWSING',
+            'Finished background Edge browsing activity | reports=3 | reportsCompleted=3/6 | reportsRemaining=0 | scheduledMinutesCovered=15/30 | serverComplete=true | accepted=3 | duplicates=0 | failed=0 | elapsedMinutes=15.6 | estimatedRemainingMinutes=0',
+            'INFO',
+            'MOBILE'
+        ),
+        '2026-08-13T09:35:37.000Z'
+    )
+
+    const finished = state.accounts['alpha@example.com'].edgeBrowsing
+    assert.equal(finished.status, 'complete')
+    assert.equal(finished.reportsCompleted, 3)
+    assert.equal(finished.reportsTotal, 6)
+    assert.equal(finished.reportsRemaining, 0)
+    assert.equal(finished.scheduledMinutesCovered, 15)
+})
+
+test('marks Edge browsing partial when the local maximum ends before Microsoft reports completion', () => {
+    const state = createRunState()
+
+    apply(
+        state,
+        line('alpha', 'ACCOUNT-START', 'Starting account: alpha@example.com | geoLocale: US | locale: en-US'),
+        '2026-08-13T09:20:00.000Z'
+    )
+    apply(
+        state,
+        line(
+            'alpha',
+            'EDGE-BROWSING',
+            'Started background Edge browsing activity | offerId=DailyCheckIn_Edge | type=29 | targetMinutes=30 | reports=6 | serverDriven=true | serverIntervalMinutes=5 | jitterSeconds=5-20 | estimatedDurationMinutes=31.2',
+            'INFO',
+            'MOBILE'
+        ),
+        '2026-08-13T09:20:01.000Z'
+    )
+    apply(
+        state,
+        line(
+            'alpha',
+            'EDGE-BROWSING',
+            'Finished background Edge browsing activity | reports=6 | reportsCompleted=6/6 | reportsRemaining=0 | scheduledMinutesCovered=30/30 | serverComplete=false | accepted=6 | duplicates=0 | failed=0 | elapsedMinutes=31.2 | estimatedRemainingMinutes=0',
+            'WARN',
+            'MOBILE'
+        ),
+        '2026-08-13T09:51:13.000Z'
+    )
+
+    const finished = state.accounts['alpha@example.com'].edgeBrowsing
+    assert.equal(finished.status, 'partial')
+    assert.equal(finished.reportsCompleted, 6)
+    assert.equal(finished.reportsTotal, 6)
+})
