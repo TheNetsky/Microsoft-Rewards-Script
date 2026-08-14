@@ -406,7 +406,7 @@ export default class BrowserFunc {
         return result
     }
 
-    private extractDynamicChunkPaths(js: string): string[] {
+    private extractDynamicChunkPaths(js: string): string[] {
         const seen = new Set<string>()
 
         // Webpack builder
@@ -424,7 +424,7 @@ export default class BrowserFunc {
             seen.add(`/_next/static/chunks/${id}.${hash}.js`)
         }
 
-        // NEW: Turbopack
+        // Turbopack
         const turbopackRegex = /"(static\/(?:immutable|chunks|media)\/[\w\-./()]+?\.js)"/g
         for (const match of js.matchAll(turbopackRegex)) {
             seen.add(`/_next/${match[1]}`)
