@@ -301,7 +301,7 @@ export default class BrowserFunc {
 
         try {
             const initialChunks = new Set<string>()
-            const chunkRegex = /(?:\/_next\/)?(static\/chunks\/[\w\-./()]+?\.js)/g
+            const chunkRegex = /(?:\/_next\/)?(static\/(?:chunks|immutable|media)\/[\w\-./()]+?\.js)/g
             for (const html of htmls) {
                 if (!html) continue
                 for (const match of html.matchAll(chunkRegex)) {
@@ -409,6 +409,7 @@ export default class BrowserFunc {
     private extractDynamicChunkPaths(js: string): string[] {
         const seen = new Set<string>()
 
+        // Webpack builder
         const builder = /static\/chunks\/"\s*\+\s*\w+\s*\+\s*"([-.])"\s*\+\s*\{([\s\S]*?)\}\s*\[/g
         for (const match of js.matchAll(builder)) {
             const sep = match[1]!
@@ -417,12 +418,16 @@ export default class BrowserFunc {
             }
         }
 
-        // If the builder shape changes, scan id:hash pairs globally
-        if (!seen.size) {
-            for (const [, id, hash] of js.matchAll(/\b(\d{2,6}):"([a-f0-9]{12,})"/g)) {
-                seen.add(`/_next/static/chunks/${id}-${hash}.js`)
-                seen.add(`/_next/static/chunks/${id}.${hash}.js`)
-            }
+        // Webpack fallback
+        for (const [, id, hash] of js.matchAll(/\b(\d{2,6}):"([a-f0-9]{12,})"/g)) {
+            seen.add(`/_next/static/chunks/${id}-${hash}.js`)
+            seen.add(`/_next/static/chunks/${id}.${hash}.js`)
+        }
+
+        // Turbopack
+        const turbopackRegex = /"(static\/(?:immutable|chunks|media)\/[\w\-./()]+?\.js)"/g
+        for (const match of js.matchAll(turbopackRegex)) {
+            seen.add(`/_next/${match[1]}`)
         }
 
         return [...seen]
