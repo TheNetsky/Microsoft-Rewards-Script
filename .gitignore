@@ -3,6 +3,10 @@ dist/
 .dev/
 node_modules/
 /config.json
+# 运行时配置/账号文件可能被放到 src/ 下（Load.ts 的查找路径之一），防止误提交
+/src/config.json
+/src/accounts.json
+/src/accounts.dev.json
 /.vscode
 /diagnostics
 note
