@@ -13,4 +13,4 @@ note
 .DS_Store
 .playwright-chromium-installed
 .stfolder/
-.env
+.envlogs/

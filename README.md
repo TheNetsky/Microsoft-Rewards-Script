@@ -10,6 +10,42 @@
 
 ---
 
+## V4-china 国内适配版说明
+
+本分支（`V4-china`）基于官方 v4 分支，针对国内网络环境做了如下适配：
+
+| 特性 | 说明 |
+|------|------|
+| **中国热搜查询源** | `queryEngines` 新增 `china` 引擎：从 [gmya.net](https://gmya.net) 聚合百度/头条/抖音/微博/知乎热榜，随机取源分散请求；主源词量足够时不再请求兜底源（达阈值即停） |
+| **chinaApi.appkey** | gmya.net 免费档有频率限制（限流自动退避）；配置 appkey 可解除限流并提升取源数量 |
+| **PushPlus 微信推送** | 运行结束一次性推送中文积分摘要（不逐条推日志），国内无需翻墙 |
+| **国内默认值** | `config.example.json` 默认：china+local 引擎、搜索间隔 6-12min、默认开随机滚动/点击、默认关并行——降低风控风险 |
+| **中文词库与日志** | `search-queries.json` 为中文词库；全部运行日志已中文化 |
+| **Docker 国内构建** | 基础镜像走 m.daocloud.io 加速；compose 默认本地构建（官方 ghcr 镜像**不含**国内适配） |
+| **浏览器版本回退** | Chrome/Edge 版本接口不可达时自动使用内置版本，不再直接报错退出 |
+
+### 国内推荐配置
+
+```jsonc
+// config.json 关键项（accounts 中 geoLocale 填 CN、langCode 填 zh-CN）
+{
+    "searchSettings": {
+        "queryEngines": ["china", "local"],
+        "chinaApi": { "appkey": "" }   // 留空走免费档；填 appkey 解除限流
+    },
+    "webhook": {
+        "pushplus": { "enabled": true, "token": "你的token" }
+    }
+}
+```
+
+Docker 环境变量对应：`CONFIG_SEARCH_QUERY_ENGINES=china,local`、`CONFIG_CHINA_API_APPKEY`、`CONFIG_PUSHPLUS_ENABLED/_TOKEN/_TITLE/_TEMPLATE/_CHANNEL`。
+
+> [!NOTE]
+> `google`/`wikipedia`/`reddit`/`hackernews` 源及多数 RSS 源在国内网络不可直连，选了也会静默失败降级到其他源；无代理环境直接用 `china,local` 即可。
+
+---
+
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
@@ -223,18 +259,21 @@ Edit `config.json` to customize behavior, or set `CONFIG_*` environment variable
 
 | Setting                                | Type     | Default                             | Description                                               | Docker environment variable        |
 | -------------------------------------- | -------- | ----------------------------------- | --------------------------------------------------------- | ---------------------------------- |
-| `searchSettings.scrollRandomResults`   | boolean  | `false`                             | Scroll randomly on results                                | `CONFIG_SEARCH_SCROLL_RANDOM`      |
-| `searchSettings.clickRandomResults`    | boolean  | `false`                             | Click random links                                        | `CONFIG_SEARCH_CLICK_RANDOM`       |
+| `searchSettings.scrollRandomResults`   | boolean  | `true`                              | Scroll randomly on results                                | `CONFIG_SEARCH_SCROLL_RANDOM`      |
+| `searchSettings.clickRandomResults`    | boolean  | `true`                              | Click random links                                        | `CONFIG_SEARCH_CLICK_RANDOM`       |
 | `searchSettings.runOnZeroPoints`       | boolean  | `false`                             | Run searches even when no search points remain            | `CONFIG_SEARCH_RUN_ON_ZERO_POINTS` |
 | `searchSettings.maxBonusSearches`      | number   | `110`                               | Max bonus searches per run (when `doBonusSearches` is on) | `CONFIG_SEARCH_MAX_BONUS_SEARCHES` |
-| `searchSettings.parallelSearching`     | boolean  | `true`                              | Run searches in parallel                                  | `CONFIG_SEARCH_PARALLEL`           |
+| `searchSettings.parallelSearching`     | boolean  | `false`                             | Run searches in parallel                                  | `CONFIG_SEARCH_PARALLEL`           |
 | `searchSettings.clusterSearch`         | boolean  | `true`                              | Cluster each main topic with Bing suggestions             | `CONFIG_SEARCH_CLUSTER`            |
 | `searchSettings.queryEngines`          | string[] | see [Query sources](#query-sources) | Sources used to build the search query pool               | `CONFIG_SEARCH_QUERY_ENGINES` \*   |
-| `searchSettings.searchResultVisitTime` | string   | `"10sec"`                           | Time to spend on each search result                       | `CONFIG_SEARCH_VISIT_TIME`         |
-| `searchSettings.searchDelay.min`       | string   | `"30sec"`                           | Minimum delay between searches                            | `CONFIG_SEARCH_DELAY_MIN`          |
-| `searchSettings.searchDelay.max`       | string   | `"1min"`                            | Maximum delay between searches                            | `CONFIG_SEARCH_DELAY_MAX`          |
-| `searchSettings.readDelay.min`         | string   | `"30sec"`                           | Minimum delay for reading                                 | `CONFIG_SEARCH_READ_DELAY_MIN`     |
-| `searchSettings.readDelay.max`         | string   | `"1min"`                            | Maximum delay for reading                                 | `CONFIG_SEARCH_READ_DELAY_MAX`     |
+| `searchSettings.searchResultVisitTime` | string   | `"20sec"`                           | Time to spend on each search result                       | `CONFIG_SEARCH_VISIT_TIME`         |
+| `searchSettings.searchDelay.min`       | string   | `"6min"`                            | Minimum delay between searches                            | `CONFIG_SEARCH_DELAY_MIN`          |
+| `searchSettings.searchDelay.max`       | string   | `"12min"`                           | Maximum delay between searches                            | `CONFIG_SEARCH_DELAY_MAX`          |
+| `searchSettings.readDelay.min`         | string   | `"6min"`                            | Minimum delay for reading                                 | `CONFIG_SEARCH_READ_DELAY_MIN`     |
+| `searchSettings.readDelay.max`         | string   | `"11min"`                           | Maximum delay for reading                                 | `CONFIG_SEARCH_READ_DELAY_MAX`     |
+| `searchSettings.chinaApi.appkey`       | string   | `""`                                | gmya.net appkey（留空走免费档）                           | `CONFIG_CHINA_API_APPKEY`          |
+
+> 默认值为本仓库 `config.example.json`（国内防风控调优）；官方上游默认更激进（30sec-1min 间隔、并行开）。
 
 Desktop and mobile search quotas are tracked independently from the dashboard counters. All `mobileSearch` entries are combined for the mobile quota, while all `pcSearch` entries are combined for desktop execution; a counter explicitly identified as Edge is also shown separately for diagnostics. The script skips only the completed platform, so a completed `60/60` mobile quota does not prevent an incomplete desktop quota from running. With `parallelSearching` enabled, both incomplete quotas can run concurrently in their own browser contexts.
 
@@ -249,6 +288,7 @@ Core sources:
 
 | Selector     | Source                                           |
 | ------------ | ------------------------------------------------ |
+| `china`      | 中国热榜（百度/头条/抖音/微博/知乎，gmya.net 聚合，国内推荐） |
 | `google`     | Google Trends (trending searches)                |
 | `wikipedia`  | Wikipedia most-read articles (previous day)      |
 | `wikirandom` | Random Wikipedia articles                        |
@@ -270,21 +310,14 @@ RSS feeds use a dotted path - `rss` for every feed, `rss.<site>` for a whole sit
 
 Add your own feeds in `src/constants/rssFeeds.ts`.
 
+`china` 源说明：随机选取热榜源聚合（免费档 1 个、配置 appkey 2 个），某个源失败自动 fallback 到其余源；命中免费档限流（403）时自动退避并提示配置 `searchSettings.chinaApi.appkey`。queryManager 的兜底策略为主源优先——主源原始词累计达 20 即停止请求后续源，主源不足时后续源随机抽样 50 条补充。
+
 Default:
 
 ```json
 [
-    "google",
-    "wikipedia",
-    "wikirandom",
-    "hackernews",
-    "reddit",
-    "local",
-    "rss.googleTrends",
-    "rss.googleNews",
-    "rss.bbc",
-    "rss.guardian.world",
-    "rss.theVerge.all"
+    "china",
+    "local"
 ]
 ```
 
@@ -367,6 +400,11 @@ Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5:
 | `webhook.ntfy.title`                     | string   | `"Microsoft-Rewards-Script"`                         | Notification title                | `CONFIG_NTFY_TITLE`                     |
 | `webhook.ntfy.tags`                      | string[] | `["bot", "notify"]`                                  | Notification tags                 | `CONFIG_NTFY_TAGS` \*                   |
 | `webhook.ntfy.priority`                  | number   | `3`                                                  | Notification priority (1-5)       | `CONFIG_NTFY_PRIORITY`                  |
+| `webhook.pushplus.enabled`               | boolean  | `false`                                              | 启用 PushPlus 微信推送            | `CONFIG_PUSHPLUS_ENABLED`               |
+| `webhook.pushplus.token`                 | string   | `""`                                                 | PushPlus token                    | `CONFIG_PUSHPLUS_TOKEN`                 |
+| `webhook.pushplus.title`                 | string   | `"Microsoft-Rewards-Script"`                         | 推送标题                          | `CONFIG_PUSHPLUS_TITLE`                 |
+| `webhook.pushplus.template`              | string   | `"txt"`                                              | 推送模板（txt/html/markdown）    | `CONFIG_PUSHPLUS_TEMPLATE`              |
+| `webhook.pushplus.channel`               | string   | `""`                                                 | 推送渠道（默认微信）             | `CONFIG_PUSHPLUS_CHANNEL`               |
 | `webhook.webhookLogFilter.enabled`       | boolean  | `false`                                              | Enable webhook log filtering      | `CONFIG_WEBHOOK_LOG_FILTER_ENABLED`     |
 | `webhook.webhookLogFilter.mode`          | string   | `"whitelist"`                                        | Filter mode (whitelist/blacklist) | `CONFIG_WEBHOOK_LOG_FILTER_MODE`        |
 | `webhook.webhookLogFilter.levels`        | string[] | `["error"]`                                          | Log levels to send                | `CONFIG_WEBHOOK_LOG_FILTER_LEVELS` \*   |
