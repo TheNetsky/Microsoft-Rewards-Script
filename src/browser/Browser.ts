@@ -76,14 +76,14 @@ class Browser {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'BROWSER-SECURITY',
-                    'TLS certificate verification is disabled by proxy.ignoreCertificateErrors'
+                    'TLS 证书验证已被 proxy.ignoreCertificateErrors 禁用'
                 )
             }
 
             this.bot.logger.info(
                 this.bot.isMobile,
                 'BROWSER',
-                `Launching bundled patched Chromium (Edge UA) | headless=${headless} | platform=${process.platform} | proxy=${hasProxy ? 'yes' : 'no'} | tls=${ignoreCertificateErrors ? 'verification-disabled' : 'verified'} | sandbox=${sandboxDisabled ? 'disabled-root' : 'enabled'}`
+                `正在启动内置的补丁版 Chromium (Edge UA) | headless=${headless} | platform=${process.platform} | proxy=${hasProxy ? 'yes' : 'no'} | tls=${ignoreCertificateErrors ? 'verification-disabled' : 'verified'} | sandbox=${sandboxDisabled ? 'disabled-root' : 'enabled'}`
             )
 
             browser = await rebrowser.chromium.launch({
@@ -93,7 +93,7 @@ class Browser {
             })
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
-            this.bot.logger.error(this.bot.isMobile, 'BROWSER', `Browser launch failed: ${errorMessage}`)
+            this.bot.logger.error(this.bot.isMobile, 'BROWSER', `浏览器启动失败: ${errorMessage}`)
             throw error
         }
 
@@ -105,13 +105,13 @@ class Browser {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SESSION',
-                    `Restoring saved browser session | cookies=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | ageMinutes=${ageMinutes}`
+                    `正在恢复已保存的浏览器会话 | Cookie数=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | 已保存分钟数=${ageMinutes}`
                 )
             } else {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SESSION',
-                    'No saved browser session found; login may be required'
+                    '未找到已保存的浏览器会话；可能需要登录'
                 )
             }
 
@@ -127,7 +127,7 @@ class Browser {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'BROWSER-FINGERPRINT',
-                    `Saved fingerprint locale does not match ${this.bot.accountLocale.locale}; generating a replacement`
+                    `已保存的指纹区域与 ${this.bot.accountLocale.locale} 不匹配；正在生成替代指纹`
                 )
             }
 
@@ -175,10 +175,10 @@ class Browser {
 
             context.on('page', p => {
                 p.on('crash', () =>
-                    this.bot.logger.error(this.bot.isMobile, 'BROWSER', `Renderer crashed | ${p.url()}`)
+                    this.bot.logger.error(this.bot.isMobile, 'BROWSER', `渲染器崩溃 | ${p.url()}`)
                 )
             })
-            context.on('close', () => this.bot.logger.warn(this.bot.isMobile, 'BROWSER', 'Browser context closed'))
+            context.on('close', () => this.bot.logger.warn(this.bot.isMobile, 'BROWSER', '浏览器上下文已关闭'))
 
             context.setDefaultTimeout(this.bot.utils.stringToNumber(this.bot.config?.globalTimeout ?? 30000))
 
@@ -189,7 +189,7 @@ class Browser {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'BROWSER',
-                `Created context | locale=${this.bot.accountLocale.locale} | Accept-Language="${this.bot.accountLocale.acceptLanguage}" | User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`
+                `已创建上下文 | locale=${this.bot.accountLocale.locale} | Accept-Language="${this.bot.accountLocale.acceptLanguage}" | User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`
             )
             this.bot.logger.debug(this.bot.isMobile, 'BROWSER-FINGERPRINT', JSON.stringify(fingerprint))
 

@@ -18,7 +18,7 @@ export async function activateSearchOnBing(bot: MicrosoftRewardsBot, promotion: 
         bot.logger.warn(
             bot.isMobile,
             'SEARCH-ON-BING-ACTIVATE',
-            `Skipping ${offerId}: "reportActivity" not discovered in bundle`
+            `跳过 ${offerId}: 未在 bundle 中发现 "reportActivity"`
         )
         return false
     }
@@ -29,7 +29,7 @@ export async function activateSearchOnBing(bot: MicrosoftRewardsBot, promotion: 
         bot.logger.warn(
             bot.isMobile,
             'SEARCH-ON-BING-ACTIVATE',
-            `Skipping ${offerId}: no live hash for the activation offer`
+            `跳过 ${offerId}: 激活活动无可用 hash`
         )
         return false
     }
@@ -48,14 +48,14 @@ export async function activateSearchOnBing(bot: MicrosoftRewardsBot, promotion: 
         bot.logger.info(
             bot.isMobile,
             'SEARCH-ON-BING-ACTIVATE',
-            `Activated activity | offerId=${offerId} | status=${status} | acknowledged=${acknowledged}`
+            `活动已激活 | offerId=${offerId} | 状态=${status} | 已确认=${acknowledged}`
         )
         return acknowledged
     } catch (error) {
         bot.logger.error(
             bot.isMobile,
             'SEARCH-ON-BING-ACTIVATE',
-            `Activation failed | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
+            `激活失败 | offerId=${offerId} | 错误=${error instanceof Error ? error.message : String(error)}`
         )
         return false
     }
@@ -76,12 +76,12 @@ export async function getSearchOnBingQueries(bot: MicrosoftRewardsBot, promotion
         let activities: ActivityQueries[]
 
         if (bot.config.searchOnBingLocalQueries) {
-            bot.logger.debug(bot.isMobile, 'SEARCH-ON-BING-QUERY', 'Using local queries config file')
+            bot.logger.debug(bot.isMobile, 'SEARCH-ON-BING-QUERY', '使用本地查询词配置文件')
             activities = JSON.parse(
                 fs.readFileSync(path.join(__dirname, '../../bing-search-activity-queries.json'), 'utf8')
             ) as ActivityQueries[]
         } else {
-            bot.logger.debug(bot.isMobile, 'SEARCH-ON-BING-QUERY', 'Fetching queries config from remote repository')
+            bot.logger.debug(bot.isMobile, 'SEARCH-ON-BING-QUERY', '从远程仓库获取查询词配置')
             activities = (
                 await bot.http.request<ActivityQueries[]>({
                     method: 'GET',
@@ -98,7 +98,7 @@ export async function getSearchOnBingQueries(bot: MicrosoftRewardsBot, promotion
             bot.logger.info(
                 bot.isMobile,
                 'SEARCH-ON-BING-QUERY',
-                `Found ${shuffled.length} queries for "${promotion.title}" | source=${bot.config.searchOnBingLocalQueries ? 'local' : 'remote'}`
+                `为 "${promotion.title}" 找到 ${shuffled.length} 条查询词 | 来源=${bot.config.searchOnBingLocalQueries ? '本地' : '远程'}`
             )
             return shuffled
         }
@@ -106,14 +106,14 @@ export async function getSearchOnBingQueries(bot: MicrosoftRewardsBot, promotion
         bot.logger.info(
             bot.isMobile,
             'SEARCH-ON-BING-QUERY',
-            `No curated queries for "${promotion.title}", falling back to the activity title and description`
+            `"${promotion.title}" 无精选查询词，回退使用活动标题与描述`
         )
         return fallbackQueries(promotion)
     } catch (error) {
         bot.logger.error(
             bot.isMobile,
             'SEARCH-ON-BING-QUERY',
-            `Error resolving search queries | title="${promotion.title}" | message=${error instanceof Error ? error.message : String(error)} | fallback=titleAndDescription`
+            `解析查询词出错 | 标题="${promotion.title}" | 错误=${error instanceof Error ? error.message : String(error)} | 回退=标题与描述`
         )
         return fallbackQueries(promotion)
     }

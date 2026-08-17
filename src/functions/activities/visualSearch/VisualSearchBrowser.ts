@@ -39,7 +39,7 @@ export class VisualSearchBrowser {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-REPORT',
-                'Desktop page is unavailable - cannot run the visual-search browser flow'
+                '桌面端页面不可用 - 无法执行视觉搜索浏览器流程'
             )
             return this.emptyReport()
         }
@@ -72,7 +72,7 @@ export class VisualSearchBrowser {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'VISUAL-SEARCH-REPORT',
-                    `Bing did not issue reportActivity for "${candidate.query}" | bcid=${candidate.bcid.slice(0, 12)}`
+                    `Bing 未对 "${candidate.query}" 发出 reportActivity | bcid=${candidate.bcid.slice(0, 12)}`
                 )
                 return this.emptyReport()
             }
@@ -88,7 +88,7 @@ export class VisualSearchBrowser {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-REPORT',
-                `Browser reported "${candidate.query}" | status=${response.status()}` +
+                `浏览器已上报 "${candidate.query}" | status=${response.status()}` +
                     ` | acknowledged=${acknowledged} | ig=${ig ?? 'n/a'} | bcid=${candidate.bcid.slice(0, 12)}` +
                     ` | pointsGained=${gained ?? 'n/a'} | currentBalance=${parsed.balance ?? 'n/a'}` +
                     ` | searchPts=${parsed.searchPointsEarned ?? 'n/a'}/${parsed.searchPointsLimit ?? 'n/a'}`
@@ -99,7 +99,7 @@ export class VisualSearchBrowser {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-REPORT',
-                `Browser flow failed for "${candidate.query}" | ${
+                `视觉搜索浏览器流程失败 "${candidate.query}" | ${
                     error instanceof Error ? error.message : String(error)
                 }`
             )
@@ -116,7 +116,7 @@ export class VisualSearchBrowser {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'VISUAL-SEARCH-BCID',
-                    'Desktop page is unavailable - cannot acquire a visual search'
+                    '桌面端页面不可用 - 无法获取视觉搜索'
                 )
                 return null
             }
@@ -152,12 +152,12 @@ export class VisualSearchBrowser {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'VISUAL-SEARCH-BCID',
-                    `kblob returned no redirectUrl | status=${response.status()} - endpoint shape may have changed`
+                    `kblob 未返回 redirectUrl | status=${response.status()} - 接口结构可能已变化`
                 )
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'VISUAL-SEARCH-BCID',
-                    `kblob response: ${responseData.slice(0, 400)}`
+                    `kblob 响应: ${responseData.slice(0, 400)}`
                 )
                 return null
             }
@@ -165,7 +165,7 @@ export class VisualSearchBrowser {
             const redirect = new URL(redirectUrl, URLs.bing.origin)
             const bcid = redirect.searchParams.get('bcid')
             if (!bcid) {
-                this.bot.logger.warn(this.bot.isMobile, 'VISUAL-SEARCH-BCID', `Redirect had no bcid | ${redirectUrl}`)
+                this.bot.logger.warn(this.bot.isMobile, 'VISUAL-SEARCH-BCID', `重定向中没有 bcid | ${redirectUrl}`)
                 return null
             }
 
@@ -173,7 +173,7 @@ export class VisualSearchBrowser {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-BCID',
-                `Acquired bcid=${bcid.slice(0, 14)} | q="${query}" | status=${response.status()}` +
+                `已获取 bcid=${bcid.slice(0, 14)} | q="${query}" | status=${response.status()}` +
                     ` | seed=${seed.slice(0, 80)}`,
                 'green'
             )
@@ -182,7 +182,7 @@ export class VisualSearchBrowser {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-BCID',
-                `Failed to acquire visual search | ${error instanceof Error ? error.message : String(error)}`
+                `获取视觉搜索失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return null
         }
@@ -194,7 +194,7 @@ export class VisualSearchBrowser {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-BCID',
-                'Desktop page is unavailable - using the static visual-search seed'
+                '桌面端页面不可用 - 使用静态视觉搜索种子'
             )
             return [STATIC_SEED_URL]
         }
@@ -221,7 +221,7 @@ export class VisualSearchBrowser {
                     this.bot.logger.debug(
                         this.bot.isMobile,
                         'VISUAL-SEARCH-BCID',
-                        `Prepared ${uniqueSeeds.length} randomized Bing wallpaper seed(s)`
+                        `已准备 ${uniqueSeeds.length} 个随机化的 Bing 壁纸种子`
                     )
                     return uniqueSeeds
                 }
@@ -230,14 +230,14 @@ export class VisualSearchBrowser {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-BCID',
-                `HPImageArchive returned no usable urls | status=${response.status()} - using the static seed`
+                `HPImageArchive 未返回可用 URL | status=${response.status()} - 使用静态种子`
             )
         } catch (error) {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'VISUAL-SEARCH-BCID',
-                `HPImageArchive lookup failed | ${error instanceof Error ? error.message : String(error)}` +
-                    ' - using the static seed'
+                `HPImageArchive 查询失败 | ${error instanceof Error ? error.message : String(error)}` +
+                    ' - 使用静态种子'
             )
         }
 

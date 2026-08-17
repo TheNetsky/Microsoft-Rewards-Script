@@ -16,7 +16,7 @@ export class EnsureStreakProtection extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'ENABLE-STREAK-PROTECTION',
-                `Skipping: streak-protection action id not discovered in bundle (looked for [${STREAK_PROTECTION_ACTION_NAMES.join(', ')}] + any "*streak*protect*" key)`
+                `跳过：bundle 中未发现连击保护 action id（查找过 [${STREAK_PROTECTION_ACTION_NAMES.join(', ')}] 及任何 "*streak*protect*" 键）`
             )
             return
         }
@@ -27,7 +27,7 @@ export class EnsureStreakProtection extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'ENABLE-STREAK-PROTECTION',
-                `Already enabled | remainingDays=${before.remainingDays ?? 'null'}`,
+                `连击保护已启用 | remainingDays=${before.remainingDays ?? 'null'}`,
                 'green'
             )
             return
@@ -37,7 +37,7 @@ export class EnsureStreakProtection extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'ENABLE-STREAK-PROTECTION',
-                'No protection days remaining - toggle is disabled, skipping'
+                '没有剩余的保护天数 - 开关已禁用，跳过'
             )
             return
         }
@@ -48,7 +48,7 @@ export class EnsureStreakProtection extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'ENABLE-STREAK-PROTECTION',
-            `Starting EnsureStreakProtection | action=${resolved.name} | before=${beforeDesc}`
+            `开始确保连击保护 | action=${resolved.name} | before=${beforeDesc}`
         )
 
         try {
@@ -64,20 +64,20 @@ export class EnsureStreakProtection extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'ENABLE-STREAK-PROTECTION',
-                    `Completed | streakProtectionEnabled=true | remainingDays=${after.remainingDays ?? 'null'} | status=${status}`,
+                    `完成 | streakProtectionEnabled=true | remainingDays=${after.remainingDays ?? 'null'} | status=${status}`,
                     'green'
                 )
             } else if (after === null) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'ENABLE-STREAK-PROTECTION',
-                    `Fired but could not confirm state from a fresh snapshot | acknowledged=${acknowledged} | status=${status}`
+                    `已触发但无法从最新快照确认状态 | acknowledged=${acknowledged} | status=${status}`
                 )
             } else {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'ENABLE-STREAK-PROTECTION',
-                    `Toggle did not take - still off after firing | status=${status}`
+                    `开关未生效 - 触发后仍处于关闭状态 | status=${status}`
                 )
             }
 
@@ -86,7 +86,7 @@ export class EnsureStreakProtection extends BaseActivity {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'ENABLE-STREAK-PROTECTION',
-                `Error in ensureStreakProtection | message=${error instanceof Error ? error.message : String(error)}`
+                `ensureStreakProtection 出错 | message=${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -95,7 +95,7 @@ export class EnsureStreakProtection extends BaseActivity {
         try {
             const html = await this.bot.browser.func.getRewardsPageHtml(URLs.rewards.earn, '/earn')
             if (!html) {
-                this.bot.logger.warn(this.bot.isMobile, 'ENABLE-STREAK-PROTECTION', 'Verify fetch failed')
+                this.bot.logger.warn(this.bot.isMobile, 'ENABLE-STREAK-PROTECTION', '验证请求失败')
                 return null
             }
             return this.bot.browser.react.getStreakProtection(html)
@@ -103,7 +103,7 @@ export class EnsureStreakProtection extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'ENABLE-STREAK-PROTECTION',
-                `Verify read errored | ${error instanceof Error ? error.message : String(error)}`
+                `验证读取出错 | ${error instanceof Error ? error.message : String(error)}`
             )
             return null
         }

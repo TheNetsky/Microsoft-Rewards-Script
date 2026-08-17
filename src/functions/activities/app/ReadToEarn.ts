@@ -10,7 +10,7 @@ export class ReadToEarn extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'READ-TO-EARN',
-                'Skipping: App access token not available, this activity requires it!'
+                '跳过：应用访问令牌不可用，此活动需要它！'
             )
             return
         }
@@ -22,7 +22,7 @@ export class ReadToEarn extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'READ-TO-EARN',
-            `Starting Read to Earn | geo=${this.bot.userData.geoLocale} | delayRange=${delayMin}-${delayMax} | currentBalance=${startBalance}`
+            `开始读文赚积分 | geo=${this.bot.userData.geoLocale} | delayRange=${delayMin}-${delayMax} | currentBalance=${startBalance}`
         )
 
         try {
@@ -47,7 +47,7 @@ export class ReadToEarn extends BaseActivity {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'READ-TO-EARN',
-                    `Submitting Read to Earn activity | article=${i + 1}/${articleCount} | id=${jsonData.id} | country=${jsonData.country}`
+                    `正在提交读文赚积分活动 | article=${i + 1}/${articleCount} | id=${jsonData.id} | country=${jsonData.country}`
                 )
 
                 const request: HttpRequestConfig = {
@@ -69,7 +69,7 @@ export class ReadToEarn extends BaseActivity {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'READ-TO-EARN',
-                    `Received Read to Earn response | article=${i + 1}/${articleCount} | status=${response?.status ?? 'unknown'}`
+                    `已收到读文赚积分响应 | article=${i + 1}/${articleCount} | status=${response?.status ?? 'unknown'}`
                 )
 
                 const newBalance = Number(response?.data?.response?.balance ?? oldBalance)
@@ -78,14 +78,14 @@ export class ReadToEarn extends BaseActivity {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'READ-TO-EARN',
-                    `Balance delta after article | article=${i + 1}/${articleCount} | previousBalance=${oldBalance} | currentBalance=${newBalance} | pointsGained=${gainedPoints}`
+                    `文章后的积分变化 | article=${i + 1}/${articleCount} | previousBalance=${oldBalance} | currentBalance=${newBalance} | pointsGained=${gainedPoints}`
                 )
 
                 if (gainedPoints <= 0) {
                     this.bot.logger.info(
                         this.bot.isMobile,
                         'READ-TO-EARN',
-                        `No points gained, stopping Read to Earn | article=${i + 1}/${articleCount} | status=${response.status} | pointsGained=0 | currentBalance=${newBalance}`
+                        `未获得积分，停止读文赚积分 | article=${i + 1}/${articleCount} | status=${response.status} | pointsGained=0 | currentBalance=${newBalance}`
                     )
                     break
                 }
@@ -100,7 +100,7 @@ export class ReadToEarn extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'READ-TO-EARN',
-                    `Read article ${i + 1}/${articleCount} | status=${response.status} | pointsGained=${gainedPoints} | currentBalance=${newBalance}`,
+                    `已阅读第 ${i + 1}/${articleCount} 篇文章 | status=${response.status} | pointsGained=${gainedPoints} | currentBalance=${newBalance}`,
                     'green'
                 )
 
@@ -108,7 +108,7 @@ export class ReadToEarn extends BaseActivity {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'READ-TO-EARN',
-                    `Waiting between articles | article=${i + 1}/${articleCount} | delayRange=${delayMin}-${delayMax}`
+                    `文章间等待 | article=${i + 1}/${articleCount} | delayRange=${delayMin}-${delayMax}`
                 )
 
                 await this.bot.utils.wait(this.bot.utils.randomDelay(delayMin, delayMax))
@@ -119,13 +119,13 @@ export class ReadToEarn extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'READ-TO-EARN',
-                `Completed Read to Earn | articlesRead=${articlesRead} | pointsGained=${totalGained} | previousBalance=${startBalance} | currentBalance=${finalBalance}`
+                `读文赚积分完成 | articlesRead=${articlesRead} | pointsGained=${totalGained} | previousBalance=${startBalance} | currentBalance=${finalBalance}`
             )
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'READ-TO-EARN',
-                `Error during Read to Earn | message=${error instanceof Error ? error.message : String(error)}`
+                `读文赚积分出错 | message=${error instanceof Error ? error.message : String(error)}`
             )
         }
     }

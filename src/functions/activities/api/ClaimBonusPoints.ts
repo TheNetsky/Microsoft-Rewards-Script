@@ -7,7 +7,7 @@ export class ClaimBonusPoints extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'CLAIM-BONUS-POINTS',
-                'Skipping: "reportClaimAllPoints" action id not discovered in bundle'
+                '跳过：bundle 中未发现 "reportClaimAllPoints" action id'
             )
             return
         }
@@ -17,7 +17,7 @@ export class ClaimBonusPoints extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'CLAIM-BONUS-POINTS',
-            `Starting ClaimBonusPoints | geo=${this.bot.userData.geoLocale} | currentBalance=${oldBalance}`
+            `开始领取奖励积分 | geo=${this.bot.userData.geoLocale} | currentBalance=${oldBalance}`
         )
 
         try {
@@ -29,7 +29,7 @@ export class ClaimBonusPoints extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'CLAIM-BONUS-POINTS',
-                `Response | status=${status} | acknowledged=${acknowledged} | previousBalance=${oldBalance} | currentBalance=${newBalance} | pointsGained=${gainedPoints}`
+                `响应 | status=${status} | acknowledged=${acknowledged} | previousBalance=${oldBalance} | currentBalance=${newBalance} | pointsGained=${gainedPoints}`
             )
 
             if (acknowledged) {
@@ -41,14 +41,14 @@ export class ClaimBonusPoints extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'CLAIM-BONUS-POINTS',
-                    `Completed ClaimBonusPoints | acknowledged=true | pointsGained=${gainedPoints} | currentBalance=${newBalance}`,
+                    `领取奖励积分完成 | acknowledged=true | pointsGained=${gainedPoints} | currentBalance=${newBalance}`,
                     'green'
                 )
             } else {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'CLAIM-BONUS-POINTS',
-                    `Nothing claimed | status=${status} | pointsGained=0 | currentBalance=${newBalance}`
+                    `没有可领取的积分 | status=${status} | pointsGained=0 | currentBalance=${newBalance}`
                 )
             }
 
@@ -57,7 +57,7 @@ export class ClaimBonusPoints extends BaseActivity {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'CLAIM-BONUS-POINTS',
-                `Error in claimBonusPoints | message=${error instanceof Error ? error.message : String(error)}`
+                `claimBonusPoints 出错 | message=${error instanceof Error ? error.message : String(error)}`
             )
         }
     }

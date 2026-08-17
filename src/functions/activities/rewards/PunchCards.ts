@@ -11,7 +11,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.error(
                 'main',
                 'PUNCHCARD',
-                `Mobile punchcards failed | ${error instanceof Error ? error.message : String(error)}`
+                `移动端打卡任务失败 | ${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -26,7 +26,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.warn(
                 'main',
                 'PUNCHCARD',
-                `Desktop punchcard data unavailable | ${error instanceof Error ? error.message : String(error)}`
+                `桌面端打卡数据不可用 | ${error instanceof Error ? error.message : String(error)}`
             )
             return
         }
@@ -37,7 +37,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.error(
                 'main',
                 'PUNCHCARD',
-                `Desktop punchcards failed | ${error instanceof Error ? error.message : String(error)}`
+                `桌面端打卡任务失败 | ${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -59,14 +59,14 @@ export class PunchCards extends BaseActivity {
         })
 
         if (!pending.length) {
-            this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', 'No actionable quests')
+            this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', '没有可执行的任务')
             return
         }
 
         this.bot.logger.info(
             this.bot.isMobile,
             'PUNCHCARD',
-            `Found ${pending.length} incomplete quest(s) | apiMatched=${pending.filter(parent => apiById.has(parent.offerId)).length}`
+            `发现 ${pending.length} 个未完成任务 | apiMatched=${pending.filter(parent => apiById.has(parent.offerId)).length}`
         )
 
         for (const parent of pending) {
@@ -76,21 +76,21 @@ export class PunchCards extends BaseActivity {
                 this.bot.logger.error(
                     this.bot.isMobile,
                     'PUNCHCARD',
-                    `Error solving quest "${parent.title || parent.offerId}" | message=${
+                    `解决任务 "${parent.title || parent.offerId}" 时出错 | message=${
                         error instanceof Error ? error.message : String(error)
                     }`
                 )
             }
         }
 
-        this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', 'Finished processing quests')
+        this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', '任务处理完毕')
     }
 
     private async getParentQuests(): Promise<ParentQuest[] | null> {
         try {
             const earn = await this.bot.browser.func.getRewardsPageHtml(URLs.rewards.earn, '/earn')
             if (!earn) {
-                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', '/earn unavailable - cannot list quests')
+                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', '/earn 不可用 - 无法获取任务列表')
                 return null
             }
 
@@ -103,7 +103,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'PUNCHCARD',
-                `Failed fetching quest list | ${error instanceof Error ? error.message : String(error)}`
+                `获取任务列表失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return null
         }
@@ -151,7 +151,7 @@ export class PunchCards extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'PUNCHCARD',
-            `Solving "${title}" | children=${ordered.length} | reportable=${ordered.filter(child => child.reportable).length}`
+            `正在解决 "${title}" | children=${ordered.length} | reportable=${ordered.filter(child => child.reportable).length}`
         )
 
         const startBalance = this.bot.userData.currentPoints
@@ -166,14 +166,14 @@ export class PunchCards extends BaseActivity {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'PUNCHCARD',
-                    `Skip ${child.offerId}: not reportable (locked=${child.isLocked} disabled=${child.isDisabled} done=${child.isCompleted} hash=${Boolean(child.hash)})`
+                    `跳过 ${child.offerId}：不可上报（locked=${child.isLocked} disabled=${child.isDisabled} done=${child.isCompleted} hash=${Boolean(child.hash)}）`
                 )
                 continue
             }
 
             if (this.isSearchQuotaChild(child.offerId, apiChild)) {
                 remaining += 1
-                this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', `Skip ${child.offerId}: multi-day search task`)
+                this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', `跳过 ${child.offerId}：多天搜索任务`)
                 continue
             }
 
@@ -183,7 +183,7 @@ export class PunchCards extends BaseActivity {
                     this.bot.logger.info(
                         this.bot.isMobile,
                         'PUNCHCARD',
-                        `Reward for "${title}" is ready for manual redemption | offerId=${child.offerId}`
+                        `"${title}" 的奖励可手动兑换 | offerId=${child.offerId}`
                     )
                     continue
                 }
@@ -200,7 +200,7 @@ export class PunchCards extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'PUNCHCARD',
-            `Quest "${title}" ${remaining === 0 ? 'COMPLETE' : 'in progress'} | reported=${reported}` +
+            `任务 "${title}" ${remaining === 0 ? 'COMPLETE' : 'in progress'} | reported=${reported}` +
                 `${remaining ? ` | remaining=${remaining}` : ''} | pointsGained=${gained}` +
                 ` | currentBalance=${this.bot.userData.currentPoints}` +
                 `${parent.pointProgressMax > 0 ? ` | targetPoints=${parent.pointProgressMax}` : ''}`,
@@ -213,13 +213,13 @@ export class PunchCards extends BaseActivity {
             const questUrl = URLs.rewards.quest(parentId)
             const html = await this.bot.browser.func.getRewardsPageHtml(questUrl, `/earn/quest/${parentId}`)
             if (!html) {
-                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', `Quest page unavailable for "${title}"`)
+                this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', `"${title}" 的任务页面不可用`)
                 return null
             }
 
             const children = this.bot.browser.react.snapshotQuestPage(html)
             if (!children.length) {
-                this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', `No actionable children for "${title}"`)
+                this.bot.logger.info(this.bot.isMobile, 'PUNCHCARD', `"${title}" 没有可执行的子任务`)
                 return null
             }
             return children
@@ -227,7 +227,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'PUNCHCARD',
-                `Failed fetching quest page for "${title}" | ${error instanceof Error ? error.message : String(error)}`
+                `获取 "${title}" 的任务页面失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return null
         }
@@ -239,12 +239,12 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'PUNCHCARD',
-                `Skip ${child.offerId}: "reportActivity" was not discovered`
+                `跳过 ${child.offerId}：未发现 "reportActivity"`
             )
             return
         }
         if (!child.hash) {
-            this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', `Skip ${child.offerId}: no live hash`)
+            this.bot.logger.warn(this.bot.isMobile, 'PUNCHCARD', `跳过 ${child.offerId}：没有有效的 hash`)
             return
         }
 
@@ -279,7 +279,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'PUNCHCARD',
-                `Reported child | offerId=${child.offerId} | status=${status} | acknowledged=${acknowledged}` +
+                `已上报子任务 | offerId=${child.offerId} | status=${status} | acknowledged=${acknowledged}` +
                     ` | pointsGained=${gained} | currentBalance=${newBalance}`,
                 gained > 0 || acknowledged ? 'green' : undefined
             )
@@ -287,7 +287,7 @@ export class PunchCards extends BaseActivity {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'PUNCHCARD',
-                `Error reporting child | offerId=${child.offerId} | message=${
+                `上报子任务出错 | offerId=${child.offerId} | message=${
                     error instanceof Error ? error.message : String(error)
                 }`
             )

@@ -60,7 +60,7 @@ export class BingSearchApi {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'SEARCH-REPORT',
-                `No IG for "${query}" - SERP not served as expected`
+                `查询 "${query}" 无 IG - SERP 未按预期返回`
             )
             return { ig: null, ...this.emptyReport(), gained: null }
         }
@@ -101,7 +101,7 @@ export class BingSearchApi {
         this.bot.logger.debug(
             this.bot.isMobile,
             'SEARCH-REPORT',
-            `Reported "${query}" | ig=${ig} | pointsGained=${gained ?? 'n/a'}` +
+            `已上报 "${query}" | ig=${ig} | pointsGained=${gained ?? 'n/a'}` +
                 ` | currentBalance=${parsed.balance ?? 'n/a'}` +
                 ` | searchPts=${parsed.searchPointsEarned ?? 'n/a'}/${parsed.searchPointsLimit ?? 'n/a'}`
         )

@@ -13,7 +13,7 @@ export class DailyCheckIn extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                'Skipping: App access token not available, this activity requires it!'
+                '跳过：应用访问令牌不可用，此活动需要它！'
             )
             return
         }
@@ -23,7 +23,7 @@ export class DailyCheckIn extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'DAILY-CHECK-IN',
-            `Starting Daily Check-In | geo=${this.bot.userData.geoLocale} | currentBalance=${this.oldBalance}`
+            `开始每日签到 | geo=${this.bot.userData.geoLocale} | currentBalance=${this.oldBalance}`
         )
 
         try {
@@ -32,7 +32,7 @@ export class DailyCheckIn extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                `Received Daily Check-In response | status=${response?.status ?? 'unknown'}`
+                `已收到每日签到响应 | status=${response?.status ?? 'unknown'}`
             )
 
             const newBalance = Number(response?.data?.response?.balance ?? this.oldBalance)
@@ -41,7 +41,7 @@ export class DailyCheckIn extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                `Balance delta after Daily Check-In | type=103 | previousBalance=${this.oldBalance} | currentBalance=${newBalance} | pointsGained=${this.gainedPoints}`
+                `每日签到后的积分变化 | type=103 | previousBalance=${this.oldBalance} | currentBalance=${newBalance} | pointsGained=${this.gainedPoints}`
             )
 
             if (this.gainedPoints > 0) {
@@ -51,21 +51,21 @@ export class DailyCheckIn extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'DAILY-CHECK-IN',
-                    `Completed Daily Check-In | type=103 | pointsGained=${this.gainedPoints} | currentBalance=${newBalance}`,
+                    `每日签到完成 | type=103 | pointsGained=${this.gainedPoints} | currentBalance=${newBalance}`,
                     'green'
                 )
             } else {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'DAILY-CHECK-IN',
-                    `Daily Check-In completed but no points gained | type=103 | pointsGained=0 | currentBalance=${newBalance}`
+                    `每日签到完成但未获得积分 | type=103 | pointsGained=0 | currentBalance=${newBalance}`
                 )
             }
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                `Error during Daily Check-In | message=${error instanceof Error ? error.message : String(error)}`
+                `每日签到出错 | message=${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -85,7 +85,7 @@ export class DailyCheckIn extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                `Preparing Daily Check-In payload | type=${jsonData.type} | id=${jsonData.id} | amount=${jsonData.amount} | country=${jsonData.country}`
+                `正在准备每日签到载荷 | type=${jsonData.type} | id=${jsonData.id} | amount=${jsonData.amount} | country=${jsonData.country}`
             )
 
             const request: HttpRequestConfig = {
@@ -110,7 +110,7 @@ export class DailyCheckIn extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                `Sending Daily Check-In request | type=${jsonData.type} | url=${request.url}`
+                `正在发送每日签到请求 | type=${jsonData.type} | url=${request.url}`
             )
 
             return this.bot.http.request<{ response?: { balance?: number } }>(request)
@@ -118,7 +118,7 @@ export class DailyCheckIn extends BaseActivity {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'DAILY-CHECK-IN',
-                `Error in submitDaily | message=${error instanceof Error ? error.message : String(error)}`
+                `submitDaily 出错 | message=${error instanceof Error ? error.message : String(error)}`
             )
             throw error
         }

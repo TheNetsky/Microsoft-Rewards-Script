@@ -92,7 +92,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUERY-MANAGER',
-                `Building main topic pool | sources=${sourceOrder.join(',')} | shuffle=${shuffle} | lang=${langCode} | geo=${geoLocale}`
+                `构建主题词池 | 源=${sourceOrder.join(',')} | shuffle=${shuffle} | lang=${langCode} | geo=${geoLocale}`
             )
 
             const sourceHandlers: Record<QueryEngine, () => Promise<string[]> | string[]> = {
@@ -132,7 +132,7 @@ export class QueryCore {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'QUERY-MANAGER',
-                    `Source "${source}" returned ${topics.length}`
+                    `源 "${source}" 返回 ${topics.length} 条`
                 )
                 if (!topics.length) continue
 
@@ -155,7 +155,7 @@ export class QueryCore {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'QUERY-MANAGER',
-                    `Source "rss" returned ${rssTopics.length} (${rssSelectors.length} selector(s))`
+                    `源 "rss" 返回 ${rssTopics.length} 条（${rssSelectors.length} 个选择器）`
                 )
                 if (rssTopics.length) topicLists.push(rssTopics)
             }
@@ -163,7 +163,7 @@ export class QueryCore {
             const rawTopics = topicLists.flat()
             const topics = this.normalizeAndDedupe(rawTopics)
             if (!topics.length) {
-                this.bot.logger.warn(this.bot.isMobile, 'QUERY-MANAGER', 'No topics returned by any source')
+                this.bot.logger.warn(this.bot.isMobile, 'QUERY-MANAGER', '所有源均未返回主题')
                 return []
             }
 
@@ -172,21 +172,21 @@ export class QueryCore {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'QUERY-MANAGER',
-                    `Shuffled main topic pool | first="${topics[0] ?? ''}"`
+                    `主题词池已打乱 | 首个="${topics[0] ?? ''}"`
                 )
             }
 
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUERY-MANAGER',
-                `Built main topic pool | raw=${rawTopics.length} | unique=${topics.length} | duplicatesRemoved=${rawTopics.length - topics.length}`
+                `主题词池已构建 | 原始=${rawTopics.length} | 去重后=${topics.length} | 移除重复=${rawTopics.length - topics.length}`
             )
             return topics
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'QUERY-MANAGER',
-                `Failed building main topic pool | ${error instanceof Error ? error.message : String(error)}`
+                `构建主题词池失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -205,7 +205,7 @@ export class QueryCore {
         const normalizedMain = this.normalizeAndDedupe([mainTopic])[0]
         if (!normalizedMain) return []
         if (!this.bot.config.searchSettings.clusterSearch) {
-            this.bot.logger.debug(this.bot.isMobile, 'QUERY-CLUSTER', `Clustering disabled | main="${normalizedMain}"`)
+            this.bot.logger.debug(this.bot.isMobile, 'QUERY-CLUSTER', `聚类已禁用 | 主词="${normalizedMain}"`)
             return [normalizedMain]
         }
 
@@ -213,7 +213,7 @@ export class QueryCore {
         this.bot.logger.debug(
             this.bot.isMobile,
             'QUERY-CLUSTER',
-            `Fetching related queries | main="${normalizedMain}" | lang=${langCode} | limit=${MAX_CLUSTER_SUGGESTIONS}`
+            `正在获取相关查询 | 主词="${normalizedMain}" | lang=${langCode} | 上限=${MAX_CLUSTER_SUGGESTIONS}`
         )
 
         const [suggestionsResult, relatedResult] = await Promise.allSettled([
@@ -227,14 +227,14 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUERY-CLUSTER',
-                `Related source unavailable | source=v7 | main="${normalizedMain}" | ${String(suggestionsResult.reason)}`
+                `相关词源不可用 | 源=v7 | 主词="${normalizedMain}" | ${String(suggestionsResult.reason)}`
             )
         }
         if (relatedResult.status === 'rejected') {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'QUERY-CLUSTER',
-                `Related source unavailable | source=osjson | main="${normalizedMain}" | ${String(relatedResult.reason)}`
+                `相关词源不可用 | 源=osjson | 主词="${normalizedMain}" | ${String(relatedResult.reason)}`
             )
         }
 
@@ -244,13 +244,13 @@ export class QueryCore {
         this.bot.logger.debug(
             this.bot.isMobile,
             'QUERY-CLUSTER',
-            `Related source ready | source=v7 | main="${normalizedMain}" | raw=${rawSuggestions.length} | unique=${suggestions.length} | queries=${JSON.stringify(suggestions)}`
+            `相关词源就绪 | 源=v7 | 主词="${normalizedMain}" | 原始=${rawSuggestions.length} | 去重后=${suggestions.length} | 查询=${JSON.stringify(suggestions)}`
         )
 
         this.bot.logger.debug(
             this.bot.isMobile,
             'QUERY-CLUSTER',
-            `Related source ready | source=osjson | main="${normalizedMain}" | raw=${rawRelated.length} | unique=${related.length} | queries=${JSON.stringify(related)}`
+            `相关词源就绪 | 源=osjson | 主词="${normalizedMain}" | 原始=${rawRelated.length} | 去重后=${related.length} | 查询=${JSON.stringify(related)}`
         )
 
         const interleaved: string[] = []
@@ -269,7 +269,7 @@ export class QueryCore {
         this.bot.logger.debug(
             this.bot.isMobile,
             'QUERY-CLUSTER',
-            `Related queries merged | main="${normalizedMain}" | availableSources=${Number(suggestions.length > 0) + Number(related.length > 0)} | unique=${merged.length} | selected=${selected.length} | queries=${JSON.stringify(selected)}`
+            `相关查询已合并 | 主词="${normalizedMain}" | 可用源数=${Number(suggestions.length > 0) + Number(related.length > 0)} | 去重后=${merged.length} | 选中=${selected.length} | 查询=${JSON.stringify(selected)}`
         )
 
         const cluster = [normalizedMain, ...selected]
@@ -278,7 +278,7 @@ export class QueryCore {
         this.bot.logger.debug(
             this.bot.isMobile,
             'QUERY-CLUSTER',
-            `Cluster ready | main="${normalizedMain}" | related=${Math.max(0, cluster.length - 1)} | total=${cluster.length} | order=${JSON.stringify(cluster)}`
+            `聚类就绪 | 主词="${normalizedMain}" | 相关词=${Math.max(0, cluster.length - 1)} | 总数=${cluster.length} | 顺序=${JSON.stringify(cluster)}`
         )
         return cluster
     }
@@ -317,7 +317,7 @@ export class QueryCore {
             const response = await this.bot.http.request<string>(request, this.bot.config.proxy.queryEngine)
             const trendsData = this.extractJsonFromResponse(response.data)
             if (!trendsData) {
-                this.bot.logger.debug(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', 'No trends data parsed from response')
+                this.bot.logger.debug(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', '未能从响应中解析趋势数据')
                 return []
             }
 
@@ -334,7 +334,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-GOOGLE-TRENDS',
-                `Request failed | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -369,7 +369,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-BING-SUGGESTIONS',
-                `Request failed | query="${query}" | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | 查询="${query}" | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -392,7 +392,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-BING-RELATED',
-                `Request failed | query="${query}" | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | 查询="${query}" | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -419,7 +419,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-WIKIPEDIA-TRENDING',
-                `Request failed | lang=${langCode} | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | 语言=${langCode} | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -442,7 +442,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-REDDIT',
-                `Request failed | subreddit=${safe} | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | 子版块=${safe} | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -464,7 +464,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-HACKERNEWS',
-                `Request failed | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -490,7 +490,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-WIKIPEDIA-RANDOM',
-                `Request failed | lang=${lang} | ${error instanceof Error ? error.message : String(error)}`
+                `请求失败 | 语言=${lang} | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -519,7 +519,7 @@ export class QueryCore {
 
             const feeds = RSS_FEEDS[site]
             if (!feeds) {
-                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-RSS', `Unknown RSS site "${site}" in "${selector}"`)
+                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-RSS', `未知的 RSS 站点 "${site}"（选择器 "${selector}"）`)
                 continue
             }
 
@@ -530,7 +530,7 @@ export class QueryCore {
 
             const url = feeds[endpoint]
             if (url) urls.add(url)
-            else this.bot.logger.warn(this.bot.isMobile, 'SEARCH-RSS', `Unknown RSS feed "${site}.${endpoint}"`)
+            else this.bot.logger.warn(this.bot.isMobile, 'SEARCH-RSS', `未知的 RSS 订阅源 "${site}.${endpoint}"`)
         }
 
         return [...urls]
@@ -551,7 +551,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-RSS',
-                `Feed failed | ${url} | ${error instanceof Error ? error.message : String(error)}`
+                `订阅源失败 | ${url} | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
@@ -586,7 +586,7 @@ export class QueryCore {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'SEARCH-LOCAL-QUERY-LIST',
-                `Failed reading search-queries.json | ${error instanceof Error ? error.message : String(error)}`
+                `读取 search-queries.json 失败 | ${error instanceof Error ? error.message : String(error)}`
             )
             return []
         }
