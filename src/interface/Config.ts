@@ -19,7 +19,7 @@ export interface Config {
     webhook: ConfigWebhook
 }
 
-export type QueryEngine = 'google' | 'wikipedia' | 'wikirandom' | 'hackernews' | 'reddit' | 'local'
+export type QueryEngine = 'china' | 'google' | 'wikipedia' | 'wikirandom' | 'hackernews' | 'reddit' | 'local'
 
 // RSS feeds are selected with a dotted path: 'rss' (every catalogued feed),
 // 'rss.<site>' (every feed for that site), or 'rss.<site>.<endpoint>' (one feed).
@@ -37,6 +37,13 @@ export interface ConfigSearchSettings {
     searchResultVisitTime: number | string
     searchDelay: ConfigDelay
     readDelay: ConfigDelay
+    /**
+     * 中国热搜源（gmya.net）配置。
+     * appkey 留空走免费档（有频率限制）；填入则带 appkey 请求以解除限流。
+     */
+    chinaApi?: {
+        appkey?: string
+    }
 }
 
 export interface ConfigDelay {

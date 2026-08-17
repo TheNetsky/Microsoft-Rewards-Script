@@ -38,17 +38,8 @@
         "parallelSearching": true,
         "clusterSearch": true,
         "queryEngines": [
-            "google",
-            "wikipedia",
-            "wikirandom",
-            "hackernews",
-            "reddit",
-            "local",
-            "rss.googleTrends",
-            "rss.googleNews",
-            "rss.bbc",
-            "rss.guardian.world",
-            "rss.theVerge.all"
+            "china",
+            "local"
         ],
         "searchResultVisitTime": "10sec",
         "searchDelay": {
@@ -58,6 +49,9 @@
         "readDelay": {
             "min": "30sec",
             "max": "1min"
+        },
+        "chinaApi": {
+            "appkey": ""
         }
     },
     "experimental": {

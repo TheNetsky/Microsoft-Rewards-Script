@@ -44,7 +44,7 @@ const DelaySchema = z
     })
 
 const QueryEngineSchema = z.union([
-    z.enum(['google', 'wikipedia', 'wikirandom', 'hackernews', 'reddit', 'local']),
+    z.enum(['china', 'google', 'wikipedia', 'wikirandom', 'hackernews', 'reddit', 'local']),
     z
         .string()
         .regex(/^rss(\.[A-Za-z0-9_-]+){0,2}$/, 'Invalid rss selector (use rss, rss.<site>, or rss.<site>.<endpoint>)')
@@ -144,7 +144,12 @@ export const ConfigSchema = z.object({
         queryEngines: z.array(QueryEngineSchema),
         searchResultVisitTime: NumberOrString,
         searchDelay: DelaySchema,
-        readDelay: DelaySchema
+        readDelay: DelaySchema,
+        chinaApi: z
+            .object({
+                appkey: z.string().optional()
+            })
+            .optional()
     }),
     experimental: z
         .object({
@@ -286,7 +291,8 @@ const defaultConfig: Config = {
         queryEngines: ['google', 'wikipedia', 'wikirandom', 'hackernews', 'reddit', 'local'],
         searchResultVisitTime: '10sec',
         searchDelay: { min: '30sec', max: '1min' },
-        readDelay: { min: '30sec', max: '1min' }
+        readDelay: { min: '30sec', max: '1min' },
+        chinaApi: { appkey: '' }
     },
     experimental: {
         apiSearch: false,
