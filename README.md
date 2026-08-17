@@ -1,6 +1,4 @@
 [![Discord](https://img.shields.io/badge/Join%20Our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8BxYbV4pkj)
-[![Latest Build](https://img.shields.io/github/actions/workflow/status/TheNetsky/Microsoft-Rewards-Script/auto-release.yml?branch=v4&style=for-the-badge&label=Latest%20Build)](https://github.com/TheNetsky/Microsoft-Rewards-Script/actions/workflows/auto-release.yml)
-[![Docker](https://img.shields.io/badge/Docker-GHCR-blue?style=for-the-badge&logo=docker)](https://github.com/TheNetsky/Microsoft-Rewards-Script/pkgs/container/microsoft-rewards-script)
 
 > [!TIP]
 > This version supports the **new, modern Bing Rewards dashboard only** - it does **not** support the legacy dashboard.
@@ -85,11 +83,13 @@ Works on Windows, Linux, macOS, and WSL.
 #### Get the script
 
 ```bash
-git clone https://github.com/TheNetsky/Microsoft-Rewards-Script.git
+git clone -b V4-china https://github.com/chiihero/Microsoft-Rewards-Script.git
 cd Microsoft-Rewards-Script
 ```
 
-Or, download the latest release ZIP and extract it.
+> [!NOTE]
+> 国内无法直连 GitHub 时可用镜像加速：`git clone -b V4-china https://gh-proxy.com/https://github.com/chiihero/Microsoft-Rewards-Script.git`
+> 也可以在本仓库 V4-china 分支页面 "Code → Download ZIP" 下载（上游 TheNetsky 的 release 是原版代码，不含国内适配）。
 
 ## Account Setup
 
@@ -131,6 +131,9 @@ npm run start
 ```
 
 ## Docker
+
+> [!IMPORTANT]
+> 本仓库 `compose.yaml` 默认 `build: .` 本地构建（运行本分支代码）。**不要**改回 `ghcr.io/thenetsky/...` 官方镜像——那是原作者的原版代码，不含中国热搜 / PushPlus 等国内适配。
 
 - Copy the sample [`compose.yaml`](compose.yaml)
 - Copy and rename [`env.example`](env.example) to `.env` and add your account credentials:
