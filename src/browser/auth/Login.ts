@@ -63,6 +63,7 @@ export class Login {
         passwordlessOptionOld: 'img[data-testid="accessibleImg"][src*="picker_remote_ngc"]',
         recoveryEmail: '[data-testid="proof-confirmation"]',
         emailVerificationInput: 'input#proof-confirmation-email-input',
+        emailVerificationUsePassword: '[data-testid="viewFooter"] + [data-testid="viewFooter"] [role="button"]',
         passwordIcon: '[data-testid="tile"]:has(svg path[d*="M11.78 10.22a.75.75"])',
         accountLocked: '#serviceAbuseLandingTitle',
         errorAlert: 'div[role="alert"]',
@@ -630,15 +631,24 @@ export class Login {
             }
 
             case 'EMAIL_VERIFICATION_INPUT': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Email verification input detected')
-                await this.waitForIdle(page, 'on email verification page')
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Initiating email-code verification handler')
-                await this.codeLogin.handle(page)
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN',
-                    'Email-code verification handler completed successfully'
+                    'Email verification input detected; selecting password sign-in'
                 )
+                await this.waitForIdle(page, 'on email verification page')
+
+                const clicked = await this.bot.browser.utils.ghostClick(
+                    page,
+                    this.selectors.emailVerificationUsePassword
+                )
+                if (!clicked) {
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'Could not select password sign-in option')
+                    return false
+                }
+
+                await this.waitForIdle(page, 'after selecting password sign-in')
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Password sign-in option selected')
                 return true
             }
 
