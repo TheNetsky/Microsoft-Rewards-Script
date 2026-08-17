@@ -29,26 +29,26 @@
         "searchOnBing": true
     },
     "searchOnBingLocalQueries": false,
-    "globalTimeout": "30sec",
+    "globalTimeout": "50sec",
     "searchSettings": {
-        "scrollRandomResults": false,
-        "clickRandomResults": false,
+        "scrollRandomResults": true,
+        "clickRandomResults": true,
         "runOnZeroPoints": false,
         "maxBonusSearches": 110,
-        "parallelSearching": true,
+        "parallelSearching": false,
         "clusterSearch": true,
         "queryEngines": [
             "china",
             "local"
         ],
-        "searchResultVisitTime": "10sec",
+        "searchResultVisitTime": "20sec",
         "searchDelay": {
-            "min": "30sec",
-            "max": "1min"
+            "min": "6min",
+            "max": "12min"
         },
         "readDelay": {
-            "min": "30sec",
-            "max": "1min"
+            "min": "6min",
+            "max": "11min"
         },
         "chinaApi": {
             "appkey": ""
@@ -60,7 +60,7 @@
         "blockMedia": false,
         "edgeBrowsing": false
     },
-    "debugLogs": false,
+    "debugLogs": true,
     "consoleLogFilter": {
         "enabled": false,
         "mode": "whitelist",
@@ -69,7 +69,7 @@
         "regexPatterns": []
     },
     "proxy": {
-        "queryEngine": true,
+        "queryEngine": false,
         "ignoreCertificateErrors": false
     },
     "webhook": {
