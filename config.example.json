@@ -82,6 +82,13 @@
             "botToken": "",
             "chatId": ""
         },
+        "pushplus": {
+            "enabled": false,
+            "token": "",
+            "title": "Microsoft-Rewards-Script",
+            "template": "txt",
+            "channel": ""
+        },
         "ntfy": {
             "enabled": false,
             "url": "",

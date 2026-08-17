@@ -99,6 +99,15 @@ const WebhookSchema = z.object({
             chatId: z.string()
         })
         .optional(),
+    pushplus: z
+        .object({
+            enabled: z.boolean().optional(),
+            token: z.string(),
+            title: z.string().optional(),
+            template: z.enum(['txt', 'html', 'markdown']).optional(),
+            channel: z.string().optional()
+        })
+        .optional(),
     webhookLogFilter: LogFilterSchema
 })
 

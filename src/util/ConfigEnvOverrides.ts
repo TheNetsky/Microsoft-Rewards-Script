@@ -96,6 +96,13 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_TELEGRAM_BOTTOKEN', path: 'webhook.telegram.botToken', type: 'string' },
     { env: 'CONFIG_TELEGRAM_CHATID', path: 'webhook.telegram.chatId', type: 'string' },
 
+    // PushPlus webhook（国内微信推送）
+    { env: 'CONFIG_PUSHPLUS_ENABLED', path: 'webhook.pushplus.enabled', type: 'bool' },
+    { env: 'CONFIG_PUSHPLUS_TOKEN', path: 'webhook.pushplus.token', type: 'string' },
+    { env: 'CONFIG_PUSHPLUS_TITLE', path: 'webhook.pushplus.title', type: 'string' },
+    { env: 'CONFIG_PUSHPLUS_TEMPLATE', path: 'webhook.pushplus.template', type: 'string' },
+    { env: 'CONFIG_PUSHPLUS_CHANNEL', path: 'webhook.pushplus.channel', type: 'string' },
+
     // ntfy webhook (tags are comma-separated e.g. "bot,notify")
     { env: 'CONFIG_NTFY_ENABLED', path: 'webhook.ntfy.enabled', type: 'bool' },
     { env: 'CONFIG_NTFY_URL', path: 'webhook.ntfy.url', type: 'string' },

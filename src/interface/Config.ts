@@ -88,6 +88,7 @@ export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig
     telegram?: WebhookTelegramConfig
+    pushplus?: WebhookPushPlusConfig
     webhookLogFilter: LogFilter
 }
 
@@ -118,4 +119,12 @@ export interface WebhookTelegramConfig {
     enabled?: boolean
     botToken: string
     chatId: string | number
+}
+
+export interface WebhookPushPlusConfig {
+    enabled?: boolean
+    token: string
+    title?: string
+    template?: 'txt' | 'html' | 'markdown'
+    channel?: string
 }
