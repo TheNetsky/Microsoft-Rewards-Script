@@ -1,0 +1,3 @@
+chmod +x ~/scripts/mac_script.sh
+然后local.npm-start.plist复制到~/Library/LaunchAgents/local.npm-start.plist
+
