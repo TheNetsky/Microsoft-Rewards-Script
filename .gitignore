@@ -17,3 +17,6 @@ note
 .stfolder/
 .envlogs/
 /logs
+# 本地私密配置与编辑器工作目录，严禁提交
+/.env
+/.zcode/
