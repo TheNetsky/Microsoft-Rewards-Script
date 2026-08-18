@@ -2,9 +2,9 @@
 
 > [!TIP]
 > This version supports the **new, modern Bing Rewards dashboard only** - it does **not** support the legacy dashboard.
-> If your account still uses the old dashboard, use the [v3 branch](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v3) and v3.x releases instead!
+> If your account still uses the old dashboard, use the [v3 branch](https://github.com/chiihero/Microsoft-Rewards-Script/tree/main) of this repository（本仓库 `main` 分支即国内适配的 v3 稳定版）instead!
 >
-> Use at your own risk - some features may not work as expected.
+> **状态（2026-08）：V4-china 已基本可用**——搜索、活动、签到、Read-to-Earn、微信推送（PushPlus / ClawBot）等核心功能实测通过，可用于日常运行。新架构仍在迭代，追求极致稳定可暂留 v3（`main` 分支），后续会继续同步上游 v4 更新。Use at your own risk.
 
 ---
 
