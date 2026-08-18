@@ -16,3 +16,4 @@ note
 .playwright-chromium-installed
 .stfolder/
 .envlogs/
+/logs

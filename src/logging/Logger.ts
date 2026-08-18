@@ -1,10 +1,13 @@
 import chalk from 'chalk'
 import cluster from 'cluster'
+import fs from 'fs'
+import path from 'path'
 import { sendDiscord } from './Discord'
 import { sendNtfy } from './Ntfy'
 import { sendTelegram } from './Telegram'
 import type { MicrosoftRewardsBot } from '../index'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
+import { getProjectRoot } from '../util/Load'
 import type { LogFilter } from '../interface/Config'
 
 export type Platform = boolean | 'main'
@@ -54,6 +57,66 @@ function formatMessage(message: string | Error): string {
     return stackFrames ? `${message.message} | stack=${stackFrames}` : message.message
 }
 
+/**
+ * 日志保留天数，超期的日志文件在进程首次写日志时清理
+ */
+const LOG_RETENTION_DAYS = 90
+
+/**
+ * 日志文件目录（首次写入时解析，避免每条日志都做磁盘检查）
+ */
+let logFileDir: string | null = null
+
+function cleanOldLogFiles(logDir: string): void {
+    const cutoff = Date.now() - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000
+    let entries: string[]
+    try {
+        entries = fs.readdirSync(logDir)
+    } catch {
+        return
+    }
+    for (const name of entries) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})\.log$/.exec(name)
+        if (!match) continue
+        const fileDate = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime()
+        if (Number.isNaN(fileDate) || fileDate >= cutoff) continue
+        try {
+            fs.rmSync(path.join(logDir, name), { force: true })
+        } catch {
+            // 单个文件清理失败不影响运行
+        }
+    }
+}
+
+function getLogFilePath(now: Date): string | null {
+    try {
+        if (!logFileDir) {
+            logFileDir = path.join(getProjectRoot(), 'logs')
+            fs.mkdirSync(logFileDir, { recursive: true })
+            cleanOldLogFiles(logFileDir)
+        }
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        return path.join(logFileDir, `${date}.log`)
+    } catch (error) {
+        console.error('[Logger] 创建日志目录失败:', error)
+        logFileDir = null
+        return null
+    }
+}
+
+/**
+ * 将日志追加写入 logs/YYYY-MM-DD.log（按本地日期分文件）
+ */
+function writeLogToFile(logContent: string): void {
+    try {
+        const logFilePath = getLogFilePath(new Date())
+        if (!logFilePath) return
+        fs.appendFileSync(logFilePath, `${new Date().toISOString()} ${logContent}\n`, 'utf8')
+    } catch (error) {
+        console.error('[Logger] 写入日志文件失败:', error)
+    }
+}
+
 export class Logger {
     constructor(private bot: MicrosoftRewardsBot) {}
 
@@ -93,6 +156,9 @@ export class Logger {
         if (level === 'debug' && !config.debugLogs && !process.argv.includes('-dev')) {
             return
         }
+
+        // 保存日志到本地文件
+        writeLogToFile(cleanMsg)
 
         const badge = platformBadge(isMobile)
         const consoleStr = `[${now}] [${userName}] [${levelTag}] ${badge} [${title}] ${formatted}`

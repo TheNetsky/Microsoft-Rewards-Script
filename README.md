@@ -387,6 +387,8 @@ Regardless of the experimental search settings, normal Rewards actions use the c
 
 > [!NOTE]
 > \* Docker `CONFIG_*` array values are comma-separated strings e.g. `"error,warn"`. Regex patterns must be set directly in `config.json`.
+>
+> 日志默认全量写入 `logs/YYYY-MM-DD.log`（按本地日期分文件），进程启动时自动清理 90 天前的旧文件（`src/logging/Logger.ts` 中的 `LOG_RETENTION_DAYS` 可调整）。
 
 ### Proxy
 
