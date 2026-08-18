@@ -22,10 +22,14 @@ export interface ClawBotAuth {
     token: string
     accountId: string
     userId: string
+    // 主动发送必须携带的上下文凭证，来自用户发给 bot 的消息（getupdates 抓取）
+    contextToken?: string
+    // getupdates 游标，持久化以便增量拉取
+    getUpdatesBuf?: string
     savedAt: string
 }
 
-export type ClawBotSendResult = 'ok' | 'expired' | 'rate-limited' | 'error'
+export type ClawBotSendResult = 'ok' | 'expired' | 'needs-activation' | 'error'
 
 export function resolveClawBotAuthFile(customPath?: string): string {
     if (customPath) return path.resolve(customPath)
@@ -42,6 +46,8 @@ export function loadClawBotAuth(customPath?: string): ClawBotAuth | null {
                 token: raw.token,
                 accountId: typeof raw.accountId === 'string' ? raw.accountId : '',
                 userId: raw.userId,
+                contextToken: typeof raw.contextToken === 'string' && raw.contextToken ? raw.contextToken : undefined,
+                getUpdatesBuf: typeof raw.getUpdatesBuf === 'string' && raw.getUpdatesBuf ? raw.getUpdatesBuf : undefined,
                 savedAt: typeof raw.savedAt === 'string' ? raw.savedAt : new Date().toISOString()
             }
         }
@@ -122,6 +128,7 @@ export async function sendClawBotText(auth: ClawBotAuth, text: string): Promise<
             client_id: clientId,
             message_type: 2,
             message_state: 2,
+            ...(auth.contextToken ? { context_token: auth.contextToken } : {}),
             item_list: [{ type: 1, text_item: { text } }]
         },
         base_info: {
@@ -137,7 +144,8 @@ export async function sendClawBotText(auth: ClawBotAuth, text: string): Promise<
         const ret = resp?.ret ?? 0
         if (ret === 0) return 'ok'
         if (ret === -14) return 'expired'
-        if (ret === -2) return 'rate-limited'
+        // -2: prepare failed —— context_token 缺失或已失效（也与限频共用错误码）
+        if (ret === -2) return 'needs-activation'
         return 'error'
     } catch (err) {
         const status = (err as { status?: number })?.status
@@ -169,9 +177,9 @@ function log(msg: string): void {
 
 async function displayQrCode(qrUrl: string): Promise<void> {
     try {
-        const qrterm = (await import('qrcode-terminal')) as { default?: { generate: (text: string, opts?: unknown) => void } }
-        const generate = qrterm.default?.generate ?? (qrterm as unknown as { generate: (text: string, opts?: unknown) => void }).generate
-        generate(qrUrl, { small: true })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const qrterm = require('qrcode-terminal') as { generate: (text: string, opts?: { small?: boolean }) => void }
+        qrterm.generate(qrUrl, { small: true })
     } catch {
         // 二维码渲染失败时仅打印链接
     }
@@ -322,4 +330,53 @@ export async function loginClawBotInteractive(customAuthPath?: string, timeoutMs
     }
 
     return { ok: false, message: '等待扫码超时（5 分钟），本次跳过 ClawBot 推送' }
+}
+
+// ---------------------------------------------------------------------------
+// 激活：通过 getupdates 抓取 context_token
+// ---------------------------------------------------------------------------
+
+interface GetUpdatesResponse {
+    ret?: number
+    msgs?: Array<{ context_token?: string; from_user_id?: string }>
+    sync_buf?: string
+    get_updates_buf?: string
+}
+
+/**
+ * 激活等待：提示用户给「微信 ClawBot」发一条消息，通过 getupdates 长轮询抓取
+ * 消息中的 context_token 并持久化。iLink 要求主动发送必须携带该 token
+ * （无 token 时 sendmessage 返回 ret=-2 "prepare failed"）。
+ */
+export async function waitForClawBotActivation(
+    auth: ClawBotAuth,
+    customAuthPath?: string,
+    timeoutMs = 2 * 60 * 1000
+): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+        try {
+            const resp = await iLinkPost<GetUpdatesResponse>(
+                `${BASE_URL}/ilink/bot/getupdates`,
+                {
+                    get_updates_buf: auth.getUpdatesBuf ?? '',
+                    base_info: { channel_version: CHANNEL_VERSION, bot_agent: BOT_AGENT }
+                },
+                { token: auth.token, timeout: QR_LONG_POLL_TIMEOUT_MS }
+            )
+
+            if (resp?.get_updates_buf) auth.getUpdatesBuf = resp.get_updates_buf
+            const msg = resp?.msgs?.find(m => m?.context_token)
+            if (msg?.context_token) {
+                auth.contextToken = msg.context_token
+                if (msg.from_user_id) auth.userId = msg.from_user_id
+                saveClawBotAuth(auth, customAuthPath)
+                log('✅ 已收到激活消息，ClawBot 推送通道就绪')
+                return true
+            }
+        } catch {
+            // 长轮询超时或网络抖动，继续等待
+        }
+    }
+    return false
 }
