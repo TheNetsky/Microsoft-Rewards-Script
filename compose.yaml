@@ -61,6 +61,10 @@ services:
             #CONFIG_PUSHPLUS_TITLE: 'Microsoft-Rewards-Script'
             #CONFIG_PUSHPLUS_TEMPLATE: 'txt'        # txt / html / markdown
             #CONFIG_PUSHPLUS_CHANNEL: ''             # 默认微信；可选其他 channel
+            # 微信 ClawBot 推送（官方 iLink 直连，免费；需容器内完成一次扫码，
+            # 建议配合 API_MODE/tty 使用，或本地登录后把 clawbot-auth.json 挂载进容器）：
+            #CONFIG_CLAWBOT_ENABLED: 'true'
+            #CONFIG_CLAWBOT_AUTHFILE: ''             # 凭证路径，默认项目根 clawbot-auth.json
 
         # ── API mode port mapping ──────────────────────────────────────
         # Uncomment when API_MODE=true

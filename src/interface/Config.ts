@@ -89,6 +89,7 @@ export interface ConfigWebhook {
     ntfy?: WebhookNtfyConfig
     telegram?: WebhookTelegramConfig
     pushplus?: WebhookPushPlusConfig
+    clawbot?: WebhookClawBotConfig
     webhookLogFilter: LogFilter
 }
 
@@ -127,4 +128,9 @@ export interface WebhookPushPlusConfig {
     title?: string
     template?: 'txt' | 'html' | 'markdown'
     channel?: string
+}
+
+export interface WebhookClawBotConfig {
+    enabled?: boolean
+    authFile?: string
 }

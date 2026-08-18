@@ -103,16 +103,6 @@ export function saveStorageState(
         .run(email, platformOf(isMobile), JSON.stringify(storageState), Date.now())
 }
 
-export function clearStorageState(sessionPath: string, email: string, isMobile: boolean): void {
-    getDb(sessionPath)
-        .prepare(
-            `UPDATE sessions
-             SET storage_state = NULL, updated_at = ?
-             WHERE email = ? AND platform = ?`
-        )
-        .run(Date.now(), email, platformOf(isMobile))
-}
-
 export function saveFingerprint(
     sessionPath: string,
     email: string,

@@ -25,6 +25,13 @@ export default tseslint.config(
             'preserve-caught-error': 'off'
         }
     },
+    // scripts/ 下用 ts-node/register 桥接 src TS 的 CJS 工具脚本
+    {
+        files: ['scripts/**/*.cjs'],
+        rules: {
+            '@typescript-eslint/no-require-imports': 'off'
+        }
+    },
     // Must come last: disables ESLint rules that conflict with Prettier formatting
     prettier
 )

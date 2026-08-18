@@ -29,6 +29,7 @@ import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import { sendTelegram, flushTelegramQueue } from './logging/Telegram'
 import { sendPushPlus, flushPushPlusQueue } from './logging/PushPlus'
+import { sendClawBot, flushClawBotQueue, ensureClawBotReady } from './logging/ClawBot'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
 import type { AppEarnablePoints } from './interface/Points'
@@ -68,7 +69,8 @@ async function flushAllWebhooks(timeoutMs = 5000): Promise<void> {
         flushDiscordQueue(timeoutMs),
         flushNtfyQueue(timeoutMs),
         flushTelegramQueue(timeoutMs),
-        flushPushPlusQueue(timeoutMs)
+        flushPushPlusQueue(timeoutMs),
+        flushClawBotQueue(timeoutMs)
     ])
     closeSessionStore()
 }
@@ -272,6 +274,11 @@ export class MicrosoftRewardsBot {
             `启动微软奖励脚本 | v${pkg.version} | 账户数: ${totalAccounts} | 集群数: ${this.config.clusters}`
         )
 
+        // 主进程启动时检查 ClawBot 凭证：缺失则弹出扫码登录（worker 不重复触发）
+        if (cluster.isPrimary) {
+            await ensureClawBotReady(this.config.webhook?.clawbot)
+        }
+
         if (this.config.clusters > 1) {
             if (cluster.isPrimary) {
                 await this.runMaster(runStartTime)
@@ -359,6 +366,7 @@ export class MicrosoftRewardsBot {
                 )
 
                 await this.sendPushPlusSummary(allAccountStats, runStartTime, hadWorkerFailure)
+                await this.sendClawBotSummary(allAccountStats, runStartTime, hadWorkerFailure)
                 await flushAllWebhooks()
 
                 process.exit(hadWorkerFailure ? 1 : 0)
@@ -451,6 +459,20 @@ export class MicrosoftRewardsBot {
 
         const content = this.buildSummaryMessage(accountStats, runStartTime, hadWorkerFailure)
         await sendPushPlus(pushplus, content)
+    }
+
+    private async sendClawBotSummary(
+        accountStats: AccountStats[],
+        runStartTime: number,
+        hadWorkerFailure: boolean
+    ): Promise<void> {
+        const clawbot = this.config?.webhook?.clawbot
+        if (!clawbot?.enabled) {
+            return
+        }
+
+        const content = this.buildSummaryMessage(accountStats, runStartTime, hadWorkerFailure)
+        await sendClawBot(clawbot, content)
     }
 
     private async runTasks(accounts: Account[], runStartTime: number): Promise<AccountStats[]> {
@@ -564,6 +586,7 @@ export class MicrosoftRewardsBot {
 
             const hadFailure = accountStats.some(s => !s.success)
             await this.sendPushPlusSummary(accountStats, runStartTime, hadFailure)
+            await this.sendClawBotSummary(accountStats, runStartTime, hadFailure)
             await flushAllWebhooks()
             process.exit(0)
         }

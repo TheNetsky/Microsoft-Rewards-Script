@@ -89,6 +89,10 @@
             "template": "txt",
             "channel": ""
         },
+        "clawbot": {
+            "enabled": false,
+            "authFile": ""
+        },
         "ntfy": {
             "enabled": false,
             "url": "",

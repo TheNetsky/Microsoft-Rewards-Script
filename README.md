@@ -17,6 +17,7 @@
 | **中国热搜查询源** | `queryEngines` 新增 `china` 引擎：从 [gmya.net](https://gmya.net) 聚合百度/头条/抖音/微博/知乎热榜，随机取源分散请求；主源词量足够时不再请求兜底源（达阈值即停） |
 | **chinaApi.appkey** | gmya.net 免费档有频率限制（限流自动退避）；配置 appkey 可解除限流并提升取源数量 |
 | **PushPlus 微信推送** | 运行结束一次性推送中文积分摘要（不逐条推日志），国内无需翻墙 |
+| **微信 ClawBot 推送** | 直连腾讯官方 iLink 接口（免费、无第三方依赖），开启后首次运行自动弹扫码，运行摘要直达微信聊天列表 |
 | **国内默认值** | `config.example.json` 默认：china+local 引擎、搜索间隔 6-12min、默认开随机滚动/点击、默认关并行——降低风控风险 |
 | **中文词库与日志** | `search-queries.json` 为中文词库；全部运行日志已中文化 |
 | **Docker 国内构建** | 基础镜像走 m.daocloud.io 加速；compose 默认本地构建（官方 ghcr 镜像**不含**国内适配） |
@@ -32,12 +33,25 @@
         "chinaApi": { "appkey": "" }   // 留空走免费档；填 appkey 解除限流
     },
     "webhook": {
-        "pushplus": { "enabled": true, "token": "你的token" }
+        "pushplus": { "enabled": true, "token": "你的token" },
+        "clawbot": { "enabled": true }    // 微信 ClawBot：首次运行自动弹扫码
     }
 }
 ```
 
-Docker 环境变量对应：`CONFIG_SEARCH_QUERY_ENGINES=china,local`、`CONFIG_CHINA_API_APPKEY`、`CONFIG_PUSHPLUS_ENABLED/_TOKEN/_TITLE/_TEMPLATE/_CHANNEL`。
+Docker 环境变量对应：`CONFIG_SEARCH_QUERY_ENGINES=china,local`、`CONFIG_CHINA_API_APPKEY`、`CONFIG_PUSHPLUS_ENABLED/_TOKEN/_TITLE/_TEMPLATE/_CHANNEL`、`CONFIG_CLAWBOT_ENABLED/_AUTHFILE`。
+
+#### 微信 ClawBot 推送（V4-china）
+
+基于腾讯官方微信 ClawBot（iLink 灰度接口）直连推送，**免费、无第三方服务、消息直达微信聊天列表**。需要你的微信号有 ClawBot 灰度资格（微信 → 我 → 设置 → 插件）。
+
+使用只需三步：
+
+1. `config.json` 中开启：`"webhook": { "clawbot": { "enabled": true } }`
+2. 正常启动脚本（如 `npm run dev`）——检测到未登录时，终端会**自动弹出二维码**，手机微信扫码确认（等待 5 分钟，超时则本次跳过推送，任务照常运行）
+3. 首次登录后建议在手机微信里给「微信 ClawBot」发一条消息完成激活
+
+之后每次运行结束，积分摘要会自动推送到你的微信。凭证保存在项目根 `clawbot-auth.json`（已加入 .gitignore），多台机器可直接复制该文件共用。也可用 `npm run clawbot:login` 手动触发扫码。凭证过期时（服务端返回 -14）脚本会自动清除失效凭证，下次运行时重新弹出扫码。
 
 > [!NOTE]
 > `google`/`wikipedia`/`reddit`/`hackernews` 源及多数 RSS 源在国内网络不可直连，选了也会静默失败降级到其他源；无代理环境直接用 `china,local` 即可。
@@ -408,6 +422,8 @@ Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5:
 | `webhook.pushplus.title`                 | string   | `"Microsoft-Rewards-Script"`                         | 推送标题                          | `CONFIG_PUSHPLUS_TITLE`                 |
 | `webhook.pushplus.template`              | string   | `"txt"`                                              | 推送模板（txt/html/markdown）    | `CONFIG_PUSHPLUS_TEMPLATE`              |
 | `webhook.pushplus.channel`               | string   | `""`                                                 | 推送渠道（默认微信）             | `CONFIG_PUSHPLUS_CHANNEL`               |
+| `webhook.clawbot.enabled`                | boolean  | `false`                                              | 启用微信 ClawBot 推送            | `CONFIG_CLAWBOT_ENABLED`                |
+| `webhook.clawbot.authFile`               | string   | `""`（项目根 clawbot-auth.json）                      | 扫码凭证文件路径                 | `CONFIG_CLAWBOT_AUTHFILE`               |
 | `webhook.webhookLogFilter.enabled`       | boolean  | `false`                                              | Enable webhook log filtering      | `CONFIG_WEBHOOK_LOG_FILTER_ENABLED`     |
 | `webhook.webhookLogFilter.mode`          | string   | `"whitelist"`                                        | Filter mode (whitelist/blacklist) | `CONFIG_WEBHOOK_LOG_FILTER_MODE`        |
 | `webhook.webhookLogFilter.levels`        | string[] | `["error"]`                                          | Log levels to send                | `CONFIG_WEBHOOK_LOG_FILTER_LEVELS` \*   |

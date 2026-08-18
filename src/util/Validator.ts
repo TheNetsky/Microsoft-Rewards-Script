@@ -108,6 +108,12 @@ const WebhookSchema = z.object({
             channel: z.string().optional()
         })
         .optional(),
+    clawbot: z
+        .object({
+            enabled: z.boolean().optional(),
+            authFile: z.string().optional()
+        })
+        .optional(),
     webhookLogFilter: LogFilterSchema
 })
 
