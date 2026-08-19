@@ -11,7 +11,7 @@ import BrowserUtils from './browser/BrowserUtils'
 import ReactFunc from './browser/ReactFunc'
 import type { PageSnapshot } from './browser/ReactFunc'
 
-import { IpcLog, Logger } from './logging/Logger'
+import { IpcLog, Logger, formatLocalTimestamp } from './logging/Logger'
 import Utils, { isBrowserClosedError } from './util/Utils'
 import { loadAccounts, loadConfig } from './util/Load'
 import { closeSessionStore, loadResolvedRegion, saveResolvedRegion } from './util/SessionStore'
@@ -420,7 +420,7 @@ export class MicrosoftRewardsBot {
         const totalInitialPoints = accountStats.reduce((sum, s) => sum + s.initialPoints, 0)
         const totalFinalPoints = accountStats.reduce((sum, s) => sum + s.finalPoints, 0)
         const totalDurationMinutes = ((Date.now() - runStartTime) / 1000 / 60).toFixed(1)
-        const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19)
+        const timestamp = formatLocalTimestamp(new Date())
 
         const lines: string[] = [
             `每日积分摘要 | ${timestamp}`,
@@ -507,14 +507,12 @@ export class MicrosoftRewardsBot {
                     'Accept-Language': this.accountLocale.acceptLanguage
                 })
 
+                let flowError: string | undefined
                 const result: { initialPoints: number; collectedPoints: number } | undefined = await this.Main(
                     account
                 ).catch(error => {
-                    void this.logger.error(
-                        true,
-                        'FLOW',
-                        `${accountEmail} 的移动端流程失败: ${error instanceof Error ? error.message : String(error)}`
-                    )
+                    flowError = error instanceof Error ? error.message : String(error)
+                    void this.logger.error(true, 'FLOW', `${accountEmail} 的移动端流程失败: ${flowError}`)
                     return undefined
                 })
 
@@ -541,6 +539,10 @@ export class MicrosoftRewardsBot {
                         'green'
                     )
                 } else {
+                    const errorDetail = flowError && flowError !== 'undefined'
+                        ? flowError.replace(/\r?\n/g, ' ').slice(0, 120)
+                        : '流程失败（未捕获到错误详情）'
+
                     accountStats.push({
                         email: accountEmail,
                         initialPoints: 0,
@@ -548,7 +550,7 @@ export class MicrosoftRewardsBot {
                         collectedPoints: 0,
                         duration: parseFloat(durationSeconds),
                         success: false,
-                        error: 'Flow failed'
+                        error: errorDetail
                     })
                 }
             } catch (error) {

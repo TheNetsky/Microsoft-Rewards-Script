@@ -105,13 +105,24 @@ function getLogFilePath(now: Date): string | null {
 }
 
 /**
+ * 本地时区的 YYYY-MM-DD HH:mm:ss(.sss) 时间戳，用于日志与推送展示
+ */
+export function formatLocalTimestamp(date: Date, withMilliseconds = false): string {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const base =
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    return withMilliseconds ? `${base}.${String(date.getMilliseconds()).padStart(3, '0')}` : base
+}
+
+/**
  * 将日志追加写入 logs/YYYY-MM-DD.log（按本地日期分文件）
  */
 function writeLogToFile(logContent: string): void {
     try {
         const logFilePath = getLogFilePath(new Date())
         if (!logFilePath) return
-        fs.appendFileSync(logFilePath, `${new Date().toISOString()} ${logContent}\n`, 'utf8')
+        fs.appendFileSync(logFilePath, `${formatLocalTimestamp(new Date(), true)} ${logContent}\n`, 'utf8')
     } catch (error) {
         console.error('[Logger] 写入日志文件失败:', error)
     }

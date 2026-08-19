@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { createHash } from 'crypto'
 import type { Page } from 'patchright'
+import { formatLocalTimestamp } from '../logging/Logger'
 
 interface UnknownPageDiagnosticOptions {
     platform: 'mobile' | 'desktop'
@@ -38,7 +39,7 @@ function unknownPageOutputDir(rawUrl: string, capturedAt: string, platform: stri
 
 export async function errorDiagnostic(page: Page, error: Error): Promise<void> {
     try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const timestamp = formatLocalTimestamp(new Date(), true).replace(/[:. ]/g, '-')
         const folderName = `error-${timestamp}`
         const outputDir = path.join(process.cwd(), 'diagnostics', folderName)
 
@@ -54,7 +55,7 @@ export async function errorDiagnostic(page: Page, error: Error): Promise<void> {
         const errorLog = `
 Name: ${error.name}
 Message: ${error.message}
-Timestamp: ${new Date().toISOString()}
+Timestamp: ${formatLocalTimestamp(new Date(), true)}
 ---------------------------------------------------
 Stack Trace:
 ${error.stack || 'No stack trace available'}

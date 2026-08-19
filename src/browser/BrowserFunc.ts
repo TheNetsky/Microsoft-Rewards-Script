@@ -44,11 +44,12 @@ export default class BrowserFunc {
             if (response.data) return response.data
             throw new Error('Dashboard data missing from API response')
         } catch (error) {
-            throw this.bot.logger.error(
+            this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-DASHBOARD-DATA',
                 `获取仪表板数据失败: ${error instanceof Error ? error.message : String(error)}`
             )
+            throw error instanceof Error ? error : new Error(String(error))
         }
     }
 

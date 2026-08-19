@@ -900,11 +900,12 @@ export class Login {
                 `上下文就绪 | actions=${actionsCount} | reportable=${reportableCount} | available=${availablePoints}`
             )
         } catch (error) {
-            throw this.bot.logger.error(
+            this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-REWARD-SESSION',
                 `获取奖励上下文失败: ${error instanceof Error ? error.message : String(error)}`
             )
+            throw error instanceof Error ? error : new Error(String(error))
         }
     }
 
