@@ -706,7 +706,7 @@ export class MicrosoftRewardsBot {
 
                 if (this.config.experimental.edgeBrowsing) {
                     edgeBrowsingTask = this.activities
-                        .doEdgeBrowsing(edgeBrowsingController.signal)
+                        .doEdgeBrowsing(data, edgeBrowsingController.signal)
                         .catch(error => {
                             this.logger.error(
                                 this.isMobile,

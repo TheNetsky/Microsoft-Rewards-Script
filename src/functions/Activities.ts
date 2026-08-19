@@ -132,8 +132,8 @@ export default class Activities {
     }
 
     // Experimental
-    doEdgeBrowsing = async (signal?: AbortSignal): Promise<void> => {
+    doEdgeBrowsing = async (data: DashboardData, signal?: AbortSignal): Promise<void> => {
         const edgeBrowsing = new EdgeBrowsing(this.bot)
-        await edgeBrowsing.run(signal)
+        await edgeBrowsing.run(data, signal)
     }
 }

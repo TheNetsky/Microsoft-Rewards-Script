@@ -1,13 +1,17 @@
 import type { Cookie } from 'patchright'
 
-import { BROWSER_VERSION_FALLBACKS } from '../../../constants/browserVersions'
 import { URLs } from '../../../constants/urls'
+import type { ParsedOffer, StreakState } from '../../../browser/ReactFunc'
 import type { AppDashboardData, Promotion } from '../../../interface/AppDashBoardData'
+import type { DashboardData } from '../../../interface/DashboardData'
 import { BaseActivity } from '../BaseActivity'
 import { EdgeBrowsingProgress, type EdgeBrowsingProgressSnapshot } from './EdgeBrowsingProgress'
 
 const LOG_TAG = 'EDGE-BROWSING'
 const PROMOTION_NAME = 'edge_browsing_streak_flight'
+const EDGE_BROWSING_ACTIVATION_OFFER = 'edge_flight_1_ww_treatment_eligible'
+
+const VERIFIED_ACTIVITY_TYPES = new Map<string, number>([['edge_flight_1_ww_treatment_eligible', 714]])
 const TARGET_DURATION_MINUTES = 30
 const DEFAULT_REPORT_INTERVAL_MINUTES = 5
 const MIN_REPORT_INTERVAL_MINUTES = 1
@@ -18,12 +22,6 @@ const REPORT_JITTER_MAX_MS = 20_000
 const RETRY_DELAY_MIN_MS = 10_000
 const RETRY_DELAY_MAX_MS = 20_000
 const MAX_REPORT_ATTEMPTS = 2
-
-const chromeMajorVersion = BROWSER_VERSION_FALLBACKS.chrome.split('.')[0]
-const EDGE_DESKTOP_USER_AGENT =
-    `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ` +
-    `(KHTML, like Gecko) Chrome/${chromeMajorVersion}.0.0.0 Safari/537.36 ` +
-    `Edg/${BROWSER_VERSION_FALLBACKS.edge.windows}`
 
 interface EdgeBrowsingSettings {
     offerId: string
@@ -50,8 +48,20 @@ interface ReportResult {
     cookieNames: string[]
 }
 
+type ActivationResult = 'activated' | 'already-active' | 'absent' | 'failed'
+
+interface ActivationMetadata {
+    activityType: number
+    activityTypeSource: 'react' | 'streak' | 'dashboard' | 'verified-fallback'
+    isPromotional: boolean
+}
+
+interface ActivationTarget extends ParsedOffer {
+    activationSource: 'streak' | 'offer'
+}
+
 export class EdgeBrowsing extends BaseActivity {
-    public async run(signal?: AbortSignal): Promise<void> {
+    public async run(data: DashboardData, signal?: AbortSignal): Promise<void> {
         const accessToken = this.bot.accessToken
         if (!accessToken) {
             this.bot.logger.warn(this.bot.isMobile, LOG_TAG, 'Skipping: mobile app access token is unavailable')
@@ -59,8 +69,27 @@ export class EdgeBrowsing extends BaseActivity {
         }
 
         try {
-            const profile = await this.getEdgeProfile(accessToken)
+            let profile = await this.getEdgeProfile(accessToken)
             if (signal?.aborted) return
+
+            if (!this.findPromotion(profile)) {
+                const activation = await this.activate(data, signal)
+                if (signal?.aborted) return
+
+                if (activation === 'absent') {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        LOG_TAG,
+                        'Browsing Streak on Edge is not available for this account'
+                    )
+                    return
+                }
+
+                if (activation === 'failed') return
+
+                profile = await this.getEdgeProfile(accessToken)
+                if (signal?.aborted) return
+            }
 
             const settings = this.resolveSettings(profile)
             if (!settings) return
@@ -196,10 +225,27 @@ export class EdgeBrowsing extends BaseActivity {
     }
 
     private async getEdgeProfile(accessToken: string): Promise<AppDashboardData> {
+        const headers = { ...(this.bot.fingerprint?.headers ?? {}) }
+        delete headers['Cookie']
+        delete headers['cookie']
+
         const response = await this.bot.http.request<AppDashboardData>({
             url: URLs.platform.edgeProfile,
             method: 'GET',
-            headers: this.buildHeaders(accessToken)
+            headers: {
+                ...headers,
+                Authorization: `Bearer ${accessToken}`,
+                Accept: '*/*',
+                'Accept-Language': this.bot.accountLocale.acceptLanguage,
+                'X-Rewards-AppId': 'EdgeDesktop',
+                'X-Rewards-PartnerId': 'EdgeHub',
+                'X-Rewards-Country': this.bot.userData.geoLocale,
+                'X-Rewards-Language': this.bot.accountLocale.locale,
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-Mode': 'no-cors',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Storage-Access': 'active'
+            }
         })
 
         if (response.data.code !== 0) {
@@ -209,6 +255,333 @@ export class EdgeBrowsing extends BaseActivity {
         return response.data
     }
 
+    private findStreak(streaks?: StreakState[]): StreakState | undefined {
+        if (streaks) return streaks.find(streak => this.isEdgeBrowsingPartner(streak.partner))
+
+        const snapshots = [this.bot.reactSnapshot, this.bot.reactSnapshots.desktop, this.bot.reactSnapshots.mobile]
+
+        for (const snapshot of snapshots) {
+            const streak = snapshot?.streaks.find(item => this.isEdgeBrowsingPartner(item.partner))
+            if (streak) return streak
+        }
+
+        return undefined
+    }
+
+    private async activate(data: DashboardData, signal?: AbortSignal): Promise<ActivationResult> {
+        const offer = this.findActivationTarget()
+        if (!offer) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                LOG_TAG,
+                'No Edge browsing activation metadata present in the streak model or generic offers across the current, desktop, or cached mobile Rewards snapshots'
+            )
+            return 'absent'
+        }
+
+        if (offer.isCompleted) {
+            this.bot.logger.info(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Edge browsing activation offer already completed | offerId=${offer.offerId}`,
+                'green'
+            )
+            return 'already-active'
+        }
+
+        if (!offer.hash) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Activation offer present but missing a hash | offerId=${offer.offerId}`
+            )
+            return 'failed'
+        }
+
+        if (!offer.reportable && !offer.isLocked) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Activation offer is not actionable | offerId=${offer.offerId}`
+            )
+            return 'failed'
+        }
+
+        const actionId = this.bot.nextActions.reportActivity
+        if (!actionId) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                LOG_TAG,
+                'Skipping activation: "reportActivity" action id not discovered in bundle'
+            )
+            return 'failed'
+        }
+
+        const dashboard = await this.resolveDashboard(data)
+        const metadata = this.resolveActivationMetadata(offer, dashboard)
+        if (!metadata) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Skipping activation: no valid activity type found | offerId=${offer.offerId}`
+            )
+            return 'failed'
+        }
+
+        this.bot.logger.info(
+            this.bot.isMobile,
+            LOG_TAG,
+            `Activating Browsing Streak on Edge | offerId=${offer.offerId} | activationSource=${offer.activationSource} | activityType=${metadata.activityType} | activityTypeSource=${metadata.activityTypeSource} | promotional=${metadata.isPromotional} | geo=${this.bot.userData.geoLocale}`
+        )
+
+        try {
+            const { status, acknowledged } = await this.bot.browser.func.reportServerAction(actionId, [
+                offer.hash,
+                metadata.activityType,
+                {
+                    offerid: offer.offerId,
+                    isPromotional: metadata.isPromotional ? 'true' : '$undefined',
+                    timezoneOffset: this.bot.userData.timezoneOffset
+                }
+            ])
+
+            if (!(await this.wait(this.bot.utils.randomDelay(3000, 6000), signal))) return 'failed'
+            const confirmed = await this.confirmActivation(offer.offerId)
+
+            if (acknowledged || confirmed) {
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    LOG_TAG,
+                    `Activated Browsing Streak on Edge | offerId=${offer.offerId} | acknowledged=${acknowledged} | confirmed=${confirmed}`,
+                    'green'
+                )
+                return 'activated'
+            }
+
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Activation not acknowledged | offerId=${offer.offerId} | status=${status}`
+            )
+            return 'failed'
+        } catch (error) {
+            this.bot.logger.error(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Activation error | offerId=${offer.offerId} | ${error instanceof Error ? error.message : String(error)}`
+            )
+            return 'failed'
+        }
+    }
+
+    private async confirmActivation(offerId: string): Promise<boolean> {
+        try {
+            const snapshot = await this.bot.browser.func.refreshEarnSnapshot()
+            if (!snapshot) return false
+
+            this.bot.reactSnapshot = snapshot
+
+            const streak = this.findStreak(snapshot.streaks)
+            const activationOffer = snapshot.offers.find(o => o.offerId === offerId)
+            return streak?.isEnabled === true || activationOffer?.isCompleted === true
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                LOG_TAG,
+                `Could not verify activation state | offerId=${offerId} | ${error instanceof Error ? error.message : String(error)}`
+            )
+            return false
+        }
+    }
+
+    private async resolveDashboard(fallback: DashboardData): Promise<DashboardData> {
+        try {
+            return await this.bot.browser.func.getDashboardData(this.bot.cookies.desktop)
+        } catch {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                LOG_TAG,
+                'Desktop dashboard fetch failed - falling back to the dashboard from the mobile pass'
+            )
+            return fallback
+        }
+    }
+
+    private resolveActivationMetadata(offer: ActivationTarget, data: DashboardData): ActivationMetadata | null {
+        const dashboardPromotion = this.findDashboardPromotion(data.dashboard, offer.offerId)
+
+        if (offer.activityType !== null) {
+            return {
+                activityType: offer.activityType,
+                activityTypeSource: offer.activationSource === 'streak' ? 'streak' : 'react',
+                isPromotional: offer.isPromotional || this.dashboardPromotionIsPromotional(dashboardPromotion)
+            }
+        }
+
+        const dashboardActivityType = this.dashboardPromotionActivityType(dashboardPromotion)
+        if (dashboardActivityType !== null) {
+            return {
+                activityType: dashboardActivityType,
+                activityTypeSource: 'dashboard',
+                isPromotional: offer.isPromotional || this.dashboardPromotionIsPromotional(dashboardPromotion)
+            }
+        }
+
+        const verifiedFallback = VERIFIED_ACTIVITY_TYPES.get(offer.offerId.toLowerCase())
+        if (verifiedFallback !== undefined) {
+            return {
+                activityType: verifiedFallback,
+                activityTypeSource: 'verified-fallback',
+                isPromotional: offer.isPromotional || this.dashboardPromotionIsPromotional(dashboardPromotion)
+            }
+        }
+
+        return null
+    }
+
+    private findDashboardPromotion(root: unknown, offerId: string): Record<string, unknown> | null {
+        const target = offerId.toLowerCase()
+        const pending: unknown[] = [root]
+        const visited = new Set<object>()
+
+        while (pending.length) {
+            const value = pending.pop()
+            if (!value || typeof value !== 'object' || visited.has(value)) continue
+            visited.add(value)
+
+            if (Array.isArray(value)) {
+                for (const entry of value) pending.push(entry)
+                continue
+            }
+
+            const record = value as Record<string, unknown>
+            const attributes = this.asRecord(record.attributes)
+            const candidateId = record.offerId ?? record.offerid ?? attributes?.offerid
+            if (typeof candidateId === 'string' && candidateId.toLowerCase() === target) return record
+
+            for (const entry of Object.values(record)) pending.push(entry)
+        }
+
+        return null
+    }
+
+    private dashboardPromotionActivityType(promotion: Record<string, unknown> | null): number | null {
+        if (!promotion) return null
+        const attributes = this.asRecord(promotion.attributes)
+        return this.parseActivityType(
+            promotion.activityType ?? promotion.activity_type ?? attributes?.activityType ?? attributes?.activity_type
+        )
+    }
+
+    private dashboardPromotionIsPromotional(promotion: Record<string, unknown> | null): boolean {
+        if (!promotion) return false
+        const attributes = this.asRecord(promotion.attributes)
+        const value = promotion.isPromotional ?? promotion.promotional ?? attributes?.promotional
+        return value === true || (typeof value === 'string' && value.toLowerCase() === 'true')
+    }
+
+    private parseActivityType(value: unknown): number | null {
+        const parsed = Number(value)
+        return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+    }
+
+    private asRecord(value: unknown): Record<string, unknown> | null {
+        return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+    }
+
+    private findActivationTarget(): ActivationTarget | null {
+        const snapshots = [
+            { source: 'current', snapshot: this.bot.reactSnapshot },
+            { source: 'desktop', snapshot: this.bot.reactSnapshots.desktop },
+            { source: 'mobile', snapshot: this.bot.reactSnapshots.mobile }
+        ] as const
+
+        const seen = new Set<unknown>()
+
+        // New Rewards format: activation metadata is carried directly by the streak model.
+        for (const { source, snapshot } of snapshots) {
+            if (!snapshot || seen.has(snapshot)) continue
+            seen.add(snapshot)
+
+            const streak = this.findStreak(snapshot.streaks)
+            if (!streak?.activationOfferId || !streak.activationHash) continue
+
+            if (source !== 'current') {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    LOG_TAG,
+                    `Activation metadata missing from the current snapshot; using cached ${source} streak snapshot | offerId=${streak.activationOfferId}`
+                )
+            } else {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    LOG_TAG,
+                    `Using Edge browsing activation metadata from streak model | offerId=${streak.activationOfferId}`
+                )
+            }
+
+            return {
+                offerId: streak.activationOfferId,
+                hash: streak.activationHash,
+                title: 'Browsing Streak on Edge',
+                description: '',
+                points: 0,
+                promotionSubtype: null,
+                destination: streak.destinationUrl ?? '',
+                isCompleted: streak.isEnabled,
+                isPromotional: false,
+                isLocked: false,
+                unlockCriteria: null,
+                date: null,
+                activityType: streak.activationActivityType,
+                reportable: true,
+                activationSource: 'streak'
+            }
+        }
+
+        // Legacy/current alternate format: activation appears as a regular Rewards offer.
+        seen.clear()
+        for (const { source, snapshot } of snapshots) {
+            if (!snapshot || seen.has(snapshot)) continue
+            seen.add(snapshot)
+
+            const exact = snapshot.offers.find(o => o.offerId === EDGE_BROWSING_ACTIVATION_OFFER)
+            const fuzzy = snapshot.offers.find(o => {
+                const id = o.offerId.toLowerCase()
+                return id.includes('edge_flight') && (id.includes('eligible') || id.includes('activation'))
+            })
+            const offer = exact ?? fuzzy
+            if (!offer) continue
+
+            if (source !== 'current') {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    LOG_TAG,
+                    `Activation offer missing from the current snapshot; using cached ${source} offer snapshot | offerId=${offer.offerId}`
+                )
+            } else {
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    LOG_TAG,
+                    `Using Edge browsing activation metadata from generic offer | offerId=${offer.offerId}`
+                )
+            }
+
+            return { ...offer, activationSource: 'offer' }
+        }
+
+        return null
+    }
+
+    private isEdgeBrowsingPartner(partner: string): boolean {
+        const normalized = partner.replace(/[^a-z]/gi, '').toLowerCase()
+        return normalized === 'edge' || normalized.includes('edgebrows')
+    }
+
+    private findPromotion(profile: AppDashboardData): Promotion | undefined {
+        return profile.response?.promotions?.find(item => item.name === PROMOTION_NAME)
+    }
+
     private async refreshServerCompletion(
         accessToken: string,
         reportNumber: number,
@@ -216,7 +589,7 @@ export class EdgeBrowsing extends BaseActivity {
     ): Promise<boolean> {
         try {
             const profile = await this.getEdgeProfile(accessToken)
-            const promotion = profile.response?.promotions?.find(item => item.name === PROMOTION_NAME)
+            const promotion = this.findPromotion(profile)
             if (!promotion) {
                 this.bot.logger.debug(
                     this.bot.isMobile,
@@ -261,7 +634,7 @@ export class EdgeBrowsing extends BaseActivity {
     }
 
     private resolveSettings(profile: AppDashboardData): EdgeBrowsingSettings | null {
-        const promotion = profile.response?.promotions?.find(item => item.name === PROMOTION_NAME)
+        const promotion = this.findPromotion(profile)
         if (!promotion) {
             this.bot.logger.info(
                 this.bot.isMobile,
@@ -357,12 +730,27 @@ export class EdgeBrowsing extends BaseActivity {
 
     private async submitReport(accessToken: string, settings: EdgeBrowsingSettings): Promise<ReportResult> {
         const { header: cookieHeader, names: cookieNames } = this.getPlatformCookieHeader()
+        const headers = { ...(this.bot.fingerprint?.headers ?? {}) }
+        delete headers['Cookie']
+        delete headers['cookie']
+
         const response = await this.bot.http.request<EdgeActivityResponse>({
             url: URLs.platform.activities,
             method: 'POST',
             headers: {
-                ...this.buildHeaders(accessToken),
+                ...headers,
+                Authorization: `Bearer ${accessToken}`,
+                Accept: '*/*',
+                'Accept-Language': this.bot.accountLocale.acceptLanguage,
                 'Content-Type': 'application/json',
+                'X-Rewards-AppId': 'EdgeDesktop',
+                'X-Rewards-PartnerId': 'EdgeHub',
+                'X-Rewards-Country': this.bot.userData.geoLocale,
+                'X-Rewards-Language': this.bot.accountLocale.locale,
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-Mode': 'no-cors',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Storage-Access': 'active',
                 ...(cookieHeader ? { Cookie: cookieHeader } : {})
             },
             data: {
@@ -389,23 +777,6 @@ export class EdgeBrowsing extends BaseActivity {
             status: response.status,
             duplicate: response.data.response?.isDuplicate === true,
             cookieNames
-        }
-    }
-
-    private buildHeaders(accessToken: string): Record<string, string> {
-        return {
-            Authorization: `Bearer ${accessToken}`,
-            'User-Agent': EDGE_DESKTOP_USER_AGENT,
-            Accept: '*/*',
-            'Accept-Language': this.bot.accountLocale.acceptLanguage,
-            'X-Rewards-AppId': 'EdgeDesktop',
-            'X-Rewards-PartnerId': 'EdgeHub',
-            'X-Rewards-Country': this.bot.userData.geoLocale,
-            'X-Rewards-Language': this.bot.accountLocale.locale,
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Mode': 'no-cors',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Storage-Access': 'active'
         }
     }
 
