@@ -57,7 +57,7 @@ export default class Activities {
         await new BrowserSearchOnBing(this.bot).doSearchOnBing(promotion, page)
     }
 
-        doDailySet = async (data: DashboardData): Promise<void> => {
+    doDailySet = async (data: DashboardData): Promise<void> => {
         await new DailySet(this.bot).run(data)
     }
 
@@ -73,7 +73,7 @@ export default class Activities {
         await new PunchCards(this.bot).runDesktop()
     }
 
-        doUrlReward = async (promotion: BasePromotion): Promise<void> => {
+    doUrlReward = async (promotion: BasePromotion): Promise<void> => {
         const urlReward = new UrlReward(this.bot)
         await urlReward.doUrlReward(promotion)
     }
@@ -103,7 +103,7 @@ export default class Activities {
         return await visualSearch.doVisualSearch(data)
     }
 
-        doAppReward = async (promotion: Promotion): Promise<void> => {
+    doAppReward = async (promotion: Promotion): Promise<void> => {
         const urlReward = new AppReward(this.bot)
         await urlReward.doAppReward(promotion)
     }
@@ -122,7 +122,7 @@ export default class Activities {
         await new AppPromotions(this.bot).run(data)
     }
 
-        doEdgeBrowsing = async (data: DashboardData, signal?: AbortSignal): Promise<void> => {
+    doEdgeBrowsing = async (data: DashboardData, signal?: AbortSignal): Promise<void> => {
         const edgeBrowsing = new EdgeBrowsing(this.bot)
         await edgeBrowsing.run(data, signal)
     }

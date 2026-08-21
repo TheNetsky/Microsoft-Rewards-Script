@@ -162,7 +162,6 @@ export default class BrowserUtils {
                     'SEARCH-CLOSE-TABS',
                     `Closed ${closedCount}/${tabsToClose.length} excess tab(s) to reach max of ${config.maxTabs}`
                 )
-
             } else if (tabs.length < config.minTabs) {
                 const tabsNeeded = config.minTabs - tabs.length
                 this.bot.logger.debug(
