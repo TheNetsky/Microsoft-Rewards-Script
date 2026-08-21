@@ -100,7 +100,7 @@ export class Login {
                 .goto(URLs.rewards.createUser, {
                     waitUntil: 'domcontentloaded'
                 })
-                .catch(() => { })
+                .catch(() => {})
             await this.bot.utils.wait(2000)
             await this.bot.browser.utils.reloadBadPage(page)
             await this.bot.browser.utils.disableFido(page)
@@ -176,7 +176,7 @@ export class Login {
     }
 
     private async detectCurrentState(page: Page): Promise<LoginState> {
-        await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => { })
+        await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {})
 
         const url = new URL(page.url())
         const hostname = url.hostname.toLowerCase()
@@ -219,23 +219,24 @@ export class Login {
             [this.selectors.otpInput, 'OTP_CODE_ENTRY']
         ]
 
-        const [results, identityBanner, primaryButton, passwordEntry, footerAction, footerActionText] = await Promise.all([
-            Promise.all(
-                stateChecks.map(async ([sel, state]) => {
-                    const visible = await this.checkSelector(page, sel)
-                    return visible ? state : null
-                })
-            ),
-            this.checkSelector(page, this.selectors.identityBanner),
-            this.checkSelector(page, this.selectors.primaryButton),
-            this.checkSelector(page, this.selectors.passwordEntry),
-            this.checkSelector(page, this.selectors.footerAction),
-            page
-                .locator(this.selectors.footerAction)
-                .first()
-                .innerText({ timeout: 200 })
-                .catch(() => '')
-        ])
+        const [results, identityBanner, primaryButton, passwordEntry, footerAction, footerActionText] =
+            await Promise.all([
+                Promise.all(
+                    stateChecks.map(async ([sel, state]) => {
+                        const visible = await this.checkSelector(page, sel)
+                        return visible ? state : null
+                    })
+                ),
+                this.checkSelector(page, this.selectors.identityBanner),
+                this.checkSelector(page, this.selectors.primaryButton),
+                this.checkSelector(page, this.selectors.passwordEntry),
+                this.checkSelector(page, this.selectors.footerAction),
+                page
+                    .locator(this.selectors.footerAction)
+                    .first()
+                    .innerText({ timeout: 200 })
+                    .catch(() => '')
+            ])
 
         const visibleStates = results.filter((s): s is LoginState => s !== null)
         if (visibleStates.length > 0) {
@@ -721,7 +722,7 @@ export class Login {
                             waitUntil: 'domcontentloaded',
                             timeout: 10000
                         })
-                        .catch(() => { })
+                        .catch(() => {})
                     await this.bot.utils.wait(3000)
                     this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Recovery navigation successful')
                     return true
@@ -732,7 +733,7 @@ export class Login {
                             waitUntil: 'domcontentloaded',
                             timeout: 10000
                         })
-                        .catch(() => { })
+                        .catch(() => {})
                     await this.bot.utils.wait(3000)
                     this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Fallback navigation successful')
                     return true
@@ -815,8 +816,8 @@ export class Login {
                                 methodPickerVisible
                                     ? 'Returned to sign-in method selection'
                                     : passwordlessLandingVisible
-                                        ? 'Switched to Microsoft Authenticator sign-in'
-                                        : 'Switched away from email-code authentication'
+                                      ? 'Switched to Microsoft Authenticator sign-in'
+                                      : 'Switched away from email-code authentication'
                             )
                             return true
                         }
@@ -866,7 +867,7 @@ export class Login {
     private async finalizeLogin(page: Page, account: Account) {
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Finalizing login')
 
-        await page.goto(REWARDS_BASE_URL, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => { })
+        await page.goto(REWARDS_BASE_URL, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
 
         const rewardsLanding = new URL(page.url())
         const rewardsHostname = rewardsLanding.hostname.toLowerCase()
@@ -886,7 +887,7 @@ export class Login {
         }
 
         // Dismiss at rewards dashboard
-        await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => { })
+        await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => {})
 
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Starting Bing session verification')
         await this.verifyBingSession(page, account)
@@ -913,7 +914,7 @@ export class Login {
         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing session')
 
         try {
-            await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => { })
+            await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
 
             for (let i = 0; i < loopMax; i++) {
                 if (page.isClosed()) break
@@ -941,7 +942,7 @@ export class Login {
                 )
 
                 if (atBingPage) {
-                    await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => { })
+                    await this.bot.browser.utils.tryDismissAllMessages(page).catch(() => {})
 
                     const signedIn = await page
                         .waitForSelector(this.selectors.bingProfile, { timeout: 3000 })
