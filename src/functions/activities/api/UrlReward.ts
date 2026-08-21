@@ -123,7 +123,6 @@ export class UrlReward extends BaseActivity {
                     `UrlReward credited no points | offerId=${offerId} | acknowledged=${acknowledged} | expected=${expectedPoints} | pointsGained=0 | currentBalance=${newBalance}`
                 )
             }
-
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
@@ -148,5 +147,4 @@ export class UrlReward extends BaseActivity {
         await this.runUrlReward(promotion, false)
         return true
     }
-
 }

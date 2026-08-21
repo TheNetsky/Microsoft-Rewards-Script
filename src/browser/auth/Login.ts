@@ -550,7 +550,10 @@ export class Login {
                         (await this.checkSelector(page, this.selectors.passwordlessCheck)) ||
                         (await this.checkSelector(page, this.selectors.passwordlessNumber))
 
-                    if (!passwordlessChallengeVisible && (await this.checkSelector(page, this.selectors.primaryButton))) {
+                    if (
+                        !passwordlessChallengeVisible &&
+                        (await this.checkSelector(page, this.selectors.primaryButton))
+                    ) {
                         this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Sending Microsoft Authenticator request')
                         const confirmed = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
                         if (!confirmed) {
@@ -633,7 +636,11 @@ export class Login {
                     return true
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Email verification input detected; checking alternatives')
+                this.bot.logger.info(
+                    this.bot.isMobile,
+                    'LOGIN',
+                    'Email verification input detected; checking alternatives'
+                )
                 await this.waitForIdle(page, 'on email verification page')
 
                 const footerActions = page.locator(this.selectors.footerAction)
@@ -641,7 +648,13 @@ export class Login {
 
                 for (let index = 0; index < footerCount; index++) {
                     const selector = `${this.selectors.footerAction} >> nth=${index}`
-                    if (!(await footerActions.nth(index).isVisible().catch(() => false))) continue
+                    if (
+                        !(await footerActions
+                            .nth(index)
+                            .isVisible()
+                            .catch(() => false))
+                    )
+                        continue
                     if (!(await this.bot.browser.utils.ghostClick(page, selector))) continue
 
                     await this.waitForIdle(page, 'after email verification alternative')
