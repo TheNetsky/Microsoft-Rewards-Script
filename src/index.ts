@@ -52,6 +52,12 @@ interface AccountStats {
     error?: string
 }
 
+interface AccountRunResult {
+    initialPoints: number
+    collectedPoints: number
+    skippedForBotWarning?: boolean
+}
+
 const executionContext = new AsyncLocalStorage<ExecutionContext>()
 
 export function getCurrentContext(): ExecutionContext {
@@ -432,9 +438,7 @@ export class MicrosoftRewardsBot {
                     'Accept-Language': this.accountLocale.acceptLanguage
                 })
 
-                const result: { initialPoints: number; collectedPoints: number } | undefined = await this.Main(
-                    account
-                ).catch(error => {
+                const result: AccountRunResult | undefined = await this.Main(account).catch(error => {
                     void this.logger.error(
                         true,
                         'FLOW',
@@ -450,21 +454,39 @@ export class MicrosoftRewardsBot {
                     const accountInitialPoints = result.initialPoints ?? 0
                     const accountFinalPoints = accountInitialPoints + collectedPoints
 
-                    accountStats.push({
-                        email: accountEmail,
-                        initialPoints: accountInitialPoints,
-                        finalPoints: accountFinalPoints,
-                        collectedPoints: collectedPoints,
-                        duration: parseFloat(durationSeconds),
-                        success: true
-                    })
+                    if (result.skippedForBotWarning) {
+                        accountStats.push({
+                            email: accountEmail,
+                            initialPoints: accountInitialPoints,
+                            finalPoints: accountInitialPoints,
+                            collectedPoints: 0,
+                            duration: parseFloat(durationSeconds),
+                            success: false,
+                            error: 'Microsoft bot-score warning detected'
+                        })
 
-                    this.logger.info(
-                        'main',
-                        'ACCOUNT-END',
-                        `Completed account: ${accountEmail} | pointsGained=${collectedPoints} | previousBalance=${accountInitialPoints} | currentBalance=${accountFinalPoints} | durationSeconds=${durationSeconds}`,
-                        'green'
-                    )
+                        this.logger.warn(
+                            'main',
+                            'ACCOUNT-SKIP',
+                            `Skipped account: ${accountEmail} | reason=Fraud_UserWarning_BotScore_UX | durationSeconds=${durationSeconds}`
+                        )
+                    } else {
+                        accountStats.push({
+                            email: accountEmail,
+                            initialPoints: accountInitialPoints,
+                            finalPoints: accountFinalPoints,
+                            collectedPoints: collectedPoints,
+                            duration: parseFloat(durationSeconds),
+                            success: true
+                        })
+
+                        this.logger.info(
+                            'main',
+                            'ACCOUNT-END',
+                            `Completed account: ${accountEmail} | pointsGained=${collectedPoints} | previousBalance=${accountInitialPoints} | currentBalance=${accountFinalPoints} | durationSeconds=${durationSeconds}`,
+                            'green'
+                        )
+                    }
                 } else {
                     accountStats.push({
                         email: accountEmail,
@@ -550,7 +572,7 @@ export class MicrosoftRewardsBot {
         return session
     }
 
-    async Main(account: Account): Promise<{ initialPoints: number; collectedPoints: number }> {
+    async Main(account: Account): Promise<AccountRunResult> {
         const accountEmail = account.email
         this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
 
@@ -636,6 +658,37 @@ export class MicrosoftRewardsBot {
                 }
 
                 const data: DashboardData = await this.browser.func.getDashboardData()
+                const hasBotScoreWarning =
+                    Array.isArray(data.dashboard.userWarnings) &&
+                    data.dashboard.userWarnings.some(warning => warning?.name === 'Fraud_UserWarning_BotScore_UX')
+
+                if (hasBotScoreWarning) {
+                    const availablePoints = data.dashboard.userStatus.availablePoints ?? 0
+
+                    if (!this.config.contintueOnBotWarning) {
+                        this.logger.warn(
+                            'main',
+                            'BOT-WARNING',
+                            `Microsoft Rewards reported Fraud_UserWarning_BotScore_UX for ${accountEmail}. ` +
+                                'This account will be skipped for safety. The preferred action is to stop automation for this account and wait a few days. ' +
+                                'To continue anyway (not recommended), set "contintueOnBotWarning": true.'
+                        )
+
+                        return {
+                            initialPoints: availablePoints,
+                            collectedPoints: 0,
+                            skippedForBotWarning: true
+                        }
+                    }
+
+                    this.logger.warn(
+                        'main',
+                        'BOT-WARNING',
+                        `Microsoft Rewards reported Fraud_UserWarning_BotScore_UX for ${accountEmail}, but contintueOnBotWarning=true. ` +
+                            'Continuing as configured is not recommended; waiting a few days is the preferred action.'
+                    )
+                }
+
                 const profileCountry = normalizeCountry(data.dashboard.userProfile.attributes.country)
 
                 if (account.geoLocale === 'auto') {

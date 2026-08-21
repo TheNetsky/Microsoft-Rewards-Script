@@ -15,6 +15,7 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_ERROR_DIAGNOSTICS', path: 'errorDiagnostics', type: 'bool' },
     { env: 'CONFIG_ENSURE_STREAK_PROTECTION', path: 'ensureStreakProtection', type: 'bool' },
     { env: 'CONFIG_AUTO_CLAIM_PUNCHCARD_REWARDS', path: 'autoClaimPunchcardRewards', type: 'bool' },
+    { env: 'CONFIG_CONTINTUE_ON_BOT_WARNING', path: 'contintueOnBotWarning', type: 'bool' },
     { env: 'CONFIG_SKIP_NON_POINT_TASKS', path: 'skipNonPointTasks', type: 'bool' },
     { env: 'CONFIG_GLOBAL_TIMEOUT', path: 'globalTimeout', type: 'string' },
     { env: 'CONFIG_ACCOUNT_DELAY_MIN', path: 'accountDelay.min', type: 'string' },

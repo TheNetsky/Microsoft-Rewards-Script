@@ -108,6 +108,7 @@ export const ConfigSchema = z.object({
     errorDiagnostics: z.boolean(),
     ensureStreakProtection: z.boolean(),
     autoClaimPunchcardRewards: z.boolean(),
+    contintueOnBotWarning: z.boolean().default(false),
     skipNonPointTasks: z.boolean().default(true),
     accountDelay: DelaySchema.default({ min: '1min', max: '3min' }),
     workers: z.object({
@@ -251,6 +252,7 @@ const defaultConfig: Config = {
     errorDiagnostics: true,
     ensureStreakProtection: true,
     autoClaimPunchcardRewards: false,
+    contintueOnBotWarning: false,
     skipNonPointTasks: true,
     accountDelay: { min: '1min', max: '3min' },
     workers: {

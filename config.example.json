@@ -5,6 +5,7 @@
     "errorDiagnostics": false,
     "ensureStreakProtection": true,
     "autoClaimPunchcardRewards": false,
+    "contintueOnBotWarning": false,
     "skipNonPointTasks": true,
     "accountDelay": {
         "min": "1min",
@@ -70,8 +71,14 @@
     "consoleLogFilter": {
         "enabled": false,
         "mode": "whitelist",
-        "levels": ["error", "warn"],
-        "keywords": ["starting account"],
+        "levels": [
+            "error",
+            "warn"
+        ],
+        "keywords": [
+            "starting account",
+            "Fraud_UserWarning_BotScore_UX"
+        ],
         "regexPatterns": []
     },
     "proxy": {
@@ -94,14 +101,24 @@
             "topic": "",
             "token": "",
             "title": "Microsoft-Rewards-Script",
-            "tags": ["bot", "notify"],
+            "tags": [
+                "bot",
+                "notify"
+            ],
             "priority": 3
         },
         "webhookLogFilter": {
             "enabled": false,
             "mode": "whitelist",
-            "levels": ["error"],
-            "keywords": ["starting account", "select number", "collected"],
+            "levels": [
+                "error"
+            ],
+            "keywords": [
+                "starting account",
+                "select number",
+                "collected",
+                "Fraud_UserWarning_BotScore_UX"
+            ],
             "regexPatterns": []
         }
     }

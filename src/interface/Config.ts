@@ -5,6 +5,7 @@ export interface Config {
     errorDiagnostics: boolean
     ensureStreakProtection: boolean
     autoClaimPunchcardRewards: boolean
+    contintueOnBotWarning: boolean
     skipNonPointTasks: boolean
     accountDelay: ConfigDelay
     workers: ConfigWorkers
