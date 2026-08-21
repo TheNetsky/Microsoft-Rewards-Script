@@ -1,14 +1,3 @@
-/**
- * Triggers a run via the local API server and waits for it to finish.
- *
- * Called by scripts/docker/run_daily.sh when API_MODE=true so that cron
- * delegates to the API server rather than running npm start directly.  The
- * API server has full visibility over every run, scheduled or
- * manually triggered, and the dashboard can stream logs, stop a run, or
- * inspect history regardless of how it was started.
- *
- */
-
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -70,11 +59,6 @@ function sleep(ms) {
     return new Promise(r => setTimeout(r, ms))
 }
 
-// Scheduled runs (cron -> run_daily.sh -> here) honor whichever accounts are
-// currently excluded in config/schedule.json, if the dashboard (or a manual
-// PUT /schedule call) has ever saved one. RUN_ON_START's initial kickoff goes
-// through this same path, so it respects exclusions too rather than always
-// running every account regardless of the saved schedule.
 function buildStartBody() {
     try {
         const schedule = readSchedule(projectRoot)
@@ -87,8 +71,6 @@ function buildStartBody() {
     return {}
 }
 
-// Wait for the API server to be ready.  Handles the RUN_ON_START race where
-// trigger.js is launched in the background before the API server has started.
 let ready = false
 for (let i = 0; i < STARTUP_ATTEMPTS; i++) {
     try {
@@ -119,8 +101,6 @@ if (!ready) {
 const { status, body } = await request('POST', '/start', buildStartBody())
 
 if (status === 409) {
-    // A run is already in progress - the dashboard or a previous cron invocation
-    // beat us to it.  Exit cleanly so the lockfile is released.
     console.log('[trigger] A run is already in progress (409 Conflict). Skipping.')
     process.exit(0)
 }

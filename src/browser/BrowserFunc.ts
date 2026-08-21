@@ -41,14 +41,15 @@ export default class BrowserFunc {
 
             await this.applyResponseCookies(URLs.rewards.userInfoApi, response.headers['set-cookie'])
 
-            if (response.data) return response.data
+            if (response.data?.dashboard) return response.data
             throw new Error('Dashboard data missing from API response')
         } catch (error) {
-            throw this.bot.logger.error(
+            this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-DASHBOARD-DATA',
                 `Failed to get dashboard data: ${error instanceof Error ? error.message : String(error)}`
             )
+            throw error
         }
     }
 
@@ -78,9 +79,9 @@ export default class BrowserFunc {
         }
     }
 
-    async getBrowserEarnablePoints(): Promise<BrowserEarnablePoints> {
+    async getBrowserEarnablePoints(data?: DashboardData): Promise<BrowserEarnablePoints> {
         try {
-            const data = await this.getDashboardData()
+            data ??= await this.getDashboardData()
 
             const desktopSearchPoints =
                 data.dashboard.userStatus.counters.pcSearch?.reduce(
@@ -320,23 +321,20 @@ export default class BrowserFunc {
             this.bot.logger.debug(this.bot.isMobile, 'BOOTSTRAP', `Fetching ${initialChunks.size} initial JS chunks`)
             const jsByPath = await this.fetchJsChunks(page, [...initialChunks])
 
-            // dynamically-imported chunks, server actions inside popover
-            const dynamicPaths: string[] = []
+            const dynamicPaths = new Set<string>()
             for (const js of jsByPath.values()) {
                 for (const path of this.extractDynamicChunkPaths(js)) {
-                    if (!jsByPath.has(path) && !dynamicPaths.includes(path)) {
-                        dynamicPaths.push(path)
-                    }
+                    if (!jsByPath.has(path)) dynamicPaths.add(path)
                 }
             }
 
-            if (dynamicPaths.length) {
+            if (dynamicPaths.size) {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'BOOTSTRAP',
-                    `Fetching ${dynamicPaths.length} dynamic chunks discovered via webpack manifest`
+                    `Fetching ${dynamicPaths.size} dynamic chunks discovered via webpack manifest`
                 )
-                const moreJs = await this.fetchJsChunks(page, dynamicPaths)
+                const moreJs = await this.fetchJsChunks(page, [...dynamicPaths])
                 for (const [path, js] of moreJs) jsByPath.set(path, js)
             }
 
@@ -549,14 +547,33 @@ export default class BrowserFunc {
 
         try {
             const context = page.context()
+            let liveCookies = await context.cookies()
+
             if (applyCached) {
-                const cached = this.getCachedCookies().filter(
-                    cookie => cookie.expires === -1 || cookie.expires > Date.now() / 1000
+                const now = Date.now() / 1000
+                const liveByKey = new Map(
+                    liveCookies.map(cookie => [`${cookie.domain}|${cookie.path}|${cookie.name}`, cookie])
                 )
-                if (cached.length) await context.addCookies(cached)
+                const changed = this.getCachedCookies().filter(cookie => {
+                    if (cookie.expires !== -1 && cookie.expires <= now) return false
+                    const live = liveByKey.get(`${cookie.domain}|${cookie.path}|${cookie.name}`)
+                    return (
+                        !live ||
+                        live.value !== cookie.value ||
+                        live.expires !== cookie.expires ||
+                        live.httpOnly !== cookie.httpOnly ||
+                        live.secure !== cookie.secure ||
+                        live.sameSite !== cookie.sameSite
+                    )
+                })
+
+                if (changed.length) {
+                    await context.addCookies(changed)
+                    liveCookies = await context.cookies()
+                }
             }
 
-            this.updateCookieCache(await context.cookies(), source)
+            this.updateCookieCache(liveCookies, source)
             return true
         } catch (error) {
             this.bot.logger.debug(

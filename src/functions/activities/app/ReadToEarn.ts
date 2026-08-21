@@ -90,7 +90,6 @@ export class ReadToEarn extends BaseActivity {
                     break
                 }
 
-                // Update point tracking
                 this.bot.userData.currentPoints = newBalance
                 this.bot.userData.gainedPoints = (this.bot.userData.gainedPoints ?? 0) + gainedPoints
                 totalGained += gainedPoints
@@ -104,14 +103,15 @@ export class ReadToEarn extends BaseActivity {
                     'green'
                 )
 
-                // Wait random delay between articles
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'READ-TO-EARN',
                     `Waiting between articles | article=${i + 1}/${articleCount} | delayRange=${delayMin}-${delayMax}`
                 )
 
-                await this.bot.utils.wait(this.bot.utils.randomDelay(delayMin, delayMax))
+                if (i < articleCount - 1) {
+                    await this.bot.utils.wait(this.bot.utils.randomDelay(delayMin, delayMax))
+                }
             }
 
             const finalBalance = Number(this.bot.userData.currentPoints ?? startBalance)

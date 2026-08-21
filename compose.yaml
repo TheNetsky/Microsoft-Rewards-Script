@@ -10,7 +10,7 @@ services:
             - ./config:/usr/src/microsoft-rewards-script/config
             - ./sessions:/usr/src/microsoft-rewards-script/sessions
         env_file:
-            # Load account credentials from the .env file (ACCOUNT_1_EMAIL, ACCOUNT_1_PASSWORD, etc.)
+            # Load account credentials from the .env file (ACCOUNT_1_EMAIL, optional ACCOUNT_1_PASSWORD, etc.)
             - path: .env
         environment:
             # ── Scheduler ──────────────────────────────────────

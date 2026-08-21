@@ -108,10 +108,6 @@ const RE = {
     runEnd: /^Completed all accounts \| accountsProcessed=(\d+) \| pointsGained=(-?\d+) \| previousBalance=(\d+) \| currentBalance=(\d+) \| runtimeMinutes=([\d.]+)/,
     accountError: /^(\S+@\S+): ([\s\S]+)$/,
     flowFailed: /flow failed for (\S+@\S+):/i,
-    // index.ts's waitBeforeNextAccount() appends the upcoming account's email
-    // in parentheses when it's known (it always is, on both the single-worker
-    // and cluster-fork paths). The email is optional in the regex only to
-    // stay forward-compatible with older/foreign log lines that lack it.
     accountDelay: /^Waiting ([\d.]+) seconds before starting the next account(?: \((\S+@\S+)\))?$/,
 
     searchStart: /^Starting Bing searches \| currentBalance=(\d+)/,

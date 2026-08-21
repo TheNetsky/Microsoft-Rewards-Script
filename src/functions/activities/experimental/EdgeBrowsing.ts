@@ -19,9 +19,6 @@ const MAX_REPORT_INTERVAL_MINUTES = 30
 
 const REPORT_JITTER_MIN_MS = 5_000
 const REPORT_JITTER_MAX_MS = 20_000
-const RETRY_DELAY_MIN_MS = 10_000
-const RETRY_DELAY_MAX_MS = 20_000
-const MAX_REPORT_ATTEMPTS = 2
 
 interface EdgeBrowsingSettings {
     offerId: string
@@ -141,7 +138,21 @@ export class EdgeBrowsing extends BaseActivity {
                     return
                 }
 
-                const result = await this.submitWithRetry(accessToken, settings, reportNumber, reportCount, signal)
+                let result: ReportResult | null = null
+                try {
+                    result = await this.submitReport(accessToken, settings)
+                } catch (error) {
+                    const requestError = error as { status?: number; response?: { status?: number } }
+                    const status = requestError.response?.status ?? requestError.status ?? null
+                    this.bot.logger.warn(
+                        this.bot.isMobile,
+                        LOG_TAG,
+                        `Edge browsing report failed | report=${reportNumber}/${reportCount}` +
+                            ` | status=${status ?? 'unknown'}` +
+                            ` | message=${error instanceof Error ? error.message : String(error)}`
+                    )
+                }
+
                 if (signal?.aborted) return
                 reportsProcessed = reportNumber
 
@@ -676,58 +687,6 @@ export class EdgeBrowsing extends BaseActivity {
         return { offerId, activityType, reportIntervalMinutes, promotion }
     }
 
-    private async submitWithRetry(
-        accessToken: string,
-        settings: EdgeBrowsingSettings,
-        reportNumber: number,
-        reportCount: number,
-        signal?: AbortSignal
-    ): Promise<ReportResult | null> {
-        for (let attempt = 1; attempt <= MAX_REPORT_ATTEMPTS; attempt++) {
-            if (signal?.aborted) return null
-
-            try {
-                return await this.submitReport(accessToken, settings)
-            } catch (error) {
-                const status = this.getErrorStatus(error)
-                const fatalClientError = status !== null && status >= 400 && status < 500 && status !== 429
-                const canRetry = attempt < MAX_REPORT_ATTEMPTS && (status === null || status === 429 || status >= 500)
-
-                if (fatalClientError) {
-                    throw new Error(
-                        `Edge browsing report rejected | report=${reportNumber}/${reportCount}` +
-                            ` | status=${status} | message=${error instanceof Error ? error.message : String(error)}`
-                    )
-                }
-
-                if (!canRetry) {
-                    this.bot.logger.warn(
-                        this.bot.isMobile,
-                        LOG_TAG,
-                        `Edge browsing report failed | report=${reportNumber}/${reportCount}` +
-                            ` | attempt=${attempt}/${MAX_REPORT_ATTEMPTS} | status=${status ?? 'unknown'}` +
-                            ` | message=${error instanceof Error ? error.message : String(error)}`
-                    )
-                    return null
-                }
-
-                const retryDelayMs = this.bot.utils.randomDelay(RETRY_DELAY_MIN_MS, RETRY_DELAY_MAX_MS)
-                this.bot.logger.warn(
-                    this.bot.isMobile,
-                    LOG_TAG,
-                    `Retrying Edge browsing report | report=${reportNumber}/${reportCount}` +
-                        ` | attempt=${attempt}/${MAX_REPORT_ATTEMPTS}` +
-                        ` | retryInSeconds=${(retryDelayMs / 1000).toFixed(1)}` +
-                        ` | message=${error instanceof Error ? error.message : String(error)}`
-                )
-
-                if (!(await this.wait(retryDelayMs, signal))) return null
-            }
-        }
-
-        return null
-    }
-
     private async submitReport(accessToken: string, settings: EdgeBrowsingSettings): Promise<ReportResult> {
         const { header: cookieHeader, names: cookieNames } = this.getPlatformCookieHeader()
         const headers = { ...(this.bot.fingerprint?.headers ?? {}) }
@@ -817,11 +776,6 @@ export class EdgeBrowsing extends BaseActivity {
             header: cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; '),
             names: cookies.map(cookie => cookie.name)
         }
-    }
-
-    private getErrorStatus(error: unknown): number | null {
-        const requestError = error as { status?: number; response?: { status?: number } }
-        return requestError.response?.status ?? requestError.status ?? null
     }
 
     private logProgress(

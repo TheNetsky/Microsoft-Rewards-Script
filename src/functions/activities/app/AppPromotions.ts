@@ -26,9 +26,11 @@ export class AppPromotions extends BaseActivity {
             'APP-PROMOTIONS',
             `Started solving "App Promotions" items | remaining=${pending.length}`
         )
-        for (const promotion of pending) {
+        for (const [index, promotion] of pending.entries()) {
             await this.bot.activities.doAppReward(promotion)
-            await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+            if (index < pending.length - 1) {
+                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+            }
         }
         this.bot.logger.info(this.bot.isMobile, 'APP-PROMOTIONS', 'Finished processing "App Promotions" items')
     }

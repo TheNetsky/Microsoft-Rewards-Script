@@ -73,7 +73,6 @@ const AccountCountrySchema = z
         'Expected "auto" or a two-letter country code'
     )
 
-// Webhook
 const WebhookSchema = z.object({
     discord: z
         .object({
@@ -102,7 +101,6 @@ const WebhookSchema = z.object({
     webhookLogFilter: LogFilterSchema
 })
 
-// Config
 export const ConfigSchema = z.object({
     sessionPath: z.string(),
     headless: z.boolean(),
@@ -163,7 +161,6 @@ export const ConfigSchema = z.object({
     webhook: WebhookSchema
 })
 
-// Account
 const AccountProxySchema = z
     .object({
         proxyHttp: z.boolean(),

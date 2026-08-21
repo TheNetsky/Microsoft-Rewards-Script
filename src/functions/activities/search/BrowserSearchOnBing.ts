@@ -75,9 +75,8 @@ export class SearchOnBing extends BaseActivity {
         await this.ensureSearchReady(page)
 
         let lastBalance = this.oldBalance
-        let i = 0
 
-        for (const query of queries) {
+        for (const [index, query] of queries.entries()) {
             try {
                 this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `Processing query | query="${query}"`)
 
@@ -124,7 +123,7 @@ export class SearchOnBing extends BaseActivity {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-SEARCH',
-                    `${++i}/${queries.length} | activity not complete | offerProgress=${offerProgress} | query="${query}"`
+                    `${index + 1}/${queries.length} | activity not complete | offerProgress=${offerProgress} | query="${query}"`
                 )
             } catch (error) {
                 this.bot.logger.error(
@@ -133,7 +132,9 @@ export class SearchOnBing extends BaseActivity {
                     `Error during search loop | query="${query}" | message=${error instanceof Error ? error.message : String(error)}`
                 )
             } finally {
-                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                if (!this.success && index < queries.length - 1) {
+                    await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                }
             }
         }
 

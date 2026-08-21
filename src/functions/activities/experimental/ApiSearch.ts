@@ -6,6 +6,7 @@ import { BingSearchApi } from './BingSearchApi'
 
 const STAGNANT_LIMIT = 10
 const MAX_SEARCHES = 60
+const DASHBOARD_REFRESH_EVERY = 5
 
 export class ApiSearch extends BaseActivity {
     private readonly searchApi = new BingSearchApi(this.bot)
@@ -74,24 +75,31 @@ export class ApiSearch extends BaseActivity {
 
                 let dashboardProgress: number | null = null
                 let dashboardChecked = false
-                try {
-                    const updated = await this.searchProgress.getMissing(isMobile)
-                    dashboardProgress = Math.max(0, remainingPoints - updated.totalPoints)
-                    remainingPoints = updated.totalPoints
-                    dashboardChecked = true
-                } catch (error) {
-                    this.bot.logger.debug(
-                        isMobile,
-                        'SEARCH-BING',
-                        `Could not refresh the ${isMobile ? 'mobile' : 'desktop'} search quota | ${
-                            error instanceof Error ? error.message : String(error)
-                        }`
-                    )
+                const shouldRefreshDashboard =
+                    performed === 1 ||
+                    performed % DASHBOARD_REFRESH_EVERY === 0 ||
+                    earned == null ||
+                    limit == null ||
+                    responseProgress <= 0 ||
+                    responseCapReached
+
+                if (shouldRefreshDashboard) {
+                    try {
+                        const updated = await this.searchProgress.getMissing(isMobile)
+                        dashboardProgress = Math.max(0, remainingPoints - updated.totalPoints)
+                        remainingPoints = updated.totalPoints
+                        dashboardChecked = true
+                    } catch (error) {
+                        this.bot.logger.debug(
+                            isMobile,
+                            'SEARCH-BING',
+                            `Could not refresh the ${isMobile ? 'mobile' : 'desktop'} search quota | ${
+                                error instanceof Error ? error.message : String(error)
+                            }`
+                        )
+                    }
                 }
 
-                // The dashboard remains the source of truth for completion, but its
-                // counters can lag the API response by one request. Either signal is
-                // enough to reset the stagnant-search guard.
                 const searchProgress =
                     dashboardProgress === null ? responseProgress : Math.max(dashboardProgress, responseProgress)
                 const capReached = dashboardChecked ? remainingPoints <= 0 : responseCapReached

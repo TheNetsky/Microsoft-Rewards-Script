@@ -97,6 +97,7 @@ export class MicrosoftRewardsBot {
         mobile: null,
         desktop: null
     }
+    public searchTopicsCache: { key: string; topics: Promise<string[]> } | null = null
 
     public accessToken = ''
     public cookies: { mobile: Cookie[]; desktop: Cookie[] }
@@ -228,7 +229,6 @@ export class MicrosoftRewardsBot {
         this.warnExperimental()
     }
 
-    // Move to utils
     private warnExperimental(): void {
         const exp = this.config.experimental
         const searchFeatures = [exp.apiSearch && 'apiSearch', exp.apiSearchOnBing && 'apiSearchOnBing'].filter(
@@ -554,15 +554,22 @@ export class MicrosoftRewardsBot {
         const accountEmail = account.email
         this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
 
-        // Drop cookies, page snapshots and app credentials from the previous account
         this.accessToken = ''
         this.cookies = { mobile: [], desktop: [] }
+        this.fingerprintMobile = undefined
+        this.fingerprintDesktop = undefined
         this.reactSnapshot = null
         this.reactSnapshots = { mobile: null, desktop: null }
+        this.searchTopicsCache = null
 
         const apiSearch = this.config.experimental.apiSearch
         const apiSearchOnBing = this.config.experimental.apiSearchOnBing
         const fullApi = apiSearch && (apiSearchOnBing || !this.config.activities.searchOnBing)
+        const needsAppActivities =
+            this.config.workers.doDailyCheckIn ||
+            this.config.workers.doAppPromotions ||
+            this.config.workers.doReadToEarn
+        const needsAppAccessToken = this.config.experimental.edgeBrowsing || needsAppActivities
 
         let mobileSession: BrowserSession | null = null
         let desktopSession: BrowserSession | null = null
@@ -602,15 +609,17 @@ export class MicrosoftRewardsBot {
 
                 await this.login.login(this.mainMobilePage, account)
 
-                try {
-                    this.accessToken = await this.login.getAppAccessToken(this.mainMobilePage, accountEmail)
-                } catch (error) {
-                    this.logger.error(
-                        'main',
-                        'FLOW',
-                        `Failed to get mobile access token: ${error instanceof Error ? error.message : String(error)}`
-                    )
-                    this.accessToken = ''
+                if (needsAppAccessToken) {
+                    try {
+                        this.accessToken = await this.login.getAppAccessToken(this.mainMobilePage, accountEmail)
+                    } catch (error) {
+                        this.logger.error(
+                            'main',
+                            'FLOW',
+                            `Failed to get mobile access token: ${error instanceof Error ? error.message : String(error)}`
+                        )
+                        this.accessToken = ''
+                    }
                 }
 
                 await this.browser.func.checkpointActiveSession('LOGIN-CHECKPOINT')
@@ -652,7 +661,7 @@ export class MicrosoftRewardsBot {
 
                 let appData: AppDashboardData | null = null
 
-                if (this.accessToken) {
+                if (this.accessToken && needsAppActivities) {
                     try {
                         appData = await this.browser.func.getAppDashboardData()
                     } catch (error) {
@@ -669,10 +678,10 @@ export class MicrosoftRewardsBot {
                 this.userData.currentPoints = data.dashboard.userStatus.availablePoints
                 const initialPoints = this.userData.initialPoints ?? 0
 
-                const browserEarnable = await this.browser.func.getBrowserEarnablePoints()
+                const browserEarnable = await this.browser.func.getBrowserEarnablePoints(data)
                 let appEarnable: AppEarnablePoints | null = null
 
-                if (this.accessToken) {
+                if (this.accessToken && needsAppActivities) {
                     try {
                         appEarnable = await this.browser.func.getAppEarnablePoints()
                     } catch (error) {
@@ -733,10 +742,15 @@ export class MicrosoftRewardsBot {
                     const doDesktopSearch = plan.doDesktop
                     const desktopBrowserNeeded = this.config.workers.doPunchCards || doVisualSearch
 
+                    if (doDesktopSearch && !desktopBrowserNeeded) {
+                        this.cookies.desktop = [...this.cookies.mobile]
+                        this.fingerprintDesktop = await this.browserFactory.generateFingerprint(false)
+                    }
+
                     if (desktopBrowserNeeded) {
                         await executionContext.run({ isMobile: false, account }, async () => {
                             desktopSession = await this.createDesktopSession(account)
-                            await this.activities.doPunchCardsDesktop()
+                            if (this.config.workers.doPunchCards) await this.activities.doPunchCardsDesktop()
                             if (doVisualSearch) await this.activities.doVisualSearch(data)
                         })
                         await closeDesktopSession()
@@ -772,10 +786,15 @@ export class MicrosoftRewardsBot {
                     const desktopBrowserNeeded =
                         this.config.workers.doPunchCards || doVisualSearch || (doDesktopSearch && !apiSearch)
 
+                    if (apiSearch && doDesktopSearch && !desktopBrowserNeeded) {
+                        this.cookies.desktop = [...this.cookies.mobile]
+                        this.fingerprintDesktop = await this.browserFactory.generateFingerprint(false)
+                    }
+
                     if (parallel && !apiSearch && doMobileSearch && doDesktopSearch) {
                         await executionContext.run({ isMobile: false, account }, async () => {
                             desktopSession = await this.createDesktopSession(account)
-                            await this.activities.doPunchCardsDesktop()
+                            if (this.config.workers.doPunchCards) await this.activities.doPunchCardsDesktop()
                             if (doVisualSearch) await this.activities.doVisualSearch(data)
                         })
 
@@ -809,7 +828,7 @@ export class MicrosoftRewardsBot {
                             await executionContext.run({ isMobile: false, account }, async () => {
                                 desktopSession = await this.createDesktopSession(account)
 
-                                await this.activities.doPunchCardsDesktop()
+                                if (this.config.workers.doPunchCards) await this.activities.doPunchCardsDesktop()
                                 if (doVisualSearch) await this.activities.doVisualSearch(data)
                                 if (doDesktopSearch && !apiSearch) {
                                     desktopPoints = await this.searchManager.searchDesktop(account)
@@ -945,6 +964,8 @@ async function main(): Promise<void> {
         await rewardsBot.run()
     } catch (error) {
         rewardsBot.logger.error('main', 'MAIN-ERROR', error as Error)
+        await flushAllWebhooks()
+        process.exitCode = 1
     }
 }
 

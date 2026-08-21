@@ -11,11 +11,6 @@ function sanitizeProxyUrl(value) {
     }
 }
 
-/**
- * Returns the configured accounts without exposing passwords, recovery
- * addresses, TOTP secrets, or proxy credentials. This API is intended for the
- * local dashboard, so account email addresses are returned in full.
- */
 export function loadAccounts(sourceEnv = process.env) {
     const accounts = []
 
@@ -47,11 +42,6 @@ export function loadAccounts(sourceEnv = process.env) {
     return accounts
 }
 
-/**
- * Builds a child-process-only environment override that runs exactly one
- * configured account. The selected slot is remapped to ACCOUNT_1_* in the
- * isolated child environment. No secret values leave the API process.
- */
 export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
     const index = Number(accountIndex)
     if (!Number.isSafeInteger(index) || index < 1) {
@@ -71,14 +61,10 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
 
     const env = {}
 
-    // Blank every configured account variable in the child environment first.
-    // Empty strings are treated as unset by the bot's env parser.
     for (const key of Object.keys(sourceEnv)) {
         if (/^ACCOUNT_\d+_/.test(key)) env[key] = ''
     }
 
-    // Copy the chosen slot into slot 1, including any future ACCOUNT_N_* fields
-    // not known by this API yet (password, browser settings, proxy fields, etc.).
     for (const [key, value] of selected) {
         const suffix = key.slice(selectedPrefix.length)
         env[`ACCOUNT_1_${suffix}`] = value
@@ -90,10 +76,6 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
     }
 }
 
-/**
- * Builds a dense child-process account environment with selected configured
- * slots excluded. Remaining slots are remapped to ACCOUNT_1..N.
- */
 export function buildExcludedAccountsEnv(excludedAccountIndexes, sourceEnv = process.env) {
     if (!Array.isArray(excludedAccountIndexes)) {
         const err = new Error('`excludedAccountIndexes` must be an array of positive integers.')

@@ -60,7 +60,6 @@ export class Search extends BaseActivity {
 
         const stats = await this.runSearchSession(page, isMobile, tracker)
 
-        // No active offer (or the feature is off): prepare() already logged why
         if (!tracker.started) return 0
 
         const done = tracker.done() && !tracker.offerLost
@@ -197,6 +196,7 @@ export class Search extends BaseActivity {
                     'SEARCH-BING',
                     `Search attempt ${attempt}/${MAX_QUERY_ATTEMPTS} failed | query="${query}" | ${error instanceof Error ? error.message : String(error)}`
                 )
+                if (attempt === MAX_QUERY_ATTEMPTS) throw error
                 await this.bot.utils.wait(2000)
             }
         }
@@ -204,10 +204,10 @@ export class Search extends BaseActivity {
 
     private async randomScroll(page: Page, isMobile: boolean) {
         try {
-            const viewportHeight = await page.evaluate(() => window.innerHeight)
-            const totalHeight = await page.evaluate(() => document.body.scrollHeight)
-            const scrollPos = Math.floor(Math.random() * Math.max(1, totalHeight - viewportHeight))
-            await page.evaluate(pos => window.scrollTo({ left: 0, top: pos, behavior: 'auto' }), scrollPos)
+            await page.evaluate(() => {
+                const maxScroll = Math.max(1, document.body.scrollHeight - window.innerHeight)
+                window.scrollTo({ left: 0, top: Math.floor(Math.random() * maxScroll), behavior: 'auto' })
+            })
         } catch (error) {
             this.bot.logger.error(
                 isMobile,

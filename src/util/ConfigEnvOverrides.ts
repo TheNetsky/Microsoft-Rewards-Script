@@ -1,20 +1,3 @@
-/**
- * ConfigEnvOverrides.ts
- *
- * Single source of truth for the CONFIG_* environment variable overrides
- * applied to config.json on every docker container start. Previously this
- * mapping existed twice in entrypoint.sh: once as a hand-written doc comment
- * and once as the actual `_cfg`/`_cfg_array` call list - the two had to be
- * kept in sync by hand. Now there's one table (ENV_OVERRIDES) that both the
- * apply logic and `list` output are generated from.
- *
- * Not used by bare metal at all - Load.ts/Validator.ts are untouched.
- *
- * Usage:
- *   node dist/util/ConfigEnvOverrides.js apply --config <path>
- *   node dist/util/ConfigEnvOverrides.js list [--format table|env]
- */
-
 import { readJson, writeConfigAtomic } from './ConfigSync'
 
 export type OverrideType = 'string' | 'bool' | 'number' | 'array'
@@ -111,8 +94,6 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_KEYWORDS', path: 'webhook.webhookLogFilter.keywords', type: 'array' }
 ]
 
-// headless is always forced true in docker - not env-var driven, so it isn't
-// in the table above, but it's applied the same way every start.
 const FORCED_OVERRIDES: { path: string; value: unknown }[] = [{ path: 'headless', value: true }]
 
 function setDeep(obj: Record<string, unknown>, dottedPath: string, value: unknown): void {
@@ -158,12 +139,6 @@ export interface OverrideError {
     message: string
 }
 
-/**
- * Reads ENV_OVERRIDES against `env` and returns the values to apply.
- * Matches the previous bash semantics: a scalar var that's unset OR set to
- * an empty string is skipped (no way to distinguish the two in `_cfg`); an
- * array var that's unset is skipped, but set-to-empty applies `[]`.
- */
 export function computeOverrides(env: NodeJS.ProcessEnv = process.env): {
     applied: ComputedOverride[]
     errors: OverrideError[]
@@ -200,12 +175,6 @@ export interface ApplyReport {
     errors: OverrideError[]
 }
 
-/**
- * Applies FORCED_OVERRIDES + ENV_OVERRIDES to config.json in one atomic
- * write. Unlike the old bash version (which wrote incrementally per
- * variable, so an invalid value left partial changes on disk), this
- * validates everything first and only writes if there are no errors.
- */
 export function applyEnvOverrides(configPath: string, env: NodeJS.ProcessEnv = process.env): ApplyReport {
     const { applied, errors } = computeOverrides(env)
     if (errors.length > 0) {
@@ -216,8 +185,6 @@ export function applyEnvOverrides(configPath: string, env: NodeJS.ProcessEnv = p
     for (const { path: p, value } of FORCED_OVERRIDES) setDeep(config, p, value)
     for (const { path: p, value } of applied) setDeep(config, p, value)
 
-    // No .bak here - this runs on every container start, unlike the rarer
-    // default-sync patch, so a backup per boot would just be noise.
     writeConfigAtomic(configPath, config, { backup: false })
 
     return { configPath, forced: FORCED_OVERRIDES, applied, errors: [] }

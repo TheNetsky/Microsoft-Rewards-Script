@@ -62,7 +62,6 @@ export default class BrowserUtils {
                 await this.bot.utils.wait(300)
             }
 
-            // Overlay
             const overlay = await page.$('#bnp_overlay_wrapper')
             if (overlay) {
                 const rejected = await this.ghostClick(page, '#bnp_btn_reject, button[aria-label*="Reject" i]')
@@ -96,7 +95,7 @@ export default class BrowserUtils {
 
             const newTab = pages[pages.length - 1]
             if (!newTab) {
-                throw this.bot.logger.error(this.bot.isMobile, 'GET-NEW-TAB', 'No tabs could be found!')
+                throw new Error('No tabs could be found!')
             }
 
             return newTab
@@ -147,13 +146,11 @@ export default class BrowserUtils {
                 `Found ${tabs.length} tab(s) open (min: ${config.minTabs}, max: ${config.maxTabs})`
             )
 
-            // Check if valid
             if (config.minTabs < 1 || config.maxTabs < config.minTabs) {
                 this.bot.logger.warn(this.bot.isMobile, 'SEARCH-CLOSE-TABS', 'Invalid config, using defaults')
                 config = { minTabs: 1, maxTabs: 1 }
             }
 
-            // Close if more than max config
             if (tabs.length > config.maxTabs) {
                 const tabsToClose = tabs.slice(config.maxTabs)
 
@@ -166,7 +163,6 @@ export default class BrowserUtils {
                     `Closed ${closedCount}/${tabsToClose.length} excess tab(s) to reach max of ${config.maxTabs}`
                 )
 
-                // Open more tabs
             } else if (tabs.length < config.minTabs) {
                 const tabsNeeded = config.minTabs - tabs.length
                 this.bot.logger.debug(
@@ -213,10 +209,8 @@ export default class BrowserUtils {
                 `Trying to click selector: ${selector}, options: ${JSON.stringify(options)}`
             )
 
-            // Wait for selector to exist before clicking
             await page.waitForSelector(selector, { timeout: 1000 }).catch(() => {})
 
-            // ghost-cursor expects its own Playwright Page type from a different
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cursor = createCursor(page as any)
             await cursor.click(selector, options)

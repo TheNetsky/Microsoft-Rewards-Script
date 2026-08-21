@@ -1,11 +1,3 @@
-/**
- * Applies a persisted config/schedule.json override to the live crontab at
- * container startup. Called by entrypoint.sh in API_MODE=true, only when
- * schedule.json exists (i.e. the dashboard has saved a remote schedule at
- * least once) - bots that only ever use CRON_SCHEDULE never touch this file
- * and take the existing envsubst path in entrypoint.sh instead.
- */
-
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 

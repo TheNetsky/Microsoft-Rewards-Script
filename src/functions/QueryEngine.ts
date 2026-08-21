@@ -91,29 +91,34 @@ export class QueryCore {
             const coreSources = sourceOrder.filter(source => !isRss(source)) as QueryEngine[]
             const rssSelectors = sourceOrder.filter(isRss)
 
-            const topicLists: string[][] = []
-            for (const source of coreSources) {
-                const handler = sourceHandlers[source]
-                if (!handler) continue
+            const topicLists = await Promise.all([
+                ...coreSources.map(async source => {
+                    const handler = sourceHandlers[source]
+                    if (!handler) return []
 
-                const topics = await Promise.resolve(handler())
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'QUERY-MANAGER',
-                    `Source "${source}" returned ${topics.length}`
-                )
-                if (topics.length) topicLists.push(topics)
-            }
-
-            if (rssSelectors.length) {
-                const rssTopics = await this.getRssTopics(rssSelectors).catch(() => [])
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'QUERY-MANAGER',
-                    `Source "rss" returned ${rssTopics.length} (${rssSelectors.length} selector(s))`
-                )
-                if (rssTopics.length) topicLists.push(rssTopics)
-            }
+                    const topics = await Promise.resolve(handler())
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'QUERY-MANAGER',
+                        `Source "${source}" returned ${topics.length}`
+                    )
+                    return topics
+                }),
+                ...(rssSelectors.length
+                    ? [
+                          this.getRssTopics(rssSelectors)
+                              .catch(() => [])
+                              .then(topics => {
+                                  this.bot.logger.debug(
+                                      this.bot.isMobile,
+                                      'QUERY-MANAGER',
+                                      `Source "rss" returned ${topics.length} (${rssSelectors.length} selector(s))`
+                                  )
+                                  return topics
+                              })
+                      ]
+                    : [])
+            ])
 
             const rawTopics = topicLists.flat()
             const topics = this.normalizeAndDedupe(rawTopics)
@@ -147,13 +152,25 @@ export class QueryCore {
         }
     }
 
-    async getConfiguredSearchTopics(): Promise<string[]> {
-        return await this.queryManager({
-            shuffle: true,
-            langCode: (this.bot.userData.langCode ?? 'en').toLowerCase(),
-            geoLocale: (this.bot.userData.geoLocale ?? 'US').toUpperCase(),
-            sourceOrder: this.bot.config.searchSettings.queryEngines
-        })
+    async getConfiguredSearchTopics(forceRefresh = false): Promise<string[]> {
+        const langCode = (this.bot.userData.langCode ?? 'en').toLowerCase()
+        const geoLocale = (this.bot.userData.geoLocale ?? 'US').toUpperCase()
+        const sourceOrder = this.bot.config.searchSettings.queryEngines
+        const cacheKey = JSON.stringify([langCode, geoLocale, sourceOrder])
+
+        let cache = this.bot.searchTopicsCache
+        if (forceRefresh || cache?.key !== cacheKey) {
+            cache = {
+                key: cacheKey,
+                topics: this.queryManager({ shuffle: false, langCode, geoLocale, sourceOrder })
+            }
+            this.bot.searchTopicsCache = cache
+        }
+
+        const topics = [...(await cache.topics)]
+        if (!topics.length && this.bot.searchTopicsCache === cache) this.bot.searchTopicsCache = null
+        this.bot.utils.shuffleArray(topics)
+        return topics
     }
 
     async getSearchCluster(mainTopic: string): Promise<string[]> {

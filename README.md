@@ -61,10 +61,12 @@ Or, download the latest release ZIP and extract it.
 
 ```env
 ACCOUNT_1_EMAIL=email@example.com
-ACCOUNT_1_PASSWORD=your_password
+# ACCOUNT_1_PASSWORD=your_password
 ```
 
 > [!NOTE]
+> `ACCOUNT_N_PASSWORD` is optional. Set it when password sign-in should be available; leave it unset for passwordless/Authenticator-only accounts.
+>
 > Add one `ACCOUNT_N_*` block per account. Account slots do not need to be contiguous: `ACCOUNT_2` or `ACCOUNT_4` can be configured even when earlier slots are missing. Accounts run in ascending slot order. Optional per-account fields cover recovery email, locale, language, proxy, and fingerprint persistence - see [`env.example`](env.example) for all of them.
 
 `ACCOUNT_N_LANG_CODE` accepts a BCP 47 language tag such as `nl`, `it`, or `pt-BR`. `ACCOUNT_N_GEO_LOCALE` accepts a two-letter country code or defaults to `auto`. The selected language and country are applied consistently to browser fingerprints, `Accept-Language`, Microsoft Rewards app headers, and market-specific requests. In `auto` mode, the country reported by the Microsoft profile is cached after the first successful dashboard request; changing either locale setting automatically replaces an incompatible saved fingerprint.
@@ -101,8 +103,10 @@ npm run start
 
 ```env
 ACCOUNT_1_EMAIL=email@example.com
-ACCOUNT_1_PASSWORD=your_password
+# ACCOUNT_1_PASSWORD=your_password
 ```
+
+`ACCOUNT_N_PASSWORD` is optional; omit it for passwordless/Authenticator-only accounts.
 
 - Review `compose.yaml` to adjust scheduling, timezone, and config options.
 

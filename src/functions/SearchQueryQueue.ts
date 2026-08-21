@@ -10,6 +10,7 @@ export class SearchQueryQueue {
     private activeClusterIndex = 0
     private readonly seenTopics = new Set<string>()
     private readonly seenQueries = new Set<string>()
+    private refillCount = 0
 
     constructor(
         private readonly bot: MicrosoftRewardsBot,
@@ -93,7 +94,8 @@ export class SearchQueryQueue {
     }
 
     private async refillTopics(): Promise<number> {
-        const topics = await this.queryCore.getConfiguredSearchTopics()
+        const topics = await this.queryCore.getConfiguredSearchTopics(this.refillCount > 0)
+        this.refillCount++
         this.topics = topics.filter(topic => {
             const key = normalizeQueryKey(topic)
             return key.length > 0 && !this.seenTopics.has(key)

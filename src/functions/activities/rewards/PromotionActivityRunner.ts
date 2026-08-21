@@ -3,10 +3,12 @@ import type { BasePromotion } from '../../../interface/DashboardData'
 
 export class PromotionActivityRunner extends BaseActivity {
     public async run(promotions: BasePromotion[]): Promise<void> {
-        for (const promotion of promotions) {
+        for (const [index, promotion] of promotions.entries()) {
             try {
                 await this.runPromotion(promotion)
-                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                if (index < promotions.length - 1) {
+                    await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                }
             } catch (error) {
                 this.bot.logger.error(
                     this.bot.isMobile,
