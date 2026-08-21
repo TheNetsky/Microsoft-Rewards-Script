@@ -38,7 +38,6 @@ export function resolveExamplePath(projectRoot: string = getProjectRoot()): stri
     return resolveProjectFile('config.example.json', projectRoot) ?? path.join(projectRoot, 'config.example.json')
 }
 
-
 export function readJson(filePath: string): unknown {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'))
 }
@@ -63,7 +62,6 @@ export function writeConfigAtomic(
     fs.renameSync(tmp, targetPath)
     return { backupPath }
 }
-
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -107,7 +105,6 @@ export function mergeMissingDefaults<T = unknown>(config: unknown, example: T): 
 
     return { merged: walk(config, example, '') as T, addedKeys }
 }
-
 
 export interface SyncOptions {
     projectRoot?: string

@@ -144,9 +144,7 @@ export function loadAccounts(): Account[] {
         }
 
         if (!accounts.length) {
-            throw new Error(
-                'No accounts found in environment. Set at least one ACCOUNT_N_EMAIL (see env.example).'
-            )
+            throw new Error('No accounts found in environment. Set at least one ACCOUNT_N_EMAIL (see env.example).')
         }
 
         return validateAccounts(accounts)

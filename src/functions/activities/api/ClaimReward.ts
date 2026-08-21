@@ -81,7 +81,6 @@ export class ClaimReward extends BaseActivity {
                     `Claim not acknowledged by server | offerId=${offerId} | status=${status}`
                 )
             }
-
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
