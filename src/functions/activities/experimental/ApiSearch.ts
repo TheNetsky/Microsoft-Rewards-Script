@@ -247,14 +247,14 @@ export class ApiSearch extends BaseActivity {
 
         const done = tracker.done() && !tracker.offerLost
         const reason = done
-            ? 'offer complete'
+            ? '活动完成'
             : tracker.offerLost
-              ? 'offer no longer present'
+              ? '活动已不存在'
               : performed >= tracker.maxSearches
-                ? 'reached maxBonusSearches'
+                ? '达到最大加成搜索次数'
                 : stagnant >= tracker.stagnantLimit
-                  ? `${tracker.stagnantLimit} idle searches`
-                  : 'query pool exhausted'
+                  ? `连续 ${tracker.stagnantLimit} 次无积分`
+                  : '查询池已耗尽'
 
         this.bot.logger.info(
             isMobile,
