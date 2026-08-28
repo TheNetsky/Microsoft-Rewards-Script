@@ -2,7 +2,6 @@ import type { QuestChild } from '../../../browser/ReactFunc'
 import { BaseActivity } from '../BaseActivity'
 import { URLs } from '../../../constants/urls'
 
-// This is still very much WIP!
 export class ClaimReward extends BaseActivity {
     public async claimReward(child: QuestChild, parentId: string) {
         const offerId = child.offerId
@@ -82,8 +81,6 @@ export class ClaimReward extends BaseActivity {
                     `服务器未确认领取 | offerId=${offerId} | status=${status}`
                 )
             }
-
-            await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,

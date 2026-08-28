@@ -26,6 +26,8 @@ export class UserAgentManager {
     private static readonly VERSION_LOOKUP_TIMEOUT_MS = 5000
     private static readonly VERSION_PATTERN = /^\d+\.\d+\.\d+\.\d+$/
     private readonly appComponents = new Map<boolean, Promise<AppComponents>>()
+    private chromeVersion?: Promise<string>
+    private edgeVersions?: Promise<EdgeVersions>
 
     private static readonly MOBILE_MODELS = [
         // Samsung Galaxy S series
@@ -248,10 +250,9 @@ export class UserAgentManager {
     }
 
     private async loadAppComponents(isMobile: boolean): Promise<AppComponents> {
-        const [versions, chromeVersion] = await Promise.all([
-            this.getEdgeVersions(isMobile),
-            this.getChromeVersion(isMobile)
-        ])
+        this.edgeVersions ??= this.getEdgeVersions(isMobile)
+        this.chromeVersion ??= this.getChromeVersion(isMobile)
+        const [versions, chromeVersion] = await Promise.all([this.edgeVersions, this.chromeVersion])
         const edgeVersion = isMobile ? versions.android : versions.desktop
         const edgeMajorVersion = edgeVersion.split('.')[0]!
         const chromeMajorVersion = chromeVersion.split('.')[0]!
@@ -299,15 +300,6 @@ export class UserAgentManager {
             fingerprint.headers['sec-ch-ua-arch'] = `"${meta.architecture}"`
             fingerprint.headers['sec-ch-ua-bitness'] = `"${meta.bitness}"`
             fingerprint.headers['sec-ch-ua-model'] = `"${meta.model}"`
-
-            /*
-            Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36 EdgA/129.0.0.0
-            sec-ch-ua-full-version-list: "Microsoft Edge";v="129.0.2792.84", "Not=A?Brand";v="8.0.0.0", "Chromium";v="129.0.6668.90"
-            sec-ch-ua: "Microsoft Edge";v="129", "Not=A?Brand";v="8", "Chromium";v="129"
-    
-            Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36
-            "Google Chrome";v="129.0.6668.90", "Not=A?Brand";v="8.0.0.0", "Chromium";v="129.0.6668.90"
-            */
 
             return fingerprint
         } catch (error) {

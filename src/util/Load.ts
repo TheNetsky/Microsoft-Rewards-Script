@@ -129,10 +129,7 @@ export function loadAccounts(): Account[] {
             const email = envStr(`ACCOUNT_${index}_EMAIL`)
             if (!email) continue
 
-            const password = envStr(`ACCOUNT_${index}_PASSWORD`)
-            if (!password) {
-                throw new Error(`ACCOUNT_${index}_EMAIL is set but ACCOUNT_${index}_PASSWORD is missing`)
-            }
+            const password = envStr(`ACCOUNT_${index}_PASSWORD`) ?? ''
 
             accounts.push({
                 email,
@@ -147,14 +144,13 @@ export function loadAccounts(): Account[] {
         }
 
         if (!accounts.length) {
-            throw new Error(
-                'No accounts found in environment. Set at least one ACCOUNT_N_EMAIL / ACCOUNT_N_PASSWORD pair (see env.example).'
-            )
+            throw new Error('No accounts found in environment. Set at least one ACCOUNT_N_EMAIL (see env.example).')
         }
 
         return validateAccounts(accounts)
     } catch (error) {
-        throw new Error(error instanceof Error ? error.message : String(error))
+        if (error instanceof Error) throw error
+        throw new Error(String(error))
     }
 }
 
@@ -180,6 +176,7 @@ export function loadConfig(): Config {
 
         return configData
     } catch (error) {
-        throw new Error(error as string)
+        if (error instanceof Error) throw error
+        throw new Error(String(error))
     }
 }

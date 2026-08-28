@@ -1,19 +1,3 @@
-/**
- * ConfigSync.ts
- *
- * Single source of truth for comparing/merging config.json against
- * config.example.json. Used by the Docker entrypoint (via CLI) and the
- * API's configEditor.js (via dynamic import) - NOT by Load.ts. Load.ts /
- * Validator.ts already backfill missing keys in memory on every start
- * (bare metal and docker); this module is strictly about writing
- * those defaults back to the *file on disk* for docker users whose
- * config.json lives in a bind-mounted volume across image updates.
- *
- * Users:
- *   - entrypoint.sh -> `node dist/util/ConfigSync.js sync [--patch] --config <path> --example <path>`
- *   - configEditor.js -> dynamic import of diffKeyPaths / mergeMissingDefaults / readJson / resolveExamplePath
- */
-
 import fs from 'fs'
 import path from 'path'
 
@@ -25,9 +9,6 @@ export interface SyncReport {
     patched: boolean // true if addedKeys were actually written into config.json
     backupPath?: string
 }
-
-// ── Path helpers (docker-side only; mirrors the search order Load.ts uses,
-//    kept separate/duplicated there deliberately - see note above) ──
 
 export function getProjectRoot(startDir: string = process.cwd()): string {
     if (fs.existsSync(path.join(startDir, 'package.json'))) return startDir
@@ -57,8 +38,6 @@ export function resolveExamplePath(projectRoot: string = getProjectRoot()): stri
     return resolveProjectFile('config.example.json', projectRoot) ?? path.join(projectRoot, 'config.example.json')
 }
 
-// ── Read/write ──
-
 export function readJson(filePath: string): unknown {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'))
 }
@@ -84,16 +63,10 @@ export function writeConfigAtomic(
     return { backupPath }
 }
 
-// ── Diff / merge ──
-
 function isPlainObject(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
-/**
- * Dotted key-paths present in `example` but absent from `config`. Arrays are
- * leaves - their contents are never diffed, only presence/absence of the key.
- */
 export function diffKeyPaths(config: unknown, example: unknown, prefix = ''): string[] {
     if (!isPlainObject(example)) return []
     const cfgObj = isPlainObject(config) ? config : {}
@@ -112,11 +85,6 @@ export function diffKeyPaths(config: unknown, example: unknown, prefix = ''): st
     return missing
 }
 
-/**
- * Deep-copies `config`, filling in any key present in `example` but missing
- * from `config` using the example's value. Existing user values are never
- * overwritten. Returns the merged config plus the dotted paths that were added.
- */
 export function mergeMissingDefaults<T = unknown>(config: unknown, example: T): { merged: T; addedKeys: string[] } {
     const addedKeys: string[] = []
 
@@ -137,8 +105,6 @@ export function mergeMissingDefaults<T = unknown>(config: unknown, example: T): 
 
     return { merged: walk(config, example, '') as T, addedKeys }
 }
-
-// ── Orchestration (docker CLI path) ──
 
 export interface SyncOptions {
     projectRoot?: string
@@ -164,9 +130,6 @@ export function syncConfig(opts: SyncOptions = {}): SyncReport {
         return { configPath, examplePath, created: true, addedKeys: [], patched: true }
     }
 
-    // Existing file: parse errors are surfaced as a thrown error rather than
-    // silently overwritten, so a corrupt user file fails loudly instead of
-    // being clobbered.
     const config = readJson(configPath)
     const addedKeys = diffKeyPaths(config, example)
 
@@ -182,8 +145,6 @@ export function syncConfig(opts: SyncOptions = {}): SyncReport {
     return { configPath, examplePath, created: false, addedKeys, patched: true, backupPath }
 }
 
-// ── CLI entry point, used by entrypoint.sh ──
-// node dist/util/ConfigSync.js sync [--patch] [--config <path>] [--example <path>]
 if (require.main === module) {
     const args = process.argv.slice(2)
     const patch = args.includes('--patch')

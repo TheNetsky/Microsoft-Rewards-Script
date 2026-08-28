@@ -1,6 +1,6 @@
 {
     "name": "microsoft-rewards-script",
-    "version": "4.3.0",
+    "version": "4.3.1",
     "description": "Automatically do tasks for Microsoft Rewards but in TS!",
     "author": "Netsky",
     "license": "GPL-3.0-or-later",

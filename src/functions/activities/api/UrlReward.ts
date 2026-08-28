@@ -38,7 +38,7 @@ export class UrlReward extends BaseActivity {
             return
         }
 
-        if (this.bot.config.skipNonPointTasks && this.isNonCrediting(live.points, live.promotionSubtype, live.title)) {
+        if (this.bot.config.skipNonPointTasks && live.points === 0) {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'URL-REWARD',
@@ -123,8 +123,6 @@ export class UrlReward extends BaseActivity {
                     `UrlReward 未获得积分 | offerId=${offerId} | acknowledged=${acknowledged} | expected=${expectedPoints} | pointsGained=0 | currentBalance=${newBalance}`
                 )
             }
-
-            await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
@@ -148,13 +146,5 @@ export class UrlReward extends BaseActivity {
         )
         await this.runUrlReward(promotion, false)
         return true
-    }
-
-    private isNonCrediting(points: number, subtype: string | null, title: string): boolean {
-        if (points > 0) return false
-        const haystack = `${subtype ?? ''} ${title ?? ''}`.toLowerCase()
-
-        // Make proper language independant
-        return points === 0 || /free trial|trial|subscription|sign up|sign-up|signup/.test(haystack)
     }
 }

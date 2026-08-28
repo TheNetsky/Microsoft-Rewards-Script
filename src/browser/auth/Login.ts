@@ -17,10 +17,8 @@ import type { Account } from '../../interface/Account'
 type LoginState =
     | 'EMAIL_INPUT'
     | 'PASSWORD_INPUT'
-    | 'USE_PASSWORD'
-    | 'SIGN_IN_ANOTHER_WAY'
-    | 'SIGN_IN_ANOTHER_WAY_EMAIL'
-    | 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS'
+    | 'FOOTER_ACTION'
+    | 'SIGN_IN_METHOD_PICKER'
     | 'PASSKEY_ERROR'
     | 'PASSKEY_VIDEO'
     | 'KMSI_PROMPT'
@@ -43,6 +41,8 @@ type SignInMethodOption = {
     signature: string
 }
 
+type SignInMethodType = 'PASSWORD' | 'AUTHENTICATOR' | 'EMAIL' | 'PASSKEY' | 'TOTP' | 'UNKNOWN'
+
 export class Login {
     emailLogin: EmailLogin
     passwordlessLogin: PasswordlessLogin
@@ -52,18 +52,17 @@ export class Login {
 
     private readonly capturedUnknownUrls = new Set<string>()
     private signInMethodsLogged = false
+    private passwordlessMethodSelected = false
 
     private readonly selectors = {
         primaryButton: 'button[data-testid="primaryButton"]',
         secondaryButton: 'button[data-testid="secondaryButton"]',
-        usePasswordOption: '[data-testid="viewFooter"] [role="button"]',
+        footerAction: '[data-testid="viewFooter"] [role="button"]',
         signInTile: '[data-testid="tile"]',
-        emailIcon: '[data-testid="tile"]:has(svg path[d*="M5.25 4h13.5a3.25"])',
         emailIconOld: 'img[data-testid="accessibleImg"][src*="picker_verify_email"]',
         passwordlessOptionOld: 'img[data-testid="accessibleImg"][src*="picker_remote_ngc"]',
         recoveryEmail: '[data-testid="proof-confirmation"]',
         emailVerificationInput: 'input#proof-confirmation-email-input',
-        passwordIcon: '[data-testid="tile"]:has(svg path[d*="M11.78 10.22a.75.75"])',
         accountLocked: '#serviceAbuseLandingTitle',
         errorAlert: 'div[role="alert"]',
         passwordEntry: '[data-testid="passwordEntry"]',
@@ -94,6 +93,7 @@ export class Login {
         try {
             this.capturedUnknownUrls.clear()
             this.signInMethodsLogged = false
+            this.passwordlessMethodSelected = false
             this.bot.logger.info(this.bot.isMobile, 'LOGIN', '开始登录流程')
 
             await page
@@ -176,7 +176,7 @@ export class Login {
     }
 
     private async detectCurrentState(page: Page): Promise<LoginState> {
-        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+        await page.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {})
 
         const url = new URL(page.url())
         const hostname = url.hostname.toLowerCase()
@@ -198,6 +198,7 @@ export class Login {
             return 'LOGGED_IN'
         }
 
+        // Page/state selectors are checked together; page-specific routing is resolved below by priority
         const stateChecks: Array<[string, LoginState]> = [
             [this.selectors.errorAlert, 'ERROR_ALERT'],
             [this.selectors.passwordEntry, 'PASSWORD_INPUT'],
@@ -207,10 +208,9 @@ export class Login {
             [this.selectors.kmsiVideo, 'KMSI_PROMPT'],
             [this.selectors.passKeyVideo, 'PASSKEY_VIDEO'],
             [this.selectors.passKeyError, 'PASSKEY_ERROR'],
-            [this.selectors.passwordlessOptionOld, 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS'],
-            [this.selectors.passwordIcon, 'SIGN_IN_ANOTHER_WAY'],
-            [this.selectors.emailIcon, 'SIGN_IN_ANOTHER_WAY_EMAIL'],
-            [this.selectors.emailIconOld, 'SIGN_IN_ANOTHER_WAY_EMAIL'],
+            [this.selectors.signInTile, 'SIGN_IN_METHOD_PICKER'],
+            [this.selectors.passwordlessOptionOld, 'SIGN_IN_METHOD_PICKER'],
+            [this.selectors.emailIconOld, 'SIGN_IN_METHOD_PICKER'],
             [this.selectors.passwordlessCheck, 'LOGIN_PASSWORDLESS'],
             [this.selectors.passwordlessNumber, 'LOGIN_PASSWORDLESS'],
             [this.selectors.totpInput, '2FA_TOTP'],
@@ -219,54 +219,59 @@ export class Login {
             [this.selectors.otpInput, 'OTP_CODE_ENTRY']
         ]
 
-        const results = await Promise.all(
-            stateChecks.map(async ([sel, state]) => {
-                const visible = await this.checkSelector(page, sel)
-                return visible ? state : null
-            })
-        )
+        const [results, identityBanner, primaryButton, passwordEntry, footerAction, footerActionText] =
+            await Promise.all([
+                Promise.all(
+                    stateChecks.map(async ([sel, state]) => {
+                        const visible = await this.checkSelector(page, sel)
+                        return visible ? state : null
+                    })
+                ),
+                this.checkSelector(page, this.selectors.identityBanner),
+                this.checkSelector(page, this.selectors.primaryButton),
+                this.checkSelector(page, this.selectors.passwordEntry),
+                this.checkSelector(page, this.selectors.footerAction),
+                page
+                    .locator(this.selectors.footerAction)
+                    .first()
+                    .innerText({ timeout: 200 })
+                    .catch(() => '')
+            ])
 
         const visibleStates = results.filter((s): s is LoginState => s !== null)
         if (visibleStates.length > 0) {
             this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', `可见状态: [${visibleStates.join(', ')}]`)
         }
 
-        const passwordlessOption = await this.findPasswordlessOption(page)
-        if (passwordlessOption && !results.includes('SIGN_IN_ANOTHER_WAY_PASSWORDLESS')) {
-            results.push('SIGN_IN_ANOTHER_WAY_PASSWORDLESS')
-        }
-
-        const [identityBanner, primaryButton, passwordEntry, usePasswordOption] = await Promise.all([
-            this.checkSelector(page, this.selectors.identityBanner),
-            this.checkSelector(page, this.selectors.primaryButton),
-            this.checkSelector(page, this.selectors.passwordEntry),
-            this.checkSelector(page, this.selectors.usePasswordOption)
-        ])
-
+        // Get a sign-in request - distinguish a generic methods footer from a direct email/phone fallback
         if (
             identityBanner &&
             primaryButton &&
-            usePasswordOption &&
             !passwordEntry &&
             !results.includes('2FA_TOTP') &&
             !results.includes('RECOVERY_EMAIL_INPUT') &&
             !results.includes('EMAIL_VERIFICATION_INPUT')
         ) {
-            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', '检测到密码登录回退操作')
-            results.push('USE_PASSWORD')
-        }
+            const normalizedFooterAction = this.normalizeSignInText(footerActionText)
+            // 通过邮箱/掩码手机号正则区分通用方法入口与具体验证回退，不依赖本地化文案
+            const footerTargetsSpecificProof =
+                /[\w.+*-]+@[\w.*-]+\.[a-z]{2,}/i.test(normalizedFooterAction) ||
+                /(?:\+?\d|[*xX])(?:[\d\s().*xX-]{4,})(?:\d|[*xX])/.test(normalizedFooterAction)
 
-        if (
-            identityBanner &&
-            primaryButton &&
-            !usePasswordOption &&
-            !passwordEntry &&
-            !results.includes('2FA_TOTP') &&
-            !results.includes('RECOVERY_EMAIL_INPUT') &&
-            !results.includes('EMAIL_VERIFICATION_INPUT')
-        ) {
-            this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', '检测到无密码"发送代码"操作')
-            results.push('PASSWORDLESS_SEND_CODE')
+            if (footerAction && !footerTargetsSpecificProof && !this.passwordlessMethodSelected) {
+                this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', '有可用的备选登录方式')
+                results.push('FOOTER_ACTION')
+            } else {
+                if (footerAction && footerTargetsSpecificProof) {
+                    this.bot.logger.debug(
+                        this.bot.isMobile,
+                        'DETECT-STATE',
+                        '页脚指向具体验证方式；保持主登录方式'
+                    )
+                }
+                this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', '检测到主无密码登录操作')
+                results.push('PASSWORDLESS_SEND_CODE')
+            }
         }
 
         let foundStates = results.filter((s): s is LoginState => s !== null)
@@ -297,11 +302,9 @@ export class Login {
             'EMAIL_INPUT',
             'EMAIL_VERIFICATION_INPUT',
             'RECOVERY_EMAIL_INPUT',
-            'SIGN_IN_ANOTHER_WAY_PASSWORDLESS',
-            'SIGN_IN_ANOTHER_WAY', // Prefer password option over email code
-            'SIGN_IN_ANOTHER_WAY_EMAIL',
+            'SIGN_IN_METHOD_PICKER',
             'OTP_CODE_ENTRY',
-            'USE_PASSWORD',
+            'FOOTER_ACTION',
             'PASSWORDLESS_SEND_CODE',
             '2FA_TOTP'
         ]
@@ -337,79 +340,96 @@ export class Login {
     private async getSignInMethodOptions(page: Page): Promise<SignInMethodOption[]> {
         const tiles = page.locator(this.selectors.signInTile)
         const count = await tiles.count().catch(() => 0)
-        const options: SignInMethodOption[] = []
+        const options = await Promise.all(
+            Array.from({ length: count }, async (_, index): Promise<SignInMethodOption | null> => {
+                const tile = tiles.nth(index)
+                if (!(await tile.isVisible().catch(() => false))) return null
 
-        for (let index = 0; index < count; index++) {
-            const tile = tiles.nth(index)
-            if (!(await tile.isVisible().catch(() => false))) continue
+                const metadata = await tile
+                    .evaluate(element => {
+                        const elements = [element, ...Array.from(element.querySelectorAll('*'))]
+                        const structuralAttributeNames = new Set([
+                            'id',
+                            'name',
+                            'src',
+                            'data-testid',
+                            'data-value',
+                            'data-bind',
+                            'd'
+                        ])
+                        const accessibleText = elements
+                            .flatMap(node => ['aria-label', 'title', 'alt'].map(name => node.getAttribute(name) ?? ''))
+                            .filter(Boolean)
+                            .join(' ')
+                        const structuralAttributes = elements
+                            .flatMap(node =>
+                                Array.from(node.attributes)
+                                    .filter(attribute => structuralAttributeNames.has(attribute.name))
+                                    .map(attribute => `${attribute.name}=${attribute.value}`)
+                            )
+                            .join(' ')
 
-            const metadata = await tile
-                .evaluate(element => {
-                    const elements = [element, ...Array.from(element.querySelectorAll('*'))]
-                    const structuralAttributeNames = new Set([
-                        'id',
-                        'name',
-                        'src',
-                        'data-testid',
-                        'data-value',
-                        'data-bind'
-                    ])
-                    const accessibleText = elements
-                        .flatMap(node => ['aria-label', 'title', 'alt'].map(name => node.getAttribute(name) ?? ''))
-                        .filter(Boolean)
-                        .join(' ')
-                    const structuralAttributes = elements
-                        .flatMap(node =>
-                            Array.from(node.attributes)
-                                .filter(attribute => structuralAttributeNames.has(attribute.name))
-                                .map(attribute => `${attribute.name}=${attribute.value}`)
-                        )
-                        .join(' ')
+                        return {
+                            text: element.textContent ?? '',
+                            accessibleText,
+                            structuralAttributes
+                        }
+                    })
+                    .catch(() => null)
 
-                    return {
-                        text: element.textContent ?? '',
-                        accessibleText,
-                        structuralAttributes
-                    }
-                })
-                .catch(() => null)
+                if (!metadata) return null
 
-            if (!metadata) continue
+                const label = this.normalizeSignInText(`${metadata.text} ${metadata.accessibleText}`)
+                const signature = this.normalizeSignInText(metadata.structuralAttributes).toLowerCase()
 
-            const label = this.normalizeSignInText(`${metadata.text} ${metadata.accessibleText}`)
-            const signature = this.normalizeSignInText(metadata.structuralAttributes).toLowerCase()
-
-            options.push({
-                index,
-                selector: `${this.selectors.signInTile} >> nth=${index}`,
-                label: label || `Sign-in option ${index + 1}`,
-                signature
+                return {
+                    index,
+                    selector: `${this.selectors.signInTile} >> nth=${index}`,
+                    label: label || `Sign-in option ${index + 1}`,
+                    signature
+                }
             })
-        }
+        )
 
-        return options
+        return options.filter((option): option is SignInMethodOption => option !== null)
     }
 
-    private isPasswordlessOption(option: SignInMethodOption): boolean {
+    private classifySignInMethod(option: SignInMethodOption): SignInMethodType {
         const signature = option.signature
 
-        if (/phone[\s_-]*app[\s_-]*otp|\btotp\b/.test(signature)) return false
+        // Sign in another way - classify method tiles from structural signatures, not translated labels
+        if (signature.includes('m5.25 4h13.5a3.25') || signature.includes('picker_verify_email')) return 'EMAIL'
+        if (signature.includes('m11.78 10.22a.75')) return 'PASSWORD'
+        // Known passkey/security-key SVG signature keeps it out of the Authenticator fallback
+        if (/picker_fido|passkey|fido|m18 16\.66a3\.51/.test(signature)) return 'PASSKEY'
+        if (/phone[\s_-]*app[\s_-]*otp|\btotp\b/.test(signature)) return 'TOTP'
+        // Known Remote NGC/mobile-app SVG signature identifies Microsoft Authenticator language-independently
+        if (
+            /remote[\s_-]*ngc|picker_remote_ngc|phone[\s_-]*app[\s_-]*notification|push[\s_-]*notification|m15\.75 2c16\.99 2 18 3/.test(
+                signature
+            )
+        ) {
+            return 'AUTHENTICATOR'
+        }
 
-        return /remote[\s_-]*ngc|picker_remote_ngc|phone[\s_-]*app[\s_-]*notification|push[\s_-]*notification/.test(
-            signature
-        )
+        return 'UNKNOWN'
     }
 
-    private async findPasswordlessOption(page: Page): Promise<SignInMethodOption | null> {
-        const options = await this.getSignInMethodOptions(page)
-        return options.find(option => this.isPasswordlessOption(option)) ?? null
+    private async clickSignInMethodOption(page: Page, option: SignInMethodOption): Promise<boolean> {
+        const ghostClicked = await this.bot.browser.utils.ghostClick(page, option.selector)
+        if (ghostClicked) return true
+
+        return page
+            .locator(this.selectors.signInTile)
+            .nth(option.index)
+            .click()
+            .then(() => true)
+            .catch(() => false)
     }
 
-    private async logAvailableSignInMethods(page: Page): Promise<void> {
+    private logAvailableSignInMethods(options: SignInMethodOption[]): void {
         if (this.signInMethodsLogged) return
         this.signInMethodsLogged = true
-
-        const options = await this.getSignInMethodOptions(page)
         if (options.length === 0) return
 
         const labels = options.map(option => this.sanitizeSignInLabel(option.label))
@@ -463,7 +483,20 @@ export class Login {
                 return true
             }
 
+            // Enter password - use it only when Microsoft actually presents the password page
             case 'PASSWORD_INPUT': {
+                if (!account.password) {
+                    this.bot.logger.info(
+                        this.bot.isMobile,
+                        'LOGIN',
+                        '检测到密码输入页但未配置密码；返回登录方式选择'
+                    )
+                    if (await this.tryClick(page, this.selectors.backButton, 'Back button')) return true
+
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '未配置密码且无法返回登录方式选择')
+                    return false
+                }
+
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '输入密码')
                 const result = await this.emailLogin.enterPassword(page, account.password)
                 if (result === 'error') return false
@@ -472,17 +505,20 @@ export class Login {
                 return true
             }
 
-            case 'USE_PASSWORD': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '密码登录选项可用，正在选择')
-                const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.usePasswordOption)
+            // 通用备选方式页脚 - 先打开方式选择器再选择凭据
+            case 'FOOTER_ACTION': {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '打开备选登录方式')
+                const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.footerAction)
                 if (!clicked) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择密码登录选项')
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法打开备选登录方式')
                     return false
                 }
-                await this.waitForIdle(page, 'after selecting password sign-in')
+                this.passwordlessMethodSelected = false
+                await this.waitForIdle(page, 'after sign-in footer action')
                 return true
             }
 
+            // Get a sign-in request - keep the primary Authenticator action when footer is a proof fallback
             case 'PASSWORDLESS_SEND_CODE': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '继续使用主要登录方式')
                 const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
@@ -494,132 +530,113 @@ export class Login {
                 return true
             }
 
-            case 'SIGN_IN_ANOTHER_WAY_PASSWORDLESS': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '选择Microsoft Authenticator无密码登录')
+            // 其他登录方式 - 优先密码，其次Authenticator，最后交互式邮箱验证码
+            case 'SIGN_IN_METHOD_PICKER': {
+                const options = await this.getSignInMethodOptions(page)
+                this.logAvailableSignInMethods(options)
 
-                const passwordlessOption = await this.findPasswordlessOption(page)
+                const methods = options.map(option => ({ option, type: this.classifySignInMethod(option) }))
+                const passwordOption = methods.find(method => method.type === 'PASSWORD')?.option
+                const authenticatorOption = methods.find(method => method.type === 'AUTHENTICATOR')?.option
+                const emailOption = methods.find(method => method.type === 'EMAIL')?.option
+
+                if (account.password && passwordOption) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '密码登录可用；正在选择')
+                    this.passwordlessMethodSelected = false
+
+                    if (!(await this.clickSignInMethodOption(page, passwordOption))) {
+                        this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择密码登录方式')
+                        return false
+                    }
+
+                    await this.waitForIdle(page, 'after password method selection')
+                    return true
+                }
+
                 const passwordlessOptionOldFound = await this.checkSelector(page, this.selectors.passwordlessOptionOld)
-                const passwordlessSelector =
-                    passwordlessOption?.selector ??
-                    (passwordlessOptionOldFound ? this.selectors.passwordlessOptionOld : null)
+                if (authenticatorOption || passwordlessOptionOldFound) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '选择Microsoft Authenticator登录')
+                    this.passwordlessMethodSelected = true
 
-                if (!passwordlessSelector) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '未找到Microsoft Authenticator选项')
-                    return false
+                    const clicked = authenticatorOption
+                        ? await this.clickSignInMethodOption(page, authenticatorOption)
+                        : await this.bot.browser.utils.ghostClick(page, this.selectors.passwordlessOptionOld)
+
+                    if (!clicked) {
+                        this.passwordlessMethodSelected = false
+                        this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择Microsoft Authenticator')
+                        return false
+                    }
+
+                    await this.waitForIdle(page, 'after Microsoft Authenticator selection')
+
+                    const passwordlessChallengeVisible =
+                        (await this.checkSelector(page, this.selectors.passwordlessCheck)) ||
+                        (await this.checkSelector(page, this.selectors.passwordlessNumber))
+
+                    if (
+                        !passwordlessChallengeVisible &&
+                        (await this.checkSelector(page, this.selectors.primaryButton))
+                    ) {
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN', '正在发送Microsoft Authenticator请求')
+                        const confirmed = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
+                        if (!confirmed) {
+                            this.passwordlessMethodSelected = false
+                            this.bot.logger.warn(
+                                this.bot.isMobile,
+                                'LOGIN',
+                                '无法发送Microsoft Authenticator请求'
+                            )
+                            return false
+                        }
+                        await this.waitForIdle(page, 'after Microsoft Authenticator request')
+                    }
+
+                    return true
                 }
 
-                if (passwordlessOption) {
-                    this.bot.logger.info(
-                        this.bot.isMobile,
-                        'LOGIN',
-                        `使用Authenticator登录方式: ${this.sanitizeSignInLabel(passwordlessOption.label)}`
-                    )
-                }
-
-                let clicked = await this.bot.browser.utils.ghostClick(page, passwordlessSelector)
-                if (!clicked && passwordlessOption) {
-                    clicked = await page
-                        .locator(this.selectors.signInTile)
-                        .nth(passwordlessOption.index)
-                        .click()
-                        .then(() => true)
-                        .catch(() => false)
-                }
-                if (!clicked) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择Microsoft Authenticator')
-                    return false
-                }
-
-                await this.waitForIdle(page, 'after Microsoft Authenticator selection')
-
-                const passwordlessChallengeVisible =
-                    (await this.checkSelector(page, this.selectors.passwordlessCheck)) ||
-                    (await this.checkSelector(page, this.selectors.passwordlessNumber))
-
-                if (!passwordlessChallengeVisible && (await this.checkSelector(page, this.selectors.primaryButton))) {
-                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '确认Microsoft Authenticator通知')
-                    const confirmed = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
-                    if (!confirmed) {
-                        this.bot.logger.warn(
+                const emailIconOldFound = await this.checkSelector(page, this.selectors.emailIconOld)
+                if (emailOption || emailIconOldFound) {
+                    if (!canPromptForInput()) {
+                        this.bot.logger.error(
                             this.bot.isMobile,
                             'LOGIN',
-                            '无法确认Microsoft Authenticator通知'
+                            '没有可用的非交互登录方式；邮箱验证码回退需要交互式终端输入'
+
                         )
                         return false
                     }
-                    await this.waitForIdle(page, 'after Microsoft Authenticator notification confirmation')
-                }
 
-                return true
-            }
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '选择邮箱验证码登录')
+                    this.passwordlessMethodSelected = false
 
-            case 'SIGN_IN_ANOTHER_WAY_EMAIL': {
-                // The picker can finish rendering after state detection. Re-check before falling back to email.
-                const passwordlessOption = await this.findPasswordlessOption(page)
-                if (passwordlessOption) {
-                    this.bot.logger.info(
-                        this.bot.isMobile,
-                        'LOGIN',
-                        'Microsoft Authenticator已可用；优先使用无密码登录而非邮箱代码'
-                    )
-                    let clicked = await this.bot.browser.utils.ghostClick(page, passwordlessOption.selector)
+                    const clicked = emailOption
+                        ? await this.clickSignInMethodOption(page, emailOption)
+                        : await this.bot.browser.utils.ghostClick(page, this.selectors.emailIconOld)
+
                     if (!clicked) {
-                        clicked = await page
-                            .locator(this.selectors.signInTile)
-                            .nth(passwordlessOption.index)
-                            .click()
-                            .then(() => true)
-                            .catch(() => false)
+                        this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择邮箱验证码登录方式')
+                        return false
                     }
-                    return clicked
+
+                    await this.waitForIdle(page, 'after email method selection')
+                    await this.codeLogin.handle(page)
+                    return true
                 }
 
-                await this.logAvailableSignInMethods(page)
+                const ignoredMethods = methods
+                    .map(method => method.type)
+                    .filter(type => type === 'PASSKEY' || type === 'TOTP' || type === 'UNKNOWN')
 
-                if (!canPromptForInput()) {
-                    this.bot.logger.error(
-                        this.bot.isMobile,
-                        'LOGIN',
-                        '未提供Microsoft Authenticator无密码登录；邮箱代码回退需要交互式stdin'
-                    )
-                    return false
-                }
-
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '选择"发送代码到邮箱"')
-
-                const [emailIconFound, emailIconOldFound] = await Promise.all([
-                    this.checkSelector(page, this.selectors.emailIcon),
-                    this.checkSelector(page, this.selectors.emailIconOld)
-                ])
-
-                const emailSelector = emailIconFound
-                    ? this.selectors.emailIcon
-                    : emailIconOldFound
-                      ? this.selectors.emailIconOld
-                      : null
-
-                if (!emailSelector) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '未找到邮箱图标')
-                    return false
-                }
-
-                this.bot.logger.info(
+                this.bot.logger.error(
                     this.bot.isMobile,
                     'LOGIN',
-                    `使用${emailSelector === this.selectors.emailIcon ? 'new' : 'old'}版邮箱图标选择器`
+                    `没有可用的受支持登录方式${ignoredMethods.length ? `；已忽略=${ignoredMethods.join(',')}` : ''}`
                 )
-                const clicked = await this.bot.browser.utils.ghostClick(page, emailSelector)
-                if (!clicked) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择邮箱代码登录方式')
-                    return false
-                }
-                await this.waitForIdle(page, 'after email icon click')
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '启动代码登录处理器')
-                await this.codeLogin.handle(page)
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '代码登录处理器完成')
-                return true
+                return false
             }
 
+            // Recovery email confirmation
             case 'RECOVERY_EMAIL_INPUT': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '检测到恢复邮箱输入')
                 await this.waitForIdle(page, 'on recovery page')
@@ -629,17 +646,68 @@ export class Login {
                 return true
             }
 
+            // Verify your email - identical footer actions are validated by their resulting state, not position
             case 'EMAIL_VERIFICATION_INPUT': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '检测到邮箱验证输入')
-                await this.waitForIdle(page, 'on email verification page')
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '启动邮箱代码验证处理器')
-                await this.codeLogin.handle(page)
+                if (!account.password) {
+                    if (!canPromptForInput()) {
+                        this.bot.logger.error(
+                            this.bot.isMobile,
+                            'LOGIN',
+                            '邮箱验证需要已配置的密码或交互式终端输入'
+                        )
+                        return false
+                    }
+
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '检测到邮箱验证输入')
+                    await this.codeLogin.handle(page)
+                    return true
+                }
+
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN',
-                    '邮箱代码验证处理器完成'
+                    '检测到邮箱验证输入；正在检查备选方式'
                 )
-                return true
+                await this.waitForIdle(page, 'on email verification page')
+
+                const footerActions = page.locator(this.selectors.footerAction)
+                const footerCount = await footerActions.count().catch(() => 0)
+
+                for (let index = 0; index < footerCount; index++) {
+                    const selector = `${this.selectors.footerAction} >> nth=${index}`
+                    if (
+                        !(await footerActions
+                            .nth(index)
+                            .isVisible()
+                            .catch(() => false))
+                    )
+                        continue
+                    if (!(await this.bot.browser.utils.ghostClick(page, selector))) continue
+
+                    await this.waitForIdle(page, 'after email verification alternative')
+
+                    if (await this.checkSelector(page, this.selectors.passwordEntry)) {
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN', '已选择密码登录选项')
+                        return true
+                    }
+
+                    if (await this.checkSelector(page, this.selectors.signInTile)) {
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN', '已打开登录方式选择器')
+                        return true
+                    }
+
+                    if (!(await this.tryClick(page, this.selectors.backButton, 'Back button'))) break
+                    if (!(await this.checkSelector(page, this.selectors.emailVerificationInput))) break
+                }
+
+                if (canPromptForInput()) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '回退到交互式邮箱验证')
+                    await this.codeLogin.handle(page)
+                    return true
+                }
+
+                this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '未找到可用的邮箱验证备选方式')
+                return false
             }
 
             case 'CHROMEWEBDATA_ERROR': {
@@ -676,18 +744,7 @@ export class Login {
                 return true
             }
 
-            case 'SIGN_IN_ANOTHER_WAY': {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '选择"使用我的密码"')
-                const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.passwordIcon)
-                if (!clicked) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '无法选择密码登录方式')
-                    return false
-                }
-                await this.waitForIdle(page, 'after password icon click')
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '密码选项已选择')
-                return true
-            }
-
+            // 保持登录 / KMSI 确认
             case 'KMSI_PROMPT': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '接受KMSI提示')
                 const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.primaryButton)
@@ -700,6 +757,7 @@ export class Login {
                 return true
             }
 
+            // Passkey prompt/error - skip back to a supported sign-in method
             case 'PASSKEY_VIDEO':
             case 'PASSKEY_ERROR': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '跳过Passkey提示')
@@ -713,29 +771,72 @@ export class Login {
                 return true
             }
 
+            // Microsoft Authenticator approval/number challenge
             case 'LOGIN_PASSWORDLESS': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '处理无密码认证')
                 await this.passwordlessLogin.handle(page)
+                this.passwordlessMethodSelected = false
                 await this.waitForIdle(page, 'after passwordless auth')
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', '无密码认证完成')
                 return true
             }
 
+            // Enter your code - prefer its alternate-method footer before Back to avoid an email-code loop
             case 'OTP_CODE_ENTRY': {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'LOGIN',
-                    '检测到OTP代码输入页面；返回登录方式选择'
+                    '检测到OTP代码输入页面；尝试可用的备选登录方式'
                 )
 
+                if (await this.checkSelector(page, this.selectors.footerAction)) {
+                    const clicked = await this.bot.browser.utils.ghostClick(page, this.selectors.footerAction)
+                    if (clicked) {
+                        await this.waitForIdle(page, 'after OTP alternative sign-in action')
+
+                        const stillOnOtp = await this.checkSelector(page, this.selectors.otpCodeEntry)
+                        if (!stillOnOtp) {
+                            const methodPickerVisible =
+                                (await this.checkSelector(page, this.selectors.signInTile)) ||
+                                (await this.checkSelector(page, this.selectors.passwordlessOptionOld)) ||
+                                (await this.checkSelector(page, this.selectors.emailIconOld))
+                            const passwordlessLandingVisible =
+                                (await this.checkSelector(page, this.selectors.passwordlessCheck)) ||
+                                (await this.checkSelector(page, this.selectors.passwordlessNumber)) ||
+                                ((await this.checkSelector(page, this.selectors.identityBanner)) &&
+                                    (await this.checkSelector(page, this.selectors.primaryButton)))
+
+                            this.passwordlessMethodSelected = passwordlessLandingVisible
+                            this.bot.logger.info(
+                                this.bot.isMobile,
+                                'LOGIN',
+                                methodPickerVisible
+                                    ? '已返回登录方式选择'
+                                    : passwordlessLandingVisible
+                                      ? '已切换到Microsoft Authenticator登录'
+                                      : '已离开邮箱验证码登录'
+                            )
+                            return true
+                        }
+
+                        this.bot.logger.debug(
+                            this.bot.isMobile,
+                            'LOGIN',
+                            'OTP页脚操作未离开代码输入页；回退到返回按钮'
+                        )
+                    }
+                }
+
+                this.passwordlessMethodSelected = false
                 if (!(await this.tryClick(page, this.selectors.backButton, 'Back button'))) {
-                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'OTP页面上未找到返回按钮')
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN', 'OTP页面上没有可用的备选操作')
                     return false
                 }
 
                 return true
             }
 
+            // Unknown page - keep diagnostics useful instead of guessing a sign-in action
             case 'UNKNOWN': {
                 const rawUrl = page.url()
                 const url = new URL(rawUrl)
@@ -828,7 +929,6 @@ export class Login {
                         await this.bot.browser.utils.ghostClick(page, this.selectors.secondaryButton)
                     }
 
-                    // Handle stats in case of password etc
                     await this.handleState(state, page, account)
                 }
 
@@ -900,12 +1000,15 @@ export class Login {
                 `上下文就绪 | actions=${actionsCount} | reportable=${reportableCount} | available=${availablePoints}`
             )
         } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-REWARD-SESSION',
-                `获取奖励上下文失败: ${error instanceof Error ? error.message : String(error)}`
+                `获取奖励上下文失败: ${message}`
             )
-            throw error instanceof Error ? error : new Error(String(error))
+
+            throw new Error(`获取奖励上下文失败: ${message}`)
         }
     }
 

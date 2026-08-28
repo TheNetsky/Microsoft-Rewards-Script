@@ -228,10 +228,6 @@ export function deepMerge(base, patch) {
     return out
 }
 
-// Compares the current config.json against config.example.json.
-// Returns dotted key-paths present in the example but missing from the
-// user's file - the same check entrypoint.sh runs on container start, now
-// available on demand from the API/dashboard (e.g. GET /config/diff).
 export async function diffConfig(projectRoot, { validatorModule } = {}) {
     const mod = await loadConfigSync(projectRoot, validatorModule)
     if (!mod) throw new Error('ConfigSync module not found - run `npm run build`.')
@@ -240,10 +236,6 @@ export async function diffConfig(projectRoot, { validatorModule } = {}) {
     return { addedKeys: mod.diffKeyPaths(config, example) }
 }
 
-// Fills in any keys missing from config.json using config.example.json's
-// values, without touching existing user values, and writes the result back
-// (with a .bak backup via writeConfigAtomic). Intended for a gated endpoint
-// like POST /config/sync, behind API_ALLOW_CONFIG_WRITE.
 export async function syncMissingDefaults(projectRoot, { validatorModule } = {}) {
     const mod = await loadConfigSync(projectRoot, validatorModule)
     if (!mod) throw new Error('ConfigSync module not found - run `npm run build`.')

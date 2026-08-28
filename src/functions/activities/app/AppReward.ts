@@ -100,10 +100,6 @@ export class AppReward extends BaseActivity {
                 )
             }
 
-            this.bot.logger.debug(this.bot.isMobile, 'APP-REWARD', `AppReward 后等待 | offerId=${offerId}`)
-
-            await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 10000))
-
             this.bot.logger.info(
                 this.bot.isMobile,
                 'APP-REWARD',

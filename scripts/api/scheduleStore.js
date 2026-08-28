@@ -2,9 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 
-// Kept in sync with rewards-dashboard/lib/cron.js's isValidCron - same
-// 5-field grammar. Duplicated here because the bot and dashboard are
-// separate projects that don't share a package.
 const CRON_FIELD_RANGES = [
     { min: 0, max: 59 }, // minute
     { min: 0, max: 23 }, // hour
@@ -51,20 +48,10 @@ export function isValidCron(expr) {
     return parts.every((part, i) => validateField(part, CRON_FIELD_RANGES[i]))
 }
 
-// The override file lives inside the ./config bind mount already configured
-// by compose.yaml, so no new volume is required to persist it
-// across container restarts.
 export function scheduleFilePath(projectRoot) {
     return process.env.SCHEDULE_FILE || path.join(projectRoot, 'config', 'schedule.json')
 }
 
-/**
- * Returns the effective schedule: the persisted override if one has been
- * written via PUT /schedule, otherwise the CRON_SCHEDULE env var as set at
- * container start (so a bot with no frontend attached still reports something
- * sensible, and reports it as `source: 'env'` so callers know it isn't live-editable
- * without first calling PUT).
- */
 export function readSchedule(projectRoot) {
     const file = scheduleFilePath(projectRoot)
     if (fs.existsSync(file)) {
@@ -187,13 +174,6 @@ export function writeSchedule(projectRoot, patch) {
 const CRON_FILE = '/etc/cron.d/microsoft-rewards-cron'
 const CRON_TEMPLATE = '/etc/cron.d/microsoft-rewards-cron.template'
 
-/**
- * Renders the crontab template with the given schedule and loads it live via
- * `crontab <file>` - the same mechanism entrypoint.sh uses at startup, which
- * is why cron picks it up without a container restart. Note the template has
- * no `user` field, so it's only valid when loaded via `crontab`, not via
- * cron.d's own directory auto-scan.
- */
 export function applyCrontab({ enabled, cron }) {
     if (!enabled || !cron) {
         try {

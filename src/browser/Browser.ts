@@ -26,6 +26,8 @@ interface BrowserCreationResult {
 
 class Browser {
     private readonly bot: MicrosoftRewardsBot
+    private readonly fingerprintGenerator = new FingerprintGenerator()
+    private readonly userAgentManager: UserAgentManager
     private static readonly BROWSER_ARGS = [
         '--mute-audio',
         '--no-first-run',
@@ -43,6 +45,7 @@ class Browser {
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
+        this.userAgentManager = new UserAgentManager(bot)
     }
 
     async createBrowser(account: Account): Promise<BrowserCreationResult> {
@@ -157,9 +160,6 @@ class Browser {
             })
             const context = injected as unknown as BrowserContext
 
-            // Only alter WebRTC when a proxy is in use. Removing these APIs on direct connections
-            // adds an unnecessary fingerprint difference; behind a proxy it prevents local/direct
-            // ICE candidates from exposing an address outside the configured proxy path.
             if (hasProxy) {
                 await context.addInitScript(() => {
                     // @ts-expect-error Chromium-specific runtime globals
@@ -182,7 +182,7 @@ class Browser {
 
             context.setDefaultTimeout(this.bot.utils.stringToNumber(this.bot.config?.globalTimeout ?? 30000))
 
-            if (shouldUseFingerprint) {
+            if (shouldUseFingerprint && !reuseFingerprint) {
                 saveFingerprint(this.bot.config.sessionPath, account.email, this.bot.isMobile, fingerprint)
             }
 
@@ -204,15 +204,14 @@ class Browser {
         const hostOs: 'windows' | 'macos' | 'linux' =
             process.platform === 'darwin' ? 'macos' : process.platform === 'linux' ? 'linux' : 'windows'
 
-        const fingerPrintData = new FingerprintGenerator().getFingerprint({
+        const fingerPrintData = this.fingerprintGenerator.getFingerprint({
             devices: isMobile ? ['mobile'] : ['desktop'],
             operatingSystems: isMobile ? ['android'] : [hostOs],
             browsers: [{ name: 'edge' }],
             locales: this.bot.accountLocale.acceptedLocales
         })
 
-        const userAgentManager = new UserAgentManager(this.bot)
-        return await userAgentManager.updateFingerprintUserAgent(fingerPrintData, isMobile)
+        return this.userAgentManager.updateFingerprintUserAgent(fingerPrintData, isMobile)
     }
 }
 

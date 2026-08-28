@@ -74,9 +74,8 @@ export class ApiSearchOnBing extends BaseActivity {
         )
 
         let lastBalance = this.oldBalance
-        let i = 0
 
-        for (const query of queries) {
+        for (const [index, query] of queries.entries()) {
             try {
                 this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `处理查询 | 查询="${query}"`)
 
@@ -129,7 +128,7 @@ export class ApiSearchOnBing extends BaseActivity {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-SEARCH',
-                    `${++i}/${queries.length} | 活动未完成 | 活动进度=${offerProgress} | 查询="${query}"`
+                    `${index + 1}/${queries.length} | 活动未完成 | 活动进度=${offerProgress} | 查询="${query}"`
                 )
             } catch (error) {
                 this.bot.logger.error(
@@ -138,7 +137,9 @@ export class ApiSearchOnBing extends BaseActivity {
                     `搜索循环出错 | 查询="${query}" | 错误=${error instanceof Error ? error.message : String(error)}`
                 )
             } finally {
-                await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                if (!this.success && index < queries.length - 1) {
+                    await this.bot.utils.wait(this.bot.utils.randomDelay(5000, 15000))
+                }
             }
         }
 

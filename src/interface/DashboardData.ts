@@ -450,9 +450,13 @@ export interface RedeemPageFlights {
     destination: string
 }
 
+export interface UserWarning {
+    name: string
+}
+
 export interface Dashboard {
     userStatus: UserStatus
-    userWarnings: unknown[]
+    userWarnings: UserWarning[]
     promotionalItem: PromotionalItem
     promotionalItems: PurplePromotionalItem[]
     dailySetPromotions: { [key: string]: PromotionalItem[] }

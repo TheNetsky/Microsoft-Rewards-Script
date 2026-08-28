@@ -1,17 +1,14 @@
 import type { MicrosoftRewardsBot } from '../index'
 
-// Rewards
 import { DailySet } from './activities/rewards/DailySet'
 import { MorePromotions } from './activities/rewards/MorePromotions'
 import { PunchCards } from './activities/rewards/PunchCards'
 
-// App
 import { DailyCheckIn } from './activities/app/DailyCheckIn'
 import { ReadToEarn } from './activities/app/ReadToEarn'
 import { AppReward } from './activities/app/AppReward'
 import { AppPromotions } from './activities/app/AppPromotions'
 
-// API
 import { UrlReward } from './activities/api/UrlReward'
 import { ClaimBonusPoints } from './activities/api/ClaimBonusPoints'
 import { EnsureStreakProtection } from './activities/api/EnsureStreakProtection'
@@ -19,11 +16,9 @@ import { ClaimReward } from './activities/api/ClaimReward'
 import { ActivateSearchPerk } from './activities/api/ActivateSearchPerk'
 import { VisualSearch } from './activities/visualSearch/VisualSearch'
 
-// Browser
 import { Search as BrowserSearch } from './activities/search/BrowserSearch'
 import { SearchOnBing as BrowserSearchOnBing } from './activities/search/BrowserSearchOnBing'
 
-// Experimental
 import { ApiSearch } from './activities/experimental/ApiSearch'
 import { ApiSearchOnBing } from './activities/experimental/ApiSearchOnBing'
 import { EdgeBrowsing } from './activities/experimental/EdgeBrowsing'
@@ -40,7 +35,6 @@ export default class Activities {
         this.bot = bot
     }
 
-    // Search activities
     doSearch = async (page: Page, isMobile: boolean): Promise<number> => {
         if (this.bot.config.experimental.apiSearch) {
             return await new ApiSearch(this.bot).doSearch(isMobile)
@@ -63,7 +57,6 @@ export default class Activities {
         await new BrowserSearchOnBing(this.bot).doSearchOnBing(promotion, page)
     }
 
-    // Rewards
     doDailySet = async (data: DashboardData): Promise<void> => {
         await new DailySet(this.bot).run(data)
     }
@@ -80,7 +73,6 @@ export default class Activities {
         await new PunchCards(this.bot).runDesktop()
     }
 
-    // API
     doUrlReward = async (promotion: BasePromotion): Promise<void> => {
         const urlReward = new UrlReward(this.bot)
         await urlReward.doUrlReward(promotion)
@@ -111,7 +103,6 @@ export default class Activities {
         return await visualSearch.doVisualSearch(data)
     }
 
-    // App
     doAppReward = async (promotion: Promotion): Promise<void> => {
         const urlReward = new AppReward(this.bot)
         await urlReward.doAppReward(promotion)
@@ -131,9 +122,8 @@ export default class Activities {
         await new AppPromotions(this.bot).run(data)
     }
 
-    // Experimental
-    doEdgeBrowsing = async (signal?: AbortSignal): Promise<void> => {
+    doEdgeBrowsing = async (data: DashboardData, signal?: AbortSignal): Promise<void> => {
         const edgeBrowsing = new EdgeBrowsing(this.bot)
-        await edgeBrowsing.run(signal)
+        await edgeBrowsing.run(data, signal)
     }
 }

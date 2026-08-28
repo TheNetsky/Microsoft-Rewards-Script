@@ -11,7 +11,7 @@ services:
             - ./config:/usr/src/microsoft-rewards-script/config
             - ./sessions:/usr/src/microsoft-rewards-script/sessions
         env_file:
-            # Load account credentials from the .env file (ACCOUNT_1_EMAIL, ACCOUNT_1_PASSWORD, etc.)
+            # Load account credentials from the .env file (ACCOUNT_1_EMAIL, optional ACCOUNT_1_PASSWORD, etc.)
             - path: .env
         environment:
             # ── Scheduler ──────────────────────────────────────
@@ -42,6 +42,8 @@ services:
             #CONFIG_CLUSTERS: '1'
             #CONFIG_ACCOUNT_DELAY_MIN: '1min'
             #CONFIG_ACCOUNT_DELAY_MAX: '3min'
+            # Continue even if Microsoft reports Fraud_UserWarning_BotScore_UX (not recommended).
+            #CONFIG_CONTINTUE_ON_BOT_WARNING: 'false'
             # Block browser image/video/audio requests to reduce transferred media bytes.
             #CONFIG_EXPERIMENTAL_BLOCK_MEDIA: 'false'
             # Report the Edge browsing streak in the background (experimental).

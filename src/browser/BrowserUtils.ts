@@ -62,7 +62,6 @@ export default class BrowserUtils {
                 await this.bot.utils.wait(300)
             }
 
-            // Overlay
             const overlay = await page.$('#bnp_overlay_wrapper')
             if (overlay) {
                 const rejected = await this.ghostClick(page, '#bnp_btn_reject, button[aria-label*="Reject" i]')
@@ -148,13 +147,11 @@ export default class BrowserUtils {
                 `发现 ${tabs.length} 个打开的标签页 (最少: ${config.minTabs}, 最多: ${config.maxTabs})`
             )
 
-            // Check if valid
             if (config.minTabs < 1 || config.maxTabs < config.minTabs) {
                 this.bot.logger.warn(this.bot.isMobile, 'SEARCH-CLOSE-TABS', '配置无效，使用默认值')
                 config = { minTabs: 1, maxTabs: 1 }
             }
 
-            // Close if more than max config
             if (tabs.length > config.maxTabs) {
                 const tabsToClose = tabs.slice(config.maxTabs)
 
@@ -166,8 +163,6 @@ export default class BrowserUtils {
                     'SEARCH-CLOSE-TABS',
                     `已关闭 ${closedCount}/${tabsToClose.length} 个多余标签页，以达到最大值 ${config.maxTabs}`
                 )
-
-                // Open more tabs
             } else if (tabs.length < config.minTabs) {
                 const tabsNeeded = config.minTabs - tabs.length
                 this.bot.logger.debug(
@@ -214,10 +209,8 @@ export default class BrowserUtils {
                 `尝试点击选择器: ${selector}，选项: ${JSON.stringify(options)}`
             )
 
-            // Wait for selector to exist before clicking
             await page.waitForSelector(selector, { timeout: 1000 }).catch(() => {})
 
-            // ghost-cursor expects its own Playwright Page type from a different
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cursor = createCursor(page as any)
             await cursor.click(selector, options)

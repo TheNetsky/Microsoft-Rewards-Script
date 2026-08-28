@@ -4,6 +4,8 @@ import type { AccountProxy } from '../interface/Account'
 import { parseBrowserProxyUrl } from './Proxy'
 
 const DEFAULT_TIMEOUT = 20000
+const MAX_RETRIES = 3
+const RETRY_BASE_DELAY = 1000
 
 export interface HttpRequestConfig {
     url?: string
@@ -114,8 +116,8 @@ async function toResponse<T>(res: ImpitResponse, config: HttpRequestConfig): Pro
     }
 }
 
-function backoff(attempt: number): Promise<void> {
-    const ms = Math.min(2 ** attempt * 100, 8000) + Math.floor(Math.random() * 100)
+function backoff(retry: number): Promise<void> {
+    const ms = RETRY_BASE_DELAY * 2 ** (retry - 1) + Math.floor(Math.random() * 250)
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
@@ -123,43 +125,42 @@ async function send<T>(
     instance: Impit,
     url: string,
     init: ImpitRequestInit,
-    config: HttpRequestConfig,
-    retries: number
+    config: HttpRequestConfig
 ): Promise<HttpResponse<T>> {
-    let attempt = 0
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        let responseStatus: number | undefined
 
-    for (;;) {
-        let res: ImpitResponse
         try {
-            res = await instance.fetch(url, init)
-        } catch (error) {
-            const status = (error as { status?: number })?.status
-            const retriable = status === undefined || status === 429 || status >= 500
-            if (retriable && attempt < retries) {
-                await backoff(attempt++)
-                continue
-            }
-            throw error
-        }
+            const res = await instance.fetch(url, init)
+            responseStatus = res.status
+            const out = await toResponse<T>(res, config)
 
-        if ((res.status === 429 || (res.status >= 500 && res.status <= 599)) && attempt < retries) {
-            await backoff(attempt++)
-            continue
-        }
+            if (out.status >= 200 && out.status < 300) return out
 
-        const out = await toResponse<T>(res, config)
-        if (res.status < 200 || res.status >= 300) {
-            const error = new Error(`Request failed with status code ${res.status}`) as Error & {
+            const error = new Error(`Request failed with status code ${out.status}`) as Error & {
                 response?: HttpResponse<T>
                 status?: number
             }
             error.response = out
-            error.status = res.status
+            error.status = out.status
             throw error
-        }
+        } catch (error) {
+            const status = (error as { status?: number })?.status ?? responseStatus
+            const permanentClientError =
+                typeof status === 'number' &&
+                status >= 400 &&
+                status < 500 &&
+                status !== 408 &&
+                status !== 425 &&
+                status !== 429
 
-        return out
+            if (permanentClientError || attempt >= MAX_RETRIES) throw error
+
+            await backoff(attempt + 1)
+        }
     }
+
+    throw new Error('Request failed after maximum retries')
 }
 
 class HttpClient {
@@ -190,10 +191,10 @@ class HttpClient {
 
         if (!useProxy) {
             if (!this.direct) this.direct = new Impit({ browser: 'chrome', timeout: DEFAULT_TIMEOUT })
-            return send<T>(this.direct, url, init, requestConfig, 3)
+            return send<T>(this.direct, url, init, requestConfig)
         }
 
-        return send<T>(this.instance, url, init, requestConfig, 5)
+        return send<T>(this.instance, url, init, requestConfig)
     }
 
     private buildProxyUrl(proxyConfig: AccountProxy): string {
@@ -218,7 +219,7 @@ let sharedInstance: Impit | undefined
 export async function httpRequest<T = unknown>(config: HttpRequestConfig): Promise<HttpResponse<T>> {
     if (!sharedInstance) sharedInstance = new Impit({ browser: 'chrome', timeout: DEFAULT_TIMEOUT })
     const { url, init } = toInit(config)
-    return send<T>(sharedInstance, url, init, config, 0)
+    return send<T>(sharedInstance, url, init, config)
 }
 
 export default HttpClient

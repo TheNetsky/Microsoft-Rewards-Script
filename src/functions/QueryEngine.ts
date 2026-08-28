@@ -192,13 +192,25 @@ export class QueryCore {
         }
     }
 
-    async getConfiguredSearchTopics(): Promise<string[]> {
-        return await this.queryManager({
-            shuffle: true,
-            langCode: (this.bot.userData.langCode ?? 'en').toLowerCase(),
-            geoLocale: (this.bot.userData.geoLocale ?? 'US').toUpperCase(),
-            sourceOrder: this.bot.config.searchSettings.queryEngines
-        })
+    async getConfiguredSearchTopics(forceRefresh = false): Promise<string[]> {
+        const langCode = (this.bot.userData.langCode ?? 'en').toLowerCase()
+        const geoLocale = (this.bot.userData.geoLocale ?? 'US').toUpperCase()
+        const sourceOrder = this.bot.config.searchSettings.queryEngines
+        const cacheKey = JSON.stringify([langCode, geoLocale, sourceOrder])
+
+        let cache = this.bot.searchTopicsCache
+        if (forceRefresh || cache?.key !== cacheKey) {
+            cache = {
+                key: cacheKey,
+                topics: this.queryManager({ shuffle: false, langCode, geoLocale, sourceOrder })
+            }
+            this.bot.searchTopicsCache = cache
+        }
+
+        const topics = [...(await cache.topics)]
+        if (!topics.length && this.bot.searchTopicsCache === cache) this.bot.searchTopicsCache = null
+        this.bot.utils.shuffleArray(topics)
+        return topics
     }
 
     async getSearchCluster(mainTopic: string): Promise<string[]> {

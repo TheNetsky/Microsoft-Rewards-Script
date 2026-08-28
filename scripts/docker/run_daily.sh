@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Preserve any value injected by the caller (e.g. SKIP_RANDOM_SLEEP=true from
-# entrypoint's RUN_ON_START prefix) before the env file can override it.
 _SKIP_SLEEP_OVERRIDE="${SKIP_RANDOM_SLEEP:-}"
 
 # Restore container environment (ACCOUNT_*, CONFIG_*, etc.) lost when cron spawns this job
@@ -36,9 +34,6 @@ is_run_daily_process() {
     tr '\0' ' ' < "/proc/$pid/cmdline" | grep -q 'scripts/docker/run_daily\.sh'
 }
 
-# -------------------------------
-#  Function: Check and fix lockfile integrity
-# -------------------------------
 self_heal_lockfile() {
     # If lockfile exists but is empty → remove it
     if [ -f "$LOCKFILE" ]; then
@@ -65,8 +60,6 @@ self_heal_lockfile() {
             return
         fi
 
-        # PID reuse must never make this script treat an unrelated process as a
-        # rewards run, much less terminate it as "stuck".
         if ! is_run_daily_process "$lock_content"; then
             echo "[$(date)] [run_daily.sh] Lockfile PID $lock_content is not run_daily.sh → removing stale lock."
             rm -f "$LOCKFILE"
@@ -74,9 +67,6 @@ self_heal_lockfile() {
     fi
 }
 
-# -------------------------------
-#  Function: Acquire lock
-# -------------------------------
 acquire_lock() {
     local max_attempts=5
     local attempt=0
@@ -91,6 +81,7 @@ acquire_lock() {
     timeout_seconds=$((timeout_hours * 3600))
 
     while [ $attempt -lt $max_attempts ]; do
+        attempt=$((attempt + 1))
         # Try to create lock with current PID
         if (set -C; echo "$$" > "$LOCKFILE") 2>/dev/null; then
             echo "[$(date)] [run_daily.sh] Lock acquired successfully (PID: $$)"
@@ -137,18 +128,14 @@ acquire_lock() {
             fi
         fi
 
-        echo "[$(date)] [run_daily.sh] Lock held by PID $existing_pid, attempt $((attempt + 1))/$max_attempts"
+        echo "[$(date)] [run_daily.sh] Lock held by PID $existing_pid, attempt $attempt/$max_attempts"
         sleep 2
-        attempt=$((attempt + 1))
     done
 
     echo "[$(date)] [run_daily.sh] Could not acquire lock after $max_attempts attempts; exiting."
     return 1
 }
 
-# -------------------------------
-#  Function: Release lock
-# -------------------------------
 release_lock() {
     if [ -f "$LOCKFILE" ]; then
         local lock_pid
@@ -165,16 +152,11 @@ trap release_lock EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-# -------------------------------
-#  MAIN EXECUTION FLOW
-# -------------------------------
 echo "[$(date)] [run_daily.sh] Current process PID: $$"
 
 # Self-heal any broken or empty locks before proceeding
 self_heal_lockfile
 
-# Attempt to acquire the lock safely. A held lock is a clean skip; invalid
-# scheduler configuration is an error.
 if acquire_lock; then
     :
 else
@@ -215,8 +197,6 @@ fi
 echo "[$(date)] [run_daily.sh] Starting script..."
 run_status=0
 if [ "${API_MODE:-false}" = "true" ]; then
-    # API-integrated mode: delegate to the API server so the dashboard has full
-    # visibility and control.  trigger.js calls POST /start and waits for idle.
     if node scripts/api/trigger.js; then
         echo "[$(date)] [run_daily.sh] Script completed successfully (via API)."
     else

@@ -56,9 +56,6 @@ const STOP_TIMEOUT_MS = integerSetting('API_STOP_TIMEOUT_MS', envStr('API_STOP_T
 const ALLOW_ENV_OVERRIDES = envBool('API_ALLOW_ENV_OVERRIDES', false)
 const REVEAL_ENABLED = envBool('API_ALLOW_CONFIG_REVEAL', false)
 const ALLOW_CONFIG_WRITE = envBool('API_ALLOW_CONFIG_WRITE', false)
-// Writing to the crontab is a meaningfully different trust level than
-// starting/stopping a run, so it gets its own opt-in flag rather than
-// riding along with API_MODE=true for free.
 const ALLOW_SCHEDULE_WRITE = envBool('API_ALLOW_SCHEDULE_WRITE', false)
 
 const RUN_HISTORY = integerSetting('API_RUN_HISTORY', envStr('API_RUN_HISTORY'), 20)
@@ -91,10 +88,6 @@ if (containsControlCharacters(HOST) || containsControlCharacters(CORS_ORIGIN)) {
     process.exit(1)
 }
 
-// Forward bot stdout/stderr to the API server's own output streams so that
-// container logs (docker logs) continue to show the bot's output regardless
-// of which mode started the run. Controller messages (run start/stop lifecycle
-// events from ProcessManager) are included - they are low-volume and useful.
 pm.on('log', entry => {
     const line = (entry.raw ?? entry.message ?? '') + '\n'
     if (entry.source === 'stderr') process.stderr.write(line)
@@ -454,11 +447,6 @@ const requestHandler = async (req, res) => {
             return sendJson(res, 200, { path: loaded.path, redacted: !reveal, config: data })
         }
 
-        // conf diff - lists keys present in config.example.json but missing
-        // from the live config.json. Same check entrypoint.sh runs on
-        // container start, exposed here so a dashboard can surface it
-        // without waiting for the next restart. Always readable; no write
-        // gate needed since it doesn't touch the file.
         if (method === 'GET' && pathname === '/config/diff') {
             try {
                 const { addedKeys } = await diffConfig(projectRoot, {
@@ -470,10 +458,6 @@ const requestHandler = async (req, res) => {
             }
         }
 
-        // conf sync - patches missing keys into config.json using
-        // config.example.json's defaults, without touching values the user
-        // already set. Same trust level as PUT/PATCH /config, so it rides
-        // the same flag.
         if (method === 'POST' && pathname === '/config/sync') {
             if (!ALLOW_CONFIG_WRITE) {
                 return sendJson(res, 403, {

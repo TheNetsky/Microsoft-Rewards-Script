@@ -73,7 +73,6 @@ const AccountCountrySchema = z
         'Expected "auto" or a two-letter country code'
     )
 
-// Webhook
 const WebhookSchema = z.object({
     discord: z
         .object({
@@ -117,7 +116,6 @@ const WebhookSchema = z.object({
     webhookLogFilter: LogFilterSchema
 })
 
-// Config
 export const ConfigSchema = z.object({
     sessionPath: z.string(),
     headless: z.boolean(),
@@ -125,6 +123,7 @@ export const ConfigSchema = z.object({
     errorDiagnostics: z.boolean(),
     ensureStreakProtection: z.boolean(),
     autoClaimPunchcardRewards: z.boolean(),
+    contintueOnBotWarning: z.boolean().default(false),
     skipNonPointTasks: z.boolean().default(true),
     accountDelay: DelaySchema.default({ min: '1min', max: '3min' }),
     workers: z.object({
@@ -183,7 +182,6 @@ export const ConfigSchema = z.object({
     webhook: WebhookSchema
 })
 
-// Account
 const AccountProxySchema = z
     .object({
         proxyHttp: z.boolean(),
@@ -274,6 +272,7 @@ const defaultConfig: Config = {
     errorDiagnostics: true,
     ensureStreakProtection: true,
     autoClaimPunchcardRewards: false,
+    contintueOnBotWarning: false,
     skipNonPointTasks: true,
     accountDelay: { min: '1min', max: '3min' },
     workers: {
