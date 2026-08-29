@@ -97,7 +97,7 @@ export class Login {
             this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Starting login process')
 
             await page
-                .goto(URLs.rewards.createUser, {
+                .goto(URLs.rewards.userLogin, {
                     waitUntil: 'domcontentloaded'
                 })
                 .catch(() => {})
