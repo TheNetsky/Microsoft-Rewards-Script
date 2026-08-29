@@ -11,6 +11,7 @@ export interface LoadedSession {
     storageState: StorageState | null
     fingerprint: BrowserFingerprintWithHeaders | null
     updatedAt: number
+    expiredCookiesRemoved: number
 }
 
 interface SessionRow {
@@ -23,6 +24,22 @@ let db: DatabaseSync | null = null
 
 function platformOf(isMobile: boolean): 'mobile' | 'desktop' {
     return isMobile ? 'mobile' : 'desktop'
+}
+
+function removeExpiredCookies(storageState: StorageState): {
+    storageState: StorageState
+    expiredCookiesRemoved: number
+} {
+    const now = Date.now() / 1000
+    const cookies = storageState.cookies.filter(
+        cookie => cookie.expires === -1 || !Number.isFinite(cookie.expires) || cookie.expires > now
+    )
+    const expiredCookiesRemoved = storageState.cookies.length - cookies.length
+
+    return {
+        storageState: expiredCookiesRemoved ? { ...storageState, cookies } : storageState,
+        expiredCookiesRemoved
+    }
 }
 
 function getDb(sessionPath: string): DatabaseSync {
@@ -70,7 +87,8 @@ export function loadSession(
     isMobile: boolean,
     maxAgeMs?: number
 ): LoadedSession | null {
-    const row = getDb(sessionPath)
+    const database = getDb(sessionPath)
+    const row = database
         .prepare('SELECT storage_state, fingerprint, updated_at FROM sessions WHERE email = ? AND platform = ?')
         .get(email, platformOf(isMobile)) as SessionRow | undefined
 
@@ -80,10 +98,20 @@ export function loadSession(
         return null
     }
 
+    const storedState = row.storage_state ? (JSON.parse(row.storage_state) as StorageState) : null
+    const sanitized = storedState ? removeExpiredCookies(storedState) : { storageState: null, expiredCookiesRemoved: 0 }
+
+    if (sanitized.expiredCookiesRemoved) {
+        database
+            .prepare('UPDATE sessions SET storage_state = ? WHERE email = ? AND platform = ?')
+            .run(JSON.stringify(sanitized.storageState), email, platformOf(isMobile))
+    }
+
     return {
-        storageState: row.storage_state ? (JSON.parse(row.storage_state) as StorageState) : null,
+        storageState: sanitized.storageState,
         fingerprint: row.fingerprint ? (JSON.parse(row.fingerprint) as BrowserFingerprintWithHeaders) : null,
-        updatedAt: row.updated_at
+        updatedAt: row.updated_at,
+        expiredCookiesRemoved: sanitized.expiredCookiesRemoved
     }
 }
 
@@ -93,6 +121,8 @@ export function saveStorageState(
     isMobile: boolean,
     storageState: StorageState
 ): void {
+    const sanitized = removeExpiredCookies(storageState).storageState
+
     getDb(sessionPath)
         .prepare(
             `INSERT INTO sessions (email, platform, storage_state, updated_at)
@@ -100,7 +130,7 @@ export function saveStorageState(
              ON CONFLICT(email, platform)
              DO UPDATE SET storage_state = excluded.storage_state, updated_at = excluded.updated_at`
         )
-        .run(email, platformOf(isMobile), JSON.stringify(storageState), Date.now())
+        .run(email, platformOf(isMobile), JSON.stringify(sanitized), Date.now())
 }
 
 export function clearStorageState(sessionPath: string, email: string, isMobile: boolean): void {

@@ -108,7 +108,10 @@ class Browser {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SESSION',
-                    `Restoring saved browser session | cookies=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | ageMinutes=${ageMinutes}`
+                    `Restoring saved browser session | cookies=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | ageMinutes=${ageMinutes}` +
+                        (session.expiredCookiesRemoved
+                            ? ` | expiredCookiesRemoved=${session.expiredCookiesRemoved}`
+                            : '')
                 )
             } else {
                 this.bot.logger.info(

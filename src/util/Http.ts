@@ -15,6 +15,7 @@ export interface HttpRequestConfig {
     data?: unknown
     timeout?: number
     responseType?: 'json' | 'text'
+    retries?: number
 }
 
 export interface HttpResponse<T = unknown> {
@@ -127,7 +128,10 @@ async function send<T>(
     init: ImpitRequestInit,
     config: HttpRequestConfig
 ): Promise<HttpResponse<T>> {
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const configuredRetries = config.retries ?? MAX_RETRIES
+    const maxRetries = Number.isFinite(configuredRetries) ? Math.max(0, Math.floor(configuredRetries)) : MAX_RETRIES
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
         let responseStatus: number | undefined
 
         try {
@@ -154,7 +158,7 @@ async function send<T>(
                 status !== 425 &&
                 status !== 429
 
-            if (permanentClientError || attempt >= MAX_RETRIES) throw error
+            if (permanentClientError || attempt >= maxRetries) throw error
 
             await backoff(attempt + 1)
         }

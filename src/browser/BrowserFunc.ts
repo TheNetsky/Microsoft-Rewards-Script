@@ -12,45 +12,108 @@ import type { DashboardData } from './../interface/DashboardData'
 import type { AppUserData } from '../interface/AppUserData'
 import type { AppEarnablePoints, BrowserEarnablePoints } from '../interface/Points'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
+import { detectFlyoutBotWarning, mapFlyoutToDashboard, type RewardsFlyoutData } from './FlyoutDashboard'
 
 export default class BrowserFunc {
     private bot: MicrosoftRewardsBot
 
     private rewardsDeploymentId = ''
 
+    private useFlyoutDashboardFallback = false
+
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
     }
 
     async getDashboardData(cookies?: Cookie[]): Promise<DashboardData> {
-        try {
-            const fingerprintHeaders = { ...(this.bot.fingerprint?.headers ?? {}) }
-            delete fingerprintHeaders['Cookie']
-            delete fingerprintHeaders['cookie']
+        const fingerprintHeaders = { ...(this.bot.fingerprint?.headers ?? {}) }
+        delete fingerprintHeaders['Cookie']
+        delete fingerprintHeaders['cookie']
 
-            const response = await this.bot.http.request<DashboardData>({
-                url: URLs.rewards.userInfoApi,
+        if (!this.useFlyoutDashboardFallback) {
+            let primaryError: unknown
+
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    const response = await this.bot.http.request<DashboardData>({
+                        url: URLs.rewards.userInfoApi,
+                        method: 'GET',
+                        headers: {
+                            ...fingerprintHeaders,
+                            Cookie: this.buildCookieHeader(this.getCachedCookies(cookies, URLs.rewards.userInfoApi)),
+                            Referer: URLs.rewards.referer,
+                            Origin: URLs.rewards.origin
+                        },
+                        retries: 0
+                    })
+
+                    await this.applyResponseCookies(URLs.rewards.userInfoApi, response.headers['set-cookie'])
+
+                    if (response.data?.dashboard) return response.data
+                    throw new Error('Dashboard data missing from API response')
+                } catch (error) {
+                    primaryError = error
+                    if (attempt === 1) {
+                        this.bot.logger.warn(
+                            this.bot.isMobile,
+                            'GET-DASHBOARD-DATA',
+                            `Primary dashboard request failed; retrying once | message=${this.errorMessage(error)}`
+                        )
+                        await new Promise(resolve => setTimeout(resolve, 1000))
+                    }
+                }
+            }
+
+            this.useFlyoutDashboardFallback = true
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'GET-DASHBOARD-DATA',
+                `Primary dashboard unavailable after one retry; using Bing flyout fallback | message=${this.errorMessage(primaryError)}`
+            )
+        }
+
+        return await this.getFlyoutDashboardData(cookies, fingerprintHeaders)
+    }
+
+    private async getFlyoutDashboardData(
+        cookies: Cookie[] | undefined,
+        fingerprintHeaders: Record<string, string>
+    ): Promise<DashboardData> {
+        try {
+            const response = await this.bot.http.request<RewardsFlyoutData>({
+                url: URLs.bing.rewardsFlyoutUserInfo,
                 method: 'GET',
                 headers: {
                     ...fingerprintHeaders,
-                    Cookie: this.buildCookieHeader(this.getCachedCookies(cookies, URLs.rewards.userInfoApi)),
-                    Referer: URLs.rewards.referer,
-                    Origin: URLs.rewards.origin
-                }
+                    Accept: 'application/json',
+                    Cookie: this.buildCookieHeader(this.getCachedCookies(cookies, URLs.bing.rewardsFlyoutUserInfo)),
+                    Referer: `${URLs.bing.origin}/`,
+                    Origin: URLs.bing.origin
+                },
+                retries: 0
             })
 
-            await this.applyResponseCookies(URLs.rewards.userInfoApi, response.headers['set-cookie'])
+            await this.applyResponseCookies(URLs.bing.rewardsFlyoutUserInfo, response.headers['set-cookie'])
 
-            if (response.data?.dashboard) return response.data
-            throw new Error('Dashboard data missing from API response')
+            const detection = detectFlyoutBotWarning(response.data)
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'GET-DASHBOARD-DATA',
+                `Using partial Bing flyout dashboard | suspectedLimited=${detection.likelyLimited} | botMarkers=${detection.hasBotProfileMarkers} | activitiesCollapsed=${detection.hasCollapsedActivities}`
+            )
+            return mapFlyoutToDashboard(response.data)
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-DASHBOARD-DATA',
-                `Failed to get dashboard data: ${error instanceof Error ? error.message : String(error)}`
+                `Primary dashboard and Bing flyout fallback failed | message=${this.errorMessage(error)}`
             )
             throw error
         }
+    }
+
+    private errorMessage(error: unknown): string {
+        return error instanceof Error ? error.message : String(error)
     }
 
     async getAppDashboardData(): Promise<AppDashboardData> {
