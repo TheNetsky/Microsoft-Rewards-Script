@@ -322,7 +322,7 @@ export class Login {
 
     private async checkSelector(page: Page, selector: string): Promise<boolean> {
         return page
-            .waitForSelector(selector, { state: 'visible', timeout: 200 })
+            .waitForSelector(selector, { state: 'visible', timeout: 5000 })
             .then(() => true)
             .catch(() => false)
     }
