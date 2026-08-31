@@ -259,7 +259,7 @@ function saveManualSession(dbPath, email, platform, storageState, fingerprint, p
     fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 })
     try {
         fs.chmodSync(sessionDir, 0o700)
-    } catch { }
+    } catch {}
 
     const db = openSessionDb(dbPath)
     try {
@@ -272,7 +272,7 @@ function saveManualSession(dbPath, email, platform, storageState, fingerprint, p
 
     try {
         fs.chmodSync(dbPath, 0o600)
-    } catch { }
+    } catch {}
 }
 
 async function runPlatform({ account, config, dbPath, platform, fresh }) {
@@ -323,7 +323,7 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
         if (interrupted) return
         interrupted = true
         log('WARN', `${signal} received; closing without saving an incomplete login`)
-        await browser.close().catch(() => { })
+        await browser.close().catch(() => {})
     }
     const onSigInt = () => void stop('SIGINT')
     const onSigTerm = () => void stop('SIGTERM')
@@ -339,12 +339,12 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
                 ...(stored.storageState ? { storageState: stored.storageState } : {}),
                 ...(isMobile
                     ? {
-                        isMobile: true,
-                        hasTouch: true,
-                        deviceScaleFactor: screen.devicePixelRatio,
-                        viewport: { width: screen.width, height: screen.height },
-                        screen: { width: screen.width, height: screen.height }
-                    }
+                          isMobile: true,
+                          hasTouch: true,
+                          deviceScaleFactor: screen.devicePixelRatio,
+                          viewport: { width: screen.width, height: screen.height },
+                          screen: { width: screen.width, height: screen.height }
+                      }
                     : {})
             }
         })
@@ -381,7 +381,7 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
     } finally {
         process.removeListener('SIGINT', onSigInt)
         process.removeListener('SIGTERM', onSigTerm)
-        await browser.close().catch(() => { })
+        await browser.close().catch(() => {})
     }
 }
 
