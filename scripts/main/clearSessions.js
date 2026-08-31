@@ -74,7 +74,11 @@ function printSessions(rows, dbPath) {
 const cliArgs = process.argv.slice(2)
 const command = cliArgs[0]?.toLowerCase()
 
-if (!command || command === 'help' || command === '--help' || command === '-h') {
+if (!command) {
+    fail('Missing command. Choose list, email <account-email>, or all.')
+}
+
+if (command === 'help' || command === '--help' || command === '-h') {
     printHelp()
     process.exit(0)
 }

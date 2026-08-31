@@ -13,6 +13,7 @@ import {
     buildProxyConfig,
     closeSessionDb,
     ensureSessionSchema,
+    findUnknownOptions,
     findAccountByEmail,
     getDirname,
     getProjectRoot,
@@ -24,8 +25,8 @@ import {
     log,
     openSessionDb,
     parseArgs,
-    saveSessionRow,
-    validateEmail
+    resolveEmailArgument,
+    saveSessionRow
 } from '../utils.js'
 
 const REWARDS_LOGIN_URL = 'https://rewards.bing.com/auth/login'
@@ -63,13 +64,20 @@ function printHelp() {
 Microsoft Rewards manual login
 
 Usage:
+  npm run manual-login -- <account-email> [--platform mobile|desktop|both] [--fresh]
   npm run manual-login -- --email <account-email> [--platform mobile|desktop|both] [--fresh]
 
 Options:
-  --email       Email from an ACCOUNT_N_* block in .env.
+  --email       Optional named form of the account email.
   --platform    Session to create. Defaults to mobile; "both" opens them sequentially.
   --fresh       Do not restore existing cookies. An enabled saved fingerprint is still reused.
   --help        Show this help.
+
+Examples:
+  npm run manual-login -- user@example.com
+  npm run manual-login -- user@example.com --platform desktop
+  npm run manual-login -- user@example.com --platform mobile
+  npm run manual-login -- --email user@example.com --platform both --fresh
 
 The browser stays open while you sign in manually. Once it remains on a
 Microsoft Rewards page for five continuous seconds, the session is saved and
@@ -77,9 +85,20 @@ the browser closes automatically.
 `)
 }
 
+function failUsage(message) {
+    log('ERROR', message)
+    printHelp()
+    process.exit(1)
+}
+
 export function parsePlatforms(value) {
-    const platform = typeof value === 'string' ? value.trim().toLowerCase() : 'mobile'
-    if (!platform || platform === 'mobile') return ['mobile']
+    if (value === undefined) return ['mobile']
+    if (typeof value !== 'string' || !value.trim()) {
+        throw new Error('--platform requires mobile, desktop, or both after it')
+    }
+
+    const platform = value.trim().toLowerCase()
+    if (platform === 'mobile') return ['mobile']
     if (platform === 'desktop') return ['desktop']
     if (platform === 'both') return ['mobile', 'desktop']
     throw new Error('--platform must be mobile, desktop, or both')
@@ -240,7 +259,7 @@ function saveManualSession(dbPath, email, platform, storageState, fingerprint, p
     fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 })
     try {
         fs.chmodSync(sessionDir, 0o700)
-    } catch {}
+    } catch { }
 
     const db = openSessionDb(dbPath)
     try {
@@ -253,7 +272,7 @@ function saveManualSession(dbPath, email, platform, storageState, fingerprint, p
 
     try {
         fs.chmodSync(dbPath, 0o600)
-    } catch {}
+    } catch { }
 }
 
 async function runPlatform({ account, config, dbPath, platform, fresh }) {
@@ -304,7 +323,7 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
         if (interrupted) return
         interrupted = true
         log('WARN', `${signal} received; closing without saving an incomplete login`)
-        await browser.close().catch(() => {})
+        await browser.close().catch(() => { })
     }
     const onSigInt = () => void stop('SIGINT')
     const onSigTerm = () => void stop('SIGTERM')
@@ -320,12 +339,12 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
                 ...(stored.storageState ? { storageState: stored.storageState } : {}),
                 ...(isMobile
                     ? {
-                          isMobile: true,
-                          hasTouch: true,
-                          deviceScaleFactor: screen.devicePixelRatio,
-                          viewport: { width: screen.width, height: screen.height },
-                          screen: { width: screen.width, height: screen.height }
-                      }
+                        isMobile: true,
+                        hasTouch: true,
+                        deviceScaleFactor: screen.devicePixelRatio,
+                        viewport: { width: screen.width, height: screen.height },
+                        screen: { width: screen.width, height: screen.height }
+                    }
                     : {})
             }
         })
@@ -362,26 +381,44 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
     } finally {
         process.removeListener('SIGINT', onSigInt)
         process.removeListener('SIGTERM', onSigTerm)
-        await browser.close().catch(() => {})
+        await browser.close().catch(() => { })
     }
 }
 
 async function main() {
-    const args = parseArgs()
+    const args = parseArgs(process.argv.slice(2), { boolean: ['fresh', 'help', 'h'] })
     if (args.help || args.h) {
         printHelp()
         return
     }
 
-    validateEmail(args.email)
+    const unknownOptions = findUnknownOptions(args, ['email', 'platform', 'fresh', 'help', 'h'])
+    if (unknownOptions.length) {
+        failUsage(
+            `Unknown option${unknownOptions.length === 1 ? '' : 's'}: ${unknownOptions.map(v => `--${v}`).join(', ')}`
+        )
+    }
+
+    let email
+    let platforms
+    try {
+        email = resolveEmailArgument(args)
+        platforms = parsePlatforms(args.platform)
+    } catch (error) {
+        failUsage(error?.message ?? String(error))
+    }
+
+    if (args.fresh !== undefined && args.fresh !== true) {
+        failUsage('--fresh is a switch and does not accept a value.')
+    }
+
     const accounts = loadAccountsFromEnv(projectRoot)
-    const platforms = parsePlatforms(args.platform)
-    const fresh = args.fresh === true || String(args.fresh ?? '').toLowerCase() === 'true'
+    const fresh = args.fresh === true
     const { data: fileConfig } = loadConfig(projectRoot)
     const { config, applied: appliedConfigOverrides } = applyManualConfigEnvOverrides(fileConfig)
-    const account = findAccountByEmail(accounts, args.email)
+    const account = findAccountByEmail(accounts, email)
     if (!account) {
-        throw new Error(`No ACCOUNT_N_* block found in .env for ${args.email}`)
+        throw new Error(`No ACCOUNT_N_* block found in .env for ${email}`)
     }
 
     const { dbPath } = getSessionDbPath(projectRoot, config.sessionPath)

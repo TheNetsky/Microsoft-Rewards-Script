@@ -195,13 +195,58 @@ export function applyEnvOverrides(configPath: string, env: NodeJS.ProcessEnv = p
 if (require.main === module) {
     const args = process.argv.slice(2)
     const command = args[0]
-    const getArg = (flag: string) => {
-        const i = args.indexOf(flag)
-        return i !== -1 ? args[i + 1] : undefined
+
+    const printHelp = (): void => {
+        console.log(`
+Microsoft Rewards CONFIG_* environment overrides
+
+Usage:
+  node dist/util/ConfigEnvOverrides.js list [--format table|env]
+  node dist/util/ConfigEnvOverrides.js apply --config <path>
+
+Commands:
+  list         Show every supported environment override.
+  apply        Apply configured overrides to one config.json file.
+
+Options:
+  --format     Output format for list. Defaults to table.
+  --config     Required config.json path for apply.
+  --help       Show this help.
+
+Examples:
+  node dist/util/ConfigEnvOverrides.js list
+  node dist/util/ConfigEnvOverrides.js list --format env
+  node dist/util/ConfigEnvOverrides.js apply --config ./config.json
+`)
     }
 
+    const failUsage = (message: string): never => {
+        console.error(`[config-overrides] ERROR: ${message}`)
+        printHelp()
+        process.exit(1)
+    }
+
+    const readOnlyOption = (flag: string): string | undefined => {
+        const index = args.indexOf(flag)
+        if (index === -1) return undefined
+        const value = args[index + 1]
+        if (!value || value.startsWith('-')) failUsage(`${flag} requires a value after it.`)
+        return value
+    }
+
+    if (args.includes('--help') || args.includes('-h')) {
+        printHelp()
+        process.exit(0)
+    }
+    if (!command) failUsage('Missing command. Choose "list" or "apply".')
+    if (command !== 'list' && command !== 'apply') failUsage(`Unknown command "${command}".`)
+
     if (command === 'list') {
-        const format = getArg('--format') ?? 'table'
+        const format = readOnlyOption('--format') ?? 'table'
+        const expectedLength = args.includes('--format') ? 3 : 1
+        if (args.length !== expectedLength || !['table', 'env'].includes(format)) {
+            failUsage('The list command only accepts --format table or --format env.')
+        }
         if (format === 'env') {
             for (const e of ENV_OVERRIDES) console.log(e.env)
         } else {
@@ -214,11 +259,8 @@ if (require.main === module) {
     }
 
     if (command === 'apply') {
-        const configPath = getArg('--config')
-        if (!configPath) {
-            console.error('Usage: node dist/util/ConfigEnvOverrides.js apply --config <path>')
-            process.exit(1)
-        }
+        const configPath = readOnlyOption('--config') ?? failUsage('The apply command requires --config <path>.')
+        if (args.length !== 3) failUsage('The apply command only accepts --config <path>.')
         try {
             const report = applyEnvOverrides(configPath)
             if (report.errors.length > 0) {
@@ -234,10 +276,5 @@ if (require.main === module) {
             console.error(`[entrypoint] ERROR: ${err instanceof Error ? err.message : String(err)}`)
             process.exit(1)
         }
-    }
-
-    if (!command) {
-        console.error('Usage: node dist/util/ConfigEnvOverrides.js <apply|list> [options]')
-        process.exit(1)
     }
 }

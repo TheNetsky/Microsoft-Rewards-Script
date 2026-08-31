@@ -17,14 +17,71 @@ import {
 import { readSchedule, writeSchedule } from './scheduleStore.js'
 import { deleteStoredSessions, listStoredSessions } from './sessionStore.js'
 import { resolveRunCommand } from './runCommand.js'
-import { log, parseArgs, getProjectRoot, loadEnvFile, loadConfigSafe, redactSecrets, envStr, envBool } from './lib.js'
+import {
+    log,
+    parseArgs,
+    findUnknownOptions,
+    getProjectRoot,
+    loadEnvFile,
+    loadConfigSafe,
+    redactSecrets,
+    envStr,
+    envBool
+} from './lib.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = getProjectRoot(__dirname)
 
 loadEnvFile(projectRoot)
 
-const cliArgs = parseArgs()
+const cliArgs = parseArgs(process.argv.slice(2), { boolean: ['help', 'h'] })
+
+function printHelp() {
+    console.log(`
+Microsoft Rewards control API
+
+Usage:
+  npm run api
+  npm run api -- [--host <address>] [--port <number>] [--token <token>]
+
+Options:
+  --host        Listen address. Defaults to API_HOST or 127.0.0.1.
+  --port        Listen port from 1 to 65535. Defaults to API_PORT or 3010.
+  --token       One-time API token. API_TOKEN from .env takes precedence.
+  --help        Show this help.
+
+Examples:
+  npm run api
+  npm run api -- --port 3010
+  npm run api -- --host 0.0.0.0 --port 3010 --token "YOUR_API_TOKEN"
+`)
+}
+
+function failUsage(message) {
+    log('ERROR', message)
+    printHelp()
+    process.exit(1)
+}
+
+if (cliArgs.help || cliArgs.h) {
+    printHelp()
+    process.exit(0)
+}
+
+const unknownOptions = findUnknownOptions(cliArgs, ['host', 'port', 'token', 'help', 'h'])
+if (unknownOptions.length) {
+    failUsage(
+        `Unknown option${unknownOptions.length === 1 ? '' : 's'}: ${unknownOptions.map(v => `--${v}`).join(', ')}`
+    )
+}
+if (cliArgs._.length) {
+    failUsage(`Unexpected positional argument${cliArgs._.length === 1 ? '' : 's'}: ${cliArgs._.join(' ')}`)
+}
+for (const option of ['host', 'port', 'token']) {
+    if (cliArgs[option] === true || cliArgs[option] === '') {
+        failUsage(`--${option} requires a value after it.`)
+    }
+}
 
 function integerSetting(name, value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
     if (value === undefined) return fallback

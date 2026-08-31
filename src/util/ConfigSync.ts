@@ -147,16 +147,67 @@ export function syncConfig(opts: SyncOptions = {}): SyncReport {
 
 if (require.main === module) {
     const args = process.argv.slice(2)
-    const patch = args.includes('--patch')
-    const getArg = (flag: string) => {
-        const i = args.indexOf(flag)
-        return i !== -1 ? args[i + 1] : undefined
+
+    const printHelp = (): void => {
+        console.log(`
+Microsoft Rewards config synchronizer
+
+Usage:
+  node dist/util/ConfigSync.js sync [--config <path>] [--example <path>] [--patch]
+
+Options:
+  --config     Path to config.json. Defaults to the project config.
+  --example    Path to config.example.json. Defaults to the project example.
+  --patch      Add missing defaults to config.json and create a backup.
+  --help       Show this help.
+
+Examples:
+  node dist/util/ConfigSync.js sync
+  node dist/util/ConfigSync.js sync --patch
+  node dist/util/ConfigSync.js sync --config ./config.json --example ./config.example.json
+`)
+    }
+
+    const failUsage = (message: string): never => {
+        console.error(`[config-sync] ERROR: ${message}`)
+        printHelp()
+        process.exit(1)
+    }
+
+    if (args.includes('--help') || args.includes('-h')) {
+        printHelp()
+        process.exit(0)
+    }
+
+    const command = args[0]
+    if (!command) failUsage('Missing command. Use "sync".')
+    if (command !== 'sync') failUsage(`Unknown command "${command}". Expected "sync".`)
+
+    let configPath: string | undefined
+    let examplePath: string | undefined
+    let patch = false
+
+    for (let i = 1; i < args.length; i++) {
+        const arg = args[i]
+        if (arg === '--patch') {
+            patch = true
+            continue
+        }
+        if (arg === '--config' || arg === '--example') {
+            const value = args[i + 1]
+            if (!value || value.startsWith('-')) failUsage(`${arg} requires a file path after it.`)
+            if (arg === '--config') configPath = value
+            else examplePath = value
+            i++
+            continue
+        }
+        failUsage(`Unknown option or argument: ${arg}`)
     }
 
     try {
         const report = syncConfig({
-            configPath: getArg('--config'),
-            examplePath: getArg('--example'),
+            configPath,
+            examplePath,
             patch
         })
 

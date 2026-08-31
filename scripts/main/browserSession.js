@@ -5,9 +5,10 @@ import { newInjectedContext } from 'fingerprint-injector'
 import {
     getDirname,
     getProjectRoot,
+    findUnknownOptions,
     log,
     parseArgs,
-    validateEmail,
+    resolveEmailArgument,
     loadConfig,
     loadAccountsFromEnv,
     findAccountByEmail,
@@ -39,22 +40,67 @@ const BROWSER_ARGS = [
 const __dirname = getDirname(import.meta.url)
 const projectRoot = getProjectRoot(__dirname)
 
-const args = parseArgs()
+function printHelp() {
+    console.log(`
+Microsoft Rewards saved-session browser
 
-validateEmail(args.email)
+Usage:
+  npm run open-session -- <account-email> [--platform desktop|mobile]
+  npm run open-session -- --email <account-email> [--platform desktop|mobile]
+
+Options:
+  --email       Optional named form of the account email.
+  --platform    Open a specific stored session. Defaults to desktop, then mobile.
+  --help        Show this help.
+
+Examples:
+  npm run open-session -- user@example.com
+  npm run open-session -- user@example.com --platform mobile
+  npm run open-session -- --email user@example.com --platform desktop
+`)
+}
+
+function failUsage(message) {
+    log('ERROR', message)
+    printHelp()
+    process.exit(1)
+}
+
+const args = parseArgs(process.argv.slice(2), { boolean: ['help', 'h'] })
+if (args.help || args.h) {
+    printHelp()
+    process.exit(0)
+}
+
+const unknownOptions = findUnknownOptions(args, ['email', 'platform', 'help', 'h'])
+if (unknownOptions.length) {
+    failUsage(
+        `Unknown option${unknownOptions.length === 1 ? '' : 's'}: ${unknownOptions.map(v => `--${v}`).join(', ')}`
+    )
+}
+
+let accountEmail
+try {
+    accountEmail = resolveEmailArgument(args)
+} catch (error) {
+    failUsage(error?.message ?? String(error))
+}
 
 const { data: config } = loadConfig(projectRoot)
 
 const accounts = loadAccountsFromEnv(projectRoot)
-const account = findAccountByEmail(accounts, args.email)
+const account = findAccountByEmail(accounts, accountEmail)
 if (!account) {
-    log('WARN', `No ACCOUNT_N_* block found in .env for ${args.email} - opening without a proxy`)
+    log('WARN', `No ACCOUNT_N_* block found in .env for ${accountEmail} - opening without a proxy`)
 }
 
 function platformsToTry() {
-    const p = typeof args.platform === 'string' ? args.platform.toLowerCase() : ''
+    if (args.platform === undefined) return ['desktop', 'mobile']
+    if (args.platform === true) failUsage('--platform requires either desktop or mobile after it.')
+
+    const p = String(args.platform).trim().toLowerCase()
     if (p === 'mobile' || p === 'desktop') return [p]
-    return ['desktop', 'mobile'] // prefer desktop, fall back to mobile
+    failUsage(`Invalid --platform value "${args.platform}"; expected desktop or mobile.`)
 }
 
 async function configureMediaBlocking(context) {
@@ -87,7 +133,7 @@ async function main() {
     let platform = null
     for (const p of platformsToTry()) {
         try {
-            const row = loadSessionRow(db, args.email, p)
+            const row = loadSessionRow(db, accountEmail, p)
             if (row && (row.storageState || row.fingerprint)) {
                 session = row
                 platform = p
@@ -100,7 +146,7 @@ async function main() {
     closeSessionDb(db)
 
     if (!session) {
-        log('ERROR', `No stored session for ${args.email} in ${dbPath}`)
+        log('ERROR', `No stored session for ${accountEmail} in ${dbPath}`)
         log('ERROR', 'Run the bot first, or double-check the email.')
         process.exit(1)
     }
@@ -118,7 +164,7 @@ async function main() {
         process.exit(1)
     }
 
-    log('INFO', `Session: ${args.email} (${platform})`)
+    log('INFO', `Session: ${accountEmail} (${platform})`)
     log('INFO', '  Engine: bundled patched Chromium')
     log('INFO', `  Cookies: ${cookieCount}`)
     log('INFO', `  Fingerprint: ${fingerprint ? 'Yes' : 'No'}`)

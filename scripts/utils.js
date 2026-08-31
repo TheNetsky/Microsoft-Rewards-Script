@@ -33,32 +33,77 @@ export function log(level, ...args) {
     console.log(`[${level}]`, ...args)
 }
 
-export function parseArgs(argv = process.argv.slice(2)) {
-    const args = {}
+export function parseArgs(argv = process.argv.slice(2), { boolean = [] } = {}) {
+    const args = { _: [] }
+    const booleanOptions = new Set(boolean)
 
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]
 
-        if (arg.startsWith('-')) {
-            const key = arg.replace(/^-+/, '')
+        if (arg === '--') {
+            args._.push(...argv.slice(i + 1))
+            break
+        }
 
-            if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
-                args[key] = argv[i + 1]
-                i++
-            } else {
-                args[key] = true
-            }
+        if (!arg.startsWith('-') || arg === '-') {
+            args._.push(arg)
+            continue
+        }
+
+        const option = arg.replace(/^-+/, '')
+        const equalsIndex = option.indexOf('=')
+        const key = equalsIndex === -1 ? option : option.slice(0, equalsIndex)
+
+        if (!key) {
+            args._.push(arg)
+            continue
+        }
+
+        if (equalsIndex !== -1) {
+            args[key] = option.slice(equalsIndex + 1)
+            continue
+        }
+
+        if (booleanOptions.has(key)) {
+            args[key] = true
+        } else if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+            args[key] = argv[++i]
+        } else {
+            args[key] = true
         }
     }
 
     return args
 }
 
-export function validateEmail(email) {
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
-        log('ERROR', `Invalid or missing -email argument: ${JSON.stringify(email)}`)
-        log('ERROR', 'Usage: node script.js -email you@example.com')
-        process.exit(1)
+export function findUnknownOptions(args, allowedOptions) {
+    const allowed = new Set(allowedOptions)
+    return Object.keys(args).filter(key => key !== '_' && !allowed.has(key))
+}
+
+export function resolveEmailArgument(args) {
+    const positionals = Array.isArray(args?._) ? args._ : []
+    const optionValue = args?.email
+
+    if (optionValue === true || optionValue === '') {
+        throw new Error('--email requires an email address after it.')
+    }
+    if (optionValue !== undefined && typeof optionValue !== 'string') {
+        throw new Error('--email must be followed by a valid email address.')
+    }
+    if (positionals.length > 1) {
+        throw new Error(`Unexpected extra arguments: ${positionals.slice(1).join(' ')}`)
+    }
+    if (optionValue !== undefined && positionals.length > 0) {
+        throw new Error('Provide the account email once, either positionally or with --email.')
+    }
+
+    const email = String(optionValue ?? positionals[0] ?? '').trim()
+    if (!email) {
+        throw new Error('Missing account email address.')
+    }
+    if (!email.includes('@') || email.startsWith('@') || email.endsWith('@')) {
+        throw new Error(`Invalid account email address: ${email}`)
     }
 
     return email
