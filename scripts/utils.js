@@ -291,6 +291,28 @@ export function openSessionDb(dbPath, { readonly = false } = {}) {
     return db
 }
 
+export function ensureSessionSchema(db) {
+    db.exec('PRAGMA journal_mode = WAL')
+    db.exec('PRAGMA synchronous = NORMAL')
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS sessions (
+            email         TEXT NOT NULL,
+            platform      TEXT NOT NULL,
+            storage_state TEXT,
+            fingerprint   TEXT,
+            updated_at    INTEGER NOT NULL,
+            PRIMARY KEY (email, platform)
+        )
+    `)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS account_metadata (
+            email           TEXT PRIMARY KEY COLLATE NOCASE,
+            resolved_region TEXT,
+            updated_at      INTEGER NOT NULL
+        )
+    `)
+}
+
 export function closeSessionDb(db) {
     try {
         db.close()
@@ -309,6 +331,60 @@ export function loadSessionRow(db, email, platform) {
         fingerprint: row.fingerprint ? JSON.parse(row.fingerprint) : null,
         updatedAt: row.updated_at
     }
+}
+
+export function loadResolvedRegionRow(db, email) {
+    try {
+        const row = db.prepare('SELECT resolved_region FROM account_metadata WHERE email = ?').get(email)
+        return row?.resolved_region ?? undefined
+    } catch {
+        return undefined
+    }
+}
+
+export function saveSessionRow(db, email, platform, storageState, fingerprint, persistFingerprint = true) {
+    if (platform !== 'mobile' && platform !== 'desktop') {
+        throw new Error(`Unsupported session platform: ${platform}`)
+    }
+    if (!storageState || !Array.isArray(storageState.cookies) || !Array.isArray(storageState.origins)) {
+        throw new Error('Cannot save an invalid browser storage state')
+    }
+
+    const nowSeconds = Date.now() / 1000
+    const sanitizedState = {
+        ...storageState,
+        cookies: storageState.cookies.filter(
+            cookie => cookie.expires === -1 || !Number.isFinite(cookie.expires) || cookie.expires > nowSeconds
+        )
+    }
+
+    if (persistFingerprint) {
+        db.prepare(
+            `INSERT INTO sessions (email, platform, storage_state, fingerprint, updated_at)
+             VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(email, platform)
+             DO UPDATE SET
+                 storage_state = excluded.storage_state,
+                 fingerprint = excluded.fingerprint,
+                 updated_at = excluded.updated_at`
+        ).run(
+            email,
+            platform,
+            JSON.stringify(sanitizedState),
+            fingerprint ? JSON.stringify(fingerprint) : null,
+            Date.now()
+        )
+        return
+    }
+
+    db.prepare(
+        `INSERT INTO sessions (email, platform, storage_state, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(email, platform)
+         DO UPDATE SET
+             storage_state = excluded.storage_state,
+             updated_at = excluded.updated_at`
+    ).run(email, platform, JSON.stringify(sanitizedState), Date.now())
 }
 
 export function listSessionRows(db) {

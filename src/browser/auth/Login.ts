@@ -3,6 +3,7 @@ import type { Page } from 'patchright'
 import type { MicrosoftRewardsBot } from '../../index'
 import { saveStorageState } from '../../util/SessionStore'
 import { unknownPageDiagnostic } from '../../util/ErrorDiagnostic'
+import { configureMediaBlocking, suspendMediaBlocking } from '../MediaBlocker'
 
 import { MobileAccessLogin } from './methods/MobileAccessLogin'
 import { EmailLogin } from './methods/EmailLogin'
@@ -91,6 +92,7 @@ export class Login {
 
     async login(page: Page, account: Account) {
         try {
+            suspendMediaBlocking(this.bot, page.context())
             this.capturedUnknownUrls.clear()
             this.signInMethodsLogged = false
             this.passwordlessMethodSelected = false
@@ -904,6 +906,7 @@ export class Login {
         )
         saveStorageState(this.bot.config.sessionPath, account.email, this.bot.isMobile, storageState)
 
+        await configureMediaBlocking(this.bot, context)
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Login completed, session saved')
     }
 

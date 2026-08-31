@@ -34,6 +34,7 @@
     - [Proxy](#proxy)
     - [Webhooks](#webhooks)
 - [Troubleshooting](#troubleshooting)
+    - [Manual login](#manual-login)
     - [Session management](#session-management)
 - [Disclaimer](#disclaimer)
 
@@ -297,14 +298,16 @@ Default:
 
 Opt-in features that may change. Disabled by default.
 
-| Setting                        | Type    | Default | Description                                                           | Docker environment variable              |
-| ------------------------------ | ------- | ------- | --------------------------------------------------------------------- | ---------------------------------------- |
-| `experimental.apiSearch`       | boolean | `false` | Perform Bing searches over HTTP instead of driving a browser page     | `CONFIG_EXPERIMENTAL_API_SEARCH`         |
-| `experimental.apiSearchOnBing` | boolean | `false` | Complete ExploreOnBing offers over HTTP instead of the browser        | `CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING` |
-| `experimental.blockMedia`      | boolean | `false` | Block browser `image` and `media` requests to reduce traffic          | `CONFIG_EXPERIMENTAL_BLOCK_MEDIA`        |
-| `experimental.edgeBrowsing`    | boolean | `false` | Report the 30-minute Edge browsing activity as a background HTTP task | `CONFIG_EXPERIMENTAL_EDGE_BROWSING`      |
+| Setting                        | Type    | Default | Description                                                             | Docker environment variable              |
+| ------------------------------ | ------- | ------- | ----------------------------------------------------------------------- | ---------------------------------------- |
+| `experimental.apiSearch`       | boolean | `false` | Perform Bing searches over HTTP instead of driving a browser page       | `CONFIG_EXPERIMENTAL_API_SEARCH`         |
+| `experimental.apiSearchOnBing` | boolean | `false` | Complete ExploreOnBing offers over HTTP instead of the browser          | `CONFIG_EXPERIMENTAL_API_SEARCH_ON_BING` |
+| `experimental.blockMedia`      | boolean | `false` | Block post-login browser `image` and `media` requests to reduce traffic | `CONFIG_EXPERIMENTAL_BLOCK_MEDIA`        |
+| `experimental.edgeBrowsing`    | boolean | `false` | Report the 30-minute Edge browsing activity as a background HTTP task   | `CONFIG_EXPERIMENTAL_EDGE_BROWSING`      |
 
-When `experimental.blockMedia` is enabled, document, stylesheet, script, font, XHR, and fetch requests are left untouched. This keeps login and Rewards application traffic available while avoiding image, video, and audio downloads. It also applies to `npm run open-session`.
+When `experimental.blockMedia` is enabled, the automated flow activates it only after authentication has been
+verified and the session has been saved. The manual-login flow keeps media enabled throughout; `npm run open-session` still
+applies the configured blocker immediately because it opens an already-saved session.
 
 When `experimental.edgeBrowsing` is enabled, the task starts before the normal activity sequence and runs as a separate Promise alongside Daily Set, promotions, app activities, and searches. If foreground work finishes first, the account remains open until this Promise settles. Accounts without the promotion, an access token, or remaining Edge work are skipped immediately.
 
@@ -392,6 +395,44 @@ Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5:
 
 > [!TIP]
 > Most login issues can be fixed by deleting your /sessions folder, and redeploying the script
+
+### Manual login
+
+Use the manual-login command when an account needs an interactive Microsoft sign-in. It opens the same bundled
+patched Chromium browser in headful mode and does not invoke the automated login handler. After you finish signing
+in, the command waits until the browser remains on `rewards.bing.com` for five continuous seconds, saves the session,
+and closes the browser automatically.
+
+```bash
+# Create or refresh the mobile session used at the start of automated runs
+npm run manual-login -- --email user@example.com
+
+# Create or refresh only the desktop session
+npm run manual-login -- --email user@example.com --platform desktop
+
+# Create mobile and desktop sessions sequentially
+npm run manual-login -- --email user@example.com --platform both
+
+# Ignore existing cookies and perform a clean sign-in
+npm run manual-login -- --email user@example.com --fresh
+```
+
+The email must match an `ACCOUNT_N_EMAIL` entry in `.env`. Existing cookies are restored by default, while `--fresh`
+starts without them but retains a compatible saved fingerprint when fingerprint persistence is enabled. The command
+uses the selected account's language, region, proxy, proxy credentials, and fingerprint settings from `.env`. For
+consistent device identity between the manual and automated browser, enable `ACCOUNT_N_SAVE_FINGERPRINT_MOBILE=true`
+and/or
+`ACCOUNT_N_SAVE_FINGERPRINT_DESKTOP=true` for the platforms you use.
+
+The session path, global timeout, media-blocking option, and proxy TLS option come from `config.json`. The corresponding
+`CONFIG_GLOBAL_TIMEOUT`, `CONFIG_EXPERIMENTAL_BLOCK_MEDIA`, and
+`CONFIG_PROXY_IGNORE_CERTIFICATE_ERRORS` environment overrides are also applied after `.env` is loaded. Manual login
+forces a visible browser and defers media blocking for the entire interactive authentication flow, even when
+`experimental.blockMedia` is enabled. Automated runs resume the configured blocker only after login verification and
+session saving, so authentication SVGs, QR codes, and videos cannot be blocked by this option.
+
+Run this command directly on a computer with a graphical desktop and a full Patchright Chromium installation. The
+default Docker image contains only the headless browser shell and cannot display this interactive window.
 
 ### Session management
 

@@ -24,6 +24,7 @@
         "format:check": "prettier --check .",
         "clear-diagnostics": "rimraf diagnostics",
         "clear-sessions": "node ./scripts/main/clearSessions.js",
+        "manual-login": "node ./scripts/main/manualLogin.js",
         "open-session": "node ./scripts/main/browserSession.js -email"
     },
     "keywords": [
