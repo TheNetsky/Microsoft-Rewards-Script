@@ -97,7 +97,7 @@ export class Login {
             this.bot.logger.info(this.bot.isMobile, 'LOGIN', '开始登录流程')
 
             await page
-                .goto(URLs.rewards.createUser, {
+                .goto(URLs.rewards.userLogin, {
                     waitUntil: 'domcontentloaded'
                 })
                 .catch(() => {})
@@ -322,7 +322,7 @@ export class Login {
 
     private async checkSelector(page: Page, selector: string): Promise<boolean> {
         return page
-            .waitForSelector(selector, { state: 'visible', timeout: 200 })
+            .waitForSelector(selector, { state: 'visible', timeout: 5000 })
             .then(() => true)
             .catch(() => false)
     }

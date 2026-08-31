@@ -108,7 +108,10 @@ class Browser {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SESSION',
-                    `正在恢复已保存的浏览器会话 | Cookie数=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | 已保存分钟数=${ageMinutes}`
+                    `正在恢复已保存的浏览器会话 | Cookie数=${session.storageState.cookies.length} | origins=${session.storageState.origins.length} | 已保存分钟数=${ageMinutes}` +
+                        (session.expiredCookiesRemoved
+                            ? ` | 已清除过期Cookie=${session.expiredCookiesRemoved}`
+                            : '')
                 )
             } else {
                 this.bot.logger.info(

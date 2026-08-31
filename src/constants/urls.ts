@@ -31,7 +31,7 @@ export const URLs = {
         earn: `${REWARDS}/earn`,
         earnStreaks: `${REWARDS}/earn?section=streaks`,
         dashboard: `${REWARDS}/dashboard`,
-        createUser: `${REWARDS}/createuser?idru=%2F&userScenarioId=anonsignin`,
+        userLogin: `${REWARDS}/auth/login`,
         quest: (parentOfferId: string) => `${REWARDS}/earn/quest/${parentOfferId}`,
         path: (path: string) => `${REWARDS}${path}`
     },
@@ -50,6 +50,7 @@ export const URLs = {
     },
     bing: {
         origin: BING,
+        rewardsFlyoutUserInfo: `${BING}/rewards/panelflyout/getuserinfo?channel=BingFlyout&partnerId=BingRewards`,
         search: (query: string, cvid: string) =>
             `${BING}/search?q=${encodeURIComponent(query)}&PC=U531&FORM=ANNTA1&cvid=${cvid}`
     },
