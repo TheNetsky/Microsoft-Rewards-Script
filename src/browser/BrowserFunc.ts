@@ -275,6 +275,9 @@ export default class BrowserFunc {
             // /earn is the offers page
             await page.goto(URLs.rewards.earn, { waitUntil: 'domcontentloaded' })
 
+            // first-time welcome modal blocks the dashboard from rendering
+            await this.dismissRewardsWelcomeDialog(page)
+
             const earnDom = await page.content()
             const earnRaw = await this.fetchBootstrapHtml(page, URLs.rewards.earn, '/earn')
 
@@ -336,6 +339,30 @@ export default class BrowserFunc {
                 `Failed acquiring context | error=${error instanceof Error ? error.message : String(error)}`
             )
             throw error
+        }
+    }
+
+    /**
+     * Dismisses the first-time welcome modal on /earn, which otherwise
+     * prevents section#dailyset from rendering.
+     */
+    private async dismissRewardsWelcomeDialog(page: Page): Promise<void> {
+        try {
+            const welcomeButton = await page
+                .waitForSelector('section[role="dialog"] button[slot="close"]', { timeout: 5000 })
+                .catch(() => null)
+            if (!welcomeButton) return
+
+            await welcomeButton.click({ timeout: 5000 })
+            this.bot.logger.info(this.bot.isMobile, 'BOOTSTRAP', 'Dismissed welcome dialog')
+
+            await page.waitForSelector('section#dailyset', { timeout: 15000 }).catch(() => undefined)
+        } catch (error) {
+            this.bot.logger.warn(
+                this.bot.isMobile,
+                'BOOTSTRAP',
+                `Failed to dismiss welcome dialog: ${error instanceof Error ? error.message : String(error)}`
+            )
         }
     }
 
