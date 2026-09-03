@@ -809,8 +809,10 @@ const server = http.createServer(async (req, res) => {
       };
       let all;
       if (accounts && accounts.accounts && accounts.accounts.length) {
-        all = accounts.accounts.map(acc => build(acc.index, acc.email, state.accounts[acc.email],
-          liveAccounts.find(x => x.email === acc.email)));
+        all = accounts.accounts.map(acc => Object.assign(
+          build(acc.index, acc.email, state.accounts[acc.email], liveAccounts.find(x => x.email === acc.email)),
+          { extra: Boolean(acc.extra) }
+        ));
       } else {
         // 容器 API 不可达: 用持久化 state 兜底
         all = Object.keys(state.accounts)
