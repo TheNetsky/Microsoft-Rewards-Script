@@ -89,10 +89,11 @@ COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
-# Install patchright's stealth-patched Chromium headless shell.
-# The container is headless-only so the full browser isn't needed; then clean up
+# Install patchright's stealth-patched Chromium. The full browser is required
+# (not just the headless shell) because the dashboard's manual-login feature
+# runs the browser headed under Xvfb; clean up apt lists afterwards.
 RUN set -eux; \
-    npx patchright install --with-deps --only-shell chromium; \
+    npx patchright install --with-deps chromium; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Copy config example into the image so entrypoint can use it as a fallback

@@ -549,6 +549,10 @@ async function startManualLogin(accountIndex) {
     accountIndex, email, startedAt: Date.now(),
     logs: [], procs, stopped: false, done: false,
   };
+  // 上次会话若被强杀会残留 X 锁文件, 导致 Xvfb 起不来("Server is already active")
+  for (const stale of ['/tmp/.X99-lock', '/tmp/.X11-unix/X99']) {
+    try { fs.rmSync(stale, { force: true }); } catch (e) { /* ignore */ }
+  }
   procs.xvfb = spawn('Xvfb', [ML_DISPLAY, '-screen', '0', '1280x900x24', '-nolisten', 'tcp'], { env: process.env });
   await new Promise(r => setTimeout(r, 1200));
   procs.x11vnc = spawn('x11vnc',
@@ -575,6 +579,11 @@ async function startManualLogin(accountIndex) {
     session.done = true;
     session.runnerExit = code;
     mlPushLog(session, '[dashboard] manualLogin 退出 code=' + code + (code === 0 ? '(会话已保存)' : '(未保存完整登录)'));
+    if (code !== 0) {
+      // 找出 runner 的报错行, 透出到状态接口方便定位
+      const errLine = [...session.logs].reverse().find(l => /ERROR|error|Failed|failed|doesn't exist|not found/i.test(l));
+      session.failLog = errLine || session.logs[session.logs.length - 2] || null;
+    }
     setTimeout(() => { mlCleanupProcs(session); }, 2000);
   });
   log('INFO', '人工登录会话启动: ' + email + ' (token=' + session.token.slice(0, 8) + '...)');
@@ -593,6 +602,7 @@ function manualLoginStatus() {
     startedAt: s.startedAt,
     token: active ? s.token : null,
     runnerExit: s.runnerExit != null ? s.runnerExit : null,
+    failLog: s.failLog || null,
     lastLog: s.logs.length ? s.logs[s.logs.length - 1] : null,
   };
 }
@@ -1437,6 +1447,7 @@ function ensureMlPoll() {
         mlPollTimer = null;
         if (d.done && d.runnerExit === 0) $('mlStatus').textContent = '✅ 人工登录完成, 会话已保存';
         else if (d.stopped) $('mlStatus').textContent = '会话已中止(未保存完整登录)';
+        else if (d.failLog) $('mlStatus').textContent = '❌ ' + d.failLog;
         $('mlFrame').src = 'about:blank';
         scheduleRefresh();
       }
