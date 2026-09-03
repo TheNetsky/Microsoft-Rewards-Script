@@ -214,10 +214,10 @@ function pushForEntry(entry) {
     lines = [`🚀 开始运行`, `微软积分脚本开始执行（账号数见日志）`];
   } else if (title === 'RUN-END' && ev.runEnd.enabled) {
     key = 'runEnd';
-    const accounts = extractField(message, /accountsProcessed=(\d+)/);
-    const gained = extractField(message, /pointsGained=(-?\d+)/);
-    const balance = extractField(message, /currentBalance=(\d+)/);
-    const runtime = extractField(message, /runtimeMinutes=([\d.]+)/);
+    const accounts = extractField(message, /(?:accountsProcessed|处理账户数)=(\d+)/);
+    const gained = extractField(message, /(?:pointsGained|获得积分)=(-?\d+)/);
+    const balance = extractField(message, /(?:currentBalance|现余额)=(\d+)/);
+    const runtime = extractField(message, /(?:runtimeMinutes|运行分钟数)=([\d.]+)/);
     lines = [
       `✅ 全部完成`,
       `账号: ${accounts ?? '-'} | 本次获得: ${gained ?? '-'} 分`,
@@ -225,8 +225,8 @@ function pushForEntry(entry) {
     ];
   } else if (title === 'ACCOUNT-END' && ev.accountEnd.enabled) {
     key = 'accountEnd';
-    const gained = extractField(message, /pointsGained=(-?\d+)/);
-    const balance = extractField(message, /currentBalance=(\d+)/);
+    const gained = extractField(message, /(?:pointsGained|获得积分)=(-?\d+)/);
+    const balance = extractField(message, /(?:currentBalance|现余额)=(\d+)/);
     lines = [`👤 账号完成`, `${email || '账号'}: 本次 +${gained ?? '-'} 分 | 余额 ${balance ?? '-'}`];
   } else if ((/ERROR/.test(title) || level === 'error') && ev.error.enabled) {
     key = 'error';
@@ -253,9 +253,10 @@ function recordEntry(entry) {
   const message = String(entry.message || '');
 
   if (title === 'ACCOUNT-END') {
-    const email = extractField(message, /Completed account: (\S+)/) || extractEmail(message, entry.user) || '未知';
-    const gained = parseInt(extractField(message, /pointsGained=(-?\d+)/) || '0', 10);
-    const balance = parseInt(extractField(message, /currentBalance=(\d+)/) || '0', 10);
+    // 中英双语兼容: 上游英文版 "Completed account: x | pointsGained=.." / 中文化分支 "账户完成: x | 获得积分=.."
+    const email = extractField(message, /(?:Completed account|账户完成)[:：]\s*(\S+)/) || extractEmail(message, entry.user) || '未知';
+    const gained = parseInt(extractField(message, /(?:pointsGained|获得积分)=(-?\d+)/) || '0', 10);
+    const balance = parseInt(extractField(message, /(?:currentBalance|现余额)=(\d+)/) || '0', 10);
     const a = ensureAccount(email);
     // 失败过的账号也保留上次已知余额, 仅在成功完成时刷新
     a.balance = balance;
@@ -270,7 +271,7 @@ function recordEntry(entry) {
     }
     saveState();
   } else if (title === 'ACCOUNT-START') {
-    const email = extractField(message, /Starting account: (\S+)/) || extractEmail(message, entry.user);
+    const email = extractField(message, /(?:Starting account|开始处理账户)[:：]\s*(\S+)/) || extractEmail(message, entry.user);
     if (email) {
       const a = ensureAccount(email);
       a.lastStatus = 'running';
@@ -293,8 +294,8 @@ function recordEntry(entry) {
     if (state.currentRun) {
       state.currentRun.finished = true;
       state.currentRun.endedAt = Date.now();
-      state.currentRun.totalCollected = parseInt(extractField(message, /pointsGained=(-?\d+)/) || '0', 10);
-      state.currentRun.totalBalance = parseInt(extractField(message, /currentBalance=(\d+)/) || '0', 10);
+      state.currentRun.totalCollected = parseInt(extractField(message, /(?:pointsGained|获得积分)=(-?\d+)/) || '0', 10);
+      state.currentRun.totalBalance = parseInt(extractField(message, /(?:currentBalance|现余额)=(\d+)/) || '0', 10);
       state.runs.unshift({
         startedAt: state.currentRun.startedAt,
         endedAt: state.currentRun.endedAt,
