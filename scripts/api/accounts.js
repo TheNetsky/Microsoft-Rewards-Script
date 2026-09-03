@@ -1,4 +1,8 @@
 import { accountIndexesFromEnv, envStrFrom, normalizeGeoLocale, normalizeLanguageCode } from '../env.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { loadExtraAccounts } from '../utils.js'
 
 function sanitizeProxyUrl(value) {
     try {
@@ -9,6 +13,23 @@ function sanitizeProxyUrl(value) {
     } catch {
         return value.replace(/^(?:[^/@\s]+@|([a-z][a-z0-9+.-]*:\/\/)[^/@\s]+@)/i, '$1')
     }
+}
+
+
+// 动态账号(看板"账号管理"维护): config/accounts.extra.json, 索引从 901 起,
+// 运行/展示/单账号与排除运行都会无重启感知
+const apiProjectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const EXTRA_BASE_INDEX = 901
+const extraCache = new Map()
+
+function extraAccountEnvVars(entry, index) {
+    const prefix = `ACCOUNT_${index}_`
+    const env = { [`${prefix}EMAIL`]: entry.email }
+    if (entry.password) env[`${prefix}PASSWORD`] = entry.password
+    if (entry.geoLocale) env[`${prefix}GEO_LOCALE`] = entry.geoLocale
+    if (entry.langCode) env[`${prefix}LANG_CODE`] = entry.langCode
+    if (entry.totpSecret) env[`${prefix}TOTP_SECRET`] = entry.totpSecret
+    return env
 }
 
 export function loadAccounts(sourceEnv = process.env) {
@@ -39,6 +60,23 @@ export function loadAccounts(sourceEnv = process.env) {
                 : null
         })
     }
+
+    extraCache.clear()
+    loadExtraAccounts(apiProjectRoot).forEach((entry, i) => {
+        const index = EXTRA_BASE_INDEX + i
+        extraCache.set(index, entry)
+        accounts.push({
+            index,
+            email: entry.email,
+            emailKey: entry.email,
+            geoLocale: entry.geoLocale,
+            langCode: entry.langCode,
+            hasRecoveryEmail: Boolean(entry.recoveryEmail),
+            hasTotp: Boolean(entry.totpSecret),
+            proxy: null,
+            extra: true
+        })
+    })
     return accounts
 }
 
@@ -48,6 +86,22 @@ export function buildSingleAccountEnv(accountIndex, sourceEnv = process.env) {
         const err = new Error('`accountIndex` must be a positive integer.')
         err.code = 'BAD_REQUEST'
         throw err
+    }
+
+    if (index >= EXTRA_BASE_INDEX) {
+        const extra = loadExtraAccounts(apiProjectRoot)
+        const entry = extra[index - EXTRA_BASE_INDEX]
+        if (!entry) {
+            const err = new Error(`ACCOUNT_${index} is not configured.`)
+            err.code = 'BAD_REQUEST'
+            throw err
+        }
+        const env = {}
+        for (const key of Object.keys(sourceEnv)) {
+            if (/^ACCOUNT_\d+_/.test(key)) env[key] = ''
+        }
+        Object.assign(env, extraAccountEnvVars(entry, 1))
+        return { env, account: { index, email: entry.email } }
     }
 
     const selectedPrefix = `ACCOUNT_${index}_`
@@ -117,6 +171,13 @@ export function buildExcludedAccountsEnv(excludedAccountIndexes, sourceEnv = pro
     included.forEach((account, position) => {
         const sourcePrefix = `ACCOUNT_${account.index}_`
         const targetPrefix = `ACCOUNT_${position + 1}_`
+        if (account.extra) {
+            const generated = extraAccountEnvVars(extraCache.get(account.index) || {}, account.index)
+            for (const [key, value] of Object.entries(generated)) {
+                env[`${targetPrefix}${key.slice(sourcePrefix.length)}`] = value
+            }
+            return
+        }
         for (const [key, value] of Object.entries(sourceEnv)) {
             if (!key.startsWith(sourcePrefix)) continue
             env[`${targetPrefix}${key.slice(sourcePrefix.length)}`] = value

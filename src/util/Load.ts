@@ -119,6 +119,34 @@ function getAccountIndexes(): string[] {
         .sort((a, b) => Number(a) - Number(b))
 }
 
+// Dashboard-managed dynamic accounts (config/accounts.extra.json), picked up by
+// every new run process without a container restart. Env accounts keep priority.
+function loadExtraAccounts(): Account[] {
+    const filePath = path.join(getProjectRoot(), 'config', 'accounts.extra.json')
+    try {
+        if (!fs.existsSync(filePath)) return []
+        const parsed: unknown = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+        if (!Array.isArray(parsed)) return []
+        return parsed
+            .filter(
+                (entry): entry is Record<string, unknown> =>
+                    Boolean(entry) && typeof (entry as { email?: unknown }).email === 'string'
+            )
+            .map(entry => ({
+                email: String(entry.email).trim(),
+                password: typeof entry.password === 'string' ? entry.password : '',
+                totpSecret: typeof entry.totpSecret === 'string' ? entry.totpSecret : undefined,
+                recoveryEmail: typeof entry.recoveryEmail === 'string' ? entry.recoveryEmail : '',
+                geoLocale: typeof entry.geoLocale === 'string' ? entry.geoLocale : 'auto',
+                langCode: typeof entry.langCode === 'string' ? entry.langCode : 'en',
+                proxy: { proxyHttp: false, url: '', port: 0, username: '', password: '' },
+                saveFingerprint: { mobile: false, desktop: false }
+            }))
+    } catch {
+        return []
+    }
+}
+
 export function loadAccounts(): Account[] {
     try {
         ensureEnvLoaded()
@@ -142,6 +170,8 @@ export function loadAccounts(): Account[] {
                 saveFingerprint: buildSaveFingerprint(index)
             })
         }
+
+        accounts.push(...loadExtraAccounts())
 
         if (!accounts.length) {
             throw new Error('No accounts found in environment. Set at least one ACCOUNT_N_EMAIL (see env.example).')

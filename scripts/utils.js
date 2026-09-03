@@ -231,7 +231,36 @@ export function loadAccountsFromEnv(projectRoot) {
         })
     }
 
-    return accounts
+    return accounts.concat(loadExtraAccounts(projectRoot))
+}
+
+export function getExtraAccountsPath(projectRoot) {
+    return path.join(projectRoot, 'config', 'accounts.extra.json')
+}
+
+// 动态账号(看板"账号管理"维护, 免重启): config/accounts.extra.json
+export function loadExtraAccounts(projectRoot) {
+    const filePath = getExtraAccountsPath(projectRoot)
+    try {
+        if (!fs.existsSync(filePath)) return []
+        const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+        if (!Array.isArray(parsed)) return []
+        return parsed
+            .filter(entry => entry && typeof entry.email === 'string' && entry.email.trim())
+            .map(entry => ({
+                email: entry.email.trim(),
+                password: typeof entry.password === 'string' ? entry.password : '',
+                totpSecret: typeof entry.totpSecret === 'string' ? entry.totpSecret : undefined,
+                recoveryEmail: typeof entry.recoveryEmail === 'string' ? entry.recoveryEmail : '',
+                geoLocale: normalizeGeoLocale(typeof entry.geoLocale === 'string' ? entry.geoLocale : 'auto'),
+                langCode: normalizeLanguageCode(typeof entry.langCode === 'string' ? entry.langCode : 'en'),
+                proxy: { proxyHttp: false, url: '', port: 0, username: '', password: '' },
+                saveFingerprint: { mobile: false, desktop: false }
+            }))
+    } catch (error) {
+        log('ERROR', `Failed to read extra accounts file: ${filePath} | ${error.message}`)
+        return []
+    }
 }
 
 export function findAccountByEmail(accounts, email) {

@@ -651,6 +651,32 @@ function handleUpgrade(req, socket, head) {
   }
 }
 
+// ============ 账号管理(动态账号, config/accounts.extra.json) ============
+// 与 fork 的动态账号源同文件: 添加/删除后, 下一次运行(cron 或手动)自动生效, 无需重建容器
+const EXTRA_ACCOUNTS_FILE = process.env.EXTRA_ACCOUNTS_FILE || path.join(CONFIG_DIR, '..', 'accounts.extra.json');
+
+function readExtraFile() {
+  try {
+    if (!fs.existsSync(EXTRA_ACCOUNTS_FILE)) return [];
+    const parsed = JSON.parse(fs.readFileSync(EXTRA_ACCOUNTS_FILE, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    log('ERROR', '读取动态账号文件失败: ' + e.message);
+    return [];
+  }
+}
+
+function writeExtraFile(list) {
+  try {
+    fs.writeFileSync(EXTRA_ACCOUNTS_FILE, JSON.stringify(list, null, 2), { mode: 0o600 });
+    try { fs.chmodSync(EXTRA_ACCOUNTS_FILE, 0o600); } catch (e) { /* ignore */ }
+    return true;
+  } catch (e) {
+    log('ERROR', '写入动态账号文件失败: ' + e.message);
+    return false;
+  }
+}
+
 // ============ HTTP 服务(8300) ============
 function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -848,6 +874,47 @@ const server = http.createServer(async (req, res) => {
       return handleNovncHttp(req, res);
     }
 
+    if (p === '/api/accounts-manage' && req.method === 'GET') {
+      return json(res, 200, {
+        accounts: readExtraFile().map(e => ({
+          email: e.email,
+          geoLocale: e.geoLocale || 'auto',
+          hasPassword: Boolean(e.password),
+          hasTotp: Boolean(e.totpSecret),
+        })),
+      });
+    }
+    if (p === '/api/accounts-manage' && req.method === 'POST') {
+      let body = {};
+      try { body = await readBody(req); } catch (e) { body = {}; }
+      const email = String(body.email || '').trim().toLowerCase();
+      const password = String(body.password || '');
+      const geoLocale = String(body.geoLocale || 'gb').trim() || 'gb';
+      const totpSecret = String(body.totpSecret || '').trim();
+      if (!/^\S+@\S+\.\S+$/.test(email)) return json(res, 400, { error: '邮箱格式不正确' });
+      if (!password) return json(res, 400, { error: '密码不能为空' });
+      const list = readExtraFile();
+      if (list.some(e => String(e.email || '').toLowerCase() === email)) {
+        return json(res, 409, { error: '该账号已在动态列表中' });
+      }
+      const accs = await fetchJson('/accounts');
+      const envEmails = (((accs || {}).accounts) || []).map(a => String(a.email || '').toLowerCase());
+      if (envEmails.includes(email)) return json(res, 409, { error: '该账号已作为固定账号(环境变量)配置' });
+      list.push({ email, password, geoLocale, langCode: 'en', totpSecret });
+      if (!writeExtraFile(list)) return json(res, 500, { error: '写入失败' });
+      return json(res, 200, { ok: true, count: list.length });
+    }
+    if (p === '/api/accounts-manage/delete' && req.method === 'POST') {
+      let body = {};
+      try { body = await readBody(req); } catch (e) { body = {}; }
+      const email = String(body.email || '').trim().toLowerCase();
+      const list = readExtraFile();
+      const next = list.filter(e => String(e.email || '').toLowerCase() !== email);
+      if (next.length === list.length) return json(res, 404, { error: '未找到该动态账号' });
+      if (!writeExtraFile(next)) return json(res, 500, { error: '写入失败' });
+      return json(res, 200, { ok: true, count: next.length });
+    }
+
     // ---- 前端页面 ----
     if (p === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -957,6 +1024,7 @@ const HTML = `<!DOCTYPE html>
   dialog#mlModal { width:min(980px, 97vw); }
   .rowact { white-space:nowrap; }
   .rowact .btn { padding:3px 8px; font-size:12px; }
+  .btn.danger { background:var(--err); color:#fff; }
   .pw-row { display:flex; align-items:center; gap:8px; }
   .eye { border:0; background:#eef1f4; border-radius:8px; cursor:pointer; padding:8px 10px; font-size:14px; margin-top:4px; }
   details.history { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-top:14px; }
@@ -979,6 +1047,7 @@ const HTML = `<!DOCTYPE html>
       <div class="menu">
         <button class="btn secondary" onclick="toggleMenu(event)">⚙ 菜单</button>
         <div class="menu-drop" id="menuDrop">
+          <button class="menu-item" onclick="openAccounts(); closeMenu()">👥 账号管理（动态添加）</button>
           <button class="menu-item" onclick="openPush(); closeMenu()">🔔 通知设置（钉钉推送）</button>
           <button class="menu-item" onclick="manualRefresh(); closeMenu()">⟳ 立即刷新</button>
           <div class="menu-sep"></div>
@@ -1077,11 +1146,40 @@ const HTML = `<!DOCTYPE html>
     </div>
   </dialog>
 
+  <dialog id="acctModal">
+    <h2>👥 账号管理</h2>
+    <div class="hint">动态账号保存在 config 卷的 accounts.extra.json 中，添加/删除后<b>下一次运行自动生效</b>（每日定时或手动触发均可），无需重启容器。固定账号（来自 .env 环境变量）仅可查看。新增账号首次运行需要自动登录；若遇到微软身份验证卡点，可在表格对应行点 🔑 人工登录完成。</div>
+    <table class="hist" style="margin-bottom:14px">
+      <thead><tr><th>账号</th><th>来源</th><th>地区</th><th>2FA</th><th style="width:70px">操作</th></tr></thead>
+      <tbody id="acctRows"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+    </table>
+    <div class="grid-2">
+      <div>
+        <div class="field"><label>邮箱</label><input type="text" id="naEmail" placeholder="user@example.com"></div>
+        <div class="field"><label>密码</label><div class="pw-row"><input type="password" id="naPass" placeholder="微软账号密码"><button type="button" class="eye" onclick="togglePass('naPass',this)">👁</button></div></div>
+        <div class="field"><label>地区（搜索词源相关，默认 gb 与现有账号一致）</label>
+          <select id="naGeo" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-top:4px">
+            <option value="gb" selected>gb（英国）</option><option value="us">us（美国）</option><option value="auto">auto（自动）</option><option value="de">de</option><option value="fr">fr</option><option value="jp">jp</option><option value="ca">ca</option><option value="au">au</option>
+          </select>
+        </div>
+        <div class="field"><label>2FA 密钥（无则留空）</label><input type="text" id="naTotp" placeholder="可选"></div>
+      </div>
+      <div class="hint" style="padding-top:6px">
+        说明：<br>· 动态账号与 .env 固定账号在运行、体检、人工登录中完全等价；<br>· 序号从 901 起编（批量勾选运行时可见）；<br>· 凭据明文存放于 config 卷（600 权限），请勿暴露该目录；<br>· 删除动态账号不会清除其已保存的登录会话，如需彻底清理请用容器 API 的 DELETE /sessions/:邮箱。
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:14px">
+      <button class="btn" onclick="addAccount()">➕ 添加账号</button>
+      <button class="btn secondary" onclick="closeAccounts()">关闭</button>
+      <span id="acctMsg" class="sub"></span>
+    </div>
+  </dialog>
+
   <div class="foot">数据来源: microsoft-rewards-script 容器 API · <span id="footRefresh">每 15 秒自动刷新</span> · ms-rewards-dashboard</div>
 </div>
 <script>
 'use strict';
-var API = { overview:'/api/overview', pushConfig:'/api/push-config', pushTest:'/api/push-test', start:'/api/start', stop:'/api/stop', loginCheck:'/api/login-check', loginCheckStatus:'/api/login-check/status', manualLogin:'/api/manual-login', manualLoginStatus:'/api/manual-login/status', manualLoginStop:'/api/manual-login/stop' };
+var API = { overview:'/api/overview', pushConfig:'/api/push-config', pushTest:'/api/push-test', start:'/api/start', stop:'/api/stop', loginCheck:'/api/login-check', loginCheckStatus:'/api/login-check/status', manualLogin:'/api/manual-login', manualLoginStatus:'/api/manual-login/status', manualLoginStop:'/api/manual-login/stop', accountsManage:'/api/accounts-manage' };
 var selected = {};
 var selectionReady = false; // 首次拿到账号列表时默认全选, 之后尊重用户的选择
 var accountsCache = [];
@@ -1217,7 +1315,7 @@ function renderAccounts(now) {
     html += '<tr>'
       + '<td><input type="checkbox"' + checked + ' onchange="toggleSel(' + a.index + ', this.checked)"></td>'
       + '<td>' + a.index + '</td>'
-      + '<td class="em">' + esc(a.email) + '</td>'
+      + '<td class="em">' + esc(a.email) + (a.extra ? ' <span class="badge run">动态</span>' : '') + '</td>'
       + '<td class="num">' + bal + balTs + '</td>'
       + '<td class="num" style="color:var(--ok)">' + today + live + '</td>'
       + '<td>' + badge(a.status, liveRunning) + '</td>'
@@ -1458,6 +1556,71 @@ function ensureMlPoll() {
 function mlClose() {
   var dlg = $('mlModal');
   if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+}
+
+// ---- 账号管理(动态添加) ----
+function openAccounts() {
+  apiFetch(API.accountsManage, null, 8000).then(function (d) { renderAcctManage(d || {}); }).catch(function () { renderAcctManage({}); });
+  apiFetch(API.overview).then(function (d) { renderOverview(d); }).catch(function () {});
+  var dlg = $('acctModal');
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+}
+function closeAccounts() {
+  var dlg = $('acctModal');
+  if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+  scheduleRefresh();
+}
+function showAcctMsg(txt, ok) { var el = $('acctMsg'); el.textContent = txt; el.style.color = ok ? 'var(--ok)' : 'var(--err)'; }
+var acctManageList = [];
+function renderAcctManage(d) {
+  var box = $('acctRows');
+  var fileAccounts = d.accounts || [];
+  acctManageList = fileAccounts.slice();
+  var all = accountsCache.slice();
+  for (var i = 0; i < fileAccounts.length; i++) {
+    var fa = fileAccounts[i];
+    var exists = false;
+    for (var j = 0; j < all.length; j++) if (all[j].email && all[j].email.toLowerCase() === fa.email.toLowerCase()) exists = true;
+    if (!exists) all.push({ index: 901 + i, email: fa.email, geoLocale: fa.geoLocale, hasTotp: fa.hasTotp, extra: true, fresh: true });
+  }
+  if (!all.length) { box.innerHTML = '<tr><td colspan="5" class="empty">暂无账号</td></tr>'; return; }
+  var html = '';
+  for (var k = 0; k < all.length; k++) {
+    var a = all[k];
+    var src = a.extra ? '<span class="badge run">动态</span>' : '<span class="badge">固定</span>';
+    var del = a.extra ? '<button class="btn small danger" onclick="delAccount(' + a.index + ')">删除</button>' : '';
+    var totp = a.hasTotp ? '是' : '-';
+    var geo = a.geoLocale || '-';
+    html += '<tr><td>' + esc(a.email) + (a.fresh ? ' <span class="badge err">未运行过</span>' : '') + '</td><td>' + src + '</td><td>' + esc(geo) + '</td><td>' + totp + '</td><td>' + del + '</td></tr>';
+  }
+  box.innerHTML = html;
+}
+function addAccount() {
+  var email = $('naEmail').value.trim();
+  var password = $('naPass').value;
+  if (!email || !password) { showAcctMsg('请填写邮箱和密码', false); return; }
+  fetch(API.accountsManage, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password, geoLocale: $('naGeo').value, totpSecret: $('naTotp').value.trim() }) })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.error) { showAcctMsg(d.error, false); return; }
+      showAcctMsg('✅ 已添加，下一次运行自动生效', true);
+      $('naEmail').value = ''; $('naPass').value = ''; $('naTotp').value = '';
+      openAccounts();
+    })
+    .catch(function (e) { showAcctMsg('添加失败: ' + e.message, false); });
+}
+function delAccount(index) {
+  var entry = acctManageList[index - 901];
+  var email = entry ? entry.email : '#' + index;
+  if (!confirm('删除动态账号 ' + email + '？下一次运行起不再执行该账号。')) return;
+  fetch(API.accountsManage + '/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.error) { showAcctMsg(d.error, false); return; }
+      showAcctMsg('✅ 已删除', true);
+      openAccounts();
+    })
+    .catch(function (e) { showAcctMsg('删除失败: ' + e.message, false); });
 }
 
 function showDiag() {
