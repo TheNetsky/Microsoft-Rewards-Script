@@ -76,6 +76,6 @@ export async function configureMediaBlocking(bot: MicrosoftRewardsBot, context: 
     bot.logger.info(
         bot.isMobile,
         'BROWSER',
-        'Media loading disabled after authentication | blockedResourceTypes=image,media | httpCache=disabled-by-routing'
+        '媒体加载已禁用 | 拦截资源类型=image,media | http缓存=已通过路由禁用'
     )
 }

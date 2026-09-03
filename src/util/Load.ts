@@ -8,7 +8,7 @@ import { validateAccounts, validateConfig } from './Validator'
 let configCache: Config
 let envLoaded = false
 
-function getProjectRoot(): string {
+export function getProjectRoot(): string {
     const cwd = process.cwd()
     if (fs.existsSync(path.join(cwd, 'package.json'))) return cwd
 

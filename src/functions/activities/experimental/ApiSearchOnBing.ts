@@ -20,7 +20,7 @@ export class ApiSearchOnBing extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'SEARCH-ON-BING',
-            `Starting SearchOnBing | offerId=${offerId} | title="${promotion.title}" | currentBalance=${this.oldBalance}`
+            `开始 SearchOnBing | offerId=${offerId} | 标题="${promotion.title}" | 当前余额=${this.oldBalance}`
         )
 
         try {
@@ -28,7 +28,7 @@ export class ApiSearchOnBing extends BaseActivity {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'SEARCH-ON-BING',
-                    `Search activity couldn't be activated, aborting | offerId=${offerId}`
+                    `搜索活动无法激活，中止 | offerId=${offerId}`
                 )
                 return
             }
@@ -40,21 +40,21 @@ export class ApiSearchOnBing extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'SEARCH-ON-BING',
-                    `Completed SearchOnBing | offerId=${offerId} | pointsGained=${this.gainedPoints} | currentBalance=${this.bot.userData.currentPoints} | previousBalance=${this.oldBalance}`,
+                    `SearchOnBing 完成 | offerId=${offerId} | 获得积分=${this.gainedPoints} | 当前余额=${this.bot.userData.currentPoints} | 原余额=${this.oldBalance}`,
                     'green'
                 )
             } else {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'SEARCH-ON-BING',
-                    `Failed SearchOnBing | offerId=${offerId} | pointsGained=${this.gainedPoints} | currentBalance=${this.bot.userData.currentPoints} | previousBalance=${this.oldBalance}`
+                    `SearchOnBing 失败 | offerId=${offerId} | 获得积分=${this.gainedPoints} | 当前余额=${this.bot.userData.currentPoints} | 原余额=${this.oldBalance}`
                 )
             }
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'SEARCH-ON-BING',
-                `Error in doSearchOnBing | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
+                `doSearchOnBing 出错 | offerId=${offerId} | 错误=${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -65,26 +65,26 @@ export class ApiSearchOnBing extends BaseActivity {
 
         const cgDashboard = (await this.bot.browser.func.getDashboardData()).dashboard
         const cg = this.buildCategoryGroup(cgDashboard, offerId)
-        this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `Category group | cg=${cg || '(none)'}`)
+        this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `分类组 | cg=${cg || '(none)'}`)
 
         this.bot.logger.debug(
             this.bot.isMobile,
             'SEARCH-ON-BING-SEARCH',
-            `Starting search loop | queriesCount=${queries.length} | targetPoints=${promotion.pointProgressMax} | currentBalance=${this.oldBalance}`
+            `开始搜索循环 | 查询数=${queries.length} | 目标积分=${promotion.pointProgressMax} | 当前余额=${this.oldBalance}`
         )
 
         let lastBalance = this.oldBalance
 
         for (const [index, query] of queries.entries()) {
             try {
-                this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `Processing query | query="${query}"`)
+                this.bot.logger.debug(this.bot.isMobile, 'SEARCH-ON-BING-SEARCH', `处理查询 | 查询="${query}"`)
 
                 const { ig } = await this.searchApi.report(query, cg ? { cg } : undefined)
                 if (!ig) {
                     this.bot.logger.warn(
                         this.bot.isMobile,
                         'SEARCH-ON-BING-SEARCH',
-                        `No IG returned for query="${query}" - skipping this query`
+                        `查询 "${query}" 未返回 IG - 跳过该查询`
                     )
                     continue
                 }
@@ -111,7 +111,7 @@ export class ApiSearchOnBing extends BaseActivity {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-SEARCH',
-                    `Progress check | query="${query}" | offerProgress=${offerProgress} | offerComplete=${offerComplete} | currentBalance=${newBalance}`
+                    `进度检查 | 查询="${query}" | 活动进度=${offerProgress} | 活动完成=${offerComplete} | 当前余额=${newBalance}`
                 )
 
                 if (offerComplete) {
@@ -119,7 +119,7 @@ export class ApiSearchOnBing extends BaseActivity {
                     this.bot.logger.info(
                         this.bot.isMobile,
                         'SEARCH-ON-BING-SEARCH',
-                        `SearchOnBing activity completed | pointsGained=${this.gainedPoints} | currentBalance=${newBalance} | query="${query}" | offerProgress=${offerProgress}`,
+                        `SearchOnBing 活动完成 | 获得积分=${this.gainedPoints} | 当前余额=${newBalance} | 查询="${query}" | 活动进度=${offerProgress}`,
                         'green'
                     )
                     return
@@ -128,13 +128,13 @@ export class ApiSearchOnBing extends BaseActivity {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-SEARCH',
-                    `${index + 1}/${queries.length} | activity not complete | offerProgress=${offerProgress} | query="${query}"`
+                    `${index + 1}/${queries.length} | 活动未完成 | 活动进度=${offerProgress} | 查询="${query}"`
                 )
             } catch (error) {
                 this.bot.logger.error(
                     this.bot.isMobile,
                     'SEARCH-ON-BING-SEARCH',
-                    `Error during search loop | query="${query}" | message=${error instanceof Error ? error.message : String(error)}`
+                    `搜索循环出错 | 查询="${query}" | 错误=${error instanceof Error ? error.message : String(error)}`
                 )
             } finally {
                 if (!this.success && index < queries.length - 1) {
@@ -146,7 +146,7 @@ export class ApiSearchOnBing extends BaseActivity {
         this.bot.logger.warn(
             this.bot.isMobile,
             'SEARCH-ON-BING-SEARCH',
-            `Finished all queries without completing the activity | queriesTried=${queries.length} | offerId=${offerId} | pointsGained=${this.gainedPoints} | currentBalance=${this.bot.userData.currentPoints} | previousBalance=${this.oldBalance}`
+            `所有查询已用完但活动未完成 | 已尝试查询数=${queries.length} | offerId=${offerId} | 获得积分=${this.gainedPoints} | 当前余额=${this.bot.userData.currentPoints} | 原余额=${this.oldBalance}`
         )
     }
 

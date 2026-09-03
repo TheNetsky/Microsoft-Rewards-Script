@@ -29,7 +29,7 @@ export class Search extends BaseActivity {
 
     public async doSearch(page: Page, isMobile: boolean): Promise<number> {
         const startBalance = Number(this.bot.userData.currentPoints ?? 0)
-        this.bot.logger.info(isMobile, 'SEARCH-BING', `Starting Bing searches | currentBalance=${startBalance}`)
+        this.bot.logger.info(isMobile, 'SEARCH-BING', `开始必应搜索 | 当前余额=${startBalance}`)
 
         const tracker = new PointsTracker(this.bot, isMobile)
         try {
@@ -39,14 +39,14 @@ export class Search extends BaseActivity {
                 this.bot.logger.warn(
                     isMobile,
                     tracker.context,
-                    `Hit the ${tracker.maxSearches}-search ceiling with points still missing | ${tracker.progress()}`
+                    `已达 ${tracker.maxSearches} 次搜索上限但积分仍有缺口 | ${tracker.progress()}`
                 )
             }
 
             this.bot.logger.info(
                 isMobile,
                 tracker.context,
-                `Completed Bing searches | pointsGained=${stats.totalGained} | currentBalance=${this.bot.userData.currentPoints} | previousBalance=${startBalance} | searches=${stats.performed} | ${tracker.progress()}`
+                `必应搜索完成 | 获得积分=${stats.totalGained} | 当前余额=${this.bot.userData.currentPoints} | 之前余额=${startBalance} | 搜索次数=${stats.performed} | ${tracker.progress()}`
             )
             return stats.totalGained
         } finally {
@@ -76,7 +76,7 @@ export class Search extends BaseActivity {
         this.bot.logger.info(
             isMobile,
             tracker.context,
-            `Bonus farming ${done ? 'complete' : 'stopped'} (${reason}) | pointsGained=${stats.totalGained} | currentBalance=${this.bot.userData.currentPoints} | ${tracker.progress()} | searches=${stats.performed}`,
+            `奖励搜索${done ? '完成' : '中止'}（${reason}）| 获得积分=${stats.totalGained} | 当前余额=${this.bot.userData.currentPoints} | ${tracker.progress()} | 搜索次数=${stats.performed}`,
             done || stats.totalGained > 0 ? 'green' : undefined
         )
         return stats.totalGained
@@ -92,13 +92,13 @@ export class Search extends BaseActivity {
             const queryQueue = new SearchQueryQueue(this.bot)
             const topicCount = await queryQueue.prepare()
             if (!topicCount) {
-                this.bot.logger.warn(isMobile, tracker.context, 'No main search topics available, skipping')
+                this.bot.logger.warn(isMobile, tracker.context, '无可用主搜索主题，跳过')
                 return stats
             }
             this.bot.logger.info(
                 isMobile,
                 tracker.context,
-                `Query queue ready | mainTopics=${topicCount} | clusterSearch=${this.bot.config.searchSettings.clusterSearch}`
+                `查询队列就绪 | 主题数=${topicCount} | clusterSearch=${this.bot.config.searchSettings.clusterSearch}`
             )
 
             await this.bot.browser.func.synchronizeActiveBrowserCookies('SEARCH-COOKIE-SEED', true)
@@ -109,7 +109,7 @@ export class Search extends BaseActivity {
             while (!tracker.done() && stats.performed < tracker.maxSearches && stats.stagnant < tracker.stagnantLimit) {
                 const query = await queryQueue.next()
                 if (!query) {
-                    this.bot.logger.warn(isMobile, tracker.context, 'Query queue exhausted, stopping')
+                    this.bot.logger.warn(isMobile, tracker.context, '查询队列已耗尽，停止')
                     break
                 }
 
@@ -125,7 +125,7 @@ export class Search extends BaseActivity {
                     this.bot.logger.info(
                         isMobile,
                         tracker.context,
-                        `pointsGained=${gained} | currentBalance=${this.bot.userData.currentPoints} | query="${query}" | ${tracker.progress()}`,
+                        `获得积分=${gained} | 当前余额=${this.bot.userData.currentPoints} | 查询="${query}" | ${tracker.progress()}`,
                         'green'
                     )
                 } else {
@@ -133,7 +133,7 @@ export class Search extends BaseActivity {
                     this.bot.logger.info(
                         isMobile,
                         tracker.context,
-                        `no points ${stats.stagnant}/${tracker.stagnantLimit} | query="${query}" | ${tracker.progress()}`
+                        `未获得积分 ${stats.stagnant}/${tracker.stagnantLimit} | 查询="${query}" | ${tracker.progress()}`
                     )
                 }
             }
@@ -143,7 +143,7 @@ export class Search extends BaseActivity {
             this.bot.logger.error(
                 isMobile,
                 tracker.context,
-                `Search session error | ${error instanceof Error ? error.message : String(error)}`
+                `搜索会话出错 | ${error instanceof Error ? error.message : String(error)}`
             )
             return stats
         }
@@ -194,7 +194,7 @@ export class Search extends BaseActivity {
                 this.bot.logger.warn(
                     isMobile,
                     'SEARCH-BING',
-                    `Search attempt ${attempt}/${MAX_QUERY_ATTEMPTS} failed | query="${query}" | ${error instanceof Error ? error.message : String(error)}`
+                    `搜索尝试 ${attempt}/${MAX_QUERY_ATTEMPTS} 失败 | 查询="${query}" | ${error instanceof Error ? error.message : String(error)}`
                 )
                 if (attempt === MAX_QUERY_ATTEMPTS) throw error
                 await this.bot.utils.wait(2000)
@@ -212,7 +212,7 @@ export class Search extends BaseActivity {
             this.bot.logger.error(
                 isMobile,
                 'SEARCH-RANDOM-SCROLL',
-                `Failed during random scroll | ${error instanceof Error ? error.message : String(error)}`
+                `随机滚动过程中出现错误 | ${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -233,7 +233,7 @@ export class Search extends BaseActivity {
             this.bot.logger.error(
                 isMobile,
                 'SEARCH-RANDOM-CLICK',
-                `Failed during random click | ${error instanceof Error ? error.message : String(error)}`
+                `随机点击过程中出现错误 | ${error instanceof Error ? error.message : String(error)}`
             )
         }
     }
@@ -261,7 +261,7 @@ class PointsTracker implements SearchTracker {
         this.bot.logger.info(
             this.isMobile,
             this.context,
-            `Search points remaining | edge=${this.missing.edgePoints} | desktop=${this.missing.desktopPoints} | mobile=${this.missing.mobilePoints}`
+            `剩余搜索积分 | Edge=${this.missing.edgePoints} | 桌面端=${this.missing.desktopPoints} | 移动端=${this.missing.mobilePoints}`
         )
 
         if (this.missing.totalPoints <= 0) {
@@ -269,14 +269,14 @@ class PointsTracker implements SearchTracker {
                 this.bot.logger.info(
                     this.isMobile,
                     this.context,
-                    'No search points to earn, skipping (runOnZeroPoints is disabled)'
+                    '无可赚搜索积分，跳过（runOnZeroPoints 已禁用）'
                 )
                 return false
             }
             this.bot.logger.info(
                 this.isMobile,
                 this.context,
-                'No search points reported, but runOnZeroPoints is enabled, searching anyway'
+                '未报告搜索积分，但 runOnZeroPoints 已启用，仍继续搜索'
             )
         }
         return true

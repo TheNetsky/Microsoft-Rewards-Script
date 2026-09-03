@@ -49,6 +49,7 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_SEARCH_MAX_BONUS_SEARCHES', path: 'searchSettings.maxBonusSearches', type: 'number' },
     { env: 'CONFIG_SEARCH_QUERY_ENGINES', path: 'searchSettings.queryEngines', type: 'array' },
     { env: 'CONFIG_SEARCH_ON_BING_LOCAL', path: 'searchOnBingLocalQueries', type: 'bool' },
+    { env: 'CONFIG_CHINA_API_APPKEY', path: 'searchSettings.chinaApi.appkey', type: 'string' },
 
     // Activities
     { env: 'CONFIG_ACTIVITY_URL_REWARD', path: 'activities.urlReward', type: 'bool' },
@@ -78,6 +79,17 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_TELEGRAM_ENABLED', path: 'webhook.telegram.enabled', type: 'bool' },
     { env: 'CONFIG_TELEGRAM_BOTTOKEN', path: 'webhook.telegram.botToken', type: 'string' },
     { env: 'CONFIG_TELEGRAM_CHATID', path: 'webhook.telegram.chatId', type: 'string' },
+
+    // PushPlus webhook（国内微信推送）
+    { env: 'CONFIG_PUSHPLUS_ENABLED', path: 'webhook.pushplus.enabled', type: 'bool' },
+    { env: 'CONFIG_PUSHPLUS_TOKEN', path: 'webhook.pushplus.token', type: 'string' },
+    { env: 'CONFIG_PUSHPLUS_TITLE', path: 'webhook.pushplus.title', type: 'string' },
+    { env: 'CONFIG_PUSHPLUS_TEMPLATE', path: 'webhook.pushplus.template', type: 'string' },
+    { env: 'CONFIG_PUSHPLUS_CHANNEL', path: 'webhook.pushplus.channel', type: 'string' },
+
+    // ClawBot webhook（微信 ClawBot 直连推送，凭证由扫码生成）
+    { env: 'CONFIG_CLAWBOT_ENABLED', path: 'webhook.clawbot.enabled', type: 'bool' },
+    { env: 'CONFIG_CLAWBOT_AUTHFILE', path: 'webhook.clawbot.authFile', type: 'string' },
 
     // ntfy webhook (tags are comma-separated e.g. "bot,notify")
     { env: 'CONFIG_NTFY_ENABLED', path: 'webhook.ntfy.enabled', type: 'bool' },

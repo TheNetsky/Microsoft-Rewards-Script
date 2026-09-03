@@ -9,16 +9,16 @@ export class DailySet extends BaseActivity {
             data.dashboard.dailySetPromotions[today]?.filter(item => !item.complete && item.pointProgressMax > 0) ?? []
 
         if (!pending.length) {
-            this.bot.logger.info(this.bot.isMobile, 'DAILY-SET', 'All "Daily Set" items have already been completed')
+            this.bot.logger.info(this.bot.isMobile, 'DAILY-SET', '所有"每日任务"项目已完成')
             return
         }
 
         this.bot.logger.info(
             this.bot.isMobile,
             'DAILY-SET',
-            `Started solving "Daily Set" items | remaining=${pending.length}`
+            `开始解决"每日任务"项目 | remaining=${pending.length}`
         )
         await new PromotionActivityRunner(this.bot).run(pending)
-        this.bot.logger.info(this.bot.isMobile, 'DAILY-SET', 'Finished processing "Daily Set" items')
+        this.bot.logger.info(this.bot.isMobile, 'DAILY-SET', '"每日任务"项目处理完毕')
     }
 }

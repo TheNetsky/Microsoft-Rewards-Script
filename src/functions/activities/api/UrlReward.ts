@@ -15,7 +15,7 @@ export class UrlReward extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Skipping ${offerId}: "reportActivity" not discovered in bundle`
+                `跳过 ${offerId}：bundle 中未发现 "reportActivity"`
             )
             return
         }
@@ -25,7 +25,7 @@ export class UrlReward extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Skipping ${offerId}: not present in page snapshot, even after refetching /earn and /dashboard`
+                `跳过 ${offerId}：页面快照中不存在，即使重新获取 /earn 和 /dashboard 后也没有`
             )
             return
         }
@@ -33,7 +33,7 @@ export class UrlReward extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Skipping ${offerId}: not reportable (completed/locked/no-hash/future-dated)`
+                `跳过 ${offerId}：不可上报（已完成/已锁定/无 hash/未到期）`
             )
             return
         }
@@ -42,7 +42,7 @@ export class UrlReward extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Skipping ${offerId}: awards no points (points=${live.points}${live.promotionSubtype ? ` subtype=${live.promotionSubtype}` : ''}) - likely a free trial/non-crediting offer. Set skipNonPointTasks=false to attempt anyway.`
+                `跳过 ${offerId}：不产生积分（points=${live.points}${live.promotionSubtype ? ` subtype=${live.promotionSubtype}` : ''}）- 可能是免费试用/不计分优惠。设置 skipNonPointTasks=false 可强制尝试。`
             )
             return
         }
@@ -58,7 +58,7 @@ export class UrlReward extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'URL-REWARD',
-            `Starting UrlReward | offerId=${offerId} | geo=${this.bot.userData.geoLocale} | currentBalance=${oldBalance}`
+            `开始处理 UrlReward | offerId=${offerId} | geo=${this.bot.userData.geoLocale} | currentBalance=${oldBalance}`
         )
 
         try {
@@ -84,7 +84,7 @@ export class UrlReward extends BaseActivity {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'URL-REWARD',
-                    `UrlReward request was not acknowledged | offerId=${offerId} | status=${status}`
+                    `UrlReward 请求未被确认 | offerId=${offerId} | status=${status}`
                 )
                 if (await this.retryAfterRequestFailure(promotion, allowSessionRepair)) return
             }
@@ -95,7 +95,7 @@ export class UrlReward extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Response | offerId=${offerId} | status=${status} | acknowledged=${acknowledged} | pointsGained=${gainedPoints} | currentBalance=${newBalance}`
+                `响应 | offerId=${offerId} | status=${status} | acknowledged=${acknowledged} | pointsGained=${gainedPoints} | currentBalance=${newBalance}`
             )
 
             if (gainedPoints > 0) {
@@ -106,28 +106,28 @@ export class UrlReward extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'URL-REWARD',
-                    `Completed UrlReward | offerId=${offerId} | pointsGained=${gainedPoints} | currentBalance=${newBalance}${shortfall ? ' | WARNING: credited less than advertised' : ''}`,
+                    `UrlReward 完成 | offerId=${offerId} | pointsGained=${gainedPoints} | currentBalance=${newBalance}${shortfall ? ' | WARNING: credited less than advertised' : ''}`,
                     'green'
                 )
             } else if (acknowledged && expectedPoints === 0) {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'URL-REWARD',
-                    `Completed UrlReward (no points by design) | offerId=${offerId} | acknowledged=true | pointsGained=0 | currentBalance=${newBalance}`,
+                    `UrlReward 完成（设计上无积分） | offerId=${offerId} | acknowledged=true | pointsGained=0 | currentBalance=${newBalance}`,
                     'green'
                 )
             } else {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'URL-REWARD',
-                    `UrlReward credited no points | offerId=${offerId} | acknowledged=${acknowledged} | expected=${expectedPoints} | pointsGained=0 | currentBalance=${newBalance}`
+                    `UrlReward 未获得积分 | offerId=${offerId} | acknowledged=${acknowledged} | expected=${expectedPoints} | pointsGained=0 | currentBalance=${newBalance}`
                 )
             }
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'URL-REWARD',
-                `Error in doUrlReward | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
+                `doUrlReward 出错 | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
             )
             await this.retryAfterRequestFailure(promotion, allowSessionRepair)
         }
@@ -142,7 +142,7 @@ export class UrlReward extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'URL-REWARD',
-            `Retrying UrlReward once with refreshed cookies and bootstrap data | offerId=${promotion.offerId}`
+            `使用刷新后的 cookie 和引导数据重试一次 UrlReward | offerId=${promotion.offerId}`
         )
         await this.runUrlReward(promotion, false)
         return true

@@ -1,9 +1,10 @@
 services:
     microsoft-rewards-script:
-        image: ghcr.io/thenetsky/microsoft-rewards-script:4
-        # To build locally instead of pulling the prebuilt image, use the build section below.
-        #build:
-        #    context: .
+        # 本地构建本项目代码（V4-china 国内适配版）。
+        # ghcr.io/thenetsky/... 是原作者 TheNetsky 的官方镜像，跑的是原版代码，
+        # 不含本项目的国内适配（中国热搜 / PushPlus 等）。
+        build: .
+        image: microsoft-rewards-script:china
         container_name: microsoft-rewards-script
         restart: unless-stopped
         volumes:
@@ -14,7 +15,7 @@ services:
             - path: .env
         environment:
             # ── Scheduler ──────────────────────────────────────
-            TZ: 'America/Toronto'
+            TZ: 'Asia/Shanghai' # Set your timezone for proper scheduling
             NODE_ENV: 'production'
             # CRON_SCHEDULE is the *initial* default. It will run as default unless changed by the API
             # API schedule changes are saved to ./config/schedule.json, delete
@@ -60,6 +61,24 @@ services:
         # ── API mode + dashboard port mapping ──────────────────────────────────────
         # Uncomment when API_MODE=true. 3010 should stay loopback-only (token-bearing API);
         # 8300 is the embedded dashboard web UI (LAN, no auth).
+            # ── 国内特性（V4-china）──────────────────────────────────
+            # 查询源：中国热搜(gmya.net) + 本地词兜底；国内推荐，无需代理
+            #CONFIG_SEARCH_QUERY_ENGINES: 'china,local'
+            # gmya.net appkey，填入解除免费档限流（留空走免费档，有频率限制）
+            #CONFIG_CHINA_API_APPKEY: ''
+            # PushPlus 微信推送（国内推荐，无需翻墙）：
+            #CONFIG_PUSHPLUS_ENABLED: 'true'
+            #CONFIG_PUSHPLUS_TOKEN: 'your_pushplus_token'
+            #CONFIG_PUSHPLUS_TITLE: 'Microsoft-Rewards-Script'
+            #CONFIG_PUSHPLUS_TEMPLATE: 'txt'        # txt / html / markdown
+            #CONFIG_PUSHPLUS_CHANNEL: ''             # 默认微信；可选其他 channel
+            # 微信 ClawBot 推送（官方 iLink 直连，免费；需容器内完成一次扫码，
+            # 建议配合 API_MODE/tty 使用，或本地登录后把 clawbot-auth.json 挂载进容器）：
+            #CONFIG_CLAWBOT_ENABLED: 'true'
+            #CONFIG_CLAWBOT_AUTHFILE: ''             # 凭证路径，默认项目根 clawbot-auth.json
+
+        # ── API mode port mapping ──────────────────────────────────────
+        # Uncomment when API_MODE=true
         #ports:
         #    - '127.0.0.1:3010:3010'
         #    - '8300:8300'

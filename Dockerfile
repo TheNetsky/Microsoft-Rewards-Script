@@ -1,7 +1,8 @@
 ###############################################################################
 # Stage 1: Builder
 ###############################################################################
-FROM node:24-slim AS builder
+# 国内镜像源加速拉取（m.daocloud.io 代理 Docker Hub）；海外环境可改回 node:24-slim
+FROM m.daocloud.io/docker.io/library/node:24-slim AS builder
 
 WORKDIR /usr/src/microsoft-rewards-script
 
@@ -25,7 +26,7 @@ RUN rm -rf node_modules \
 ###############################################################################
 # Stage 2: Runtime
 ###############################################################################
-FROM node:24-slim AS runtime
+FROM m.daocloud.io/docker.io/library/node:24-slim AS runtime
 
 WORKDIR /usr/src/microsoft-rewards-script
 

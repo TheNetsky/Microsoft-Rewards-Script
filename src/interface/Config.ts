@@ -20,7 +20,7 @@ export interface Config {
     webhook: ConfigWebhook
 }
 
-export type QueryEngine = 'google' | 'wikipedia' | 'wikirandom' | 'hackernews' | 'reddit' | 'local'
+export type QueryEngine = 'china' | 'google' | 'wikipedia' | 'wikirandom' | 'hackernews' | 'reddit' | 'local'
 
 export type RssFeedSelector = 'rss' | `rss.${string}`
 export type QueryEngineEntry = QueryEngine | RssFeedSelector
@@ -36,6 +36,13 @@ export interface ConfigSearchSettings {
     searchResultVisitTime: number | string
     searchDelay: ConfigDelay
     readDelay: ConfigDelay
+    /**
+     * 中国热搜源（gmya.net）配置。
+     * appkey 留空走免费档（有频率限制）；填入则带 appkey 请求以解除限流。
+     */
+    chinaApi?: {
+        appkey?: string
+    }
 }
 
 export interface ConfigDelay {
@@ -79,6 +86,8 @@ export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig
     telegram?: WebhookTelegramConfig
+    pushplus?: WebhookPushPlusConfig
+    clawbot?: WebhookClawBotConfig
     webhookLogFilter: LogFilter
 }
 
@@ -109,4 +118,17 @@ export interface WebhookTelegramConfig {
     enabled?: boolean
     botToken: string
     chatId: string | number
+}
+
+export interface WebhookPushPlusConfig {
+    enabled?: boolean
+    token: string
+    title?: string
+    template?: 'txt' | 'html' | 'markdown'
+    channel?: string
+}
+
+export interface WebhookClawBotConfig {
+    enabled?: boolean
+    authFile?: string
 }

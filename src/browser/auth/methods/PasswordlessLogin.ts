@@ -59,7 +59,7 @@ export class PasswordlessLogin {
                 return number?.trim() || null
             }
         } catch {
-            this.bot.logger.warn(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Could not retrieve displayed number')
+            this.bot.logger.warn(this.bot.isMobile, 'LOGIN-PASSWORDLESS', '无法检索显示的号码')
         }
         return null
     }
@@ -68,13 +68,13 @@ export class PasswordlessLogin {
         this.bot.logger.info(
             this.bot.isMobile,
             'LOGIN-PASSWORDLESS',
-            `Waiting for approval... (timeout after ${this.approvalTimeoutSeconds} seconds)`
+            `等待批准... (${this.approvalTimeoutSeconds}秒后超时)`
         )
 
         for (let elapsed = 1; elapsed <= this.approvalTimeoutSeconds; elapsed++) {
             const state = await this.getStableApprovalState(page)
             if (state === 'APPROVED') {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Approval detected')
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', '检测到批准')
                 return state
             }
             if (state === 'RETRY_AVAILABLE') return state
@@ -83,7 +83,7 @@ export class PasswordlessLogin {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-PASSWORDLESS',
-                    `Still waiting... (${elapsed}/${this.approvalTimeoutSeconds} seconds elapsed)`
+                    `仍在等待... (已过去 ${elapsed}/${this.approvalTimeoutSeconds} 秒)`
                 )
             }
 
@@ -99,7 +99,7 @@ export class PasswordlessLogin {
         this.bot.logger.warn(
             this.bot.isMobile,
             'LOGIN-PASSWORDLESS',
-            `Approval timeout after ${this.approvalTimeoutSeconds} seconds!`
+            `${this.approvalTimeoutSeconds} 秒后批准超时!`
         )
         return 'TIMED_OUT'
     }
@@ -127,7 +127,7 @@ export class PasswordlessLogin {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'LOGIN-PASSWORDLESS',
-                `Please approve login and select number: ${displayedNumber}`,
+                `请批准登录并选择数字: ${displayedNumber}`,
                 'yellowBright'
             )
             return
@@ -136,21 +136,21 @@ export class PasswordlessLogin {
         this.bot.logger.info(
             this.bot.isMobile,
             'LOGIN-PASSWORDLESS',
-            'Please approve login on your authenticator app',
+            '请在您的身份验证器应用上批准登录',
             'yellowBright'
         )
     }
 
     async handle(page: Page): Promise<void> {
         try {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Passwordless authentication requested')
+            this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', '请求无密码身份验证')
 
             for (let retry = 0; retry <= this.maxRequestRetries; retry++) {
                 await this.logApprovalNumber(page)
 
                 const state = await this.waitForApproval(page)
                 if (state === 'APPROVED') {
-                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Login approved successfully')
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', '登录批准成功')
                     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
                     return
                 }
@@ -159,7 +159,7 @@ export class PasswordlessLogin {
                     this.bot.logger.warn(
                         this.bot.isMobile,
                         'LOGIN-PASSWORDLESS',
-                        `Approval request expired; sending retry ${retry + 1}/${this.maxRequestRetries}`
+                        `批准请求已过期；发送重试 ${retry + 1}/${this.maxRequestRetries}`
                     )
                     if (await this.sendAnotherRequest(page)) continue
                     throw new Error('Could not send another passwordless authentication request')
@@ -171,7 +171,7 @@ export class PasswordlessLogin {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'LOGIN-PASSWORDLESS',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+                `发生错误: ${error instanceof Error ? error.message : String(error)}`
             )
             throw error
         }

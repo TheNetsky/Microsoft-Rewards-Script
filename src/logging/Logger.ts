@@ -1,10 +1,13 @@
 import chalk from 'chalk'
 import cluster from 'cluster'
+import fs from 'fs'
+import path from 'path'
 import { sendDiscord } from './Discord'
 import { sendNtfy } from './Ntfy'
 import { sendTelegram } from './Telegram'
 import type { MicrosoftRewardsBot } from '../index'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
+import { getProjectRoot } from '../util/Load'
 import type { LogFilter } from '../interface/Config'
 
 export type Platform = boolean | 'main'
@@ -54,6 +57,77 @@ function formatMessage(message: string | Error): string {
     return stackFrames ? `${message.message} | stack=${stackFrames}` : message.message
 }
 
+/**
+ * 日志保留天数，超期的日志文件在进程首次写日志时清理
+ */
+const LOG_RETENTION_DAYS = 90
+
+/**
+ * 日志文件目录（首次写入时解析，避免每条日志都做磁盘检查）
+ */
+let logFileDir: string | null = null
+
+function cleanOldLogFiles(logDir: string): void {
+    const cutoff = Date.now() - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000
+    let entries: string[]
+    try {
+        entries = fs.readdirSync(logDir)
+    } catch {
+        return
+    }
+    for (const name of entries) {
+        const match = /^(\d{4})-(\d{2})-(\d{2})\.log$/.exec(name)
+        if (!match) continue
+        const fileDate = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime()
+        if (Number.isNaN(fileDate) || fileDate >= cutoff) continue
+        try {
+            fs.rmSync(path.join(logDir, name), { force: true })
+        } catch {
+            // 单个文件清理失败不影响运行
+        }
+    }
+}
+
+function getLogFilePath(now: Date): string | null {
+    try {
+        if (!logFileDir) {
+            logFileDir = path.join(getProjectRoot(), 'logs')
+            fs.mkdirSync(logFileDir, { recursive: true })
+            cleanOldLogFiles(logFileDir)
+        }
+        const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        return path.join(logFileDir, `${date}.log`)
+    } catch (error) {
+        console.error('[Logger] 创建日志目录失败:', error)
+        logFileDir = null
+        return null
+    }
+}
+
+/**
+ * 本地时区的 YYYY-MM-DD HH:mm:ss(.sss) 时间戳，用于日志与推送展示
+ */
+export function formatLocalTimestamp(date: Date, withMilliseconds = false): string {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const base =
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+    return withMilliseconds ? `${base}.${String(date.getMilliseconds()).padStart(3, '0')}` : base
+}
+
+/**
+ * 将日志追加写入 logs/YYYY-MM-DD.log（按本地日期分文件）
+ */
+function writeLogToFile(logContent: string): void {
+    try {
+        const logFilePath = getLogFilePath(new Date())
+        if (!logFilePath) return
+        fs.appendFileSync(logFilePath, `${formatLocalTimestamp(new Date(), true)} ${logContent}\n`, 'utf8')
+    } catch (error) {
+        console.error('[Logger] 写入日志文件失败:', error)
+    }
+}
+
 export class Logger {
     constructor(private bot: MicrosoftRewardsBot) {}
 
@@ -88,6 +162,9 @@ export class Logger {
         const userName = this.bot.userData.userName || 'MAIN'
         const levelTag = level.toUpperCase()
         const cleanMsg = `[${now}] [${userName}] [${levelTag}] ${platformText(isMobile)} [${title}] ${formatted}`
+
+        // 保存日志到本地文件
+        writeLogToFile(cleanMsg)
 
         if (level === 'error' && config.errorDiagnostics) {
             const page = this.bot.isMobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage

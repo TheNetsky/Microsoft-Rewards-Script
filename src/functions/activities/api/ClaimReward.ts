@@ -11,20 +11,20 @@ export class ClaimReward extends BaseActivity {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'CLAIM-REWARD',
-                `Skipping ${offerId}: "reportActivity" not discovered in bundle`
+                `跳过 ${offerId}：bundle 中未发现 "reportActivity"`
             )
             return
         }
 
         if (!child.hash) {
-            this.bot.logger.warn(this.bot.isMobile, 'CLAIM-REWARD', `Skipping ${offerId}: no live hash on quest child`)
+            this.bot.logger.warn(this.bot.isMobile, 'CLAIM-REWARD', `跳过 ${offerId}：任务子项没有有效的 hash`)
             return
         }
         if (!child.reportable) {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'CLAIM-REWARD',
-                `Skipping ${offerId}: not reportable (completed/locked/disabled)`
+                `跳过 ${offerId}：不可上报（已完成/已锁定/已禁用）`
             )
             return
         }
@@ -34,7 +34,7 @@ export class ClaimReward extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'CLAIM-REWARD',
-            `Claiming reward | offerId=${offerId} | geo=${this.bot.userData.geoLocale}`
+            `正在领取奖励 | offerId=${offerId} | geo=${this.bot.userData.geoLocale}`
         )
 
         try {
@@ -59,7 +59,7 @@ export class ClaimReward extends BaseActivity {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'CLAIM-REWARD',
-                `Claim response | offerId=${offerId} | status=${status} | acknowledged=${acknowledged} | pointsGained=${gained} | currentBalance=${newBalance}`
+                `领取响应 | offerId=${offerId} | status=${status} | acknowledged=${acknowledged} | pointsGained=${gained} | currentBalance=${newBalance}`
             )
 
             if (acknowledged) {
@@ -71,21 +71,21 @@ export class ClaimReward extends BaseActivity {
                 this.bot.logger.info(
                     this.bot.isMobile,
                     'CLAIM-REWARD',
-                    `Reward claimed | offerId=${offerId} | status=${status} | pointsGained=${gained} | currentBalance=${newBalance}`,
+                    `奖励已领取 | offerId=${offerId} | status=${status} | pointsGained=${gained} | currentBalance=${newBalance}`,
                     'green'
                 )
             } else {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'CLAIM-REWARD',
-                    `Claim not acknowledged by server | offerId=${offerId} | status=${status}`
+                    `服务器未确认领取 | offerId=${offerId} | status=${status}`
                 )
             }
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'CLAIM-REWARD',
-                `Error in claimReward | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
+                `claimReward 出错 | offerId=${offerId} | message=${error instanceof Error ? error.message : String(error)}`
             )
         }
     }

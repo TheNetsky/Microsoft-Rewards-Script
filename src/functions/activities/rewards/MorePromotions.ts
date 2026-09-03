@@ -20,7 +20,7 @@ export class MorePromotions extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'MORE-PROMOTIONS',
-                'All "More Promotions" items have already been completed'
+                '所有"更多推广"项目已完成'
             )
             return
         }
@@ -28,10 +28,10 @@ export class MorePromotions extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'MORE-PROMOTIONS',
-            `Started solving "More Promotions" items | remaining=${pending.length}`
+            `开始解决"更多推广"项目 | remaining=${pending.length}`
         )
         await new PromotionActivityRunner(this.bot).run(pending)
-        this.bot.logger.info(this.bot.isMobile, 'MORE-PROMOTIONS', 'Finished processing "More Promotions" items')
+        this.bot.logger.info(this.bot.isMobile, 'MORE-PROMOTIONS', '"更多推广"项目处理完毕')
     }
 
     private isActionable(promotion: BasePromotion): boolean {

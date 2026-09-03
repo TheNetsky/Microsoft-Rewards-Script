@@ -3,10 +3,20 @@ dist/
 .dev/
 node_modules/
 /config.json
+# ClawBot 微信推送的扫码凭证（含 bot token），严禁提交
+/clawbot-auth.json
+# 运行时配置/账号文件可能被放到 src/ 下（Load.ts 的查找路径之一），防止误提交
+/src/config.json
+/src/accounts.json
+/src/accounts.dev.json
 /.vscode
 /diagnostics
 note
 .DS_Store
 .playwright-chromium-installed
 .stfolder/
-.env
+.envlogs/
+/logs
+# 本地私密配置与编辑器工作目录，严禁提交
+/.env
+/.zcode/

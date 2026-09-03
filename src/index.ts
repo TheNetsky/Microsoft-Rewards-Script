@@ -11,7 +11,7 @@ import BrowserUtils from './browser/BrowserUtils'
 import ReactFunc from './browser/ReactFunc'
 import type { PageSnapshot } from './browser/ReactFunc'
 
-import { IpcLog, Logger } from './logging/Logger'
+import { IpcLog, Logger, formatLocalTimestamp } from './logging/Logger'
 import Utils, { isBrowserClosedError } from './util/Utils'
 import { loadAccounts, loadConfig } from './util/Load'
 import { closeSessionStore, loadResolvedRegion, saveResolvedRegion } from './util/SessionStore'
@@ -28,6 +28,8 @@ import HttpClient from './util/Http'
 import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import { sendTelegram, flushTelegramQueue } from './logging/Telegram'
+import { sendPushPlus, flushPushPlusQueue } from './logging/PushPlus'
+import { sendClawBot, flushClawBotQueue, ensureClawBotReady } from './logging/ClawBot'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
 import type { AppEarnablePoints } from './interface/Points'
@@ -69,7 +71,13 @@ export function getCurrentContext(): ExecutionContext {
 }
 
 async function flushAllWebhooks(timeoutMs = 5000): Promise<void> {
-    await Promise.allSettled([flushDiscordQueue(timeoutMs), flushNtfyQueue(timeoutMs), flushTelegramQueue(timeoutMs)])
+    await Promise.allSettled([
+        flushDiscordQueue(timeoutMs),
+        flushNtfyQueue(timeoutMs),
+        flushTelegramQueue(timeoutMs),
+        flushPushPlusQueue(timeoutMs),
+        flushClawBotQueue(timeoutMs)
+    ])
     closeSessionStore()
 }
 
@@ -169,7 +177,7 @@ export class MicrosoftRewardsBot {
             this.logger.debug(
                 this.isMobile,
                 'CONTEXT-REFRESH',
-                `Cannot refresh rewards context | reason=${reason} | account=unavailable`
+                `无法刷新奖励上下文 | 原因=${reason} | 账户=不可用`
             )
             return false
         }
@@ -178,7 +186,7 @@ export class MicrosoftRewardsBot {
             this.logger.warn(
                 this.isMobile,
                 'CONTEXT-REFRESH',
-                `Refreshing rewards browser context after request failure | reason=${reason}`
+                `请求失败后正在刷新奖励浏览器上下文 | 原因=${reason}`
             )
 
             if (!page || page.isClosed()) {
@@ -211,7 +219,7 @@ export class MicrosoftRewardsBot {
             this.logger.info(
                 this.isMobile,
                 'CONTEXT-REFRESH',
-                `Rewards context refreshed successfully | cookies=${refreshedCookies.length}`,
+                `奖励上下文刷新成功 | Cookie数=${refreshedCookies.length}`,
                 'green'
             )
             refreshSucceeded = true
@@ -220,7 +228,7 @@ export class MicrosoftRewardsBot {
             this.logger.error(
                 this.isMobile,
                 'CONTEXT-REFRESH',
-                `Rewards context refresh failed | reason=${reason} | message=${error instanceof Error ? error.message : String(error)}`
+                `奖励上下文刷新失败 | 原因=${reason} | 信息=${error instanceof Error ? error.message : String(error)}`
             )
             return false
         } finally {
@@ -245,9 +253,9 @@ export class MicrosoftRewardsBot {
             this.logger.warn(
                 'main',
                 'EXPERIMENTAL',
-                `${searchFeatures.join(' + ')} enabled - these perform searches over HTTP with no real browser. ` +
-                    `This path is EXPERIMENTAL and UNSAFE and may get your account flagged or banned. ` +
-                    `Disable it under config.experimental if you are unsure.`,
+                `${searchFeatures.join(' + ')} 已启用 - 这些功能通过 HTTP 执行搜索，不使用真实浏览器。` +
+                    `此路径属于实验性且不安全，可能导致你的账户被标记或封禁。` +
+                    `如不确定，请在 config.experimental 下禁用。`,
                 'redBright'
             )
         }
@@ -256,8 +264,8 @@ export class MicrosoftRewardsBot {
             this.logger.warn(
                 'main',
                 'EXPERIMENTAL',
-                'edgeBrowsing enabled - the Edge browsing activity will be reported over HTTP in the background. ' +
-                    'This integration is experimental; disable it under config.experimental if it behaves unexpectedly.'
+                'edgeBrowsing 已启用 - Edge 浏览活动将在后台通过 HTTP 上报。' +
+                    '此集成为实验性功能；如表现异常，请在 config.experimental 下禁用。'
             )
         }
     }
@@ -269,8 +277,13 @@ export class MicrosoftRewardsBot {
         this.logger.info(
             'main',
             'RUN-START',
-            `Starting Microsoft Rewards Script | v${pkg.version} | Accounts: ${totalAccounts} | Clusters: ${this.config.clusters}`
+            `启动微软奖励脚本 | v${pkg.version} | 账户数: ${totalAccounts} | 集群数: ${this.config.clusters}`
         )
+
+        // 主进程启动时检查 ClawBot 凭证：缺失则弹出扫码登录（worker 不重复触发）
+        if (cluster.isPrimary) {
+            await ensureClawBotReady(this.config.webhook?.clawbot)
+        }
 
         if (this.config.clusters > 1) {
             if (cluster.isPrimary) {
@@ -284,7 +297,7 @@ export class MicrosoftRewardsBot {
     }
 
     private async runMaster(runStartTime: number): Promise<void> {
-        void this.logger.info('main', 'CLUSTER-PRIMARY', `Primary process started | PID: ${process.pid}`)
+        void this.logger.info('main', 'CLUSTER-PRIMARY', `主进程已启动 | PID: ${process.pid}`)
 
         const rawChunks = this.utils.chunkArray(this.accounts, this.config.clusters)
         const accountChunks = rawChunks.filter(c => c && c.length > 0)
@@ -342,7 +355,7 @@ export class MicrosoftRewardsBot {
             this.logger.warn(
                 'main',
                 'CLUSTER-WORKER-EXIT',
-                `Worker ${pid} exit | Code: ${code ?? 'n/a'} | Signal: ${signal ?? 'n/a'} | Active workers: ${this.activeWorkers}`
+                `worker ${pid} 退出 | 代码: ${code ?? 'n/a'} | 信号: ${signal ?? 'n/a'} | 活跃worker数: ${this.activeWorkers}`
             )
 
             if (this.activeWorkers <= 0) {
@@ -354,10 +367,12 @@ export class MicrosoftRewardsBot {
                 this.logger.info(
                     'main',
                     'RUN-END',
-                    `Completed all accounts | accountsProcessed=${allAccountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes}`,
+                    `全部账户完成 | 处理账户数=${allAccountStats.length} | 获得积分=${totalCollectedPoints} | 原余额=${totalInitialPoints} | 现余额=${totalFinalPoints} | 运行分钟数=${totalDurationMinutes}`,
                     'green'
                 )
 
+                await this.sendPushPlusSummary(allAccountStats, runStartTime, hadWorkerFailure)
+                await this.sendClawBotSummary(allAccountStats, runStartTime, hadWorkerFailure)
                 await flushAllWebhooks()
 
                 process.exit(hadWorkerFailure ? 1 : 0)
@@ -370,18 +385,18 @@ export class MicrosoftRewardsBot {
 
         cluster.on('disconnect', worker => {
             const pid = worker.process?.pid
-            this.logger.warn('main', 'CLUSTER-WORKER-DISCONNECT', `Worker ${pid ?? '?'} disconnected`)
+            this.logger.warn('main', 'CLUSTER-WORKER-DISCONNECT', `worker ${pid ?? '?'} 已断开连接`)
         })
     }
 
     private runWorker(runStartTimeFromMaster?: number): void {
-        void this.logger.info('main', 'CLUSTER-WORKER-START', `Worker spawned | PID: ${process.pid}`)
+        void this.logger.info('main', 'CLUSTER-WORKER-START', `worker 已生成 | PID: ${process.pid}`)
 
         process.on('message', async ({ chunk, runStartTime }: { chunk: Account[]; runStartTime: number }) => {
             void this.logger.info(
                 'main',
                 'CLUSTER-WORKER-TASK',
-                `Worker ${process.pid} received ${chunk.length} accounts.`
+                `worker ${process.pid} 接收到 ${chunk.length} 个账户。`
             )
 
             try {
@@ -397,13 +412,73 @@ export class MicrosoftRewardsBot {
                 this.logger.error(
                     'main',
                     'CLUSTER-WORKER-ERROR',
-                    `Worker task crash: ${error instanceof Error ? error.message : String(error)}`
+                    `worker 任务崩溃: ${error instanceof Error ? error.message : String(error)}`
                 )
 
                 await flushAllWebhooks()
                 process.exit(1)
             }
         })
+    }
+
+    private buildSummaryMessage(accountStats: AccountStats[], runStartTime: number, hadWorkerFailure: boolean): string {
+        const totalCollectedPoints = accountStats.reduce((sum, s) => sum + s.collectedPoints, 0)
+        const totalInitialPoints = accountStats.reduce((sum, s) => sum + s.initialPoints, 0)
+        const totalFinalPoints = accountStats.reduce((sum, s) => sum + s.finalPoints, 0)
+        const totalDurationMinutes = ((Date.now() - runStartTime) / 1000 / 60).toFixed(1)
+        const timestamp = formatLocalTimestamp(new Date())
+
+        const lines: string[] = [
+            `每日积分摘要 | ${timestamp}`,
+            `状态: ${hadWorkerFailure ? '异常' : '完成'}`,
+            `账户数: ${accountStats.length}`,
+            `总收集积分: +${totalCollectedPoints}`,
+            `原始总计: ${totalInitialPoints} → 新总计: ${totalFinalPoints}`,
+            `总运行时间: ${totalDurationMinutes}分钟`
+        ]
+
+        if (accountStats.length > 0) {
+            lines.push('')
+            lines.push('账户明细:')
+            for (const stat of accountStats) {
+                const status = stat.success ? '成功' : '失败'
+                const duration = Number.isFinite(stat.duration) ? stat.duration.toFixed(1) : String(stat.duration)
+                const error = stat.error ? ` | ${stat.error}` : ''
+                lines.push(
+                    `${stat.email} | +${stat.collectedPoints} | ${stat.initialPoints}→${stat.finalPoints} | ${duration}秒 | ${status}${error}`
+                )
+            }
+        }
+
+        return lines.join('\n')
+    }
+
+    private async sendPushPlusSummary(
+        accountStats: AccountStats[],
+        runStartTime: number,
+        hadWorkerFailure: boolean
+    ): Promise<void> {
+        const pushplus = this.config?.webhook?.pushplus
+        if (!pushplus?.enabled || !pushplus.token) {
+            return
+        }
+
+        const content = this.buildSummaryMessage(accountStats, runStartTime, hadWorkerFailure)
+        await sendPushPlus(pushplus, content)
+    }
+
+    private async sendClawBotSummary(
+        accountStats: AccountStats[],
+        runStartTime: number,
+        hadWorkerFailure: boolean
+    ): Promise<void> {
+        const clawbot = this.config?.webhook?.clawbot
+        if (!clawbot?.enabled) {
+            return
+        }
+
+        const content = this.buildSummaryMessage(accountStats, runStartTime, hadWorkerFailure)
+        await sendClawBot(clawbot, content)
     }
 
     private async runTasks(accounts: Account[], runStartTime: number): Promise<AccountStats[]> {
@@ -429,8 +504,8 @@ export class MicrosoftRewardsBot {
                 this.logger.info(
                     'main',
                     'ACCOUNT-START',
-                    `Starting account: ${accountEmail} | geoLocale: ${account.geoLocale} | locale: ${this.accountLocale.locale}${
-                        cachedRegion ? ` | cachedRegion: ${cachedRegion}` : ''
+                    `开始处理账户: ${accountEmail} | geoLocale: ${account.geoLocale} | locale: ${this.accountLocale.locale}${
+                        cachedRegion ? ` | 缓存区域: ${cachedRegion}` : ''
                     }`
                 )
 
@@ -438,12 +513,10 @@ export class MicrosoftRewardsBot {
                     'Accept-Language': this.accountLocale.acceptLanguage
                 })
 
+                let flowError: string | undefined
                 const result: AccountRunResult | undefined = await this.Main(account).catch(error => {
-                    void this.logger.error(
-                        true,
-                        'FLOW',
-                        `Mobile flow failed for ${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
-                    )
+                    flowError = error instanceof Error ? error.message : String(error)
+                    void this.logger.error(true, 'FLOW', `${accountEmail} 的移动端流程失败: ${flowError}`)
                     return undefined
                 })
 
@@ -468,7 +541,7 @@ export class MicrosoftRewardsBot {
                         this.logger.warn(
                             'main',
                             'ACCOUNT-SKIP',
-                            `Skipped account: ${accountEmail} | reason=Fraud_UserWarning_BotScore_UX | durationSeconds=${durationSeconds}`
+                            `跳过账户: ${accountEmail} | 原因=Fraud_UserWarning_BotScore_UX | 持续秒数=${durationSeconds}`
                         )
                     } else {
                         accountStats.push({
@@ -483,11 +556,15 @@ export class MicrosoftRewardsBot {
                         this.logger.info(
                             'main',
                             'ACCOUNT-END',
-                            `Completed account: ${accountEmail} | pointsGained=${collectedPoints} | previousBalance=${accountInitialPoints} | currentBalance=${accountFinalPoints} | durationSeconds=${durationSeconds}`,
+                            `账户完成: ${accountEmail} | 获得积分=${collectedPoints} | 原余额=${accountInitialPoints} | 现余额=${accountFinalPoints} | 持续秒数=${durationSeconds}`,
                             'green'
                         )
                     }
                 } else {
+                    const errorDetail = flowError && flowError !== 'undefined'
+                        ? flowError.replace(/\r?\n/g, ' ').slice(0, 120)
+                        : '流程失败（未捕获到错误详情）'
+
                     accountStats.push({
                         email: accountEmail,
                         initialPoints: 0,
@@ -495,7 +572,7 @@ export class MicrosoftRewardsBot {
                         collectedPoints: 0,
                         duration: parseFloat(durationSeconds),
                         success: false,
-                        error: 'Flow failed'
+                        error: errorDetail
                     })
                 }
             } catch (error) {
@@ -503,7 +580,7 @@ export class MicrosoftRewardsBot {
                 this.logger.error(
                     'main',
                     'ACCOUNT-ERROR',
-                    `${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
+                    `${accountEmail} | 错误=${error instanceof Error ? error.message : String(error)}`
                 )
 
                 accountStats.push({
@@ -527,10 +604,13 @@ export class MicrosoftRewardsBot {
             this.logger.info(
                 'main',
                 'RUN-END',
-                `Completed all accounts | accountsProcessed=${accountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes}`,
+                `全部账户完成 | 处理账户数=${accountStats.length} | 获得积分=${totalCollectedPoints} | 原余额=${totalInitialPoints} | 现余额=${totalFinalPoints} | 运行分钟数=${totalDurationMinutes}`,
                 'green'
             )
 
+            const hadFailure = accountStats.some(s => !s.success)
+            await this.sendPushPlusSummary(accountStats, runStartTime, hadFailure)
+            await this.sendClawBotSummary(accountStats, runStartTime, hadFailure)
             await flushAllWebhooks()
             process.exit(0)
         }
@@ -551,7 +631,7 @@ export class MicrosoftRewardsBot {
         this.logger.info(
             'main',
             'ACCOUNT-DELAY',
-            `Waiting ${(delayMs / 1000).toFixed(1)} seconds before starting the next account${
+            `等待 ${(delayMs / 1000).toFixed(1)} 秒后开始下一个账户${
                 nextEmail ? ` (${nextEmail})` : ''
             }`
         )
@@ -563,7 +643,7 @@ export class MicrosoftRewardsBot {
         this.mainDesktopPage = await session.context.newPage()
         this.fingerprintDesktop = session.fingerprint
 
-        this.logger.info(this.isMobile, 'BROWSER', `Desktop Browser started | ${account.email}`)
+        this.logger.info(this.isMobile, 'BROWSER', `桌面浏览器已启动 | ${account.email}`)
 
         await this.login.login(this.mainDesktopPage, account)
         await this.browser.func.checkpointActiveSession('LOGIN-CHECKPOINT')
@@ -574,7 +654,7 @@ export class MicrosoftRewardsBot {
 
     async Main(account: Account): Promise<AccountRunResult> {
         const accountEmail = account.email
-        this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
+        this.logger.info('main', 'FLOW', `开始为 ${accountEmail} 创建会话`)
 
         this.accessToken = ''
         this.cookies = { mobile: [], desktop: [] }
@@ -627,7 +707,7 @@ export class MicrosoftRewardsBot {
                 const initialContext: BrowserContext = mobileSession.context
                 this.mainMobilePage = await initialContext.newPage()
 
-                this.logger.info('main', 'BROWSER', `Mobile Browser started | ${accountEmail}`)
+                this.logger.info('main', 'BROWSER', `移动浏览器已启动 | ${accountEmail}`)
 
                 await this.login.login(this.mainMobilePage, account)
 
@@ -638,7 +718,7 @@ export class MicrosoftRewardsBot {
                         this.logger.error(
                             'main',
                             'FLOW',
-                            `Failed to get mobile access token: ${error instanceof Error ? error.message : String(error)}`
+                            `获取移动端访问令牌失败: ${error instanceof Error ? error.message : String(error)}`
                         )
                         this.accessToken = ''
                     }
@@ -653,7 +733,7 @@ export class MicrosoftRewardsBot {
                     this.logger.info(
                         'main',
                         'FLOW',
-                        'Mobile login browser closed; continuing with the saved session and HTTP requests'
+                        '移动端登录浏览器已关闭；继续使用已保存的会话和 HTTP 请求'
                     )
                 }
 
@@ -669,9 +749,9 @@ export class MicrosoftRewardsBot {
                         this.logger.warn(
                             'main',
                             'BOT-WARNING',
-                            `Microsoft Rewards reported Fraud_UserWarning_BotScore_UX for ${accountEmail}. ` +
-                                'This account will be skipped for safety. The preferred action is to stop automation for this account and wait a few days. ' +
-                                'To continue anyway (not recommended), set "contintueOnBotWarning": true.'
+                            `Microsoft Rewards 报告 ${accountEmail} 存在机器人评分警告（Fraud_UserWarning_BotScore_UX）。` +
+                                '为安全起见将跳过该账户。建议暂停该账户的自动化并等待几天。' +
+                                '如仍要继续（不推荐），可设置 "contintueOnBotWarning": true。'
                         )
 
                         return {
@@ -684,8 +764,8 @@ export class MicrosoftRewardsBot {
                     this.logger.warn(
                         'main',
                         'BOT-WARNING',
-                        `Microsoft Rewards reported Fraud_UserWarning_BotScore_UX for ${accountEmail}, but contintueOnBotWarning=true. ` +
-                            'Continuing as configured is not recommended; waiting a few days is the preferred action.'
+                        `Microsoft Rewards 报告 ${accountEmail} 存在机器人评分警告（Fraud_UserWarning_BotScore_UX），但 contintueOnBotWarning=true。` +
+                            '按配置继续运行（不推荐）；等待几天才是首选做法。'
                     )
                 }
 
@@ -698,7 +778,7 @@ export class MicrosoftRewardsBot {
                         this.logger.warn(
                             'main',
                             'GEO-LOCALE',
-                            `Microsoft profile returned an invalid country; retaining ${
+                            `Microsoft 个人资料返回了无效的国家/地区；保留 ${
                                 this.accountLocale.country ?? 'US fallback'
                             }`
                         )
@@ -721,7 +801,7 @@ export class MicrosoftRewardsBot {
                         this.logger.warn(
                             'main',
                             'LOGIN-APP',
-                            `App dashboard unavailable - app activities will be skipped this run | message=${error instanceof Error ? error.message : String(error)}`
+                            `App 仪表板不可用 - 本次运行将跳过 App 活动 | 信息=${error instanceof Error ? error.message : String(error)}`
                         )
                         this.accessToken = ''
                     }
@@ -741,7 +821,7 @@ export class MicrosoftRewardsBot {
                         this.logger.warn(
                             'main',
                             'LOGIN-APP',
-                            `App earnable-points lookup failed - app activities will be skipped this run | message=${error instanceof Error ? error.message : String(error)}`
+                            `App 可赚积分查询失败 - 本次运行将跳过 App 活动 | 信息=${error instanceof Error ? error.message : String(error)}`
                         )
                         this.accessToken = ''
                         appData = null
@@ -753,7 +833,7 @@ export class MicrosoftRewardsBot {
                 this.logger.info(
                     'main',
                     'POINTS',
-                    `Earnable today | Mobile: ${browserEarnable.mobileSearchPoints} | Browser: ${
+                    `今日可赚取 | 移动端: ${browserEarnable.mobileSearchPoints} | 浏览器: ${
                         browserEarnable.desktopSearchPoints
                     } | App: ${appEarnable?.totalEarnablePoints ?? 0} | ${accountEmail} | locale: ${this.accountLocale.locale}`
                 )
@@ -773,7 +853,7 @@ export class MicrosoftRewardsBot {
                             this.logger.error(
                                 this.isMobile,
                                 'EDGE-BROWSING',
-                                `Unexpected background task failure | message=${
+                                `意外的后台任务失败 | 信息=${
                                     error instanceof Error ? error.message : String(error)
                                 }`
                             )
@@ -899,7 +979,7 @@ export class MicrosoftRewardsBot {
                 this.logger.info(
                     'main',
                     'SEARCH-MANAGER',
-                    `Search summary | mobile=${mobilePoints} | desktop=${desktopPoints} | bonus=${bonusPoints} | total=${
+                    `搜索汇总 | 移动端=${mobilePoints} | 桌面端=${desktopPoints} | 额外=${bonusPoints} | 总计=${
                         mobilePoints + desktopPoints + bonusPoints
                     }`
                 )
@@ -911,7 +991,7 @@ export class MicrosoftRewardsBot {
                         this.logger.info(
                             this.isMobile,
                             'EDGE-BROWSING',
-                            'Foreground activities finished; waiting for the background Edge browsing activity'
+                            '前台活动已完成；正在等待后台 Edge 浏览活动'
                         )
                     }
                     await edgeBrowsingTask
@@ -924,7 +1004,7 @@ export class MicrosoftRewardsBot {
                 this.logger.info(
                     'main',
                     'FLOW',
-                    `Points collected | pointsGained=${collectedPoints} | currentBalance=${finalPoints} | account=${accountEmail}`
+                    `积分已收集 | 获得积分=${collectedPoints} | 现余额=${finalPoints} | 账户=${accountEmail}`
                 )
 
                 return {
@@ -946,7 +1026,7 @@ export class MicrosoftRewardsBot {
                     this.logger.debug(
                         'main',
                         'CLEANUP',
-                        `Mobile context close failed | ${error instanceof Error ? error.message : String(error)}`
+                        `移动端上下文关闭失败 | ${error instanceof Error ? error.message : String(error)}`
                     )
                 }
             }
@@ -958,7 +1038,7 @@ export class MicrosoftRewardsBot {
                     this.logger.debug(
                         'main',
                         'CLEANUP',
-                        `Desktop context close failed | ${error instanceof Error ? error.message : String(error)}`
+                        `桌面端上下文关闭失败 | ${error instanceof Error ? error.message : String(error)}`
                     )
                 }
             }
@@ -976,12 +1056,12 @@ async function main(): Promise<void> {
         void flushAllWebhooks()
     })
     process.on('SIGINT', async () => {
-        rewardsBot.logger.warn('main', 'PROCESS', 'SIGINT received, flushing and exiting...')
+        rewardsBot.logger.warn('main', 'PROCESS', '收到 SIGINT 信号，正在刷新并退出...')
         await flushAllWebhooks()
         process.exit(130)
     })
     process.on('SIGTERM', async () => {
-        rewardsBot.logger.warn('main', 'PROCESS', 'SIGTERM received, flushing and exiting...')
+        rewardsBot.logger.warn('main', 'PROCESS', '收到 SIGTERM 信号，正在刷新并退出...')
         await flushAllWebhooks()
         process.exit(143)
     })
@@ -990,7 +1070,7 @@ async function main(): Promise<void> {
             rewardsBot.logger.debug(
                 'main',
                 'UNCAUGHT-EXCEPTION',
-                `Ignoring benign browser-closed error during teardown | ${error instanceof Error ? error.message : String(error)}`
+                `忽略清理阶段良性的浏览器已关闭错误 | ${error instanceof Error ? error.message : String(error)}`
             )
             return
         }
@@ -1003,7 +1083,7 @@ async function main(): Promise<void> {
             rewardsBot.logger.debug(
                 'main',
                 'UNHANDLED-REJECTION',
-                `Ignoring benign browser-closed rejection during teardown | ${reason instanceof Error ? reason.message : String(reason)}`
+                `忽略清理阶段良性的浏览器已关闭拒绝 | ${reason instanceof Error ? reason.message : String(reason)}`
             )
             return
         }

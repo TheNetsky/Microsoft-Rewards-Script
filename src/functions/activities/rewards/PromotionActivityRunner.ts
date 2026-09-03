@@ -13,7 +13,7 @@ export class PromotionActivityRunner extends BaseActivity {
                 this.bot.logger.error(
                     this.bot.isMobile,
                     'ACTIVITY',
-                    `Error while solving activity "${promotion.title}" | message=${
+                    `解决活动 "${promotion.title}" 时出错 | message=${
                         error instanceof Error ? error.message : String(error)
                     }`
                 )
@@ -29,14 +29,14 @@ export class PromotionActivityRunner extends BaseActivity {
         this.bot.logger.debug(
             this.bot.isMobile,
             'ACTIVITY',
-            `Processing activity | title="${promotion.title}" | offerId=${offerId} | type=${type}`
+            `处理活动 | 标题="${promotion.title}" | offerId=${offerId} | 类型=${type}`
         )
 
         if (type !== 'urlreward') {
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'ACTIVITY',
-                `Skipped activity "${promotion.title}" | offerId=${offerId} | reason=unsupported type "${
+                `跳过活动 "${promotion.title}" | offerId=${offerId} | 原因：不支持的类型 "${
                     promotion.promotionType
                 }"`
             )
@@ -57,7 +57,7 @@ export class PromotionActivityRunner extends BaseActivity {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'ACTIVITY',
-                `Found activity type "SearchOnBing" | title="${promotion.title}" | offerId=${offerId}`
+                `发现活动类型 "SearchOnBing" | 标题="${promotion.title}" | offerId=${offerId}`
             )
             const page = this.bot.isMobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage
             await this.bot.activities.doSearchOnBing(promotion, page)
@@ -67,7 +67,7 @@ export class PromotionActivityRunner extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'ACTIVITY',
-            `Found activity type "UrlReward" | title="${promotion.title}" | offerId=${offerId}`
+            `发现活动类型 "UrlReward" | 标题="${promotion.title}" | offerId=${offerId}`
         )
         await this.bot.activities.doUrlReward(promotion)
     }
@@ -76,7 +76,7 @@ export class PromotionActivityRunner extends BaseActivity {
         this.bot.logger.info(
             this.bot.isMobile,
             'ACTIVITY',
-            `Skipping "${activity}" (disabled in config) | offerId=${offerId}`
+            `跳过 "${activity}"（配置中已禁用） | offerId=${offerId}`
         )
     }
 }

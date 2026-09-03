@@ -37,7 +37,7 @@ export class MobileAccessLogin {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `Auth URL constructed: ${authorizeUrl.origin}${authorizeUrl.pathname}`
+                `认证URL构建完成: ${authorizeUrl.origin}${authorizeUrl.pathname}`
             )
 
             let code = await this.resolveCodeViaRequest(authorizeUrl)
@@ -45,7 +45,7 @@ export class MobileAccessLogin {
                 this.bot.logger.debug(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    'Request-based OAuth did not return a code, retrying through the active browser context'
+                    '基于请求的OAuth未返回代码，通过当前浏览器上下文重试'
                 )
                 code = await this.resolveCodeViaBrowser(authorizeUrl)
             }
@@ -54,12 +54,12 @@ export class MobileAccessLogin {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    'Could not resolve mobile OAuth code - app activities will be skipped this run'
+                    '无法解析移动OAuth代码 - 本次运行将跳过应用活动'
                 )
                 return ''
             }
 
-            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'OAuth code resolved, exchanging for access token')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', '已解析OAuth代码，正在交换访问令牌')
 
             const data = new URLSearchParams()
             data.append('grant_type', 'authorization_code')
@@ -82,18 +82,18 @@ export class MobileAccessLogin {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    `Mobile token exchange failed | error=${error} | description=${description}`
+                    `移动令牌交换失败 | error=${error} | description=${description}`
                 )
                 return ''
             }
 
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-APP', 'Mobile access token received')
+            this.bot.logger.info(this.bot.isMobile, 'LOGIN-APP', '移动访问令牌已接收')
             return token
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `MobileAccess error: ${error instanceof Error ? error.stack || error.message : String(error)}`
+                `MobileAccess错误: ${error instanceof Error ? error.stack || error.message : String(error)}`
             )
             return ''
         }
@@ -101,7 +101,7 @@ export class MobileAccessLogin {
 
     private async resolveCodeViaRequest(authorizeUrl: URL): Promise<string> {
         try {
-            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Resolving mobile OAuth code via request')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', '通过请求解析移动OAuth代码')
 
             const response = await this.page.request.get(authorizeUrl.href, { maxRedirects: 20, timeout: 30000 })
             const finalUrl = response.url()
@@ -109,7 +109,7 @@ export class MobileAccessLogin {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `OAuth request resolved → ${this.safeUrl(finalUrl)} (status ${response.status()})`
+                `OAuth请求解析完成 → ${this.safeUrl(finalUrl)} (状态 ${response.status()})`
             )
 
             return this.extractCode(finalUrl)
@@ -117,7 +117,7 @@ export class MobileAccessLogin {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `OAuth code request failed: ${error instanceof Error ? error.message : String(error)}`
+                `OAuth代码请求失败: ${error instanceof Error ? error.message : String(error)}`
             )
             return ''
         }
@@ -141,7 +141,7 @@ export class MobileAccessLogin {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `OAuth browser resolved → ${this.safeUrl(oauthPage.url())} | code=${code ? 'present' : 'missing'}`
+                `OAuth浏览器解析完成 → ${this.safeUrl(oauthPage.url())} | code=${code ? 'present' : 'missing'}`
             )
 
             return code
@@ -149,7 +149,7 @@ export class MobileAccessLogin {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `OAuth browser fallback failed: ${error instanceof Error ? error.message : String(error)}`
+                `OAuth浏览器回退失败: ${error instanceof Error ? error.message : String(error)}`
             )
             return ''
         } finally {
