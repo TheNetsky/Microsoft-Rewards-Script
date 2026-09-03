@@ -32,3 +32,19 @@ const req = http.get({ host: '127.0.0.1', port, path: '/health', headers }, res 
 req.setTimeout(3000, () => req.destroy(new Error('health check timed out')))
 req.on('error', () => process.exit(1))
 NODE
+
+# Also verify the embedded dashboard when enabled (it runs as a supervised child).
+if [ "${DASHBOARD_ENABLED:-true}" = "true" ]; then
+    node --input-type=module <<'NODE'
+import http from 'node:http'
+
+const port = Number(process.env.DASHBOARD_PORT || 8300)
+const req = http.get({ host: '127.0.0.1', port, path: '/' }, res => {
+    res.resume()
+    process.exit(res.statusCode === 200 ? 0 : 1)
+})
+
+req.setTimeout(3000, () => req.destroy(new Error('dashboard health check timed out')))
+req.on('error', () => process.exit(1))
+NODE
+fi

@@ -125,6 +125,22 @@ if [ "${API_MODE:-false}" = "true" ]; then
     echo "[entrypoint] No CRON_SCHEDULE set and no schedule.json override - runs must be triggered manually via POST /start, or scheduled from the dashboard."
   fi
   echo "[entrypoint] Starting control API on ${API_HOST}:${API_PORT:-3010} at $(date)"
+
+  # Optional embedded web dashboard (zero-dependency Node, talks to the local control API).
+  # Data (push-config/state) persists under $DASHBOARD_DATA_DIR inside the mounted config volume.
+  if [ "${DASHBOARD_ENABLED:-true}" = "true" ]; then
+    export DASHBOARD_DATA_DIR="${DASHBOARD_DATA_DIR:-$SCRIPT_DIR/config/dashboard}"
+    mkdir -p "$DASHBOARD_DATA_DIR"
+    echo "[entrypoint] Starting dashboard on ${DASHBOARD_PORT:-8300} (data: $DASHBOARD_DATA_DIR)"
+    (
+      while true; do
+        node "$SCRIPT_DIR/dashboard/server.js"
+        echo "[entrypoint] dashboard exited, restarting in 5s" >&2
+        sleep 5
+      done
+    ) &
+  fi
+
   exec node scripts/api/server.js
 fi
 

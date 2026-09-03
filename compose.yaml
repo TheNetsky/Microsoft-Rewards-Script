@@ -36,6 +36,12 @@ services:
             #API_ALLOW_CONFIG_REVEAL: 'true'
             #API_ALLOW_CONFIG_WRITE: 'true'
 
+            # ── Embedded dashboard (dashboard/server.js) ──────────────────────────────────────
+            # Started automatically in API mode; web UI on :8300 (LAN, no auth - keep it internal).
+            # Its data (push-config/state) persists under ./config/dashboard/.
+            #DASHBOARD_ENABLED: 'true'
+            #DASHBOARD_PORT: '8300'
+
             #  ── Configuration ──────────────────────────────────────
             # Uncomment to override defaults, a full list of configuration options are in the README.
             #CONFIG_CLUSTERS: '1'
@@ -51,10 +57,12 @@ services:
             #CONFIG_PROXY_IGNORE_CERTIFICATE_ERRORS: 'false'
             #... add additional configuration overrides as needed
 
-        # ── API mode port mapping ──────────────────────────────────────
-        # Uncomment when API_MODE=true
+        # ── API mode + dashboard port mapping ──────────────────────────────────────
+        # Uncomment when API_MODE=true. 3010 should stay loopback-only (token-bearing API);
+        # 8300 is the embedded dashboard web UI (LAN, no auth).
         #ports:
-        #    - '3010:3010'
+        #    - '127.0.0.1:3010:3010'
+        #    - '8300:8300'
 
         healthcheck:
             test: ['CMD-SHELL', 'scripts/docker/healthcheck.sh']

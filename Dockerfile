@@ -105,6 +105,8 @@ COPY --chmod=755 scripts/docker/healthcheck.sh ./scripts/docker/healthcheck.sh
 COPY --chmod=755 scripts/api/ ./scripts/api/
 COPY --chmod=644 scripts/env.js ./scripts/env.js
 COPY --chmod=644 scripts/package.json ./scripts/package.json
+# Embedded web dashboard (zero-dependency Node; started by entrypoint when DASHBOARD_ENABLED)
+COPY --chmod=644 dashboard/ ./dashboard/
 COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 COPY --chmod=755 scripts/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
