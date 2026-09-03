@@ -17,6 +17,8 @@ const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
+const net = require('net');
 
 // ============ 常量 ============
 const BASE_DIR = __dirname;
@@ -416,6 +418,228 @@ function proxyContainerApi(reqPath, method, body, res) {
   req.end();
 }
 
+// ============ 登录体检(无头会话检查 + 实时余额) ============
+// 复用 scripts/main/loginCheck.js(与主脚本同一会话存取逻辑), 后台任务化并轮询结果
+const PROJECT_ROOT = path.join(BASE_DIR, '..');
+const LOGIN_CHECK_TIMEOUT_MS = 180000;
+const loginCheckJobs = new Map(); // id -> job
+
+function startLoginCheck(accountIndex, email) {
+  for (const job of loginCheckJobs.values()) {
+    if (job.status === 'running') return { error: '已有登录体检在进行中,请稍候', code: 'BUSY' };
+  }
+  const id = crypto.randomBytes(8).toString('hex');
+  const job = { id, accountIndex, email, status: 'running', startedAt: Date.now(), result: null, logs: [] };
+  loginCheckJobs.set(id, job);
+  for (const key of loginCheckJobs.keys()) {
+    if (loginCheckJobs.size > 6) loginCheckJobs.delete(key);
+  }
+  let buf = '';
+  const onLine = (line) => {
+    const t = line.trim();
+    if (!t) return;
+    job.logs.push(t);
+    if (job.logs.length > 60) job.logs.shift();
+    const m = t.match(/LOGINCHECK_RESULT (\{.*\})/);
+    if (m) {
+      try { job.result = JSON.parse(m[1]); } catch (e) { /* 忽略解析失败 */ }
+    }
+  };
+  const child = spawn('node',
+    [path.join(PROJECT_ROOT, 'scripts/main/loginCheck.js'), '--email', email, '--platform', 'both'],
+    { cwd: PROJECT_ROOT, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const feed = (c) => {
+    buf += c.toString();
+    let idx;
+    while ((idx = buf.indexOf('\n')) >= 0) {
+      onLine(buf.slice(0, idx));
+      buf = buf.slice(idx + 1);
+    }
+  };
+  child.stdout.on('data', feed);
+  child.stderr.on('data', feed);
+  const timer = setTimeout(() => {
+    try { child.kill('SIGKILL'); } catch (e) { /* ignore */ }
+    job.status = job.result ? 'done' : 'error';
+    job.error = job.error || '体检超时';
+  }, LOGIN_CHECK_TIMEOUT_MS);
+  child.on('exit', (code) => {
+    clearTimeout(timer);
+    job.exitCode = code;
+    job.finishedAt = Date.now();
+    job.status = job.result ? 'done' : 'error';
+    if (!job.result) job.error = job.error || ('进程退出 code=' + code);
+    if (job.result) {
+      // 体检结果直接落到账号状态(余额/体检时间), 前端刷新即可见
+      try {
+        const a = ensureAccount(job.result.email);
+        if (job.result.balance != null) { a.balance = job.result.balance; a.balanceTs = Date.now(); }
+        const first = Object.values(job.result.platforms || {})[0] || {};
+        a.lastStatus = job.result.loggedIn ? 'success' : 'failed';
+        a.lastError = job.result.loggedIn ? null : ('登录体检未通过: ' + (first.reason || 'unknown'));
+        a.lastCheckTs = Date.now();
+        saveState();
+      } catch (e) { /* ignore */ }
+    }
+  });
+  return { ok: true, id, email };
+}
+
+function loginCheckStatus() {
+  const jobs = [...loginCheckJobs.values()].sort((a, b) => b.startedAt - a.startedAt).slice(0, 6);
+  return {
+    jobs: jobs.map(j => ({
+      id: j.id, accountIndex: j.accountIndex, email: j.email, status: j.status,
+      startedAt: j.startedAt, finishedAt: j.finishedAt || null,
+      error: j.error || null, result: j.result || null,
+      lastLog: j.logs.length ? j.logs[j.logs.length - 1] : null,
+    })),
+    running: jobs.some(j => j.status === 'running'),
+  };
+}
+
+// ============ 人工登录(Xvfb + x11vnc + websockify + 上游 manualLogin) ============
+// 无头容器里拉起有头浏览器, 经 noVNC(带一次性 token 代理)让用户在内网页面里完成微软验证
+const ML_DISPLAY = ':99';
+const ML_VNC_PORT = 5999;
+const ML_WS_PORT = 6080;
+const ML_NOVNC_WEB = '/usr/share/novnc';
+const ML_WATCHDOG_MS = 20 * 60 * 1000;
+let manualLoginSession = null;
+
+function mlPushLog(session, text) {
+  for (const line of String(text).split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    session.logs.push(t);
+  }
+  if (session.logs.length > 60) session.logs.splice(0, session.logs.length - 60);
+}
+
+function mlCleanupProcs(session) {
+  for (const key of ['runner', 'websockify', 'x11vnc', 'xvfb']) {
+    const p = session.procs[key];
+    if (!p) continue;
+    try { p.kill('SIGKILL'); } catch (e) { /* ignore */ }
+    session.procs[key] = null;
+  }
+}
+
+function mlStop(session, reason) {
+  if (!session || session.stopped) return;
+  session.stopped = true;
+  session.stopReason = reason || null;
+  clearTimeout(session.watchdog);
+  try { session.procs.runner && session.procs.runner.kill('SIGTERM'); } catch (e) { /* ignore */ }
+  setTimeout(() => mlCleanupProcs(session), 2500);
+}
+
+async function startManualLogin(accountIndex) {
+  if (manualLoginSession && !manualLoginSession.done && !manualLoginSession.stopped) {
+    return { error: '已有人工登录会话进行中(同一时间仅支持一个)', code: 'BUSY' };
+  }
+  const accs = await fetchJson('/accounts');
+  const acc = (((accs || {}).accounts) || []).find(a => a.index === accountIndex);
+  if (!acc) return { error: '未知账号序号: ' + accountIndex, code: 'BAD_REQUEST' };
+  const email = acc.email;
+
+  const procs = {};
+  const session = manualLoginSession = {
+    token: crypto.randomBytes(16).toString('hex'),
+    accountIndex, email, startedAt: Date.now(),
+    logs: [], procs, stopped: false, done: false,
+  };
+  procs.xvfb = spawn('Xvfb', [ML_DISPLAY, '-screen', '0', '1280x900x24', '-nolisten', 'tcp'], { env: process.env });
+  await new Promise(r => setTimeout(r, 1200));
+  procs.x11vnc = spawn('x11vnc',
+    ['-display', ML_DISPLAY, '-rfbport', String(ML_VNC_PORT), '-listen', '127.0.0.1', '-nopw', '-forever', '-shared', '-quiet'],
+    { env: process.env });
+  procs.websockify = spawn('websockify',
+    ['--web', ML_NOVNC_WEB, '127.0.0.1:' + ML_WS_PORT, '127.0.0.1:' + ML_VNC_PORT],
+    { env: process.env });
+  procs.runner = spawn('node',
+    [path.join(PROJECT_ROOT, 'scripts/main/manualLogin.js'), '--email', email, '--platform', 'both'],
+    { cwd: PROJECT_ROOT, env: Object.assign({}, process.env, { DISPLAY: ML_DISPLAY }) });
+
+  session.watchdog = setTimeout(() => {
+    mlPushLog(session, '[dashboard] 会话超时(20 分钟), 自动结束');
+    mlStop(session, 'timeout');
+  }, ML_WATCHDOG_MS);
+  for (const name of ['xvfb', 'x11vnc', 'websockify']) {
+    procs[name].on('exit', (code) => mlPushLog(session, '[dashboard] ' + name + ' 退出 code=' + code));
+  }
+  const feed = (c) => mlPushLog(session, c.toString());
+  procs.runner.stdout.on('data', feed);
+  procs.runner.stderr.on('data', feed);
+  procs.runner.on('exit', (code) => {
+    session.done = true;
+    session.runnerExit = code;
+    mlPushLog(session, '[dashboard] manualLogin 退出 code=' + code + (code === 0 ? '(会话已保存)' : '(未保存完整登录)'));
+    setTimeout(() => { mlCleanupProcs(session); }, 2000);
+  });
+  log('INFO', '人工登录会话启动: ' + email + ' (token=' + session.token.slice(0, 8) + '...)');
+  return { ok: true, token: session.token, email };
+}
+
+function manualLoginStatus() {
+  const s = manualLoginSession;
+  if (!s) return { active: false };
+  const active = !s.done && !s.stopped;
+  return {
+    active,
+    done: s.done,
+    stopped: s.stopped,
+    email: s.email,
+    startedAt: s.startedAt,
+    token: active ? s.token : null,
+    runnerExit: s.runnerExit != null ? s.runnerExit : null,
+    lastLog: s.logs.length ? s.logs[s.logs.length - 1] : null,
+  };
+}
+
+function handleNovncHttp(req, res) {
+  const url = new URL(req.url, 'http://localhost');
+  const m = url.pathname.match(/^\/manual-vnc\/([0-9a-f]{32})(\/.*)?$/);
+  if (!m || !manualLoginSession || manualLoginSession.token !== m[1] || manualLoginSession.stopped || manualLoginSession.done) {
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end('无有效人工登录会话');
+  }
+  const suffix = (m[2] || '/vnc.html') + (url.search || '');
+  const up = http.request(
+    { hostname: '127.0.0.1', port: ML_WS_PORT, path: suffix, method: req.method, headers: Object.assign({}, req.headers, { host: '127.0.0.1:' + ML_WS_PORT }) },
+    (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
+  up.on('error', () => {
+    try { res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('noVNC 未就绪'); } catch (e) { /* ignore */ }
+  });
+  req.pipe(up);
+}
+
+function handleUpgrade(req, socket, head) {
+  try {
+    const url = new URL(req.url, 'http://localhost');
+    const m = url.pathname.match(/^\/manual-vnc\/([0-9a-f]{32})\/websockify$/);
+    if (!m || !manualLoginSession || manualLoginSession.token !== m[1] || manualLoginSession.stopped || manualLoginSession.done) {
+      socket.destroy();
+      return;
+    }
+    const upstream = net.connect(ML_WS_PORT, '127.0.0.1', () => {
+      const prefix = '/manual-vnc/' + m[1];
+      const lines = [req.method + ' ' + url.pathname.slice(prefix.length) + ' HTTP/1.1'];
+      for (let i = 0; i < req.rawHeaders.length; i += 2) lines.push(req.rawHeaders[i] + ': ' + req.rawHeaders[i + 1]);
+      socket.setTimeout(0);
+      socket.setNoDelay(true);
+      upstream.write(lines.join('\r\n') + '\r\n\r\n');
+      if (head && head.length) upstream.write(head);
+      upstream.pipe(socket);
+      socket.pipe(upstream);
+    });
+    upstream.on('error', () => socket.destroy());
+    socket.on('error', () => upstream.destroy());
+  } catch (e) {
+    try { socket.destroy(); } catch (e2) { /* ignore */ }
+  }
+}
+
 // ============ HTTP 服务(8300) ============
 function json(res, code, obj) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -577,6 +801,42 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
+    if (p === '/api/login-check' && req.method === 'POST') {
+      let body = {};
+      try { body = await readBody(req); } catch (e) { body = {}; }
+      const index = Number(body.accountIndex);
+      if (!Number.isSafeInteger(index) || index < 1) return json(res, 400, { error: 'accountIndex 无效' });
+      const accs = await fetchJson('/accounts');
+      const acc = (((accs || {}).accounts) || []).find(a => a.index === index);
+      if (!acc) return json(res, 400, { error: '未知账号序号: ' + index });
+      const r = startLoginCheck(index, acc.email);
+      if (r.error) return json(res, r.code === 'BUSY' ? 409 : 400, r);
+      return json(res, 202, r);
+    }
+    if (p === '/api/login-check/status' && req.method === 'GET') {
+      return json(res, 200, loginCheckStatus());
+    }
+    if (p === '/api/manual-login' && req.method === 'POST') {
+      let body = {};
+      try { body = await readBody(req); } catch (e) { body = {}; }
+      const index = Number(body.accountIndex);
+      if (!Number.isSafeInteger(index) || index < 1) return json(res, 400, { error: 'accountIndex 无效' });
+      const r = await startManualLogin(index);
+      if (r.error) return json(res, r.code === 'BUSY' ? 409 : 400, r);
+      return json(res, 202, r);
+    }
+    if (p === '/api/manual-login/status' && req.method === 'GET') {
+      return json(res, 200, manualLoginStatus());
+    }
+    if (p === '/api/manual-login/stop' && req.method === 'POST') {
+      if (!manualLoginSession) return json(res, 409, { error: '无进行中的人工登录会话' });
+      mlStop(manualLoginSession, 'user-stopped');
+      return json(res, 202, { stopping: true });
+    }
+    if (p.startsWith('/manual-vnc/')) {
+      return handleNovncHttp(req, res);
+    }
+
     // ---- 前端页面 ----
     if (p === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -683,6 +943,9 @@ const HTML = `<!DOCTYPE html>
   dialog { border:1px solid var(--border); border-radius:var(--radius); padding:20px; width:min(680px, 94vw); max-height:88vh; overflow:auto; }
   dialog::backdrop { background:rgba(0,0,0,.35); }
   dialog h2 { margin:0 0 14px; font-size:16px; }
+  dialog#mlModal { width:min(980px, 97vw); }
+  .rowact { white-space:nowrap; }
+  .rowact .btn { padding:3px 8px; font-size:12px; }
   .pw-row { display:flex; align-items:center; gap:8px; }
   .eye { border:0; background:#eef1f4; border-radius:8px; cursor:pointer; padding:8px 10px; font-size:14px; margin-top:4px; }
   details.history { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; margin-top:14px; }
@@ -749,8 +1012,9 @@ const HTML = `<!DOCTYPE html>
         <th style="width:76px">状态</th>
         <th style="width:112px">最近活动</th>
         <th>备注 / 错误</th>
+        <th style="width:84px">操作</th>
       </tr></thead>
-      <tbody id="accRows"><tr><td colspan="8" class="empty">加载中…</td></tr></tbody>
+      <tbody id="accRows"><tr><td colspan="9" class="empty">加载中…</td></tr></tbody>
     </table>
   </div>
   <div class="hint">余额为脚本最近一次成功运行时的已知值，打开页面即可见、无需等待运行；「今日获得」按天累计、跨天自动归零。勾选账号后点「运行」只跑选中的账号；不勾选则跑全部。</div>
@@ -792,11 +1056,21 @@ const HTML = `<!DOCTYPE html>
     </div>
   </dialog>
 
+  <dialog id="mlModal">
+    <h2>🔑 人工登录 <span id="mlEmail" style="color:var(--ms-blue)"></span></h2>
+    <div class="hint">容器内浏览器已打开(先移动端、后桌面端, 依次完成)。在下方窗口完成微软登录;停留在 Rewards 页面 5 秒会自动保存会话并进入下一平台, 两个平台都完成后自动结束。关闭本弹窗会中止会话(已保存的平台不受影响)。</div>
+    <iframe id="mlFrame" style="width:100%;height:540px;border:1px solid var(--border);border-radius:8px;background:#111"></iframe>
+    <div class="sub" id="mlStatus" style="margin-top:8px"></div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn" onclick="mlClose()">关闭并中止</button>
+    </div>
+  </dialog>
+
   <div class="foot">数据来源: microsoft-rewards-script 容器 API · <span id="footRefresh">每 15 秒自动刷新</span> · ms-rewards-dashboard</div>
 </div>
 <script>
 'use strict';
-var API = { overview:'/api/overview', pushConfig:'/api/push-config', pushTest:'/api/push-test', start:'/api/start', stop:'/api/stop' };
+var API = { overview:'/api/overview', pushConfig:'/api/push-config', pushTest:'/api/push-test', start:'/api/start', stop:'/api/stop', loginCheck:'/api/login-check', loginCheckStatus:'/api/login-check/status', manualLogin:'/api/manual-login', manualLoginStatus:'/api/manual-login/status', manualLoginStop:'/api/manual-login/stop' };
 var selected = {};
 var selectionReady = false; // 首次拿到账号列表时默认全选, 之后尊重用户的选择
 var accountsCache = [];
@@ -916,7 +1190,7 @@ function renderOverview(d) {
 
 function renderAccounts(now) {
   var box = $('accRows');
-  if (!accountsCache.length) { box.innerHTML = '<tr><td colspan="8" class="empty">暂无账号数据</td></tr>'; return; }
+  if (!accountsCache.length) { box.innerHTML = '<tr><td colspan="9" class="empty">暂无账号数据</td></tr>'; return; }
   var html = '';
   for (var i = 0; i < accountsCache.length; i++) {
     var a = accountsCache[i];
@@ -938,6 +1212,11 @@ function renderAccounts(now) {
       + '<td>' + badge(a.status, liveRunning) + '</td>'
       + '<td style="font-size:12px">' + act + '</td>'
       + '<td>' + err + '</td>'
+      + '<td class="rowact">'
+      + '<button class="btn small secondary" title="登录体检: 无头检查会话并刷新实时余额(约 30-60 秒)" onclick="doCheck(' + a.index + ')">🩺</button> '
+      + '<button class="btn small secondary" title="人工登录: 在容器内浏览器完成微软验证, 自动保存会话" onclick="doManualLogin(' + a.index + ')">🔑</button>'
+      + checkNote(a)
+      + '</td>'
       + '</tr>';
   }
   box.innerHTML = html;
@@ -1088,6 +1367,87 @@ function togglePass(id, btn) {
   else { el.type = 'password'; btn.textContent = '👁'; }
 }
 
+// ---- 登录体检 / 人工登录 ----
+var checkJobs = {};
+var checkPollTimer = null;
+function checkNote(a) {
+  var j = checkJobs[a.index];
+  if (!j) return '';
+  if (j.status === 'running') return '<div class="ts" style="color:var(--warn)">🩺 体检中…</div>';
+  if (j.status === 'error') return '<div class="ts" style="color:var(--err)">🩺 ' + esc(j.error || '失败') + '</div>';
+  var r = j.result;
+  if (r && r.loggedIn) return '<div class="ts" style="color:var(--ok)">🩺 正常' + (r.balance != null ? ' · ' + fmtNum(r.balance) + ' 分' : '') + '</div>';
+  return '<div class="ts" style="color:var(--err)">🩺 未登录</div>';
+}
+function doCheck(index) {
+  var email = '#' + index;
+  for (var i = 0; i < accountsCache.length; i++) if (accountsCache[i].index === index) email = accountsCache[i].email;
+  if (!confirm('对 ' + email + ' 做登录体检?将无头访问一次 Rewards 刷新实时余额, 约 30-60 秒。')) return;
+  fetch(API.loginCheck, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountIndex: index }) })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.error) { alert(d.error); return; }
+      ensureCheckPoll();
+      scheduleRefresh();
+    })
+    .catch(function (e) { alert('触发失败: ' + e.message); });
+}
+function ensureCheckPoll() {
+  if (checkPollTimer) return;
+  checkPollTimer = setInterval(function () {
+    fetch(API.loginCheckStatus).then(function (r) { return r.json(); }).then(function (d) {
+      checkJobs = {};
+      (d.jobs || []).forEach(function (j) {
+        if (!checkJobs[j.accountIndex] || checkJobs[j.accountIndex].startedAt < j.startedAt) checkJobs[j.accountIndex] = j;
+      });
+      renderAccounts(Date.now());
+      if (!d.running && checkPollTimer) {
+        clearInterval(checkPollTimer);
+        checkPollTimer = null;
+        scheduleRefresh();
+      }
+    }).catch(function () {});
+  }, 3000);
+}
+
+var mlPollTimer = null;
+function doManualLogin(index) {
+  var email = '#' + index;
+  for (var i = 0; i < accountsCache.length; i++) if (accountsCache[i].index === index) email = accountsCache[i].email;
+  if (!confirm('为 ' + email + ' 打开人工登录窗口?将在容器内依次打开移动端/桌面端浏览器, 完成微软登录并停留在 Rewards 页面 5 秒后自动保存。')) return;
+  fetch(API.manualLogin, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountIndex: index }) })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.error) { alert(d.error); return; }
+      $('mlEmail').textContent = d.email;
+      $('mlFrame').src = '/manual-vnc/' + d.token + '/vnc.html?path=' + encodeURIComponent('manual-vnc/' + d.token + '/websockify') + '&autoconnect=true&resize=scale';
+      var dlg = $('mlModal');
+      if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+      ensureMlPoll();
+    })
+    .catch(function (e) { alert('触发失败: ' + e.message); });
+}
+function ensureMlPoll() {
+  if (mlPollTimer) return;
+  mlPollTimer = setInterval(function () {
+    fetch(API.manualLoginStatus).then(function (r) { return r.json(); }).then(function (d) {
+      $('mlStatus').textContent = d.active ? (d.lastLog || '容器内浏览器启动中…') : '';
+      if (!d.active) {
+        clearInterval(mlPollTimer);
+        mlPollTimer = null;
+        if (d.done && d.runnerExit === 0) $('mlStatus').textContent = '✅ 人工登录完成, 会话已保存';
+        else if (d.stopped) $('mlStatus').textContent = '会话已中止(未保存完整登录)';
+        $('mlFrame').src = 'about:blank';
+        scheduleRefresh();
+      }
+    }).catch(function () {});
+  }, 2500);
+}
+function mlClose() {
+  var dlg = $('mlModal');
+  if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+}
+
 function showDiag() {
   var b = $('diag');
   b.className = 'msg show err';
@@ -1113,6 +1473,16 @@ document.addEventListener('click', function (e) {
   var m = document.querySelector('.menu');
   if (m && !m.contains(e.target)) closeMenu();
 });
+(function () {
+  var dlg = $('mlModal');
+  if (!dlg) return;
+  dlg.addEventListener('close', function () {
+    if (mlPollTimer) { clearInterval(mlPollTimer); mlPollTimer = null; }
+    $('mlFrame').src = 'about:blank';
+    fetch(API.manualLoginStop, { method: 'POST' }).catch(function () {});
+    scheduleRefresh();
+  });
+})();
 updateIvUi();
 scheduleRefresh();
 </script>
@@ -1125,6 +1495,8 @@ loadPushConfig();
 loadState();
 log('INFO', 'MS-Rewards dashboard 启动, 端口 ' + PORT + ' (内网无鉴权)');
 log('INFO', '容器 API: ' + API_BASE + (API_TOKEN ? ' (token 已加载)' : ' (⚠ 未读取到 token)'));
+
+server.on('upgrade', handleUpgrade);
 
 server.listen(PORT, '0.0.0.0', () => {
   log('INFO', 'HTTP 监听 0.0.0.0:' + PORT);

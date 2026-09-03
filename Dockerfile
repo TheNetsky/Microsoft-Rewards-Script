@@ -37,13 +37,19 @@ ENV NODE_ENV=production \
     NODE_OPTIONS=--disable-warning=ExperimentalWarning
 
 # Install minimal system libraries required for Chromium headless to run,
-# plus jq (for config generation/patching) and gettext-base (for envsubst)
+# plus jq (for config generation/patching) and gettext-base (for envsubst).
+# xvfb/x11vnc/novnc/websockify power the dashboard's in-browser manual login
+# (headed browser under a virtual display, viewed through noVNC).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     gettext-base \
     jq \
     tzdata \
     ca-certificates \
+    xvfb \
+    x11vnc \
+    novnc \
+    websockify \
     libglib2.0-0 \
     libdbus-1-3 \
     libexpat1 \
@@ -103,6 +109,8 @@ COPY config.example.json ./config.example.json
 COPY --chmod=755 scripts/docker/run_daily.sh ./scripts/docker/run_daily.sh
 COPY --chmod=755 scripts/docker/healthcheck.sh ./scripts/docker/healthcheck.sh
 COPY --chmod=755 scripts/api/ ./scripts/api/
+COPY --chmod=755 scripts/main/ ./scripts/main/
+COPY --chmod=644 scripts/utils.js ./scripts/utils.js
 COPY --chmod=644 scripts/env.js ./scripts/env.js
 COPY --chmod=644 scripts/package.json ./scripts/package.json
 # Embedded web dashboard (zero-dependency Node; started by entrypoint when DASHBOARD_ENABLED)
