@@ -1003,5 +1003,68 @@
             "cheap airport parking near me",
             "long stay airport parking"
         ]
+    },
+    {
+        "title": "Take off soon",
+        "queries": [
+            "cheap flights to london",
+            "book affordable flights",
+            "airline tickets deals",
+            "cheap airline tickets"
+        ]
+    },
+    {
+        "title": "Send a smile",
+        "queries": [
+            "flower delivery near me",
+            "fresh flower delivery",
+            "send flowers online",
+            "fast flower delivery"
+        ]
+    },
+    {
+        "title": "Stream your favorites",
+        "queries": [
+            "best streaming platforms",
+            "streaming services comparison",
+            "top streaming services",
+            "streaming bundles"
+        ]
+    },
+    {
+        "title": "Know your score",
+        "queries": [
+            "free credit report",
+            "check credit score free",
+            "how to raise credit score",
+            "credit score check"
+        ]
+    },
+    {
+        "title": "Feeling symptoms?",
+        "queries": [
+            "health condition symptoms",
+            "common cold symptoms",
+            "flu symptoms checker",
+            "health symptoms"
+        ]
+    },
+    {
+        "title": "Learn a new recipe",
+        "queries": [
+            "easy dinner recipes",
+            "healthy lunch recipes",
+            "quick dessert recipes",
+            "new recipes"
+        ]
+    },
+    {
+        "title": "Explore videogames",
+        "queries": [
+            "best new video games",
+            "top video games 2026",
+            "popular video games",
+            "explore video games"
+        ]
     }
 ]

@@ -43,7 +43,7 @@ export class PromotionActivityRunner extends BaseActivity {
             return
         }
 
-        const isSearchOnBing = name.includes('exploreonbing')
+        const isSearchOnBing = name.includes('exploreonbing') || offerId.toLowerCase().includes('exploreonbing')
         if (isSearchOnBing && !this.bot.config.activities.searchOnBing) {
             this.logDisabled('SearchOnBing', offerId)
             return

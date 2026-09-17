@@ -14,6 +14,22 @@ export class MorePromotions extends BaseActivity {
                     .map(promotion => [promotion.offerId, promotion as BasePromotion] as const)
             ).values()
         ]
+        const existingIds = new Set(promotions.map(p => p.offerId))
+        for (const offer of this.bot.reactSnapshot?.reportable ?? []) {
+            if (offer.offerId.toLowerCase().includes('dailyset') || existingIds.has(offer.offerId)) continue
+            promotions.push({
+                offerId: offer.offerId,
+                title: offer.title || offer.offerId,
+                complete: offer.isCompleted,
+                pointProgressMax: offer.points,
+                promotionType: 'urlreward',
+                destinationUrl: offer.destination,
+                hash: offer.hash,
+                activityType: offer.activityType ?? 11,
+                priority: 1
+            } as unknown as BasePromotion)
+            existingIds.add(offer.offerId)
+        }
 
         const pending = promotions.filter(promotion => this.isActionable(promotion))
         if (!pending.length) {

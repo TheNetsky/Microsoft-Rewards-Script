@@ -291,12 +291,28 @@ export default class ReactFunc {
                 // Never try future-dated offers, lol
                 const reportable = !!hash && !isCompleted && !isLocked && (date === null || date <= today)
 
+                const isExploreOnBing = offerId.toLowerCase().includes('exploreonbing')
+                const points = (obj.points as number) ?? (obj.pointProgressMax as number) ?? (isExploreOnBing ? 10 : 0)
+                let title = (obj.title as string) ?? ''
+                let description = (obj.description as string) ?? ''
+                if (isExploreOnBing && !title) {
+                    if (offerId.includes('airline')) { title = 'Take off soon'; description = 'Search on Bing to book affordable flights' }
+                    else if (offerId.includes('airport')) { title = 'Park with ease'; description = 'Search on Bing to reserve airport parking' }
+                    else if (offerId.includes('flower')) { title = 'Send a smile'; description = 'Search on Bing for fast and fresh flower delivery options' }
+                    else if (offerId.includes('streaming')) { title = 'Stream your favorites'; description = 'Search on Bing to find the best streaming platforms and bundles' }
+                    else if (offerId.includes('credit')) { title = 'Know your score'; description = 'Search on Bing to check your credit report and raise your score' }
+                    else if (offerId.includes('health')) { title = 'Feeling symptoms?'; description = 'Search on Bing for a health condition to learn about the symptoms' }
+                    else if (offerId.includes('recipe')) { title = 'Learn a new recipe'; description = 'Search on Bing for new recipes' }
+                    else if (offerId.includes('videogames')) { title = 'Explore videogames'; description = 'Search on Bing to explore videogames' }
+                    else { title = offerId }
+                }
+
                 const candidate: ParsedOffer = {
                     offerId,
                     hash,
-                    title: (obj.title as string) ?? '',
-                    description: (obj.description as string) ?? '',
-                    points: (obj.points as number) ?? (obj.pointProgressMax as number) ?? 0,
+                    title,
+                    description,
+                    points,
                     promotionSubtype: (obj.promotionSubtype as string | null) ?? null,
                     destination: (obj.destination as string) ?? (obj.destinationUrl as string) ?? '',
                     isCompleted,
@@ -720,26 +736,31 @@ export default class ReactFunc {
                 const { id, at } = anchors[k]!
                 if (!this.isParentQuestId(id)) continue
 
-                const next = anchors[k + 1]?.at ?? combined.length
-                const region = combined.slice(at, Math.min(next, at + 3000))
+                let next = combined.length
+                for (let j = k + 1; j < anchors.length; j++) {
+                    if (anchors[j]!.id !== id && this.isParentQuestId(anchors[j]!.id)) {
+                        next = anchors[j]!.at
+                        break
+                    }
+                }
+                const region = combined.slice(at, Math.min(next, at + 4000))
 
                 const title =
                     region.match(/"alt":"((?:[^"\\]|\\.)*)"/)?.[1] ??
                     region.match(/"title":"((?:[^"\\]|\\.)*)"/)?.[1] ??
                     ''
 
-                const pointsMatch = region.match(/\["\+","([\d,]+)"\]/)
+                const pointsMatch = region.match(/\["(?:|\+)","([\d,]+)"\]/)
                 const points = pointsMatch ? Number(pointsMatch[1]!.replace(/,/g, '')) : 0
-                const taskM = region.match(/(\d+)\s*\/\s*(\d+)\s*tasks/)
+                const taskM = region.match(/(\d+)\s*(?:\/|\b(?:von|of|sur|de|z|iz|із|з)\b)\s*(\d+)/i)
                 const complete = !!taskM && Number(taskM[1]) >= Number(taskM[2]!) && Number(taskM[2]) > 0
 
-                // First wins for title/points
                 const prev = byId.get(id)
                 byId.set(id, {
                     offerId: id,
                     title: prev?.title || title,
-                    pointProgressMax: prev?.pointProgressMax || points,
-                    complete: prev?.complete || complete
+                    pointProgressMax: Math.max(prev?.pointProgressMax || 0, points),
+                    complete: (prev && prev.complete) || complete
                 })
             }
 

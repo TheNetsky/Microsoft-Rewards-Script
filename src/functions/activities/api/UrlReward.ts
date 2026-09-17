@@ -74,9 +74,9 @@ export class UrlReward extends BaseActivity {
                     }
                 ],
                 {
-                    url: URLs.rewards.dashboard,
-                    referer: URLs.rewards.dashboard,
-                    routerStateTree: this.bot.browser.react.routerStateTree('dashboard')
+                    url: URLs.rewards.earn,
+                    referer: URLs.rewards.earn,
+                    routerStateTree: this.bot.browser.react.routerStateTree('earn')
                 }
             )
 

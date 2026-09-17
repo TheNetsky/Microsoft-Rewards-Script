@@ -133,7 +133,7 @@ function extractSearchTerm(description: string): string {
     return description
         .trim()
         .replace(
-            /^\s*(?:search(?:\s+on\s+bing|\s+bing|\s+the\s+web)?\s+for|look\s+up|find|explore|discover)\b[\s:]+/i,
+            /^\s*(?:search(?:\s+on\s+bing|\s+bing|\s+the\s+web)?\s+(?:for|to)|look\s+up|find|explore|discover)\b[\s:]+/i,
             ''
         )
         .replace(/^["'“”‘’]+|["'“”‘’]+$/g, '')
