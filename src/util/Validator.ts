@@ -98,6 +98,18 @@ const WebhookSchema = z.object({
             chatId: z.string()
         })
         .optional(),
+    bark: z
+        .object({
+            enabled: z.boolean().optional(),
+            url: z.string().optional(),
+            deviceKey: z.string().optional(),
+            title: z.string().optional(),
+            group: z.string().optional(),
+            icon: z.string().optional(),
+            sound: z.string().optional(),
+            level: z.enum(['active', 'timeSensitive', 'passive']).optional()
+        })
+        .optional(),
     webhookLogFilter: LogFilterSchema
 })
 

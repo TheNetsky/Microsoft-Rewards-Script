@@ -375,6 +375,14 @@ Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5:
 | `webhook.ntfy.title`                     | string   | `"Microsoft-Rewards-Script"`                         | Notification title                | `CONFIG_NTFY_TITLE`                     |
 | `webhook.ntfy.tags`                      | string[] | `["bot", "notify"]`                                  | Notification tags                 | `CONFIG_NTFY_TAGS` \*                   |
 | `webhook.ntfy.priority`                  | number   | `3`                                                  | Notification priority (1-5)       | `CONFIG_NTFY_PRIORITY`                  |
+| `webhook.bark.enabled`                   | boolean  | `false`                                              | Enable Bark notifications         | `CONFIG_BARK_ENABLED`                   |
+| `webhook.bark.url`                       | string   | `"https://api.day.app"`                              | Bark server URL                   | `CONFIG_BARK_URL`                       |
+| `webhook.bark.deviceKey`                 | string   | `""`                                                 | Bark device key                   | `CONFIG_BARK_DEVICEKEY`                 |
+| `webhook.bark.title`                     | string   | `"Microsoft-Rewards-Script"`                         | Notification title                | `CONFIG_BARK_TITLE`                     |
+| `webhook.bark.group`                     | string   | `"Microsoft-Rewards"`                                | Notification group                | `CONFIG_BARK_GROUP`                     |
+| `webhook.bark.icon`                      | string   | `""`                                                 | Custom notification icon URL      | `CONFIG_BARK_ICON`                      |
+| `webhook.bark.sound`                     | string   | `""`                                                 | Custom notification sound         | `CONFIG_BARK_SOUND`                     |
+| `webhook.bark.level`                     | string   | `"active"`                                           | Notification interruption level   | `CONFIG_BARK_LEVEL`                     |
 | `webhook.webhookLogFilter.enabled`       | boolean  | `false`                                              | Enable webhook log filtering      | `CONFIG_WEBHOOK_LOG_FILTER_ENABLED`     |
 | `webhook.webhookLogFilter.mode`          | string   | `"whitelist"`                                        | Filter mode (whitelist/blacklist) | `CONFIG_WEBHOOK_LOG_FILTER_MODE`        |
 | `webhook.webhookLogFilter.levels`        | string[] | `["error"]`                                          | Log levels to send                | `CONFIG_WEBHOOK_LOG_FILTER_LEVELS` \*   |
@@ -385,7 +393,7 @@ Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5:
 > \* Docker `CONFIG_*` array values are comma-separated strings e.g. `"error,warn"`. Regex patterns must be set directly in `config.json`.
 
 > [!WARNING]
-> **NTFY** users set the `webhookLogFilter` to `enabled`, or you will receive push notifications for _all_ logs.
+> **NTFY** and **Bark** users set the `webhookLogFilter` to `enabled`, or you will receive push notifications for _all_ logs.
 > When enabled, only account start, 2FA codes, and account completion summaries are delivered as push notifications.
 > Customize which notifications you receive with the `keywords` options.
 

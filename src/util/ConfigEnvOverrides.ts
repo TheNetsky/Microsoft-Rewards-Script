@@ -88,6 +88,16 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_NTFY_PRIORITY', path: 'webhook.ntfy.priority', type: 'number' },
     { env: 'CONFIG_NTFY_TAGS', path: 'webhook.ntfy.tags', type: 'array' },
 
+    // Bark webhook
+    { env: 'CONFIG_BARK_ENABLED', path: 'webhook.bark.enabled', type: 'bool' },
+    { env: 'CONFIG_BARK_URL', path: 'webhook.bark.url', type: 'string' },
+    { env: 'CONFIG_BARK_DEVICEKEY', path: 'webhook.bark.deviceKey', type: 'string' },
+    { env: 'CONFIG_BARK_TITLE', path: 'webhook.bark.title', type: 'string' },
+    { env: 'CONFIG_BARK_GROUP', path: 'webhook.bark.group', type: 'string' },
+    { env: 'CONFIG_BARK_ICON', path: 'webhook.bark.icon', type: 'string' },
+    { env: 'CONFIG_BARK_SOUND', path: 'webhook.bark.sound', type: 'string' },
+    { env: 'CONFIG_BARK_LEVEL', path: 'webhook.bark.level', type: 'string' },
+
     // Webhook log filter
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_ENABLED', path: 'webhook.webhookLogFilter.enabled', type: 'bool' },
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_MODE', path: 'webhook.webhookLogFilter.mode', type: 'string' },

@@ -79,6 +79,7 @@ export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig
     telegram?: WebhookTelegramConfig
+    bark?: WebhookBarkConfig
     webhookLogFilter: LogFilter
 }
 
@@ -109,4 +110,15 @@ export interface WebhookTelegramConfig {
     enabled?: boolean
     botToken: string
     chatId: string | number
+}
+
+export interface WebhookBarkConfig {
+    enabled?: boolean
+    url?: string
+    deviceKey?: string
+    title?: string
+    group?: string
+    icon?: string
+    sound?: string
+    level?: 'active' | 'timeSensitive' | 'passive'
 }

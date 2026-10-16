@@ -3,6 +3,7 @@ import cluster from 'cluster'
 import { sendDiscord } from './Discord'
 import { sendNtfy } from './Ntfy'
 import { sendTelegram } from './Telegram'
+import { sendBark } from './Bark'
 import type { MicrosoftRewardsBot } from '../index'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
 import type { LogFilter } from '../interface/Config'
@@ -115,7 +116,8 @@ export class Logger {
         const hasWebhook = Boolean(
             (config.webhook.discord?.enabled && config.webhook.discord.url) ||
             (config.webhook.ntfy?.enabled && config.webhook.ntfy.url) ||
-            (config.webhook.telegram?.enabled && config.webhook.telegram.botToken && config.webhook.telegram.chatId)
+            (config.webhook.telegram?.enabled && config.webhook.telegram.botToken && config.webhook.telegram.chatId) ||
+            (config.webhook.bark?.enabled && (config.webhook.bark.deviceKey || config.webhook.bark.url))
         )
         if (!hasWebhook) return
 
@@ -132,6 +134,9 @@ export class Logger {
                 config.webhook.telegram.chatId
             ) {
                 sendTelegram(config.webhook.telegram, cleanMsg, level)
+            }
+            if (config.webhook.bark?.enabled && (config.webhook.bark.deviceKey || config.webhook.bark.url)) {
+                sendBark(config.webhook.bark, cleanMsg, level)
             }
         } else {
             process.send?.({ __ipcLog: { content: cleanMsg, level } })

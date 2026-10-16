@@ -177,7 +177,7 @@ function structuralValidate(cfg) {
             if ('webhookLogFilter' in cfg.webhook) {
                 validateLogFilter(cfg.webhook.webhookLogFilter, 'webhook.webhookLogFilter', errors)
             }
-            for (const key of ['discord', 'ntfy', 'telegram']) {
+            for (const key of ['discord', 'ntfy', 'telegram', 'bark']) {
                 if (key in cfg.webhook && !isObject(cfg.webhook[key])) {
                     errors.push(`webhook.${key} must be an object`)
                 }

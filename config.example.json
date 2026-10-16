@@ -98,6 +98,16 @@
             "tags": ["bot", "notify"],
             "priority": 3
         },
+        "bark": {
+            "enabled": false,
+            "url": "https://api.day.app",
+            "deviceKey": "",
+            "title": "Microsoft-Rewards-Script",
+            "group": "Microsoft-Rewards",
+            "icon": "",
+            "sound": "",
+            "level": "active"
+        },
         "webhookLogFilter": {
             "enabled": false,
             "mode": "whitelist",

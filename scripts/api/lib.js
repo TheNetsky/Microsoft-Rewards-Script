@@ -123,6 +123,8 @@ export function redactSecrets(config) {
         if (wh.ntfy?.token) wh.ntfy.token = mask
         if (wh.telegram?.botToken) wh.telegram.botToken = mask
         if (wh.telegram?.chatId) wh.telegram.chatId = mask
+        if (wh.bark?.deviceKey) wh.bark.deviceKey = mask
+        if (wh.bark?.url) wh.bark.url = mask
     }
     return clone
 }
