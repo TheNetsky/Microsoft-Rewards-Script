@@ -21,3 +21,14 @@ export interface ConfigSaveFingerprint {
     mobile: boolean
     desktop: boolean
 }
+
+export interface AccountProxy {
+    proxyHttp: boolean
+    url: string
+    port: number
+    password: string
+    username: string
+
+    // Internal runtime property; not configured through .env.
+    bridgeUrl?: string
+}

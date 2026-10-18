@@ -222,13 +222,13 @@ const AccountProxySchema = z
             })
         }
 
-        if ((url.protocol === 'socks4:' || url.protocol === 'socks5:') && (hasUsername || hasPassword)) {
+        if (url.protocol === 'socks4:' && (hasUsername || hasPassword)) {
             ctx.addIssue({
                 code: 'custom',
                 path: ['username'],
-                message: `${url.protocol.slice(0, -1).toUpperCase()} proxy authentication is not supported by Patchright`
-            })
-        }
+                message: 'SOCKS4 proxy authentication is not supported'
+    })
+}
     })
 
 export const AccountSchema = z.object({

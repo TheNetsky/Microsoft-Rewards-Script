@@ -56,15 +56,20 @@ class Browser {
         let browser: rebrowser.Browser
         try {
             const proxyConfig = account.proxy.url
-                ? {
-                      server: formatBrowserProxyServer(account.proxy.url, account.proxy.port),
-                      ...(account.proxy.username &&
-                          account.proxy.password && {
-                              username: account.proxy.username,
-                              password: account.proxy.password
-                          })
-                  }
-                : undefined
+    ? {
+          server:
+              account.proxy.bridgeUrl ??
+              formatBrowserProxyServer(account.proxy.url, account.proxy.port),
+
+          ...(!account.proxy.bridgeUrl &&
+              account.proxy.username &&
+              account.proxy.password && {
+                  username: account.proxy.username,
+                  password: account.proxy.password
+              })
+      }
+    : undefined
+                
 
             const runningAsRoot = typeof process.getuid === 'function' && process.getuid() === 0
             const sandboxDisabled = process.platform === 'linux' && runningAsRoot

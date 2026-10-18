@@ -177,7 +177,9 @@ class HttpClient {
         this.account = account
         this.defaultHeaders = { ...defaultHeaders }
 
-        const proxyUrl = this.account.url && this.account.proxyHttp ? this.buildProxyUrl(this.account) : undefined
+        const proxyUrl = this.account.url && this.account.proxyHttp
+    ? (this.account.bridgeUrl ?? this.buildProxyUrl(this.account))
+    : undefined
 
         this.instance = new Impit({ browser: 'chrome', proxyUrl, timeout: DEFAULT_TIMEOUT })
     }

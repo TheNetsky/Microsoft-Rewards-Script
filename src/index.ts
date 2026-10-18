@@ -25,6 +25,8 @@ import { SearchManager } from './functions/activities/search/SearchManager'
 
 import type { Account } from './interface/Account'
 import HttpClient from './util/Http'
+import { parseBrowserProxyUrl } from './util/Proxy'
+import { startAuthenticatedSocks5Bridge } from './util/ProxyBridge'
 import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import { sendTelegram, flushTelegramQueue } from './logging/Telegram'
@@ -419,6 +421,10 @@ export class MicrosoftRewardsBot {
             this.userData.userName = this.utils.getEmailUsername(accountEmail)
             this.userData.timezoneOffset = String(new Date().getTimezoneOffset())
 
+            let proxyBridge:
+    | Awaited<ReturnType<typeof startAuthenticatedSocks5Bridge>>
+    | undefined
+
             try {
                 const cachedRegion =
                     account.geoLocale === 'auto' ? loadResolvedRegion(this.config.sessionPath, accountEmail) : undefined
@@ -434,11 +440,33 @@ export class MicrosoftRewardsBot {
                     }`
                 )
 
-                this.http = new HttpClient(account.proxy, {
-                    'Accept-Language': this.accountLocale.acceptLanguage
-                })
+                
+const configuredProxy = account.proxy.url
+    ? parseBrowserProxyUrl(account.proxy.url)
+    : undefined
 
-                const result: AccountRunResult | undefined = await this.Main(account).catch(error => {
+if (
+    configuredProxy?.protocol === 'socks5:' &&
+    account.proxy.username &&
+    account.proxy.password
+) {
+    proxyBridge = await startAuthenticatedSocks5Bridge(account.proxy)
+
+    // Browser.ts and Http.ts use this runtime-only URL.
+    account.proxy.bridgeUrl = proxyBridge.url
+
+    this.logger.info(
+        'main',
+        'PROXY-BRIDGE',
+        `Authenticated SOCKS5 bridge started for ${accountEmail}`
+    )
+}
+
+this.http = new HttpClient(account.proxy, {
+    'Accept-Language': this.accountLocale.acceptLanguage
+})
+
+const result: AccountRunResult | undefined = await this.Main(account).catch(error => {
                     void this.logger.error(
                         true,
                         'FLOW',
@@ -516,6 +544,24 @@ export class MicrosoftRewardsBot {
                     error: error instanceof Error ? error.message : String(error)
                 })
             }
+
+            finally {
+    try {
+        if (proxyBridge) {
+            await proxyBridge.close()
+        }
+    } catch (error) {
+        this.logger.warn(
+            'main',
+            'PROXY-BRIDGE',
+            `Failed to close SOCKS5 bridge for ${accountEmail}: ${
+                error instanceof Error ? error.message : String(error)
+            }`
+        )
+    } finally {
+        delete account.proxy.bridgeUrl
+    }
+}
         }
 
         if (this.config.clusters <= 1 && cluster.isPrimary) {
