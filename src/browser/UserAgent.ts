@@ -1,314 +1,119 @@
-import { URLs } from '../constants/urls'
-import { httpRequest } from '../util/Http'
 import type { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
-
-import { BROWSER_VERSION_FALLBACKS } from '../constants/browserVersions'
-import type { ChromeVersion, EdgeVersion } from '../interface/UserAgentUtil'
-import type { MicrosoftRewardsBot } from '../index'
-
-interface EdgeVersions {
-    android: string
-    desktop: string
-}
-
-interface AppComponents {
-    not_a_brand_version: string
-    not_a_brand_major_version: string
-    edge_version: string
-    edge_major_version: string
-    chrome_version: string
-    chrome_major_version: string
-    chrome_reduced_version: string
-}
+import type { BotContext } from '../core/BotContext'
+import { desktopUaArchitecture, desktopUaPlatform } from './BrowserRuntime'
+import { detectDesktopPlatformVersion } from '../util/PlatformVersion'
+import { applyDesktopAppFingerprint, desktopAppRequestHeaders, isDesktopAppFingerprint } from './RewardsAppProfile'
 
 export class UserAgentManager {
-    private static readonly NOT_A_BRAND_VERSION = '99'
-    private static readonly VERSION_LOOKUP_TIMEOUT_MS = 5000
-    private static readonly VERSION_PATTERN = /^\d+\.\d+\.\d+\.\d+$/
-    private readonly appComponents = new Map<boolean, Promise<AppComponents>>()
-    private chromeVersion?: Promise<string>
-    private edgeVersions?: Promise<EdgeVersions>
+    private engineVersion = ''
+    private engineIsRealEdge = false
+    private readonly headers = new Map<boolean, Record<string, string>>()
 
-    private static readonly MOBILE_MODELS = [
-        // Samsung Galaxy S series
-        'SM-S948B', // Galaxy S26 Ultra
-        'SM-S947B', // Galaxy S26+
-        'SM-S942B', // Galaxy S26
-        'SM-S938B', // Galaxy S25 Ultra
-        'SM-S937B', // Galaxy S25 Edge
-        'SM-S936B', // Galaxy S25+
-        'SM-S931B', // Galaxy S25
-        'SM-S928B', // Galaxy S24 Ultra
-        'SM-S926B', // Galaxy S24+
-        'SM-S921B', // Galaxy S24
-        'SM-S918B', // Galaxy S23 Ultra
-        'SM-S916B', // Galaxy S23+
-        'SM-S911B', // Galaxy S23
+    constructor(private readonly bot: Pick<BotContext, 'appIdentity'>) {}
 
-        // Samsung Galaxy Z series
-        'SM-F966B', // Galaxy Z Fold7
-        'SM-F956B', // Galaxy Z Fold6
-        'SM-F946B', // Galaxy Z Fold5
-        'SM-F741B', // Galaxy Z Flip6
-        'SM-F731B', // Galaxy Z Flip5
-
-        // Samsung
-        'SM-A566B', // Galaxy A56 5G
-        'SM-A556B', // Galaxy A55 5G
-        'SM-A546B', // Galaxy A54 5G
-        'SM-A356B', // Galaxy A35 5G
-        'SM-A346B', // Galaxy A34 5G
-        'SM-A266B', // Galaxy A26 5G
-        'SM-A256B', // Galaxy A25 5G
-        'SM-A166B', // Galaxy A16 5G
-        'SM-A156B', // Galaxy A15 5G
-
-        // Google Pixel
-        'Pixel 10 Pro Fold',
-        'Pixel 10 Pro XL',
-        'Pixel 10 Pro',
-        'Pixel 10',
-        'Pixel 10a',
-        'Pixel 9 Pro Fold',
-        'Pixel 9 Pro XL',
-        'Pixel 9 Pro',
-        'Pixel 9',
-        'Pixel 9a',
-        'Pixel 8 Pro',
-        'Pixel 8',
-        'Pixel 8a',
-        'Pixel 7 Pro',
-        'Pixel 7',
-        'Pixel 7a',
-        'Pixel Fold',
-
-        // OnePlus
-        'CPH2653', // OnePlus 13
-        'CPH2649', // OnePlus 13
-        'CPH2655', // OnePlus 13
-        'CPH2581', // OnePlus 12
-        'CPH2573', // OnePlus 12
-        'CPH2449', // OnePlus 11
-        'CPH2415', // OnePlus 10T
-
-        // Nothing
-        'A059', // Nothing Phone (3a)
-        'A059P', // Nothing Phone (3a) Pro
-        'A142', // Nothing Phone (2a)
-        'A065', // Nothing Phone (2)
-
-        // Motorola
-        'motorola edge 50 pro',
-        'motorola edge 50 neo',
-        'motorola edge 40 pro',
-        'moto g85 5G',
-        'moto g84 5G',
-        'moto g54 5G'
-    ]
-
-    constructor(
-        private bot: MicrosoftRewardsBot,
-        private readonly request: typeof httpRequest = httpRequest
-    ) {}
-
-    private static pickMobileModel(): string {
-        const pool = UserAgentManager.MOBILE_MODELS
-        return pool[Math.floor(Math.random() * pool.length)] ?? 'Pixel 8'
+    reset(): void {
+        this.engineVersion = ''
+        this.engineIsRealEdge = false
+        this.headers.clear()
+        this.bot.appIdentity.userAgent = ''
     }
 
-    async getUserAgent(isMobile: boolean) {
-        const androidVersion = isMobile ? 10 + Math.floor(Math.random() * 6) : 0 // Android 10-15
-        const system = this.getSystemComponents(isMobile, androidVersion)
-        const app = await this.getAppComponents(isMobile)
-
-        const uaTemplate = isMobile
-            ? `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${app.chrome_reduced_version} Mobile Safari/537.36 EdgA/${app.edge_version}`
-            : `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${app.chrome_reduced_version} Safari/537.36 Edg/${app.edge_version}`
-
-        const platformVersion = isMobile ? `${androidVersion}.0.0` : `${Math.floor(Math.random() * 15) + 1}.0.0`
-
-        // Keep the UA-CH platform aligned with the UA string's OS token
-        const desktopPlatform =
-            process.platform === 'darwin' ? 'macOS' : process.platform === 'linux' ? 'Linux' : 'Windows'
-
-        const model = isMobile ? UserAgentManager.pickMobileModel() : ''
-
-        const uaMetadata = {
-            isMobile,
-            platform: isMobile ? 'Android' : desktopPlatform,
-            fullVersionList: [
-                { brand: 'Not/A)Brand', version: `${UserAgentManager.NOT_A_BRAND_VERSION}.0.0.0` },
-                { brand: 'Microsoft Edge', version: app['edge_version'] },
-                { brand: 'Chromium', version: app['chrome_version'] }
-            ],
-            brands: [
-                { brand: 'Not/A)Brand', version: UserAgentManager.NOT_A_BRAND_VERSION },
-                { brand: 'Microsoft Edge', version: app['edge_major_version'] },
-                { brand: 'Chromium', version: app['chrome_major_version'] }
-            ],
-            platformVersion,
-            architecture: isMobile ? '' : 'x86',
-            bitness: isMobile ? '' : '64',
-            model
-        }
-
-        return { userAgent: uaTemplate, userAgentMetadata: uaMetadata }
+    setEngineVersion(version: string, options?: { isRealEdge?: boolean }): void {
+        const fullVersion = /\b\d+\.\d+\.\d+\.\d+\b/.exec(version)?.[0]
+        if (!fullVersion) throw new Error(`Could not read the running Chromium version: ${version}`)
+        if (this.engineVersion !== fullVersion) this.headers.clear()
+        this.engineVersion = fullVersion
+        this.engineIsRealEdge = options?.isRealEdge === true
+        const identity = this.bot.appIdentity
+        identity.userAgent =
+            `Mozilla/5.0 (Linux; Android ${identity.osVersion}; ${identity.device}) AppleWebKit/537.36 (KHTML, like Gecko)` +
+            ` Chrome/${fullVersion} Mobile Safari/537.36 BingWeb/${identity.appVersion}`
     }
 
-    async getChromeVersion(isMobile: boolean): Promise<string> {
-        try {
-            const request = {
-                url: URLs.userAgent.chromeVersions,
-                method: 'GET',
-                timeout: UserAgentManager.VERSION_LOOKUP_TIMEOUT_MS,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
+    isRealEdge(): boolean {
+        return this.engineIsRealEdge
+    }
 
-            const response = await this.request<ChromeVersion>(request)
-            const version = response.data?.channels?.Stable?.version
-            if (!UserAgentManager.isValidVersion(version)) {
-                throw new Error('Stable Chrome version was missing or invalid')
-            }
-            return version
-        } catch (error) {
-            const fallback = BROWSER_VERSION_FALLBACKS.chrome
-            this.bot.logger.warn(
-                isMobile,
-                'USERAGENT-CHROME-VERSION',
-                `Version lookup unavailable (${error instanceof Error ? error.message : String(error)}); using bundled fallback ${fallback}`
+    getRequestHeaders(isMobile: boolean, rewardsApp = false): Record<string, string> {
+        const headers = this.headers.get(isMobile)
+        if (!headers) throw new Error(`${isMobile ? 'Mobile' : 'Desktop'} browser identity is not initialized`)
+        return rewardsApp ? desktopAppRequestHeaders(this.engineVersion) : { ...headers }
+    }
+
+    matchesFingerprint(fingerprint: BrowserFingerprintWithHeaders, isMobile: boolean): boolean {
+        const navigator = fingerprint.fingerprint.navigator
+        const data = navigator.userAgentData
+        if (!isMobile)
+            return (
+                isDesktopAppFingerprint(fingerprint) && data?.platform === 'Windows' && navigator.platform === 'Win32'
             )
-            return fallback
-        }
-    }
-
-    async getEdgeVersions(isMobile: boolean): Promise<EdgeVersions> {
-        try {
-            const request = {
-                url: URLs.edge.products,
-                method: 'GET',
-                timeout: UserAgentManager.VERSION_LOOKUP_TIMEOUT_MS,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-
-            const response = await this.request<EdgeVersion[]>(request)
-            const stable = Array.isArray(response.data)
-                ? response.data.find(product => product.Product === 'Stable')
-                : undefined
-            const android = stable?.Releases.find(release => release.Platform === 'Android')?.ProductVersion
-            const desktopPlatform =
-                process.platform === 'darwin' ? 'MacOS' : process.platform === 'linux' ? 'Linux' : 'Windows'
-            const preferredArchitecture =
-                desktopPlatform === 'MacOS' ? 'universal' : process.arch === 'arm64' ? 'arm64' : 'x64'
-            const desktop =
-                stable?.Releases.find(
-                    release => release.Platform === desktopPlatform && release.Architecture === preferredArchitecture
-                )?.ProductVersion ??
-                stable?.Releases.find(release => release.Platform === desktopPlatform)?.ProductVersion
-
-            if (!UserAgentManager.isValidVersion(android) || !UserAgentManager.isValidVersion(desktop)) {
-                throw new Error('Stable Edge versions were missing or invalid')
-            }
-
-            return { android, desktop }
-        } catch (error) {
-            const fallback = BROWSER_VERSION_FALLBACKS.edge
-            this.bot.logger.warn(
-                isMobile,
-                'USERAGENT-EDGE-VERSION',
-                `Version lookup unavailable (${error instanceof Error ? error.message : String(error)}); using bundled fallbacks Android ${fallback.android}, Desktop ${fallback.windows}`
-            )
-            return { android: fallback.android, desktop: fallback.windows }
-        }
-    }
-
-    getSystemComponents(mobile: boolean, androidVersion = 13): string {
-        if (mobile) {
-            return `Linux; Android ${androidVersion}; K`
-        }
-
-        switch (process.platform) {
-            case 'darwin':
-                return 'Macintosh; Intel Mac OS X 10_15_7'
-            case 'linux':
-                return 'X11; Linux x86_64'
-            default:
-                return 'Windows NT 10.0; Win64; x64'
-        }
-    }
-
-    getAppComponents(isMobile: boolean): Promise<AppComponents> {
-        const cached = this.appComponents.get(isMobile)
-        if (cached) return cached
-
-        const pending = this.loadAppComponents(isMobile)
-        this.appComponents.set(isMobile, pending)
-        return pending
-    }
-
-    private async loadAppComponents(isMobile: boolean): Promise<AppComponents> {
-        this.edgeVersions ??= this.getEdgeVersions(isMobile)
-        this.chromeVersion ??= this.getChromeVersion(isMobile)
-        const [versions, chromeVersion] = await Promise.all([this.edgeVersions, this.chromeVersion])
-        const edgeVersion = isMobile ? versions.android : versions.desktop
-        const edgeMajorVersion = edgeVersion.split('.')[0]!
-        const chromeMajorVersion = chromeVersion.split('.')[0]!
-
-        return {
-            not_a_brand_version: `${UserAgentManager.NOT_A_BRAND_VERSION}.0.0.0`,
-            not_a_brand_major_version: UserAgentManager.NOT_A_BRAND_VERSION,
-            edge_version: edgeVersion,
-            edge_major_version: edgeMajorVersion,
-            chrome_version: chromeVersion,
-            chrome_major_version: chromeMajorVersion,
-            chrome_reduced_version: `${chromeMajorVersion}.0.0.0`
-        }
-    }
-
-    private static isValidVersion(version: unknown): version is string {
-        return typeof version === 'string' && UserAgentManager.VERSION_PATTERN.test(version)
+        return (
+            data?.platform === 'Android' &&
+            !/MSRewards\/Desktop|EdgA?\/|iPad|iPhone/.test(navigator.userAgent) &&
+            data.model === this.bot.appIdentity.device &&
+            data.platformVersion === `${this.bot.appIdentity.osVersion}.0.0`
+        )
     }
 
     async updateFingerprintUserAgent(
         fingerprint: BrowserFingerprintWithHeaders,
         isMobile: boolean
     ): Promise<BrowserFingerprintWithHeaders> {
-        try {
-            const userAgentData = await this.getUserAgent(isMobile)
-            const componentData = await this.getAppComponents(isMobile)
-            const meta = userAgentData.userAgentMetadata
-
-            //@ts-expect-error Errors due it not exactly matching
-            fingerprint.fingerprint.navigator.userAgentData = meta
-            fingerprint.fingerprint.navigator.userAgent = userAgentData.userAgent
-            fingerprint.fingerprint.navigator.appVersion = userAgentData.userAgent.replace(
-                `${fingerprint.fingerprint.navigator.appCodeName}/`,
-                ''
-            )
-
-            fingerprint.headers['user-agent'] = userAgentData.userAgent
-            fingerprint.headers['sec-ch-ua'] =
-                `"Microsoft Edge";v="${componentData.edge_major_version}", "Not=A?Brand";v="${componentData.not_a_brand_major_version}", "Chromium";v="${componentData.chrome_major_version}"`
-            fingerprint.headers['sec-ch-ua-full-version-list'] =
-                `"Microsoft Edge";v="${componentData.edge_version}", "Not=A?Brand";v="${componentData.not_a_brand_version}", "Chromium";v="${componentData.chrome_version}"`
-            fingerprint.headers['sec-ch-ua-mobile'] = meta.isMobile ? '?1' : '?0'
-            fingerprint.headers['sec-ch-ua-platform'] = `"${meta.platform}"`
-            fingerprint.headers['sec-ch-ua-platform-version'] = `"${meta.platformVersion}"`
-            fingerprint.headers['sec-ch-ua-arch'] = `"${meta.architecture}"`
-            fingerprint.headers['sec-ch-ua-bitness'] = `"${meta.bitness}"`
-            fingerprint.headers['sec-ch-ua-model'] = `"${meta.model}"`
-
-            return fingerprint
-        } catch (error) {
-            this.bot.logger.error(
-                isMobile,
-                'USER-AGENT-UPDATE',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
-            )
-            throw error
+        if (!this.engineVersion) throw new Error('Launch Chromium before preparing its browser identity')
+        const identity = this.bot.appIdentity
+        const major = this.engineVersion.split('.')[0]!
+        const platform = isMobile ? 'Android' : desktopUaPlatform()
+        const architecture = desktopUaArchitecture()
+        const system = isMobile
+            ? 'Linux; Android 10; K'
+            : platform === 'macOS'
+              ? 'Macintosh; Intel Mac OS X 10_15_7'
+              : platform === 'Linux'
+                ? `X11; Linux ${process.arch === 'arm64' ? 'aarch64' : process.arch === 'x64' ? 'x86_64' : process.arch}`
+                : architecture.bitness === '32'
+                  ? 'Windows NT 10.0'
+                  : 'Windows NT 10.0; Win64; x64'
+        const fullVersionList = [
+            { brand: 'Chromium', version: this.engineVersion },
+            { brand: 'Not/A)Brand', version: '99.0.0.0' }
+        ]
+        const brands = fullVersionList.map(({ brand, version }) => ({ brand, version: version.split('.')[0]! }))
+        const userAgent = `Mozilla/5.0 (${system}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 ${isMobile ? 'Mobile ' : ''}Safari/537.36`
+        const navigator = fingerprint.fingerprint.navigator
+        navigator.userAgent = userAgent
+        navigator.appVersion = userAgent.replace(/^Mozilla\//, '')
+        navigator.platform = isMobile
+            ? 'Linux armv8l'
+            : platform === 'Windows'
+              ? 'Win32'
+              : platform === 'macOS'
+                ? 'MacIntel'
+                : `Linux ${process.arch === 'arm64' ? 'aarch64' : process.arch === 'x64' ? 'x86_64' : process.arch}`
+        navigator.userAgentData = {
+            brands,
+            fullVersionList,
+            mobile: isMobile,
+            platform,
+            platformVersion: isMobile ? `${identity.osVersion}.0.0` : detectDesktopPlatformVersion(),
+            architecture: isMobile ? '' : architecture.architecture,
+            bitness: isMobile ? '' : architecture.bitness,
+            model: isMobile ? identity.device : '',
+            uaFullVersion: this.engineVersion
         }
+        for (const name of Object.keys(fingerprint.headers)) {
+            if (/^(?:user-agent|sec-ch-ua.*|x-rewards-source|sec-ms-gec.*)$/i.test(name))
+                delete fingerprint.headers[name]
+        }
+        const headers = {
+            'User-Agent': userAgent,
+            'sec-ch-ua': brands
+                .map(({ brand, version }) => `${JSON.stringify(brand)};v=${JSON.stringify(version)}`)
+                .join(', '),
+            'sec-ch-ua-mobile': isMobile ? '?1' : '?0',
+            'sec-ch-ua-platform': JSON.stringify(platform)
+        }
+        for (const [name, value] of Object.entries(headers)) fingerprint.headers[name.toLowerCase()] = value
+        this.headers.set(isMobile, headers)
+        return isMobile ? fingerprint : applyDesktopAppFingerprint(fingerprint, this.engineVersion)
     }
 }

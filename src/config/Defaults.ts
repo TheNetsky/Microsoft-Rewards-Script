@@ -1,0 +1,76 @@
+import type { Config } from './Config'
+
+export const defaultConfig: Config = {
+    sessionPath: 'sessions',
+    headless: false,
+    clusters: 1,
+    rewardsMode: 'browser',
+    errorDiagnostics: false,
+    ensureStreakProtection: true,
+    autoClaimPunchcardRewards: false,
+    continueOnBotWarning: false,
+    skipNonPointTasks: true,
+    accountDelay: { min: '1min', max: '3min' },
+    taskDelay: { min: '15sec', max: '30sec' },
+    workers: {
+        doDailySet: true,
+        doClaimBonusPoints: true,
+        doMorePromotions: true,
+        doPunchCards: true,
+        doAppPromotions: true,
+        doDesktopSearch: true,
+        doMobileSearch: true,
+        doBonusSearches: false,
+        doDailyCheckIn: true,
+        doReadToEarn: true,
+        doActivateSearchPerk: true,
+        doVisualSearch: false
+    },
+    activities: { urlReward: true, searchOnBing: true },
+    searchOnBingLocalQueries: false,
+    globalTimeout: '30sec',
+    searchSettings: {
+        scrollRandomResults: false,
+        clickRandomResults: false,
+        runOnZeroPoints: false,
+        maxBonusSearches: 110,
+        maxSearchOnBingAttempts: 3,
+        parallelSearching: true,
+        clusterSearch: true,
+        useAccountLocale: true,
+        queryEngines: ['google', 'local', 'wikipedia', 'rss.googleNews'],
+        searchResultVisitTime: '10sec',
+        searchDelay: { min: '30sec', max: '1min' },
+        readDelay: { min: '30sec', max: '1min' }
+    },
+    experimental: { blockMedia: false, edgeBrowsing: false, browserSearchApiReport: false },
+    debugLogs: false,
+    consoleLogFilter: {
+        enabled: false,
+        mode: 'whitelist',
+        levels: ['error', 'warn'],
+        keywords: ['starting account', 'Fraud_UserWarning_BotScore_UX'],
+        regexPatterns: []
+    },
+    proxy: { queryEngine: true, ignoreCertificateErrors: false },
+    webhook: {
+        discord: { enabled: false, url: '' },
+        telegram: { enabled: false, botToken: '', chatId: '' },
+        ntfy: {
+            enabled: false,
+            url: '',
+            topic: '',
+            token: '',
+            title: 'Microsoft-Rewards-Script',
+            tags: ['bot', 'notify'],
+            priority: 3
+        },
+        webhookLogFilter: {
+            enabled: false,
+            mode: 'whitelist',
+            levels: ['error'],
+            keywords: ['starting account', 'select number', 'collected', 'Fraud_UserWarning_BotScore_UX'],
+            regexPatterns: []
+        }
+    }
+}

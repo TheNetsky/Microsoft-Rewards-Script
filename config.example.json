@@ -2,14 +2,19 @@
     "sessionPath": "sessions",
     "headless": false,
     "clusters": 1,
+    "rewardsMode": "browser",
     "errorDiagnostics": false,
     "ensureStreakProtection": true,
     "autoClaimPunchcardRewards": false,
-    "contintueOnBotWarning": false,
+    "continueOnBotWarning": false,
     "skipNonPointTasks": true,
     "accountDelay": {
         "min": "1min",
         "max": "3min"
+    },
+    "taskDelay": {
+        "min": "15sec",
+        "max": "30sec"
     },
     "workers": {
         "doDailySet": true,
@@ -23,7 +28,7 @@
         "doDailyCheckIn": true,
         "doReadToEarn": true,
         "doActivateSearchPerk": true,
-        "doVisualSearch": false
+        "doVisualSearch": true
     },
     "activities": {
         "urlReward": true,
@@ -32,25 +37,15 @@
     "searchOnBingLocalQueries": false,
     "globalTimeout": "30sec",
     "searchSettings": {
+        "maxSearchOnBingAttempts": 3,
         "scrollRandomResults": false,
         "clickRandomResults": false,
         "runOnZeroPoints": false,
         "maxBonusSearches": 110,
         "parallelSearching": true,
         "clusterSearch": true,
-        "queryEngines": [
-            "google",
-            "wikipedia",
-            "wikirandom",
-            "hackernews",
-            "reddit",
-            "local",
-            "rss.googleTrends",
-            "rss.googleNews",
-            "rss.bbc",
-            "rss.guardian.world",
-            "rss.theVerge.all"
-        ],
+        "useAccountLocale": true,
+        "queryEngines": ["google", "local", "wikipedia", "rss.googleNews"],
         "searchResultVisitTime": "10sec",
         "searchDelay": {
             "min": "30sec",
@@ -62,10 +57,9 @@
         }
     },
     "experimental": {
-        "apiSearch": false,
-        "apiSearchOnBing": false,
         "blockMedia": false,
-        "edgeBrowsing": false
+        "edgeBrowsing": false,
+        "browserSearchApiReport": false
     },
     "debugLogs": false,
     "consoleLogFilter": {

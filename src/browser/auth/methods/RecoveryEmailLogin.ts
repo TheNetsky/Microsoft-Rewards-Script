@@ -1,36 +1,32 @@
+import { ghostClick } from '../../GhostClick'
+import { browserTimeout } from '../../BrowserTiming'
 import type { Page } from 'patchright'
-import type { MicrosoftRewardsBot } from '../../../index'
-import { canPromptForInput, getErrorMessage, promptInput } from './LoginUtils'
+import type { LoginContext } from '../LoginContext'
+import { canPromptForInput, getErrorMessage, promptInput, waitForInputResponse } from './LoginUtils'
 
 export class RecoveryLogin {
-    private readonly textInputSelector = '[data-testid="proof-confirmation"]'
+    private readonly textInputSelector =
+        'input#proof-confirmation-email-input, input[data-testid="proof-confirmation"], [data-testid="proof-confirmation"] input'
     private readonly maxManualSeconds = 60
     private readonly maxManualAttempts = 5
 
-    constructor(private bot: MicrosoftRewardsBot) {}
+    constructor(private bot: LoginContext) {}
 
     private async fillEmail(page: Page, email: string): Promise<boolean> {
         try {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Filling recovery email')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Filling recovery email')
 
-            const visibleInput = await page
-                .waitForSelector(this.textInputSelector, { state: 'visible', timeout: 500 })
-                .catch(() => null)
-
-            if (visibleInput) {
-                await page.keyboard.type(email, { delay: 50 })
-                await page.keyboard.press('Enter')
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Successfully filled email input field')
-                return true
-            }
-
-            this.bot.logger.warn(
-                this.bot.isMobile,
-                'LOGIN-RECOVERY',
-                `Email input field not found with selector: ${this.textInputSelector}`
-            )
-            return false
+            this.bot.signal.throwIfAborted()
+            const timeout = browserTimeout(this.bot)
+            const input = page.locator(`:is(${this.textInputSelector}):visible`).first()
+            await input.waitFor({ state: 'visible', timeout })
+            await ghostClick(page, input, timeout, this.bot.signal)
+            await input.fill(email, { timeout })
+            await input.press('Enter', { timeout })
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Recovery email submitted; waiting for response')
+            return true
         } catch (error) {
+            this.bot.signal.throwIfAborted()
             this.bot.logger.warn(
                 this.bot.isMobile,
                 'LOGIN-RECOVERY',
@@ -42,28 +38,29 @@ export class RecoveryLogin {
 
     async handle(page: Page, recoveryEmail: string): Promise<void> {
         try {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Email recovery authentication flow initiated')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Email recovery authentication flow initiated')
 
             if (recoveryEmail) {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Using configured recovery email')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Using configured recovery email')
 
                 const filled = await this.fillEmail(page, recoveryEmail)
                 if (!filled) {
                     throw new Error('Email input field not found')
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Waiting for page response')
-                await this.bot.utils.wait(500)
-                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
-                    this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Network idle timeout reached')
-                })
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Waiting for page response')
+                await waitForInputResponse(page, this.textInputSelector, browserTimeout(this.bot))
 
                 const errorMessage = await getErrorMessage(page)
                 if (errorMessage) {
                     throw new Error(`Email verification failed: ${errorMessage}`)
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Email authentication completed successfully')
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'LOGIN-RECOVERY',
+                    'Recovery email response received; checking next sign-in state'
+                )
                 return
             }
 
@@ -122,7 +119,7 @@ export class RecoveryLogin {
                     continue
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Valid recovery email received from user')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Valid recovery email received from user')
 
                 const filled = await this.fillEmail(page, email)
                 if (!filled) {
@@ -140,11 +137,8 @@ export class RecoveryLogin {
                     continue
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Waiting for page response')
-                await this.bot.utils.wait(500)
-                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {
-                    this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Network idle timeout reached')
-                })
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-RECOVERY', 'Waiting for page response')
+                await waitForInputResponse(page, this.textInputSelector, browserTimeout(this.bot))
 
                 const errorMessage = await getErrorMessage(page)
                 if (errorMessage) {
@@ -158,22 +152,15 @@ export class RecoveryLogin {
                         throw new Error(`Maximum attempts reached. Last error: ${errorMessage}`)
                     }
 
-                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Clearing input field for retry')
-                    const inputToClear = await page.$(this.textInputSelector).catch(() => null)
-                    if (inputToClear) {
-                        await inputToClear.click()
-                        await page.keyboard.press('Control+A')
-                        await page.keyboard.press('Backspace')
-                        this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Input field cleared')
-                    } else {
-                        this.bot.logger.warn(this.bot.isMobile, 'LOGIN-RECOVERY', 'Could not find input field to clear')
-                    }
-
                     await this.bot.utils.wait(1000)
                     continue
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-RECOVERY', 'Email authentication completed successfully')
+                this.bot.logger.debug(
+                    this.bot.isMobile,
+                    'LOGIN-RECOVERY',
+                    'Recovery email response received; checking next sign-in state'
+                )
                 return
             }
 

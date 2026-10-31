@@ -1,48 +1,34 @@
-import chalk from 'chalk'
-import cluster from 'cluster'
-import { sendDiscord } from './Discord'
-import { sendNtfy } from './Ntfy'
-import { sendTelegram } from './Telegram'
-import type { MicrosoftRewardsBot } from '../index'
+import cluster from 'node:cluster'
+import { sendNotifications } from './Notifications'
+import type { BotContext } from '../core/BotContext'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
-import type { LogFilter } from '../interface/Config'
+import type { LogFilter } from '../config/Config'
+import { emitControlEvent, type DomainEvent } from './LogEvent'
+import { sanitizeLogMessage } from './LogMessage'
+import { resolveLogColor, type LogColor } from './LogStyle'
+import { formatLogLine, writeConsoleLog } from '../../scripts/lib/logging.cjs'
+import { eventLogLevel } from './LogLevel'
+
+type LogContext = Pick<
+    BotContext,
+    'config' | 'currentAccountEmail' | 'isMobile' | 'mainDesktopPage' | 'mainMobilePage' | 'userData'
+>
 
 export type Platform = boolean | 'main'
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
-export type ColorKey = keyof typeof chalk
 export interface IpcLog {
     content: string
     level: LogLevel
+    color?: LogColor
 }
 
-type ChalkFn = (msg: string) => string
-
-function platformText(platform: Platform): string {
+function platformText(platform: Platform): 'MAIN' | 'MOBILE' | 'DESKTOP' {
     return platform === 'main' ? 'MAIN' : platform ? 'MOBILE' : 'DESKTOP'
 }
 
-function platformBadge(platform: Platform): string {
-    return platform === 'main' ? chalk.bgCyan('MAIN') : platform ? chalk.bgBlue('MOBILE') : chalk.bgMagenta('DESKTOP')
-}
-
-function getColorFn(color?: ColorKey): ChalkFn | null {
-    return color && typeof chalk[color] === 'function' ? (chalk[color] as ChalkFn) : null
-}
-
-function consoleOut(level: LogLevel, msg: string, chalkFn: ChalkFn | null): void {
-    const out = chalkFn ? chalkFn(msg) : msg
-    switch (level) {
-        case 'warn':
-            return console.warn(out)
-        case 'error':
-            return console.error(out)
-        default:
-            return console.log(out)
-    }
-}
-
-function formatMessage(message: string | Error): string {
-    if (!(message instanceof Error)) return message.replace(/\r?\n/g, '\\n')
+function formatMessage(message: string | Error, debugEnabled: boolean): string {
+    if (!(message instanceof Error)) return sanitizeLogMessage(message)
+    if (!debugEnabled) return sanitizeLogMessage(message.message)
 
     const stackFrames = message.stack
         ?.split(/\r?\n/)
@@ -51,63 +37,93 @@ function formatMessage(message: string | Error): string {
         .filter(Boolean)
         .join(' <- ')
 
-    return stackFrames ? `${message.message} | stack=${stackFrames}` : message.message
+    return sanitizeLogMessage(stackFrames ? `${message.message} | stack=${stackFrames}` : message.message)
 }
 
 export class Logger {
-    constructor(private bot: MicrosoftRewardsBot) {}
+    private readonly patterns = new Map<string, RegExp>()
 
-    info(isMobile: Platform, title: string, message: string, color?: ColorKey) {
-        return this.baseLog('info', isMobile, title, message, color)
+    constructor(private bot: LogContext) {}
+
+    info(isMobile: Platform, title: string, message: string) {
+        return this.write('info', isMobile, title, message)
     }
 
-    warn(isMobile: Platform, title: string, message: string | Error, color?: ColorKey) {
-        return this.baseLog('warn', isMobile, title, message, color)
+    success(isMobile: Platform, title: string, message: string) {
+        return this.write('info', isMobile, title, message, undefined, false, 'green')
     }
 
-    error(isMobile: Platform, title: string, message: string | Error, color?: ColorKey) {
-        return this.baseLog('error', isMobile, title, message, color)
+    special(isMobile: Platform, title: string, message: string) {
+        return this.write('info', isMobile, title, message, undefined, false, 'blue')
     }
 
-    debug(isMobile: Platform, title: string, message: string | Error, color?: ColorKey) {
-        return this.baseLog('debug', isMobile, title, message, color)
+    warn(isMobile: Platform, title: string, message: string | Error) {
+        return this.write('warn', isMobile, title, message)
     }
 
-    private baseLog(
+    error(isMobile: Platform, title: string, message: string | Error) {
+        return this.write('error', isMobile, title, message)
+    }
+
+    debug(isMobile: Platform, title: string, message: string | Error) {
+        return this.write('debug', isMobile, title, message)
+    }
+
+    event(isMobile: Platform, title: string, message: string, data?: DomainEvent): void {
+        this.write(eventLogLevel(data), isMobile, title, message, data, true)
+    }
+
+    private write(
         level: LogLevel,
         isMobile: Platform,
         title: string,
         message: string | Error,
-        color?: ColorKey
+        data?: DomainEvent,
+        trackedEvent = false,
+        color?: LogColor
     ): void {
         const config = this.bot.config
-        if (level === 'debug' && !config.debugLogs && !process.argv.includes('-dev')) return
+        const debugEnabled = config.debugLogs || process.argv.includes('-dev')
 
-        const now = new Date().toLocaleString()
-        const formatted = formatMessage(message)
-        const userName = this.bot.userData.userName || 'MAIN'
-        const levelTag = level.toUpperCase()
-        const cleanMsg = `[${now}] [${userName}] [${levelTag}] ${platformText(isMobile)} [${title}] ${formatted}`
+        if (level === 'debug' && !debugEnabled && !trackedEvent) return
+
+        const now = new Date().toISOString()
+        const formatted = formatMessage(message, debugEnabled)
+        const userName = this.bot.currentAccountEmail || this.bot.userData.userName || 'MAIN'
+        const cleanMsg = formatLogLine({
+            ts: now,
+            user: userName,
+            level,
+            platform: platformText(isMobile),
+            title,
+            message: formatted
+        })
 
         if (level === 'error' && config.errorDiagnostics) {
-            const page = this.bot.isMobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage
+            const mobile = isMobile === 'main' ? this.bot.isMobile : isMobile
+            const page = mobile ? this.bot.mainMobilePage : this.bot.mainDesktopPage
             const error = message instanceof Error ? message : new Error(String(message))
-            errorDiagnostic(page, error)
+            if (page && !page.isClosed()) errorDiagnostic(page, error)
         }
 
-        const consoleAllowed = this.shouldPassFilter(config.consoleLogFilter, level, cleanMsg)
-        const webhookAllowed = this.shouldPassFilter(config.webhook.webhookLogFilter, level, cleanMsg)
+        const consoleAllowed =
+            (level !== 'debug' || debugEnabled) && this.passesFilter(config.consoleLogFilter, level, cleanMsg)
+        const webhookAllowed = this.passesFilter(config.webhook.webhookLogFilter, level, cleanMsg)
+        const logColor = resolveLogColor(level, data, color)
 
-        if (consoleAllowed) {
-            let logColor: ColorKey | undefined = color
-            if (!logColor) {
-                if (level === 'error') logColor = 'red'
-                else if (level === 'warn') logColor = 'yellow'
-                else if (level === 'debug') logColor = 'magenta'
-            }
-
-            const consoleStr = `[${now}] [${userName}] [${levelTag}] ${platformBadge(isMobile)} [${title}] ${formatted}`
-            consoleOut(level, consoleStr, getColorFn(logColor))
+        const machineChannel = emitControlEvent({
+            ts: now,
+            user: userName,
+            platform: platformText(isMobile),
+            level,
+            title,
+            message: formatted,
+            consoleAllowed,
+            color: logColor,
+            data
+        })
+        if (consoleAllowed && !machineChannel) {
+            writeConsoleLog(level, cleanMsg, logColor)
         }
 
         if (!webhookAllowed || level === 'debug') return
@@ -120,25 +136,13 @@ export class Logger {
         if (!hasWebhook) return
 
         if (cluster.isPrimary) {
-            if (config.webhook.discord?.enabled && config.webhook.discord.url) {
-                sendDiscord(config.webhook.discord.url, cleanMsg, level)
-            }
-            if (config.webhook.ntfy?.enabled && config.webhook.ntfy.url) {
-                sendNtfy(config.webhook.ntfy, cleanMsg, level)
-            }
-            if (
-                config.webhook.telegram?.enabled &&
-                config.webhook.telegram.botToken &&
-                config.webhook.telegram.chatId
-            ) {
-                sendTelegram(config.webhook.telegram, cleanMsg, level)
-            }
+            void sendNotifications(config.webhook, cleanMsg, level, logColor)
         } else {
-            process.send?.({ __ipcLog: { content: cleanMsg, level } })
+            process.send?.({ __ipcLog: { content: cleanMsg, level, color: logColor } })
         }
     }
 
-    private shouldPassFilter(filter: LogFilter | undefined, level: LogLevel, message: string): boolean {
+    private passesFilter(filter: LogFilter | undefined, level: LogLevel, message: string): boolean {
         if (!filter || !filter.enabled) {
             return true
         }
@@ -169,12 +173,15 @@ export class Logger {
         if (!isMatch && hasPatternRule) {
             for (const pattern of regexPatterns!) {
                 try {
-                    const regex = new RegExp(pattern, 'i')
+                    const regex = this.patterns.get(pattern) ?? new RegExp(pattern, 'i')
+                    this.patterns.set(pattern, regex)
                     if (regex.test(message)) {
                         isMatch = true
                         break
                     }
-                } catch {}
+                } catch {
+                    // Ignore
+                }
             }
         }
 

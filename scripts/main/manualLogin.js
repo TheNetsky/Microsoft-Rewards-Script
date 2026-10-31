@@ -1,3 +1,5 @@
+import { buildBrowserProxy } from '../lib/proxy.cjs'
+import BROWSER_ARGS from '../lib/browser-args.json' with { type: 'json' }
 /* global window */
 
 import fs from 'node:fs'
@@ -5,12 +7,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { FingerprintGenerator } from 'fingerprint-generator'
-import { newInjectedContext } from 'fingerprint-injector'
 import ms from 'ms'
 import { chromium } from 'patchright'
 
 import {
-    buildProxyConfig,
     closeSessionDb,
     ensureSessionSchema,
     findUnknownOptions,
@@ -23,11 +23,12 @@ import {
     loadResolvedRegionRow,
     loadSessionRow,
     log,
+    exitWithUsage,
     openSessionDb,
     parseArgs,
     resolveEmailArgument,
     saveSessionRow
-} from '../utils.js'
+} from '../lib/commandUtils.js'
 
 const REWARDS_LOGIN_URL = 'https://rewards.bing.com/auth/login'
 const REWARDS_HOST = 'rewards.bing.com'
@@ -42,18 +43,6 @@ const MANUAL_CONFIG_ENV_OVERRIDES = [
         path: ['proxy', 'ignoreCertificateErrors'],
         type: 'bool'
     }
-]
-
-const BROWSER_ARGS = [
-    '--mute-audio',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-blink-features=AutomationControlled',
-    '--disable-save-password-bubble',
-    '--disable-dev-shm-usage',
-    '--disable-background-networking',
-    '--disable-backgrounding-occluded-windows',
-    '--disable-renderer-backgrounding'
 ]
 
 const __dirname = getDirname(import.meta.url)
@@ -79,19 +68,15 @@ Examples:
   npm run manual-login -- user@example.com --platform mobile
   npm run manual-login -- --email user@example.com --platform both --fresh
 
-The browser stays open while you sign in manually. Once it remains on a
-Microsoft Rewards page for five continuous seconds, the session is saved and
-the browser closes automatically.
+The browser stays open while you sign in manually. After five continuous
+seconds on a Microsoft Rewards page, Bing sign-in is verified, the session is
+saved and the browser closes. Failed or cancelled logins keep saved sessions.
 `)
 }
 
-function failUsage(message) {
-    log('ERROR', message)
-    printHelp()
-    process.exit(1)
-}
+const failUsage = message => exitWithUsage(message, printHelp, log)
 
-export function parsePlatforms(value) {
+function parsePlatforms(value) {
     if (value === undefined) return ['mobile']
     if (typeof value !== 'string' || !value.trim()) {
         throw new Error('--platform requires mobile, desktop, or both after it')
@@ -104,7 +89,7 @@ export function parsePlatforms(value) {
     throw new Error('--platform must be mobile, desktop, or both')
 }
 
-export function isRewardsPage(rawUrl) {
+function isRewardsPage(rawUrl) {
     try {
         const url = new URL(rawUrl)
         const pathname = url.pathname.replace(/\/+$/, '') || '/'
@@ -123,7 +108,7 @@ function setConfigValue(config, pathParts, value) {
     current[pathParts.at(-1)] = value
 }
 
-export function applyManualConfigEnvOverrides(rawConfig, env = process.env) {
+function applyManualConfigEnvOverrides(rawConfig, env = process.env) {
     const config = structuredClone(rawConfig)
     const applied = []
 
@@ -146,56 +131,19 @@ export function applyManualConfigEnvOverrides(rawConfig, env = process.env) {
     return { config, applied }
 }
 
-export function resolveGlobalTimeoutMs(value) {
+function resolveGlobalTimeoutMs(value) {
     const timeout = typeof value === 'number' ? value : ms(String(value))
-    if (!Number.isFinite(timeout) || timeout < 0) {
-        throw new Error(`config.globalTimeout must be a non-negative duration, got '${value}'`)
+    if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 2147483647) {
+        throw new Error(`config.globalTimeout must be a positive duration of at most 2147483647ms, got '${value}'`)
     }
     return timeout
 }
 
-function normalizeCountry(value) {
-    if (!value) return undefined
-    const country = String(value).trim().toUpperCase()
-    return /^[A-Z]{2}$/.test(country) ? country : undefined
-}
-
-function resolveLocale(account, resolvedCountry) {
-    const languageTag = new Intl.Locale(account.langCode || 'en').toString()
-    const parsed = new Intl.Locale(languageTag)
-    const language = parsed.language.toLowerCase()
-    const configuredCountry =
-        account.geoLocale.toLowerCase() === 'auto' ? undefined : normalizeCountry(account.geoLocale)
-    const country = configuredCountry ?? normalizeCountry(resolvedCountry) ?? normalizeCountry(parsed.region)
-    const locale = country ? new Intl.Locale(languageTag, { region: country }).toString() : parsed.toString()
-    const acceptedLocales = locale.toLowerCase() === language ? [language] : [locale, language]
-
-    return { locale, acceptedLocales }
-}
-
-function fingerprintMatchesLocale(fingerprint, locale) {
-    try {
-        const navigatorLocale = new Intl.Locale(fingerprint.fingerprint.navigator.language).toString()
-        const acceptLanguage = Object.entries(fingerprint.headers).find(
-            ([name]) => name.toLowerCase() === 'accept-language'
-        )?.[1]
-        const headerLocale = acceptLanguage?.split(',')[0]?.trim()
-
-        return (
-            navigatorLocale.toLowerCase() === locale.locale.toLowerCase() &&
-            new Intl.Locale(headerLocale).toString().toLowerCase() === locale.locale.toLowerCase()
-        )
-    } catch {
-        return false
-    }
-}
-
-function createFingerprint(isMobile, locale) {
-    const hostOs = process.platform === 'darwin' ? 'macos' : process.platform === 'linux' ? 'linux' : 'windows'
+function createFingerprint(isMobile, locale, operatingSystem) {
     return new FingerprintGenerator().getFingerprint({
         devices: isMobile ? ['mobile'] : ['desktop'],
-        operatingSystems: isMobile ? ['android'] : [hostOs],
-        browsers: [{ name: 'edge' }],
+        operatingSystems: isMobile ? ['android'] : [operatingSystem],
+        browsers: [{ name: 'chrome' }],
         locales: locale.acceptedLocales
     })
 }
@@ -276,15 +224,33 @@ function saveManualSession(dbPath, email, platform, storageState, fingerprint, p
 }
 
 async function runPlatform({ account, config, dbPath, platform, fresh }) {
+    const { newRewardsBrowserContext } = await import('../../dist/browser/RewardsBrowserContext.js').catch(() => {
+        throw new Error('Run npm run build before using manual-login')
+    })
+    const { createSessionState } = await import('../../dist/session/SessionState.js')
     const isMobile = platform === 'mobile'
     const stored = loadStoredSession(dbPath, account.email, platform, fresh)
-    const locale = resolveLocale(account, stored.resolvedCountry)
+    if (stored.storageState) stored.storageState = createSessionState(stored.storageState.cookies)
+    const { resolveAccountLocale, fingerprintMatchesLocale } = await import('../../dist/util/Locale.js')
+    const locale = resolveAccountLocale(account, stored.resolvedCountry)
     const savesFingerprint = isMobile ? account.saveFingerprint.mobile : account.saveFingerprint.desktop
+    const { UserAgentManager } = await import('../../dist/browser/UserAgent.js')
+    const { createAppIdentity } = await import('../../dist/rewards/app/AppIdentity.js')
+    const { fingerprintOperatingSystem, browserLocaleArgs, requireGraphicalDisplay } =
+        await import('../../dist/browser/BrowserRuntime.js')
+    requireGraphicalDisplay()
+    const { getBingSignInEvidence } = await import('../../dist/browser/auth/LoginSession.js')
+    const { URLs } = await import('../../dist/constants/urls.js')
+    const userAgentManager = new UserAgentManager({ appIdentity: createAppIdentity(account.email) })
+    const profileMatches = stored.fingerprint && userAgentManager.matchesFingerprint(stored.fingerprint, isMobile)
     const canReuseFingerprint =
-        savesFingerprint && stored.fingerprint && fingerprintMatchesLocale(stored.fingerprint, locale)
-    const fingerprint = canReuseFingerprint ? stored.fingerprint : createFingerprint(isMobile, locale)
+        savesFingerprint && stored.fingerprint && profileMatches && fingerprintMatchesLocale(stored.fingerprint, locale)
+    const fingerprint = canReuseFingerprint
+        ? stored.fingerprint
+        : createFingerprint(isMobile, locale, fingerprintOperatingSystem())
+    if (!canReuseFingerprint) stored.storageState = null
     const screen = fingerprint.fingerprint.screen
-    const proxy = buildProxyConfig(account)
+    const proxy = buildBrowserProxy(account.proxy)
 
     if (account.proxy.url && !proxy) {
         throw new Error('Account proxy is configured but invalid (needs proxy URL and port)')
@@ -314,14 +280,17 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
 
     const browser = await chromium.launch({
         headless: false,
+        handleSIGINT: false,
+        handleSIGTERM: false,
         ...(proxy ? { proxy } : {}),
-        args: [...BROWSER_ARGS, ...sandboxArgs, ...certArgs]
+        args: [...BROWSER_ARGS, ...sandboxArgs, ...certArgs, ...browserLocaleArgs(locale)]
     })
 
     let interrupted = false
     const stop = async signal => {
         if (interrupted) return
         interrupted = true
+        process.exitCode = signal === 'SIGINT' ? 130 : 143
         log('WARN', `${signal} received; closing without saving an incomplete login`)
         await browser.close().catch(() => {})
     }
@@ -331,24 +300,26 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
     process.once('SIGTERM', onSigTerm)
 
     try {
-        const injected = await newInjectedContext(browser, {
-            fingerprint,
-            newContextOptions: {
-                permissions: [],
-                ignoreHTTPSErrors: ignoreCertificateErrors,
-                ...(stored.storageState ? { storageState: stored.storageState } : {}),
-                ...(isMobile
-                    ? {
-                          isMobile: true,
-                          hasTouch: true,
-                          deviceScaleFactor: screen.devicePixelRatio,
-                          viewport: { width: screen.width, height: screen.height },
-                          screen: { width: screen.width, height: screen.height }
-                      }
-                    : {})
-            }
+        userAgentManager.setEngineVersion(browser.version())
+        await userAgentManager.updateFingerprintUserAgent(fingerprint, isMobile)
+        log(
+            'INFO',
+            `Browser identity | engine=${browser.version()} | platform=${fingerprint.fingerprint.navigator.userAgentData.platform}`
+        )
+        const context = await newRewardsBrowserContext(browser, fingerprint, {
+            permissions: [],
+            ignoreHTTPSErrors: ignoreCertificateErrors,
+            ...(stored.storageState ? { storageState: stored.storageState } : {}),
+            ...(isMobile
+                ? {
+                      isMobile: true,
+                      hasTouch: true,
+                      deviceScaleFactor: screen.devicePixelRatio,
+                      viewport: { width: screen.width, height: screen.height },
+                      screen: { width: screen.width, height: screen.height }
+                  }
+                : {})
         })
-        const context = injected
         context.setDefaultTimeout(globalTimeout)
 
         if (proxy) {
@@ -368,10 +339,18 @@ async function runPlatform({ account, config, dbPath, platform, fresh }) {
         await waitForStableRewardsPage(page, browser)
         if (interrupted) throw new Error('Manual login was interrupted')
 
-        const storageState = await context.storageState()
+        log('INFO', 'Verifying the signed-in Bing session before saving...')
+        await page.goto(URLs.auth.bingSignIn, { waitUntil: 'domcontentloaded', timeout: globalTimeout })
+        if (!(await getBingSignInEvidence(page, globalTimeout))) {
+            throw new Error('Could not verify the signed-in Bing session; existing saved sessions were kept')
+        }
+        if (interrupted) throw new Error('Manual login was interrupted')
+
+        const storageState = createSessionState(await context.cookies())
         if (!storageState.cookies.length) {
             throw new Error('Rewards page was detected, but the browser had no cookies to save')
         }
+        if (interrupted) throw new Error('Manual login was interrupted')
 
         saveManualSession(dbPath, account.email, platform, storageState, fingerprint, savesFingerprint)
         log(
@@ -441,7 +420,11 @@ async function main() {
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isDirectRun) {
     main().catch(error => {
-        log('ERROR', `manualLogin failed: ${error?.message ?? error}`)
-        process.exitCode = 1
+        if (process.exitCode === 130 || process.exitCode === 143) {
+            log('WARN', 'Manual login cancelled; existing saved sessions were kept')
+        } else {
+            log('ERROR', `manualLogin failed: ${error?.message ?? error}`)
+            process.exitCode = 1
+        }
     })
 }

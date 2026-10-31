@@ -1,6 +1,6 @@
 import type { Page } from 'patchright'
 import * as OTPAuth from 'otpauth'
-import type { MicrosoftRewardsBot } from '../../../index'
+import type { LoginContext } from '../LoginContext'
 import { canPromptForInput, getErrorMessage, promptInput } from './LoginUtils'
 
 export class TotpLogin {
@@ -11,11 +11,7 @@ export class TotpLogin {
     private readonly maxManualSeconds = 60
     private readonly maxManualAttempts = 5
 
-    constructor(private bot: MicrosoftRewardsBot) {}
-
-    private generateTotpCode(secret: string): string {
-        return new OTPAuth.TOTP({ secret, digits: 6 }).generate()
-    }
+    constructor(private bot: LoginContext) {}
 
     private async fillCode(page: Page, code: string): Promise<boolean> {
         try {
@@ -25,14 +21,14 @@ export class TotpLogin {
 
             if (visibleInput) {
                 await visibleInput.fill(code)
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'Filled TOTP input')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-TOTP', 'Filled TOTP input')
                 return true
             }
 
             const secondairyInput = await page.$(this.secondairyInputSelector)
             if (secondairyInput) {
                 await secondairyInput.fill(code)
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'Filled TOTP input')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-TOTP', 'Filled TOTP input')
                 return true
             }
 
@@ -48,13 +44,22 @@ export class TotpLogin {
         }
     }
 
+    private async submitCode(page: Page): Promise<string | null> {
+        await this.bot.utils.wait(500)
+        if (!(await this.bot.browser.utils.click(page, this.submitButtonSelector))) {
+            throw new Error('Unable to submit TOTP code')
+        }
+        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined)
+        return getErrorMessage(page)
+    }
+
     async handle(page: Page, totpSecret?: string): Promise<void> {
         try {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP 2FA authentication requested')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP 2FA authentication requested')
 
             if (totpSecret) {
-                const code = this.generateTotpCode(totpSecret)
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'Generated TOTP code from secret')
+                const code = new OTPAuth.TOTP({ secret: totpSecret, digits: 6 }).generate()
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-TOTP', 'Generated TOTP code from secret')
 
                 const filled = await this.fillCode(page, code)
                 if (!filled) {
@@ -62,19 +67,13 @@ export class TotpLogin {
                     throw new Error('TOTP input field not found')
                 }
 
-                await this.bot.utils.wait(500)
-                if (!(await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector))) {
-                    throw new Error('Unable to submit TOTP code')
-                }
-                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
-
-                const errorMessage = await getErrorMessage(page)
+                const errorMessage = await this.submitCode(page)
                 if (errorMessage) {
                     this.bot.logger.error(this.bot.isMobile, 'LOGIN-TOTP', `TOTP failed: ${errorMessage}`)
                     throw new Error(`TOTP authentication failed: ${errorMessage}`)
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP authentication completed successfully')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP authentication completed successfully')
                 return
             }
 
@@ -118,14 +117,7 @@ export class TotpLogin {
                     continue
                 }
 
-                await this.bot.utils.wait(500)
-                if (!(await this.bot.browser.utils.ghostClick(page, this.submitButtonSelector))) {
-                    throw new Error('Unable to submit TOTP code')
-                }
-                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
-
-                // Check if wrong code was entered
-                const errorMessage = await getErrorMessage(page)
+                const errorMessage = await this.submitCode(page)
                 if (errorMessage) {
                     this.bot.logger.warn(
                         this.bot.isMobile,
@@ -139,7 +131,7 @@ export class TotpLogin {
                     continue
                 }
 
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP authentication completed successfully')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-TOTP', 'TOTP authentication completed successfully')
                 return
             }
 

@@ -1,41 +1,27 @@
+import { buildBrowserProxy } from '../lib/proxy.cjs'
+import BROWSER_ARGS from '../lib/browser-args.json' with { type: 'json' }
 /* global window */
 
 import { chromium } from 'patchright'
-import { newInjectedContext } from 'fingerprint-injector'
 import {
     getDirname,
     getProjectRoot,
     findUnknownOptions,
     log,
+    exitWithUsage,
     parseArgs,
     resolveEmailArgument,
     loadConfig,
     loadAccountsFromEnv,
     findAccountByEmail,
-    buildProxyConfig,
     getSessionDbPath,
     openSessionDb,
     loadSessionRow,
     closeSessionDb,
     setupCleanupHandlers
-} from '../utils.js'
+} from '../lib/commandUtils.js'
 
 const REWARDS_URL = 'https://rewards.bing.com'
-
-const BROWSER_ARGS = [
-    '--mute-audio',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-web-authentication-ui',
-    '--disable-external-intent-requests',
-    '--disable-blink-features=AutomationControlled',
-    '--disable-features=WebAuthentication,PasswordManagerOnboarding,PasswordManager,EnablePasswordsAccountStorage,Passkeys,WebAuthenticationProxy,U2F',
-    '--disable-save-password-bubble',
-    '--disable-dev-shm-usage',
-    '--disable-background-networking',
-    '--disable-backgrounding-occluded-windows',
-    '--disable-renderer-backgrounding'
-]
 
 const __dirname = getDirname(import.meta.url)
 const projectRoot = getProjectRoot(__dirname)
@@ -60,11 +46,7 @@ Examples:
 `)
 }
 
-function failUsage(message) {
-    log('ERROR', message)
-    printHelp()
-    process.exit(1)
-}
+const failUsage = message => exitWithUsage(message, printHelp, log)
 
 const args = parseArgs(process.argv.slice(2), { boolean: ['help', 'h'] })
 if (args.help || args.h) {
@@ -90,6 +72,7 @@ const { data: config } = loadConfig(projectRoot)
 
 const accounts = loadAccountsFromEnv(projectRoot)
 const account = findAccountByEmail(accounts, accountEmail)
+if (account) accountEmail = account.email
 if (!account) {
     log('WARN', `No ACCOUNT_N_* block found in .env for ${accountEmail} - opening without a proxy`)
 }
@@ -120,6 +103,7 @@ async function configureMediaBlocking(context) {
 }
 
 async function main() {
+    const platforms = platformsToTry()
     const { dbPath, exists } = getSessionDbPath(projectRoot, config.sessionPath)
     if (!exists) {
         log('ERROR', `No sessions.db found (looked for ${dbPath})`)
@@ -131,7 +115,7 @@ async function main() {
 
     let session = null
     let platform = null
-    for (const p of platformsToTry()) {
+    for (const p of platforms) {
         try {
             const row = loadSessionRow(db, accountEmail, p)
             if (row && (row.storageState || row.fingerprint)) {
@@ -152,13 +136,25 @@ async function main() {
     }
 
     const isMobile = platform === 'mobile'
-    const { storageState, fingerprint } = session
-    const useInjector = Boolean(fingerprint)
+    const { createSessionState } = await import('../../dist/session/SessionState.js').catch(() => {
+        throw new Error('Run npm run build before using open-session')
+    })
+    const { fingerprint } = session
+    const { browserLocaleArgs, requireGraphicalDisplay } = await import('../../dist/browser/BrowserRuntime.js')
+    requireGraphicalDisplay()
+    const storageState = session.storageState ? createSessionState(session.storageState.cookies) : null
+    const { UserAgentManager } = await import('../../dist/browser/UserAgent.js')
+    const { createAppIdentity } = await import('../../dist/rewards/app/AppIdentity.js')
+    const userAgentManager = new UserAgentManager({ appIdentity: createAppIdentity(accountEmail) })
+    if (!fingerprint || !userAgentManager.matchesFingerprint(fingerprint, isMobile)) {
+        throw new Error(
+            'Saved browser identity is missing or belongs to the previous profile. Run the bot or manual-login once to refresh this session.'
+        )
+    }
     const cookieCount = storageState?.cookies?.length ?? 0
-    const screen = fingerprint?.fingerprint?.screen
-    const userAgent = fingerprint?.fingerprint?.navigator?.userAgent || fingerprint?.fingerprint?.userAgent || null
+    const screen = fingerprint.fingerprint.screen
 
-    const proxy = account ? buildProxyConfig(account) : null
+    const proxy = account ? buildBrowserProxy(account.proxy) : null
     if (account?.proxy?.url && (!proxy || !proxy.server)) {
         log('ERROR', 'Account proxy is configured but invalid (needs proxy url + port)')
         process.exit(1)
@@ -167,9 +163,7 @@ async function main() {
     log('INFO', `Session: ${accountEmail} (${platform})`)
     log('INFO', '  Engine: bundled patched Chromium')
     log('INFO', `  Cookies: ${cookieCount}`)
-    log('INFO', `  Fingerprint: ${fingerprint ? 'Yes' : 'No'}`)
-    log('INFO', `  Fingerprint injector: ${useInjector ? 'Yes' : 'No (real browser)'}`)
-    log('INFO', `  User-Agent: ${userAgent || 'Default'}`)
+    log('INFO', `  Saved User-Agent: ${fingerprint.fingerprint.navigator.userAgent}`)
     log('INFO', `  Proxy: ${proxy ? 'Yes' : 'No'}`)
     log('INFO', `  Updated: ${session.updatedAt ? new Date(session.updatedAt).toISOString() : 'unknown'}`)
     log('INFO', 'Launching browser...')
@@ -184,32 +178,33 @@ async function main() {
 
     const browser = await chromium.launch({
         headless: false,
+        handleSIGINT: false,
+        handleSIGTERM: false,
         ...(proxy ? { proxy } : {}),
-        args: [...BROWSER_ARGS, ...sandboxArgs, ...certArgs]
+        args: [
+            ...BROWSER_ARGS,
+            ...sandboxArgs,
+            ...certArgs,
+            ...browserLocaleArgs({
+                locale: fingerprint.fingerprint.navigator.language,
+                acceptedLocales: fingerprint.fingerprint.navigator.languages
+            })
+        ]
     })
 
-    let context
-    if (useInjector && fingerprint) {
-        context = await newInjectedContext(browser, {
-            fingerprint,
-            newContextOptions: {
-                permissions: [],
-                ignoreHTTPSErrors: ignoreCertificateErrors,
-                ...(storageState ? { storageState } : {}),
-                ...(isMobile && screen
-                    ? {
-                          isMobile: true,
-                          hasTouch: true,
-                          deviceScaleFactor: screen.devicePixelRatio,
-                          viewport: { width: screen.width, height: screen.height },
-                          screen: { width: screen.width, height: screen.height }
-                      }
-                    : {})
-            }
-        })
-        log('SUCCESS', 'Fingerprint injected into browser context')
-    } else {
-        context = await browser.newContext({
+    setupCleanupHandlers(async () => {
+        if (browser.isConnected()) await browser.close()
+    })
+
+    try {
+        userAgentManager.setEngineVersion(browser.version())
+        await userAgentManager.updateFingerprintUserAgent(fingerprint, isMobile)
+        log(
+            'INFO',
+            `Browser identity | engine=${browser.version()} | platform=${fingerprint.fingerprint.navigator.userAgentData.platform}`
+        )
+        const { newRewardsBrowserContext } = await import('../../dist/browser/RewardsBrowserContext.js')
+        const context = await newRewardsBrowserContext(browser, fingerprint, {
             permissions: [],
             ignoreHTTPSErrors: ignoreCertificateErrors,
             ...(storageState ? { storageState } : {}),
@@ -217,41 +212,33 @@ async function main() {
                 ? {
                       isMobile: true,
                       hasTouch: true,
-                      ...(userAgent ? { userAgent } : {}),
-                      ...(screen
-                          ? {
-                                deviceScaleFactor: screen.devicePixelRatio,
-                                viewport: { width: screen.width, height: screen.height },
-                                screen: { width: screen.width, height: screen.height }
-                            }
-                          : { viewport: { width: 375, height: 667 } })
+                      deviceScaleFactor: screen.devicePixelRatio,
+                      viewport: { width: screen.width, height: screen.height },
+                      screen: { width: screen.width, height: screen.height }
                   }
                 : {})
         })
-    }
 
-    if (proxy) {
-        await context.addInitScript(() => {
-            delete window.RTCPeerConnection
-            delete window.webkitRTCPeerConnection
-            delete window.RTCDataChannel
-        })
-    }
-
-    await configureMediaBlocking(context)
-
-    const page = await context.newPage()
-    await page.goto(REWARDS_URL, { waitUntil: 'domcontentloaded' })
-
-    log('SUCCESS', 'Browser opened with session loaded')
-    log('INFO', `Navigated to: ${REWARDS_URL}`)
-    log('INFO', 'Press Ctrl+C to close.')
-
-    setupCleanupHandlers(async () => {
-        if (browser?.isConnected?.()) {
-            await browser.close()
+        if (proxy) {
+            await context.addInitScript(() => {
+                delete window.RTCPeerConnection
+                delete window.webkitRTCPeerConnection
+                delete window.RTCDataChannel
+            })
         }
-    })
+
+        await configureMediaBlocking(context)
+
+        const page = await context.newPage()
+        await page.goto(REWARDS_URL, { waitUntil: 'domcontentloaded' })
+
+        log('SUCCESS', 'Browser opened with session loaded')
+        log('INFO', `Navigated to: ${REWARDS_URL}`)
+        log('INFO', 'Press Ctrl+C to close.')
+    } catch (error) {
+        await browser.close().catch(() => {})
+        throw error
+    }
 }
 
 main().catch(error => {

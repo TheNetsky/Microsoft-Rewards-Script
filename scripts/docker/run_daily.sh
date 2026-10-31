@@ -17,6 +17,8 @@ export PLAYWRIGHT_BROWSERS_PATH=0
 export TZ="${TZ:-UTC}"
 
 cd /usr/src/microsoft-rewards-script
+source scripts/lib/dockerLog.sh
+docker_log_flush
 
 LOCKFILE=/tmp/run_daily.lock
 
@@ -41,27 +43,27 @@ self_heal_lockfile() {
         lock_content=$(<"$LOCKFILE" || echo "")
 
         if [[ -z "$lock_content" ]]; then
-            echo "[$(date)] [run_daily.sh] Found empty lockfile → removing."
+            docker_log run_daily.sh info "Found empty lockfile → removing."
             rm -f "$LOCKFILE"
             return
         fi
 
         # If lockfile contains non-numeric PID → remove it
         if ! [[ "$lock_content" =~ ^[0-9]+$ ]]; then
-            echo "[$(date)] [run_daily.sh] Found corrupted lockfile content ('$lock_content') → removing."
+            docker_log run_daily.sh warn "Found corrupted lockfile content ('$lock_content') → removing."
             rm -f "$LOCKFILE"
             return
         fi
 
         # If lockfile contains PID but process is dead → remove it
         if ! kill -0 "$lock_content" 2>/dev/null; then
-            echo "[$(date)] [run_daily.sh] Lockfile PID $lock_content is dead → removing stale lock."
+            docker_log run_daily.sh warn "Lockfile PID $lock_content is dead → removing stale lock."
             rm -f "$LOCKFILE"
             return
         fi
 
         if ! is_run_daily_process "$lock_content"; then
-            echo "[$(date)] [run_daily.sh] Lockfile PID $lock_content is not run_daily.sh → removing stale lock."
+            docker_log run_daily.sh warn "Lockfile PID $lock_content is not run_daily.sh → removing stale lock."
             rm -f "$LOCKFILE"
         fi
     fi
@@ -75,7 +77,7 @@ acquire_lock() {
     local existing_pid="unknown"
 
     if ! is_positive_integer "$timeout_hours"; then
-        echo "[$(date)] [run_daily.sh] ERROR: STUCK_PROCESS_TIMEOUT_HOURS must be a positive integer." >&2
+        docker_log run_daily.sh error "ERROR: STUCK_PROCESS_TIMEOUT_HOURS must be a positive integer."
         return 2
     fi
     timeout_seconds=$((timeout_hours * 3600))
@@ -84,7 +86,7 @@ acquire_lock() {
         attempt=$((attempt + 1))
         # Try to create lock with current PID
         if (set -C; echo "$$" > "$LOCKFILE") 2>/dev/null; then
-            echo "[$(date)] [run_daily.sh] Lock acquired successfully (PID: $$)"
+            docker_log run_daily.sh info "Lock acquired successfully (PID: $$)"
             return 0
         fi
 
@@ -92,24 +94,24 @@ acquire_lock() {
         if [ -f "$LOCKFILE" ]; then
             existing_pid=$(<"$LOCKFILE" || echo "")
 
-            echo "[$(date)] [run_daily.sh] Lock file exists with PID: '$existing_pid'"
+            docker_log run_daily.sh info "Lock file exists with PID: '$existing_pid'"
 
             # If lockfile content is invalid → delete and retry
             if [[ -z "$existing_pid" || ! "$existing_pid" =~ ^[0-9]+$ ]]; then
-                echo "[$(date)] [run_daily.sh] Removing invalid lockfile → retrying..."
+                docker_log run_daily.sh warn "Removing invalid lockfile → retrying..."
                 rm -f "$LOCKFILE"
                 continue
             fi
 
             # If process is dead → delete and retry
             if ! kill -0 "$existing_pid" 2>/dev/null; then
-                echo "[$(date)] [run_daily.sh] Removing stale lock (dead PID: $existing_pid)"
+                docker_log run_daily.sh warn "Removing stale lock (dead PID: $existing_pid)"
                 rm -f "$LOCKFILE"
                 continue
             fi
 
             if ! is_run_daily_process "$existing_pid"; then
-                echo "[$(date)] [run_daily.sh] Removing stale lock owned by unrelated PID $existing_pid"
+                docker_log run_daily.sh warn "Removing stale lock owned by unrelated PID $existing_pid"
                 rm -f "$LOCKFILE"
                 continue
             fi
@@ -118,7 +120,7 @@ acquire_lock() {
             local process_age
             if process_age=$(ps -o etimes= -p "$existing_pid" 2>/dev/null | tr -d ' '); then
                 if [ "$process_age" -gt "$timeout_seconds" ]; then
-                    echo "[$(date)] [run_daily.sh] Killing stuck process $existing_pid (${process_age}s > ${timeout_hours}h)"
+                    docker_log run_daily.sh error "Killing stuck process $existing_pid (${process_age}s > ${timeout_hours}h)"
                     kill -TERM "$existing_pid" 2>/dev/null || true
                     sleep 5
                     kill -KILL "$existing_pid" 2>/dev/null || true
@@ -128,11 +130,11 @@ acquire_lock() {
             fi
         fi
 
-        echo "[$(date)] [run_daily.sh] Lock held by PID $existing_pid, attempt $attempt/$max_attempts"
+        docker_log run_daily.sh info "Lock held by PID $existing_pid, attempt $attempt/$max_attempts"
         sleep 2
     done
 
-    echo "[$(date)] [run_daily.sh] Could not acquire lock after $max_attempts attempts; exiting."
+    docker_log run_daily.sh warn "Could not acquire lock after $max_attempts attempts; exiting."
     return 1
 }
 
@@ -142,17 +144,27 @@ release_lock() {
         lock_pid=$(<"$LOCKFILE")
         if [ "$lock_pid" = "$$" ]; then
             rm -f "$LOCKFILE"
-            echo "[$(date)] [run_daily.sh] Lock released (PID: $$)"
+            docker_log run_daily.sh info "Lock released (PID: $$)"
         fi
     fi
 }
 
 # Always release the lock on exit, including interrupt/termination paths.
 trap release_lock EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
+child_pid=''
+stop_child() {
+    if [ -n "$child_pid" ]; then
+        kill -TERM -- "-$child_pid" 2>/dev/null || kill -TERM "$child_pid" 2>/dev/null || true
+        (sleep 15; kill -KILL -- "-$child_pid" 2>/dev/null || true) &
+        terminator=$!
+        wait "$child_pid" 2>/dev/null || true
+        kill "$terminator" 2>/dev/null || true
+    fi
+}
+trap 'stop_child; exit 130' INT
+trap 'stop_child; exit 143' TERM
 
-echo "[$(date)] [run_daily.sh] Current process PID: $$"
+docker_log run_daily.sh info "Current process PID: $$"
 
 # Self-heal any broken or empty locks before proceeding
 self_heal_lockfile
@@ -170,11 +182,11 @@ MINWAIT=${MIN_SLEEP_MINUTES:-5}
 MAXWAIT=${MAX_SLEEP_MINUTES:-50}
 
 if ! is_nonnegative_integer "$MINWAIT" || ! is_nonnegative_integer "$MAXWAIT"; then
-    echo "[$(date)] [run_daily.sh] ERROR: MIN_SLEEP_MINUTES and MAX_SLEEP_MINUTES must be non-negative integers." >&2
+    docker_log run_daily.sh error "ERROR: MIN_SLEEP_MINUTES and MAX_SLEEP_MINUTES must be non-negative integers."
     exit 1
 fi
 if [ "$MAXWAIT" -lt "$MINWAIT" ]; then
-    echo "[$(date)] [run_daily.sh] ERROR: MAX_SLEEP_MINUTES must be greater than or equal to MIN_SLEEP_MINUTES." >&2
+    docker_log run_daily.sh error "ERROR: MAX_SLEEP_MINUTES must be greater than or equal to MIN_SLEEP_MINUTES."
     exit 1
 fi
 
@@ -187,31 +199,32 @@ if [ "${SKIP_RANDOM_SLEEP:-false}" != "true" ]; then
     else
         SLEEPTIME=$((MINWAIT_SEC + RANDOM % (MAXWAIT_SEC - MINWAIT_SEC + 1)))
     fi
-    echo "[$(date)] [run_daily.sh] Sleeping for $((SLEEPTIME/60)) minutes ($SLEEPTIME seconds)"
-    sleep "$SLEEPTIME"
+    docker_log run_daily.sh info "Sleeping for $((SLEEPTIME/60)) minutes ($SLEEPTIME seconds)"
+    sleep "$SLEEPTIME" &
+    child_pid=$!
+    wait "$child_pid"
+    child_pid=''
 else
-    echo "[$(date)] [run_daily.sh] Skipping random sleep"
+    docker_log run_daily.sh info "Skipping random sleep"
 fi
 
 # Start the actual script
-echo "[$(date)] [run_daily.sh] Starting script..."
+docker_log run_daily.sh info "Starting script..."
 run_status=0
 if [ "${API_MODE:-false}" = "true" ]; then
-    if node scripts/api/trigger.js; then
-        echo "[$(date)] [run_daily.sh] Script completed successfully (via API)."
-    else
-        echo "[$(date)] [run_daily.sh] ERROR: Script failed (via API)!" >&2
-        run_status=1
-    fi
+    setsid node dist/control-api/trigger.js &
 else
-    if npm start; then
-        echo "[$(date)] [run_daily.sh] Script completed successfully."
-    else
-        echo "[$(date)] [run_daily.sh] ERROR: Script failed!" >&2
-        run_status=1
-    fi
+    setsid node dist/index.js &
 fi
+child_pid=$!
+if wait "$child_pid"; then
+    docker_log run_daily.sh info "Script completed successfully."
+else
+    run_status=$?
+    docker_log run_daily.sh error "ERROR: Script failed (exit code $run_status)."
+fi
+child_pid=''
 
-echo "[$(date)] [run_daily.sh] Script finished"
+docker_log run_daily.sh info "Script finished"
 # Lock is released automatically via trap
 exit "$run_status"

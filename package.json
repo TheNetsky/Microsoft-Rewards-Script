@@ -1,31 +1,33 @@
 {
     "name": "microsoft-rewards-script",
-    "version": "4.3.2",
-    "description": "Automatically do tasks for Microsoft Rewards but in TS!",
+    "version": "5.0.0",
+    "description": "Microsoft Rewards automation with browser and API modes.",
     "author": "Netsky",
     "license": "GPL-3.0-or-later",
     "engines": {
         "node": ">=24.0.0"
     },
     "scripts": {
-        "pre-build": "npm i && rimraf dist && npx patchright install chromium",
-        "install:browser": "npx patchright install chromium",
+        "pre-build": "npm ci --include=dev && npm run install:browser",
+        "install:browser": "patchright install chromium",
         "build": "rimraf dist && tsc && node ./scripts/main/copyAssets.js",
         "start": "node ./dist/index.js",
         "ts-start": "ts-node ./src/index.ts",
         "dev": "ts-node ./src/index.ts -dev",
-        "api": "node ./scripts/api/server.js",
-        "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",
+        "api": "node ./dist/control-api/server.js",
+        "dev:api": "npm run build && node ./dist/control-api/server.js",
+        "kill-chrome-win": "node ./scripts/main/killBrowser.js",
         "create-docker": "docker build -t microsoft-rewards-script-docker .",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
-        "test:log-parser": "node --test scripts/api/logParser.test.js",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "clear-diagnostics": "rimraf diagnostics",
+        "clear-diagnostics": "node ./scripts/main/clearDiagnostics.js",
         "clear-sessions": "node ./scripts/main/clearSessions.js",
         "manual-login": "node ./scripts/main/manualLogin.js",
-        "open-session": "node ./scripts/main/browserSession.js -email"
+        "open-session": "node ./scripts/main/browserSession.js",
+        "check:api": "tsc -p tsconfig.control-api.json",
+        "check": "npm run build && npm run check:api && npm run lint && npm run format:check"
     },
     "keywords": [
         "Bing Rewards",
@@ -38,29 +40,42 @@
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/ms": "^2.1.0",
-        "@types/node": "^24.10.1",
-        "@types/semver": "^7.7.1",
-        "eslint": "^10.4.0",
+        "@types/node": "^24.19.2",
+        "@types/semver": "^7.8.0",
+        "eslint": "^10.14.0",
         "eslint-config-prettier": "^10.1.8",
-        "globals": "^17.6.0",
-        "prettier": "^3.8.3",
+        "globals": "^17.13.0",
+        "prettier": "^3.9.10",
         "rimraf": "^6.1.3",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.60.0"
+        "typescript-eslint": "^8.72.1"
     },
     "dependencies": {
-        "chalk": "^4.1.2",
-        "fast-xml-parser": "^5.9.3",
-        "fingerprint-generator": "^2.1.88",
-        "fingerprint-injector": "^2.1.88",
-        "ghost-cursor-playwright-port": "^1.4.3",
-        "impit": "^0.14.2",
+        "chalk": "^6.0.1",
+        "fast-xml-parser": "^5.11.2",
+        "fingerprint-generator": "^2.1.89",
+        "fingerprint-injector": "^2.1.89",
+        "ghost-cursor-patchright": "1.0.7",
+        "impit": "^0.14.8",
         "ms": "^2.1.3",
-        "otpauth": "^9.5.1",
-        "p-queue": "^9.3.0",
-        "patchright": "^1.61.1",
-        "semver": "^7.8.1",
+        "otpauth": "^9.5.2",
+        "p-queue": "^9.3.5",
+        "patchright": "^1.64.2",
+        "semver": "^7.8.5",
         "ts-node": "^10.9.2",
-        "zod": "^4.4.3"
+        "zod": "^4.6.7"
+    },
+    "overrides": {
+        "adm-zip": "^0.6.1",
+        "glob": "^14.0.3",
+        "minimatch": "^11.0.3"
+    },
+    "homepage": "https://github.com/TheNetsky/Microsoft-Rewards-Script/#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/TheNetsky/Microsoft-Rewards-Script.git"
+    },
+    "bugs": {
+        "url": "https://github.com/TheNetsky/Microsoft-Rewards-Script/issues"
     }
 }

@@ -1,5 +1,5 @@
 import type { Page } from 'patchright'
-import type { MicrosoftRewardsBot } from '../../../index'
+import type { LoginContext } from '../LoginContext'
 
 type ApprovalState = 'APPROVED' | 'RETRY_AVAILABLE' | 'PENDING'
 
@@ -11,7 +11,7 @@ export class PasswordlessLogin {
     private readonly shieldMarkerSelector = '[data-testid="deviceShieldCheckmarkVideo"]'
     private readonly primaryButtonSelector = 'button[data-testid="primaryButton"]'
 
-    constructor(private bot: MicrosoftRewardsBot) {}
+    constructor(private bot: LoginContext) {}
 
     private async isAttached(page: Page, selector: string): Promise<boolean> {
         return page
@@ -74,7 +74,7 @@ export class PasswordlessLogin {
         for (let elapsed = 1; elapsed <= this.approvalTimeoutSeconds; elapsed++) {
             const state = await this.getStableApprovalState(page)
             if (state === 'APPROVED') {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Approval detected')
+                this.bot.logger.debug(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Approval detected')
                 return state
             }
             if (state === 'RETRY_AVAILABLE') return state
@@ -107,7 +107,7 @@ export class PasswordlessLogin {
     private async sendAnotherRequest(page: Page): Promise<boolean> {
         if ((await this.getApprovalState(page)) !== 'RETRY_AVAILABLE') return false
 
-        const clicked = await this.bot.browser.utils.ghostClick(page, this.primaryButtonSelector)
+        const clicked = await this.bot.browser.utils.click(page, this.primaryButtonSelector)
         if (!clicked) return false
 
         const numberElement = await page
@@ -124,34 +124,32 @@ export class PasswordlessLogin {
         const displayedNumber = await this.getDisplayedNumber(page)
 
         if (displayedNumber) {
-            this.bot.logger.info(
+            this.bot.logger.special(
                 this.bot.isMobile,
                 'LOGIN-PASSWORDLESS',
-                `Please approve login and select number: ${displayedNumber}`,
-                'yellowBright'
+                `Please approve login and select number: ${displayedNumber}`
             )
             return
         }
 
-        this.bot.logger.info(
+        this.bot.logger.special(
             this.bot.isMobile,
             'LOGIN-PASSWORDLESS',
-            'Please approve login on your authenticator app',
-            'yellowBright'
+            'Please approve login on your authenticator app'
         )
     }
 
     async handle(page: Page): Promise<void> {
         try {
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Passwordless authentication requested')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Passwordless authentication requested')
 
             for (let retry = 0; retry <= this.maxRequestRetries; retry++) {
                 await this.logApprovalNumber(page)
 
                 const state = await this.waitForApproval(page)
                 if (state === 'APPROVED') {
-                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Login approved successfully')
-                    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
+                    this.bot.logger.debug(this.bot.isMobile, 'LOGIN-PASSWORDLESS', 'Login approved successfully')
+                    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => undefined)
                     return
                 }
 

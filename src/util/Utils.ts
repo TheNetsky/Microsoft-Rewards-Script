@@ -1,5 +1,9 @@
 import ms, { StringValue } from 'ms'
 
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export function isBrowserClosedError(error: unknown): boolean {
     const msg = (error instanceof Error ? error.message : String(error ?? '')).toLowerCase()
     if (!msg) return false
@@ -16,22 +20,42 @@ export function isBrowserClosedError(error: unknown): boolean {
     )
 }
 
-export default class Util {
-    async wait(time: number | string): Promise<void> {
+export default class Utils {
+    constructor(private readonly getSignal: () => AbortSignal | undefined = () => undefined) {}
+
+    async wait(time: number | string, signal = this.getSignal()): Promise<void> {
         if (typeof time === 'string') {
-            time = this.stringToNumber(time)
+            time = this.parseDuration(time)
         }
 
-        return new Promise<void>(resolve => {
-            setTimeout(resolve, time)
+        signal?.throwIfAborted()
+        return new Promise<void>((resolve, reject) => {
+            const cancel = (): void => {
+                clearTimeout(timer)
+                reject(signal?.reason ?? new Error('Run cancelled'))
+            }
+            const timer = setTimeout(() => {
+                signal?.removeEventListener('abort', cancel)
+                resolve()
+            }, time)
+            signal?.addEventListener('abort', cancel, { once: true })
         })
     }
 
-    getFormattedDate(ms = Date.now()): string {
-        const today = new Date(ms)
-        const month = String(today.getMonth() + 1).padStart(2, '0') // January is 0
-        const day = String(today.getDate()).padStart(2, '0')
-        const year = today.getFullYear()
+    formatDate(timestamp: number, browserTimeZone: string): string {
+        if (!browserTimeZone) {
+            throw new Error('Browser timezone has not been captured')
+        }
+
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: browserTimeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).formatToParts(timestamp)
+        const month = parts.find(part => part.type === 'month')?.value ?? '01'
+        const day = parts.find(part => part.type === 'day')?.value ?? '01'
+        const year = parts.find(part => part.type === 'year')?.value ?? '1970'
 
         return `${month}/${day}/${year}`
     }
@@ -68,40 +92,37 @@ export default class Util {
         return chunks
     }
 
-    stringToNumber(input: string | number): number {
+    parseDuration(input: string | number): number {
         if (typeof input === 'number') {
             return input
         }
         const value = input.trim()
 
-        const milisec = ms(value as StringValue)
+        const milliseconds = ms(value as StringValue)
 
-        if (milisec === undefined) {
+        if (milliseconds === undefined) {
             throw new Error(
                 `The input provided (${input}) cannot be parsed to a valid time! Use a format like "1 min", "1m" or "1 minutes"`
             )
         }
 
-        return milisec
+        return milliseconds
     }
 
-    normalizeString(string: string): string {
-        return string
-            .normalize('NFD')
+    normalizeTitle(title: string): string {
+        return title
+            .normalize('NFKC')
+            .replace(/\p{Cf}/gu, '')
             .trim()
             .toLowerCase()
-            .replace(/[^\x20-\x7E]/g, '')
             .replace(/[?!]/g, '')
-    }
-
-    getEmailUsername(email: string): string {
-        return email.split('@')[0] ?? 'Unknown'
+            .replace(/\s+/gu, ' ')
     }
 
     randomDelay(min: string | number, max: string | number): number {
-        const minMs = typeof min === 'number' ? min : this.stringToNumber(min)
-        const maxMs = typeof max === 'number' ? max : this.stringToNumber(max)
-        return Math.floor(this.randomNumber(minMs, maxMs))
+        const minMs = typeof min === 'number' ? min : this.parseDuration(min)
+        const maxMs = typeof max === 'number' ? max : this.parseDuration(max)
+        return this.randomNumber(minMs, maxMs)
     }
 
     serverActionAcknowledged(response: unknown): boolean {

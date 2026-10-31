@@ -1,133 +1,160 @@
-import fs from 'fs/promises'
-import path from 'path'
-import { createHash } from 'crypto'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import type { Page } from 'patchright'
+import { getCurrentContext } from '../core/ExecutionContext'
+import { logSystemMessage } from '../logging/LogEvent'
 
-interface UnknownPageDiagnosticOptions {
-    platform: 'mobile' | 'desktop'
-}
+const pending = new Set<Promise<string | null>>()
+const lastCapture = new WeakMap<Page, number>()
+const root = path.join(process.cwd(), 'diagnostics')
+const MAX_CAPTURES = 50
 
-function safePathSegment(value: string, fallback: string): string {
-    const sanitized = value
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 80)
-
-    return sanitized || fallback
-}
-
-function unknownPageOutputDir(rawUrl: string, capturedAt: string, platform: string): string {
-    let hostname = 'unknown-host'
-    let pathname = 'root'
-
-    try {
-        const url = new URL(rawUrl)
-        hostname = safePathSegment(url.hostname, hostname)
-        pathname = safePathSegment(url.pathname, pathname)
-    } catch {
-        pathname = safePathSegment(rawUrl, 'unknown-page')
+async function prune(): Promise<void> {
+    const entries = (await fs.readdir(root, { withFileTypes: true }))
+        .filter(entry => entry.isDirectory() && entry.name.startsWith('error-'))
+        .sort((a, b) => b.name.localeCompare(a.name))
+    let bytes = 0
+    for (const [index, entry] of entries.entries()) {
+        const dir = path.join(root, entry.name)
+        const stat = await fs.stat(dir).catch(() => null)
+        if (!stat) continue
+        for (const file of await fs.readdir(dir).catch(() => [])) {
+            bytes += (await fs.stat(path.join(dir, file)).catch(() => null))?.size ?? 0
+        }
+        if (index >= MAX_CAPTURES || Date.now() - stat.mtimeMs > 7 * 86400000 || bytes > 200 * 1024 * 1024) {
+            await fs.rm(dir, { recursive: true, force: true })
+        }
     }
+}
 
-    const urlHash = createHash('sha256').update(rawUrl).digest('hex').slice(0, 12)
-    const urlFolder = `${pathname}-${urlHash}`
-    const captureFolder = `${capturedAt.replace(/[:.]/g, '-')}-${platform}`
-
-    return path.join(process.cwd(), 'diagnostics', 'unknown-login-pages', hostname, urlFolder, captureFolder)
+async function capture(page: Page, error: Error, category: string, platform?: string): Promise<string | null> {
+    if (!page || page.isClosed() || pending.size >= 2 || Date.now() - (lastCapture.get(page) ?? 0) < 5000) return null
+    lastCapture.set(page, Date.now())
+    const job = (async (): Promise<string | null> => {
+        try {
+            const capturedAt = new Date().toISOString()
+            const id = `error-${capturedAt.replace(/[:.]/g, '-')}-${randomUUID().slice(0, 8)}`
+            const dir = path.join(root, id)
+            const context = getCurrentContext()
+            const url = new URL(page.url())
+            url.search = ''
+            url.hash = ''
+            const metadata = {
+                version: 1,
+                id,
+                category,
+                capturedAt,
+                url: url.toString(),
+                runId: process.env.REWARDS_RUN_ID ?? null,
+                account: context?.account.email ? '<redacted>' : null,
+                platform: platform ?? (context?.isMobile ? 'mobile' : 'desktop')
+            }
+            await fs.mkdir(dir, { recursive: true, mode: 0o700 })
+            const authenticationPage =
+                category === 'unknown-login-page' ||
+                /(^|\.)(live\.com|microsoftonline\.com|account\.microsoft\.com)$/.test(url.hostname)
+            const results = await Promise.allSettled([
+                (authenticationPage
+                    ? Promise.resolve('<!doctype html><p>Authentication page content omitted.</p>')
+                    : page.evaluate(() => {
+                          const clone = document.documentElement.cloneNode(true) as HTMLElement
+                          clone
+                              .querySelectorAll('script, style, input, textarea, iframe, object, embed')
+                              .forEach(node => node.remove())
+                          for (const element of clone.querySelectorAll('*'))
+                              for (const attribute of [...element.attributes]) {
+                                  if (
+                                      /^(?:value|nonce|data-|on)/i.test(attribute.name) ||
+                                      /token|secret|credential|authorization|password/i.test(attribute.name)
+                                  )
+                                      element.removeAttribute(attribute.name)
+                                  else if (['href', 'src', 'action'].includes(attribute.name)) {
+                                      try {
+                                          const link = new URL(attribute.value, location.href)
+                                          link.search = ''
+                                          link.hash = ''
+                                          element.setAttribute(attribute.name, link.toString())
+                                      } catch {
+                                          element.removeAttribute(attribute.name)
+                                      }
+                                  }
+                              }
+                          return (
+                              '<!doctype html>' +
+                              clone.outerHTML.replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, '&lt;email&gt;')
+                          )
+                      })
+                ).then(html => fs.writeFile(path.join(dir, 'dump.html'), html, { mode: 0o600 })),
+                (authenticationPage
+                    ? Promise.resolve(null)
+                    : page.screenshot({
+                          fullPage: true,
+                          type: 'png',
+                          timeout: 10000,
+                          mask: [
+                              page.locator('input, textarea, [contenteditable], [data-testid="identityBanner"], #id_n')
+                          ]
+                      })
+                ).then(png => (png ? fs.writeFile(path.join(dir, 'screenshot.png'), png, { mode: 0o600 }) : undefined))
+            ])
+            await fs.writeFile(
+                path.join(dir, 'metadata.json'),
+                JSON.stringify(
+                    {
+                        ...metadata,
+                        htmlCaptured: results[0].status === 'fulfilled',
+                        screenshotCaptured: !authenticationPage && results[1].status === 'fulfilled',
+                        authenticationContentOmitted: authenticationPage
+                    },
+                    null,
+                    2
+                ),
+                { mode: 0o600 }
+            )
+            await fs.writeFile(
+                path.join(dir, 'error.txt'),
+                (error.stack ?? error.message)
+                    .replace(/https?:\/\/[^\s]+/g, '<url>')
+                    .replace(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi, '<email>'),
+                { mode: 0o600 }
+            )
+            await prune()
+            return dir
+        } catch {
+            logSystemMessage('warn', 'DIAGNOSTICS', 'Capture unavailable; continuing without diagnostics.')
+            return null
+        }
+    })()
+    pending.add(job)
+    try {
+        return await job
+    } finally {
+        pending.delete(job)
+    }
 }
 
 export async function errorDiagnostic(page: Page, error: Error): Promise<void> {
-    try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-        const folderName = `error-${timestamp}`
-        const outputDir = path.join(process.cwd(), 'diagnostics', folderName)
-
-        if (!page) {
-            return
-        }
-
-        if (page.isClosed()) {
-            return
-        }
-
-        const errorLog = `
-Name: ${error.name}
-Message: ${error.message}
-Timestamp: ${new Date().toISOString()}
----------------------------------------------------
-Stack Trace:
-${error.stack || 'No stack trace available'}
-        `.trim()
-
-        const [htmlContent, screenshotBuffer] = await Promise.all([
-            page.content(),
-            page.screenshot({ fullPage: true, type: 'png' })
-        ])
-
-        await fs.mkdir(outputDir, { recursive: true })
-
-        await Promise.all([
-            fs.writeFile(path.join(outputDir, 'dump.html'), htmlContent),
-            fs.writeFile(path.join(outputDir, 'screenshot.png'), screenshotBuffer),
-            fs.writeFile(path.join(outputDir, 'error.txt'), errorLog)
-        ])
-
-        console.log(`Diagnostics saved to: ${outputDir}`)
-    } catch (error) {
-        console.error('Unable to create error diagnostics:', error)
-    }
+    await capture(page, error, 'error')
 }
 
-export async function unknownPageDiagnostic(
+export function unknownPageDiagnostic(
     page: Page,
-    { platform }: UnknownPageDiagnosticOptions
+    { platform }: { platform: 'mobile' | 'desktop' }
 ): Promise<string | null> {
-    if (!page || page.isClosed()) return null
+    return capture(page, new Error('Unknown login page'), 'unknown-login-page', platform)
+}
 
-    const capturedAt = new Date().toISOString()
-    const rawUrl = page.url()
-    const outputDir = unknownPageOutputDir(rawUrl, capturedAt, platform)
-
+export async function flushDiagnostics(timeoutMs = 3000): Promise<void> {
+    let timer: NodeJS.Timeout | undefined
     try {
-        await fs.mkdir(outputDir, { recursive: true })
-
-        const [htmlResult, screenshotResult] = await Promise.allSettled([
-            page.content(),
-            page.screenshot({ fullPage: true, type: 'png' })
+        await Promise.race([
+            Promise.allSettled([...pending]),
+            new Promise<void>(resolve => {
+                timer = setTimeout(resolve, timeoutMs)
+            })
         ])
-
-        const metadata = {
-            url: rawUrl,
-            capturedAt,
-            platform,
-            htmlCaptured: htmlResult.status === 'fulfilled',
-            screenshotCaptured: screenshotResult.status === 'fulfilled',
-            errors: [
-                htmlResult.status === 'rejected'
-                    ? `HTML: ${htmlResult.reason instanceof Error ? htmlResult.reason.message : String(htmlResult.reason)}`
-                    : null,
-                screenshotResult.status === 'rejected'
-                    ? `Screenshot: ${screenshotResult.reason instanceof Error ? screenshotResult.reason.message : String(screenshotResult.reason)}`
-                    : null
-            ].filter((error): error is string => error !== null)
-        }
-
-        const writes: Promise<void>[] = [
-            fs.writeFile(path.join(outputDir, 'metadata.json'), JSON.stringify(metadata, null, 2))
-        ]
-
-        if (htmlResult.status === 'fulfilled') {
-            writes.push(fs.writeFile(path.join(outputDir, 'page.html'), htmlResult.value))
-        }
-        if (screenshotResult.status === 'fulfilled') {
-            writes.push(fs.writeFile(path.join(outputDir, 'screenshot.png'), screenshotResult.value))
-        }
-
-        await Promise.all(writes)
-        console.log(`Unknown login page diagnostics saved to: ${outputDir}`)
-        return outputDir
-    } catch (error) {
-        console.error('Unable to create unknown login page diagnostics:', error)
-        return null
+    } finally {
+        if (timer) clearTimeout(timer)
     }
 }

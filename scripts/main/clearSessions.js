@@ -2,13 +2,14 @@ import {
     getDirname,
     getProjectRoot,
     log,
+    exitWithUsage,
     loadConfig,
     getSessionDbPath,
     openSessionDb,
     listSessionRows,
     clearSessionRows,
     closeSessionDb
-} from '../utils.js'
+} from '../lib/commandUtils.js'
 
 const __dirname = getDirname(import.meta.url)
 const projectRoot = getProjectRoot(__dirname)
@@ -36,11 +37,7 @@ Examples:
 `)
 }
 
-function fail(message) {
-    log('ERROR', message)
-    printHelp()
-    process.exit(1)
-}
+const fail = message => exitWithUsage(message, printHelp, log)
 
 function formatUpdatedAt(value) {
     const timestamp = Number(value)

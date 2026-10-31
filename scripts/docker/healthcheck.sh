@@ -1,10 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ "${API_MODE:-false}" != "true" ]; then
-    pgrep -x cron >/dev/null 2>&1
-    exit $?
-fi
+# Cron stays available in API mode so dashboard schedules can be enabled later.
+pgrep -x cron >/dev/null 2>&1
+[ "${API_MODE:-false}" = "true" ] || exit 0
 
 node --input-type=module <<'NODE'
 import http from 'node:http'

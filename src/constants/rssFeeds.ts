@@ -1,6 +1,8 @@
 /**
  * Selected in config via a dotted path in `searchSettings.queryEngines`:
- *   - "rss"                  -> every feed below
+ *   - "rss"                  -> regional Google feeds plus the other feeds below
+ *   - "rss.googleTrends"     -> account country (explicit .gb/.us still supported)
+ *   - "rss.googleNews"       -> account language and country
  *   - "rss.bbc"              -> every BBC feed
  *   - "rss.bbc.world"        -> just BBC world
  *

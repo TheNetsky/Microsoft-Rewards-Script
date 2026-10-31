@@ -1,13 +1,14 @@
 services:
     microsoft-rewards-script:
-        image: ghcr.io/thenetsky/microsoft-rewards-script:4
-        # To build locally instead of pulling the prebuilt image, use the build section below.
-        #build:
-        #    context: .
+        build:
+            context: .
+        image: microsoft-rewards-script:local
         container_name: microsoft-rewards-script
         restart: unless-stopped
+        stop_grace_period: 60s
         volumes:
             - ./config:/usr/src/microsoft-rewards-script/config
+            - ./diagnostics:/usr/src/microsoft-rewards-script/diagnostics
             - ./sessions:/usr/src/microsoft-rewards-script/sessions
         env_file:
             # Load account credentials from the .env file (ACCOUNT_1_EMAIL, optional ACCOUNT_1_PASSWORD, etc.)
@@ -26,10 +27,11 @@ services:
             #MAX_SLEEP_MINUTES: "50"
             #STUCK_PROCESS_TIMEOUT_HOURS: "8"
 
-            # ── API mode ──────────────────────────────────────
-            # Set API_MODE=true to run the API server for additional control options
+            # ── Control API server ──────────────────────────────────
+            # API_MODE starts the Control API; it does not select the Rewards task transport.
+            # Both API_MODE values support CONFIG_REWARDS_MODE=api or browser.
             #API_MODE: 'true'
-            #API_TOKEN: '${API_TOKEN}'             # required for API mode, see example.env
+            #API_TOKEN: '${API_TOKEN}'             # required for API mode, see env.example
             # API write/reveal capabilities are separate opt-ins and are off by default.
             #API_ALLOW_SCHEDULE_WRITE: 'true'
             #API_ALLOW_ENV_OVERRIDES: 'true'
@@ -37,12 +39,14 @@ services:
             #API_ALLOW_CONFIG_WRITE: 'true'
 
             #  ── Configuration ──────────────────────────────────────
-            # Uncomment to override defaults, a full list of configuration options are in the README.
+            # Uncomment to override config.json settings; see README.md.
             #CONFIG_CLUSTERS: '1'
+            # Rewards task transport: api (direct) or browser (page navigation and DOM clicks).
+            #CONFIG_REWARDS_MODE: 'api'
             #CONFIG_ACCOUNT_DELAY_MIN: '1min'
             #CONFIG_ACCOUNT_DELAY_MAX: '3min'
             # Continue even if Microsoft reports Fraud_UserWarning_BotScore_UX (not recommended).
-            #CONFIG_CONTINTUE_ON_BOT_WARNING: 'false'
+            #CONFIG_CONTINUE_ON_BOT_WARNING: 'false'
             # Block browser image/video/audio requests to reduce transferred media bytes.
             #CONFIG_EXPERIMENTAL_BLOCK_MEDIA: 'false'
             # Report the Edge browsing streak in the background (experimental).
@@ -51,10 +55,10 @@ services:
             #CONFIG_PROXY_IGNORE_CERTIFICATE_ERRORS: 'false'
             #... add additional configuration overrides as needed
 
-        # ── API mode port mapping ──────────────────────────────────────
+        # ── Control API port mapping ──────────────────────────────
         # Uncomment when API_MODE=true
         #ports:
-        #    - '3010:3010'
+        #    - '127.0.0.1:3010:3010'
 
         healthcheck:
             test: ['CMD-SHELL', 'scripts/docker/healthcheck.sh']

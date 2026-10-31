@@ -1,145 +1,133 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Ensure Playwright uses preinstalled browsers
 export PLAYWRIGHT_BROWSERS_PATH=0
-
 SCRIPT_DIR="/usr/src/microsoft-rewards-script"
+cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/scripts/lib/dockerLog.sh"
 
-# 1. Timezone: default to UTC if not provided
 : "${TZ:=UTC}"
+export TZ
+if [ ! -f "/usr/share/zoneinfo/$TZ" ]; then
+    echo "ERROR: Unknown timezone: $TZ" >&2
+    exit 1
+fi
 ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
 echo "$TZ" > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
 
-# 2. Validate CRON_SCHEDULE (not required in API mode)
-if [ "${API_MODE:-false}" != "true" ]; then
-  if [ -z "${CRON_SCHEDULE:-}" ]; then
-    echo "ERROR: CRON_SCHEDULE environment variable is not set." >&2
-    echo "Please set CRON_SCHEDULE (e.g., \"0 2 * * *\")." >&2
-    echo "       To run the API server instead, set API_MODE=true." >&2
-    exit 1
-  fi
-fi
-
 mapfile -t account_indexes < <(
-  compgen -e | sed -n 's/^ACCOUNT_\([1-9][0-9]*\)_EMAIL$/\1/p' | sort -n -u
+    compgen -e | sed -n 's/^ACCOUNT_\([1-9][0-9]*\)_EMAIL$/\1/p' | sort -n -u
 )
-
 acct_count=0
 for i in "${account_indexes[@]}"; do
-  email_var="ACCOUNT_${i}_EMAIL"
-  [ -z "${!email_var:-}" ] && continue
-
-  acct_count=$((acct_count + 1))
+    email_var="ACCOUNT_${i}_EMAIL"
+    [ -z "${!email_var:-}" ] && continue
+    acct_count=$((acct_count + 1))
 done
-
 if [ "$acct_count" -eq 0 ]; then
-  echo "WARNING: No ACCOUNT_N_EMAIL found in environment - the script will fail." >&2
-  echo "         Set at least one ACCOUNT_N_EMAIL in your .env file." >&2
+    docker_log entrypoint warn "WARNING: No ACCOUNT_N_EMAIL found. Configure accounts in .env before starting a bot run."
 else
-  echo "[entrypoint] Found $acct_count account(s) in environment"
+    docker_log entrypoint info "[entrypoint] Found $acct_count account(s) in environment"
 fi
 
 CONFIG_FILE="$SCRIPT_DIR/config/config.json"
-CONFIG_EXAMPLE="$SCRIPT_DIR/config.example.json"
-
-if ! [ -f "$CONFIG_EXAMPLE" ]; then
-  echo "ERROR: config.example.json not found at $CONFIG_EXAMPLE - image may be corrupt." >&2
-  exit 1
-fi
-
 if [ -d "$CONFIG_FILE" ]; then
-  echo "ERROR: $CONFIG_FILE is a directory, not a file." >&2
-  echo "       ./config.json likely did not exist on the host when the container" >&2
-  echo "       started, so Docker created it as a folder. Remove it and create the" >&2
-  echo "       file first:  cp config.example.json config.json" >&2
-  exit 1
+    echo "ERROR: $CONFIG_FILE is a directory. Replace it with a config.json file." >&2
+    exit 1
 fi
 
-SYNC_ARGS=(--config "$CONFIG_FILE" --example "$CONFIG_EXAMPLE")
+SYNC_ARGS=(--config "$CONFIG_FILE")
 if [ "${CONFIG_AUTO_SYNC:-false}" = "true" ]; then
-  SYNC_ARGS+=(--patch)
+    SYNC_ARGS+=(--patch)
 fi
-if ! node "$SCRIPT_DIR/dist/util/ConfigSync.js" sync "${SYNC_ARGS[@]}"; then
-  echo "ERROR: config sync failed - see above." >&2
-  exit 1
-fi
-
-echo "[entrypoint] Applying CONFIG_* environment variable overrides..."
-if ! node "$SCRIPT_DIR/dist/util/ConfigEnvOverrides.js" apply --config "$CONFIG_FILE"; then
-  echo "ERROR: applying CONFIG_* overrides failed - see above." >&2
-  exit 1
-fi
-
-echo "[entrypoint] Config ready."
-
-# Link the generated config back to the root so the app script can find it
+docker_log_command config-sync info node dist/config/ConfigSync.js sync "${SYNC_ARGS[@]}"
+docker_log_command entrypoint info node dist/config/ConfigEnvOverrides.js apply --config "$CONFIG_FILE"
 ln -sf "$CONFIG_FILE" "$SCRIPT_DIR/config.json"
+docker_log entrypoint info "[entrypoint] Config ready."
 
-# Snapshot the full container environment for cron-spawned runs
+# Run an explicit container command after preparing the configuration.
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
+if [ "${API_MODE:-false}" = "true" ]; then
+    : "${API_HOST:=0.0.0.0}"
+    export API_HOST
+    docker_log_command entrypoint info node dist/control-api/apply-schedule.js
+else
+    if [ -z "${CRON_SCHEDULE:-}" ]; then
+        docker_log entrypoint error 'ERROR: Set CRON_SCHEDULE (e.g. "0 7 * * *"), or API_MODE=true for the Control API.'
+        exit 1
+    fi
+    node --input-type=module <<'NODE'
+import { applyCrontab } from './dist/control-api/scheduleStore.js'
+applyCrontab({ enabled: true, cron: process.env.CRON_SCHEDULE })
+NODE
+fi
+
+# Cron jobs need the same account, proxy and configuration environment.
 export -p > /etc/container_env
 chmod 600 /etc/container_env
 
-if [ "${RUN_ON_START:-false}" = "true" ]; then
-  echo "[entrypoint] Starting initial run in background at $(date)"
-  (
-    cd "$SCRIPT_DIR" || {
-      echo "[entrypoint-bg] ERROR: Unable to cd to $SCRIPT_DIR" >&2
-      exit 1
-    }
-    SKIP_RANDOM_SLEEP=true scripts/docker/run_daily.sh
-    echo "[entrypoint-bg] Initial run completed at $(date)"
-  ) &
-  echo "[entrypoint] Background process started (PID: $!)"
-fi
+service_pids=()
+cron_pid=''
+initial_run_pid=''
+stop_services() {
+    trap '' INT TERM
+    docker_log entrypoint info '[entrypoint] Stopping scheduler and active processes...'
+    local child_pids=()
+    mapfile -t child_pids < <(jobs -pr)
+    for pid in "${child_pids[@]}"; do
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    [ -z "$cron_pid" ] || wait "$cron_pid" 2>/dev/null || true
 
-: "${API_HOST:=0.0.0.0}"
-export API_HOST
+    # Cron jobs have their own sessions; let their traps stop the bot process groups.
+    local run_pids=()
+    mapfile -t run_pids < <(pgrep -f "^/bin/bash $SCRIPT_DIR/scripts/docker/run_daily[.]sh$" || true)
+    for pid in "${run_pids[@]}"; do
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    [ -z "$initial_run_pid" ] || wait "$initial_run_pid" 2>/dev/null || true
+    for pid in "${service_pids[@]}"; do
+        wait "$pid" 2>/dev/null || true
+    done
+
+    local deadline=$((SECONDS + 20))
+    for pid in "${run_pids[@]}"; do
+        while kill -0 "$pid" 2>/dev/null && [ "$SECONDS" -lt "$deadline" ]; do
+            sleep 0.1
+        done
+    done
+}
+trap stop_services EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+cron -f &
+cron_pid=$!
+service_pids+=("$cron_pid")
+docker_log entrypoint info "[entrypoint] Scheduler started (TZ=$TZ)"
 
 if [ "${API_MODE:-false}" = "true" ]; then
-  export TZ
-
-  SCHEDULE_OVERRIDE="${SCHEDULE_FILE:-$SCRIPT_DIR/config/schedule.json}"
-
-  if [ -f "$SCHEDULE_OVERRIDE" ]; then
-    echo "[entrypoint] Found $SCHEDULE_OVERRIDE - applying it (overrides CRON_SCHEDULE)."
-    if node scripts/api/apply-schedule.js; then
-      cron -f &
-      echo "[entrypoint] Cron started in background (schedule: from schedule.json, TZ: $TZ)"
-    else
-      echo "ERROR: Could not apply $SCHEDULE_OVERRIDE." >&2
-      exit 1
-    fi
-  elif [ -n "${CRON_SCHEDULE:-}" ]; then
-    if [ ! -f /etc/cron.d/microsoft-rewards-cron.template ]; then
-      echo "ERROR: Cron template /etc/cron.d/microsoft-rewards-cron.template not found." >&2
-      exit 1
-    fi
-    envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron
-    chmod 0644 /etc/cron.d/microsoft-rewards-cron
-    crontab /etc/cron.d/microsoft-rewards-cron
-    cron -f &
-    echo "[entrypoint] Cron started in background (schedule: $CRON_SCHEDULE, TZ: $TZ)"
-  else
-    echo "[entrypoint] No CRON_SCHEDULE set and no schedule.json override - runs must be triggered manually via POST /start, or scheduled from the dashboard."
-  fi
-  echo "[entrypoint] Starting control API on ${API_HOST}:${API_PORT:-3010} at $(date)"
-  exec node scripts/api/server.js
+    docker_log entrypoint info "[entrypoint] Starting Control API on ${API_HOST}:${API_PORT:-3010}"
+    node dist/control-api/server.js &
+    service_pids+=("$!")
+    docker_log_flush
+    export -p > /etc/container_env
+    chmod 600 /etc/container_env
 fi
 
-# Scheduler-only mode (default): cron calls npm start directly.
-if [ ! -f /etc/cron.d/microsoft-rewards-cron.template ]; then
-  echo "ERROR: Cron template /etc/cron.d/microsoft-rewards-cron.template not found." >&2
-  exit 1
+if [ "${RUN_ON_START:-false}" = "true" ]; then
+    docker_log entrypoint info '[entrypoint] Starting initial run...'
+    SKIP_RANDOM_SLEEP=true /bin/bash "$SCRIPT_DIR/scripts/docker/run_daily.sh" &
+    initial_run_pid=$!
 fi
 
-export TZ
-envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron
-chmod 0644 /etc/cron.d/microsoft-rewards-cron
-crontab /etc/cron.d/microsoft-rewards-cron
-
-echo "[entrypoint] Cron configured with schedule: $CRON_SCHEDULE and timezone: $TZ; starting cron at $(date)"
-
-# 7. Start cron in foreground (PID 1)
-exec cron -f
+# A failed API or scheduler should restart the container, not leave a partial service.
+status=0
+wait -n "${service_pids[@]}" || status=$?
+docker_log entrypoint error "[entrypoint] A service exited unexpectedly (status=$status)."
+[ "$status" -ne 0 ] || status=1
+exit "$status"

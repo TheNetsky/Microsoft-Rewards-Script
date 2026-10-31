@@ -1,5 +1,5 @@
 import type { Page } from 'patchright'
-import readline from 'readline'
+import readline from 'node:readline'
 
 export interface PromptOptions {
     question: string
@@ -72,4 +72,22 @@ export async function getErrorMessage(page: Page): Promise<string | null> {
 
     const text = await errorAlert.innerText()
     return text.trim()
+}
+
+export async function waitForInputResponse(page: Page, selector: string, timeout: number): Promise<void> {
+    await page.waitForFunction(
+        inputSelector => {
+            const visible = (element: Element) => {
+                const style = getComputedStyle(element)
+                return style.visibility !== 'hidden' && style.display !== 'none' && element.getClientRects().length > 0
+            }
+            const inputVisible = [...document.querySelectorAll(inputSelector)].some(visible)
+            const errorVisible = [...document.querySelectorAll('div[role="alert"]')].some(
+                element => visible(element) && Boolean(element.textContent?.trim())
+            )
+            return !inputVisible || errorVisible
+        },
+        selector,
+        { timeout }
+    )
 }

@@ -1,6 +1,6 @@
 import type { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 
-import type { Account } from '../interface/Account'
+import type { Account } from '../core/Account'
 
 export interface AccountLocale {
     language: string

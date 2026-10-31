@@ -3,6 +3,7 @@ dist/
 .dev/
 node_modules/
 /config.json
+/config/
 /.vscode
 /diagnostics
 note
@@ -10,3 +11,6 @@ note
 .playwright-chromium-installed
 .stfolder/
 .env
+.env.*
+*.bak
+*.log

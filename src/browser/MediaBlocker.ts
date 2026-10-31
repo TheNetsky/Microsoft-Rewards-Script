@@ -1,6 +1,8 @@
 import type { BrowserContext } from 'patchright'
 
-import type { MicrosoftRewardsBot } from '../index'
+import type { BotContext } from '../core/BotContext'
+
+type MediaContext = Pick<BotContext, 'config' | 'isMobile' | 'logger'>
 
 const BLOCKED_RESOURCE_TYPES = new Set(['image', 'media'])
 const AUTHENTICATION_HOSTS = new Set([
@@ -25,26 +27,26 @@ function isAuthenticationPage(rawUrl: string): boolean {
     }
 }
 
-export function suspendMediaBlocking(bot: MicrosoftRewardsBot, context: BrowserContext): void {
+export function suspendMediaBlocking(bot: MediaContext, context: BrowserContext): void {
     const state = mediaBlockingState.get(context)
     if (!state?.enabled) return
 
     state.enabled = false
-    bot.logger.info(
+    bot.logger.debug(
         bot.isMobile,
         'BROWSER',
         'Media loading enabled during authentication | image and media requests will not be blocked'
     )
 }
 
-export async function configureMediaBlocking(bot: MicrosoftRewardsBot, context: BrowserContext): Promise<void> {
+export async function configureMediaBlocking(bot: MediaContext, context: BrowserContext): Promise<void> {
     if (!bot.config.experimental.blockMedia) return
 
     const existingState = mediaBlockingState.get(context)
     if (existingState) {
         if (existingState.enabled) return
         existingState.enabled = true
-        bot.logger.info(
+        bot.logger.debug(
             bot.isMobile,
             'BROWSER',
             'Media loading disabled after authentication | blockedResourceTypes=image,media | httpCache=disabled-by-routing'
@@ -73,7 +75,7 @@ export async function configureMediaBlocking(bot: MicrosoftRewardsBot, context: 
     })
     mediaBlockingState.set(context, state)
 
-    bot.logger.info(
+    bot.logger.debug(
         bot.isMobile,
         'BROWSER',
         'Media loading disabled after authentication | blockedResourceTypes=image,media | httpCache=disabled-by-routing'

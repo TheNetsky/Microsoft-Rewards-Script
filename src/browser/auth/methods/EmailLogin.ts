@@ -1,102 +1,34 @@
 import type { Page } from 'patchright'
-import type { MicrosoftRewardsBot } from '../../../index'
+import type { LoginContext } from '../LoginContext'
+import { browserTimeout } from '../../BrowserTiming'
 
 export class EmailLogin {
-    private submitButton = 'button[type="submit"]'
+    constructor(private readonly bot: LoginContext) {}
 
-    constructor(private bot: MicrosoftRewardsBot) {}
-
-    async enterEmail(page: Page, email: string): Promise<'ok' | 'error'> {
-        try {
-            const emailInputSelector = 'input[type="email"]'
-            const emailField = await page
-                .waitForSelector(emailInputSelector, { state: 'visible', timeout: 1000 })
-                .catch(() => {})
-            if (!emailField) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Email field not found')
-                return 'error'
-            }
-
-            await this.bot.utils.wait(1000)
-
-            const prefilledEmail = await page
-                .waitForSelector('#userDisplayName', { state: 'visible', timeout: 1000 })
-                .catch(() => {})
-            if (!prefilledEmail) {
-                await page.fill(emailInputSelector, '').catch(() => {})
-                await this.bot.utils.wait(500)
-                await page.fill(emailInputSelector, email).catch(() => {})
-                await this.bot.utils.wait(1000)
-            } else {
-                this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Email prefilled')
-            }
-
-            const submitButton = await page
-                .waitForSelector(this.submitButton, { state: 'visible', timeout: 2000 })
-                .catch(() => null)
-            if (!submitButton) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Submit button not found')
-                return 'error'
-            }
-
-            const clicked = await this.bot.browser.utils.ghostClick(page, this.submitButton)
-            if (!clicked) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Could not submit email')
-                return 'error'
-            }
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-EMAIL', 'Email submitted')
-
-            return 'ok'
-        } catch (error) {
-            this.bot.logger.error(
-                this.bot.isMobile,
-                'LOGIN-ENTER-EMAIL',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
-            )
-            return 'error'
-        }
+    enterEmail(page: Page, email: string): Promise<'ok' | 'error'> {
+        return this.submitField(page, 'email', email)
     }
 
-    async enterPassword(page: Page, password: string): Promise<'ok' | 'needs-2fa' | 'error'> {
+    enterPassword(page: Page, password: string): Promise<'ok' | 'error'> {
+        return this.submitField(page, 'password', password)
+    }
+
+    private async submitField(page: Page, field: 'email' | 'password', value: string): Promise<'ok' | 'error'> {
+        const label = `LOGIN-ENTER-${field.toUpperCase()}`
         try {
-            const passwordInputSelector = 'input[type="password"]'
-            const passwordField = await page
-                .waitForSelector(passwordInputSelector, { state: 'visible', timeout: 1000 })
-                .catch(() => {})
-            if (!passwordField) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Password field not found')
-                return 'error'
-            }
-
-            await this.bot.utils.wait(1000)
-            await page.fill(passwordInputSelector, '').catch(() => {})
-            await this.bot.utils.wait(500)
-            await page.fill(passwordInputSelector, password).catch(() => {})
-            await this.bot.utils.wait(1000)
-
-            const submitButton = await page
-                .waitForSelector(this.submitButton, { state: 'visible', timeout: 2000 })
-                .catch(() => null)
-
-            if (!submitButton) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Submit button not found')
-                return 'error'
-            }
-
-            const clicked = await this.bot.browser.utils.ghostClick(page, this.submitButton)
-            if (!clicked) {
-                this.bot.logger.warn(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Could not submit password')
-                return 'error'
-            }
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-ENTER-PASSWORD', 'Password submitted')
-
+            this.bot.signal.throwIfAborted()
+            const timeout = browserTimeout(this.bot)
+            const input = page.locator(`input[type="${field}"]:visible`).first()
+            await input.waitFor({ state: 'visible', timeout })
+            await input.fill(value, { timeout })
+            const submit = 'button[type="submit"]:visible'
+            await page.locator(submit).first().waitFor({ state: 'visible', timeout })
+            if (!(await this.bot.browser.utils.click(page, submit))) throw new Error(`Could not submit ${field}`)
+            this.bot.logger.debug(this.bot.isMobile, label, `${field === 'email' ? 'Email' : 'Password'} submitted`)
             return 'ok'
         } catch (error) {
-            this.bot.logger.error(
-                this.bot.isMobile,
-                'LOGIN-ENTER-PASSWORD',
-                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
-            )
+            this.bot.signal.throwIfAborted()
+            this.bot.logger.error(this.bot.isMobile, label, error instanceof Error ? error : String(error))
             return 'error'
         }
     }

@@ -1,9 +1,10 @@
-import { randomBytes } from 'crypto'
+import { randomBytes } from 'node:crypto'
 import type { Page } from 'patchright'
-import { URLSearchParams } from 'url'
+import { browserTimeout } from '../../BrowserTiming'
+import { URLSearchParams } from 'node:url'
 
 import { URLs } from '../../../constants/urls'
-import type { MicrosoftRewardsBot } from '../../../index'
+import type { LoginContext } from '../LoginContext'
 
 interface TokenResponse {
     access_token?: string
@@ -19,11 +20,11 @@ export class MobileAccessLogin {
     private scope = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL'
 
     constructor(
-        private bot: MicrosoftRewardsBot,
+        private bot: LoginContext,
         private page: Page
     ) {}
 
-    async get(email: string): Promise<string> {
+    async getAccessToken(email: string): Promise<string> {
         try {
             const authorizeUrl = new URL(this.authUrl)
             authorizeUrl.searchParams.append('response_type', 'code')
@@ -40,21 +41,13 @@ export class MobileAccessLogin {
                 `Auth URL constructed: ${authorizeUrl.origin}${authorizeUrl.pathname}`
             )
 
-            let code = await this.resolveCodeViaRequest(authorizeUrl)
-            if (!code) {
-                this.bot.logger.debug(
-                    this.bot.isMobile,
-                    'LOGIN-APP',
-                    'Request-based OAuth did not return a code, retrying through the active browser context'
-                )
-                code = await this.resolveCodeViaBrowser(authorizeUrl)
-            }
+            const code = await this.resolveCodeViaBrowser(authorizeUrl)
 
             if (!code) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    'Could not resolve mobile OAuth code - app activities will be skipped this run'
+                    'Could not resolve the OAuth code - token-based activities will be skipped this run'
                 )
                 return ''
             }
@@ -82,42 +75,18 @@ export class MobileAccessLogin {
                 this.bot.logger.warn(
                     this.bot.isMobile,
                     'LOGIN-APP',
-                    `Mobile token exchange failed | error=${error} | description=${description}`
+                    `Token exchange failed | error=${error} | description=${description}`
                 )
                 return ''
             }
 
-            this.bot.logger.info(this.bot.isMobile, 'LOGIN-APP', 'Mobile access token received')
+            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'App access token received')
             return token
         } catch (error) {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `MobileAccess error: ${error instanceof Error ? error.stack || error.message : String(error)}`
-            )
-            return ''
-        }
-    }
-
-    private async resolveCodeViaRequest(authorizeUrl: URL): Promise<string> {
-        try {
-            this.bot.logger.debug(this.bot.isMobile, 'LOGIN-APP', 'Resolving mobile OAuth code via request')
-
-            const response = await this.page.request.get(authorizeUrl.href, { maxRedirects: 20, timeout: 30000 })
-            const finalUrl = response.url()
-
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'LOGIN-APP',
-                `OAuth request resolved → ${this.safeUrl(finalUrl)} (status ${response.status()})`
-            )
-
-            return this.extractCode(finalUrl)
-        } catch (error) {
-            this.bot.logger.debug(
-                this.bot.isMobile,
-                'LOGIN-APP',
-                `OAuth code request failed: ${error instanceof Error ? error.message : String(error)}`
+                `App access error: ${error instanceof Error ? error.stack || error.message : String(error)}`
             )
             return ''
         }
@@ -128,14 +97,19 @@ export class MobileAccessLogin {
 
         try {
             oauthPage = await this.page.context().newPage()
-            await oauthPage.goto(authorizeUrl.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
+            await oauthPage.goto(authorizeUrl.href, {
+                waitUntil: 'domcontentloaded',
+                timeout: browserTimeout(this.bot, 'navigation')
+            })
 
             let code = this.extractCode(oauthPage.url())
             if (code) return code
 
             await oauthPage
-                .waitForURL(url => url.pathname.toLowerCase() === '/oauth20_desktop.srf', { timeout: 30000 })
-                .catch(() => {})
+                .waitForURL(url => url.pathname.toLowerCase() === '/oauth20_desktop.srf', {
+                    timeout: browserTimeout(this.bot, 'navigation')
+                })
+                .catch(() => undefined)
 
             code = this.extractCode(oauthPage.url())
             this.bot.logger.debug(
@@ -149,11 +123,11 @@ export class MobileAccessLogin {
             this.bot.logger.debug(
                 this.bot.isMobile,
                 'LOGIN-APP',
-                `OAuth browser fallback failed: ${error instanceof Error ? error.message : String(error)}`
+                `OAuth browser flow failed: ${error instanceof Error ? error.message : String(error)}`
             )
             return ''
         } finally {
-            await oauthPage?.close().catch(() => {})
+            await oauthPage?.close().catch(() => undefined)
         }
     }
 

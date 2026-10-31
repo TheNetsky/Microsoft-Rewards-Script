@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "allowJs": true,
+        "checkJs": true,
+        "noEmit": true,
+        "strict": true,
+        "noImplicitAny": false,
+        "useUnknownInCatchVariables": false,
+        "noUncheckedIndexedAccess": true,
+        "types": ["node"],
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": ["src/control-api/**/*.js"],
+    "exclude": ["node_modules"]
+}
