@@ -2,6 +2,7 @@
 
 [![Validate](https://github.com/TheNetsky/Microsoft-Rewards-Script/actions/workflows/validate.yml/badge.svg?branch=v5)](https://github.com/TheNetsky/Microsoft-Rewards-Script/actions/workflows/validate.yml)
 ![Version](https://img.shields.io/github/package-json/v/TheNetsky/Microsoft-Rewards-Script/v5)
+[![Docker image (GHCR)](https://img.shields.io/badge/Docker-GHCR%20v5-2496ED?logo=docker&logoColor=white)](https://github.com/TheNetsky/Microsoft-Rewards-Script/pkgs/container/microsoft-rewards-script)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D24-green)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![Donate](https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/thenetsky)
@@ -21,6 +22,11 @@ multiple accounts, localised searches and an optional Control API.
 Activities depend on the account and region. This branch contains v5; earlier
 versions remain available on [v3](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v3)
 and [v4](https://github.com/TheNetsky/Microsoft-Rewards-Script/tree/v4).
+
+## Documentation
+
+- [Setup and usage](docs/usage.md) — local, Nix and Docker installation, accounts, settings, commands and troubleshooting.
+- [Control API](docs/control-api.md) — authentication, endpoints, run control, scheduling and dashboard data.
 
 ## Setup
 
@@ -45,7 +51,8 @@ npm start
 ```
 
 Add another numbered account block for each account. Passwords are optional for
-passwordless accounts. See [env.example](env.example) for the supported fields.
+passwordless accounts. See [env.example](env.example) for account variables and
+[Setup and usage](docs/usage.md#accounts-and-sessions) for login options.
 
 ## Modes and settings
 
@@ -62,6 +69,8 @@ Edit [config.json](config.example.json) before starting a run.
 | `searchSettings.useAccountLocale`  | Select queries using the account country                       |
 | `ensureStreakProtection`           | Enable and verify protection over HTTP in both modes           |
 | `experimental`                     | Optional features; disabled by default                         |
+
+See the full [settings reference](docs/usage.md#settings-reference) for all options.
 
 ## Sessions
 
@@ -85,10 +94,14 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
+The published v5 image is `ghcr.io/thenetsky/microsoft-rewards-script:5`.
+To use it instead of building locally, follow the [Docker image instructions](docs/usage.md#docker).
+
 Docker persists configuration in `./config`, sessions in `./sessions` and optional
 error captures in `./diagnostics`. It creates `config/config.json` from defaults
 when needed. `RUN_ON_START` controls the first run; `CRON_SCHEDULE` sets the initial
 schedule. Control API schedule changes persist in `config/schedule.json`.
+See [Control API Docker setup](docs/control-api.md#docker) to enable the server.
 
 ## License
 
