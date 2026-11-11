@@ -80,6 +80,9 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_LOG_FILTER_KEYWORDS', path: 'consoleLogFilter.keywords', type: 'array' },
 
     // Discord webhook
+    { env: 'CONFIG_FEISHU_ENABLED', path: 'webhook.feishu.enabled', type: 'bool' },
+    { env: 'CONFIG_FEISHU_URL', path: 'webhook.feishu.url', type: 'string' },
+    { env: 'CONFIG_FEISHU_SIGNING_SECRET', path: 'webhook.feishu.signingSecret', type: 'string' },
     { env: 'CONFIG_DISCORD_ENABLED', path: 'webhook.discord.enabled', type: 'bool' },
     { env: 'CONFIG_DISCORD_URL', path: 'webhook.discord.url', type: 'string' },
 

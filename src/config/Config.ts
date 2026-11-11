@@ -84,7 +84,14 @@ export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig
     telegram?: WebhookTelegramConfig
+    feishu?: WebhookFeishuConfig
     webhookLogFilter: LogFilter
+}
+
+export interface WebhookFeishuConfig {
+    enabled: boolean
+    url: string
+    signingSecret?: string
 }
 
 export interface LogFilter {

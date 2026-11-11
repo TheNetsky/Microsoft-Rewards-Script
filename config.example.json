@@ -78,6 +78,11 @@
             "enabled": false,
             "url": ""
         },
+        "feishu": {
+            "enabled": false,
+            "url": "",
+            "signingSecret": ""
+        },
         "telegram": {
             "enabled": false,
             "botToken": "",

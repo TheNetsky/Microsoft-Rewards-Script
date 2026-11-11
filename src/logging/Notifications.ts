@@ -5,6 +5,7 @@ import { sendNtfy, flushNtfyQueue } from './Ntfy'
 import { sendTelegram, flushTelegramQueue } from './Telegram'
 import { logSystemMessage } from './LogEvent'
 import type { LogColor } from './LogStyle'
+import { flushFeishuQueue } from './Feishu'
 
 export async function sendNotifications(
     config: ConfigWebhook,
@@ -23,5 +24,10 @@ export async function sendNotifications(
 }
 
 export async function flushNotifications(timeoutMs: number): Promise<void> {
-    await Promise.allSettled([flushDiscordQueue(timeoutMs), flushNtfyQueue(timeoutMs), flushTelegramQueue(timeoutMs)])
+    await Promise.allSettled([
+        flushDiscordQueue(timeoutMs),
+        flushNtfyQueue(timeoutMs),
+        flushTelegramQueue(timeoutMs),
+        flushFeishuQueue(timeoutMs)
+    ])
 }

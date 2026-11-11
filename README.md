@@ -16,7 +16,7 @@ multiple accounts, localised searches and an optional Control API.
 - Desktop/mobile searches, Explore on Bing, Daily Check-In and Read to Earn.
 - Optional Visual Search and background Edge browsing.
 - Streak progress, API-based streak protection and verified point reporting.
-- Scheduled runs, account selection, saved sessions and Discord/Telegram/ntfy notifications.
+- Scheduled runs, account selection, saved sessions and Discord/Telegram/ntfy notifications, plus Feishu/Lark account summaries.
 - Control API with live events, persistent history, punchcard progress and activity balance observations.
 
 Activities depend on the account and region. This branch contains v5; earlier

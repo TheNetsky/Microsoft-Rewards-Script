@@ -55,6 +55,7 @@ export const defaultConfig: Config = {
     proxy: { queryEngine: true, ignoreCertificateErrors: false },
     webhook: {
         discord: { enabled: false, url: '' },
+        feishu: { enabled: false, url: '', signingSecret: '' },
         telegram: { enabled: false, botToken: '', chatId: '' },
         ntfy: {
             enabled: false,

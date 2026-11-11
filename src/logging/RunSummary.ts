@@ -3,8 +3,9 @@ import type { AccountStats } from '../core/RunTypes'
 import type { Logger } from './Logger'
 import { activityKey, summarizeCompletion, summarizeRunCompletion } from '../rewards/shared/ActivityCompletion'
 import { sanitizeLogMessage } from './LogMessage'
+import { sendFeishuSummary } from './Feishu'
 
-type SummaryContext = Pick<BotContext, 'logger' | 'userData' | 'activityResults' | 'accountIssues'>
+type SummaryContext = Pick<BotContext, 'logger' | 'userData' | 'activityResults' | 'accountIssues' | 'config'>
 
 export function logRunResult(
     logger: Pick<Logger, 'event'>,
@@ -81,4 +82,5 @@ export function logAccountResult(context: SummaryContext, stats: AccountStats): 
             completion: stats.completion
         }
     )
+    sendFeishuSummary(context.config.webhook.feishu, stats)
 }

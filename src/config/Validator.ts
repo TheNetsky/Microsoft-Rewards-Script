@@ -92,6 +92,7 @@ const AccountCountrySchema = z
     )
 
 const WebhookSchema = z.strictObject({
+    feishu: z.strictObject({ enabled: z.boolean(), url: z.string(), signingSecret: z.string().optional() }).optional(),
     discord: z
         .strictObject({
             enabled: z.boolean(),
