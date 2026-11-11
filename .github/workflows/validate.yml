@@ -40,3 +40,4 @@ jobs:
                   npm run check:api --if-present
                   npm run lint --if-present
                   npm run format:check --if-present
+                  node --test tests/feishu-summary.test.mjs

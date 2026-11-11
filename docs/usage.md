@@ -444,17 +444,20 @@ A match in any level, keyword or regex rule counts. Debug console output still r
 
 Set each service under `webhook`.
 
-Environment names use `CONFIG_DISCORD_*`, `CONFIG_TELEGRAM_*` or `CONFIG_NTFY_*`; see the examples below.
+Environment names use `CONFIG_DISCORD_*`, `CONFIG_TELEGRAM_*`, `CONFIG_NTFY_*` or `CONFIG_FEISHU_*`; see the examples below.
 
 | Service    | Enable and configure            | Optional fields                               |
 | ---------- | ------------------------------- | --------------------------------------------- |
 | `discord`  | `enabled`, `url`                | -                                             |
+| `feishu`   | `enabled`, `url`                | `signingSecret`                               |
 | `telegram` | `enabled`, `botToken`, `chatId` | -                                             |
 | `ntfy`     | `enabled`, `url`                | `topic`, `token`, `title`, `tags`, `priority` |
 
 - All services are disabled by default.
 - ntfy defaults: title `Microsoft-Rewards-Script`, tags `["bot", "notify"]`, priority `3` on a `1–5` scale.
 - Technical debug output is kept out of notification webhooks.
+- Feishu/Lark sends one summary per account after its tasks finish, including completed, incomplete, unavailable and not-applicable activities. Account email is not included. Delivery failures do not stop reward tasks. This channel is independent of the log filter.
+- Configure a Feishu or Lark custom bot URL and, if the bot uses signature verification, its signing secret. Keep both private. Supported environment overrides: `CONFIG_FEISHU_ENABLED`, `CONFIG_FEISHU_URL`, and `CONFIG_FEISHU_SIGNING_SECRET`.
 
 Example Discord settings:
 

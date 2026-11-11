@@ -28,6 +28,8 @@ export function redactSecrets(config) {
     const mask = '***REDACTED***'
     const wh = clone.webhook
     if (wh && typeof wh === 'object') {
+        if (wh.feishu?.url) wh.feishu.url = mask
+        if (wh.feishu?.signingSecret) wh.feishu.signingSecret = mask
         if (wh.discord?.url) wh.discord.url = mask
         if (wh.ntfy?.url) wh.ntfy.url = mask
         if (wh.ntfy?.token) wh.ntfy.token = mask
