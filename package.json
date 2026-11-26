@@ -8,6 +8,7 @@
         "node": ">=24.0.0"
     },
     "scripts": {
+        "postinstall": "npx patchright install chromium",
         "pre-build": "npm i && rimraf dist && npx patchright install chromium",
         "install:browser": "npx patchright install chromium",
         "build": "rimraf dist && tsc && node ./scripts/main/copyAssets.js",
