@@ -275,6 +275,26 @@ function saveManualSession(dbPath, email, platform, storageState, fingerprint, p
     } catch {}
 }
 
+function hasDisplay() {
+    if (process.platform !== 'linux') return true
+    return Boolean(process.env.DISPLAY?.trim() || process.env.WAYLAND_DISPLAY?.trim())
+}
+
+function assertDisplayAvailable(command) {
+    if (!hasDisplay()) {
+        log(
+            'ERROR',
+            `${command} needs a visible browser, but no DISPLAY/WAYLAND_DISPLAY was found (plain SSH session).`
+        )
+        log(
+            'ERROR',
+            'Options: reconnect with `ssh -X`, run it on a desktop, or copy sessions.db from a machine with a display.'
+        )
+        log('ERROR', 'The automated bot itself runs fine headless over SSH (set "headless": true or HEADLESS=true).')
+        process.exit(1)
+    }
+}
+
 async function runPlatform({ account, config, dbPath, platform, fresh }) {
     const isMobile = platform === 'mobile'
     const stored = loadStoredSession(dbPath, account.email, platform, fresh)
@@ -422,6 +442,8 @@ async function main() {
     }
 
     const { dbPath } = getSessionDbPath(projectRoot, config.sessionPath)
+
+    assertDisplayAvailable('manual-login')
 
     log('INFO', `Configuration loaded from config.json | CONFIG_* overrides=${appliedConfigOverrides.length}`)
     if (config.headless) {

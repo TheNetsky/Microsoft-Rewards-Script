@@ -189,7 +189,7 @@ Edit `config.json` to customize behavior, or set `CONFIG_*` environment variable
 | Setting                     | Type    | Default      | Description                                                        | Docker environment variable           |
 | --------------------------- | ------- | ------------ | ------------------------------------------------------------------ | ------------------------------------- |
 | `sessionPath`               | string  | `"sessions"` | Directory to store browser sessions                                |                                       |
-| `headless`                  | boolean | `false`      | Run browser invisibly                                              | Always `true` in Docker               |
+| `headless`                  | boolean | `true`       | Run browser invisibly (`false` = headed, needs a display)          | `CONFIG_HEADLESS` / `HEADLESS`        |
 | `clusters`                  | number  | `1`          | Number of concurrent account clusters                              | `CONFIG_CLUSTERS`                     |
 | `errorDiagnostics`          | boolean | `false`      | Save error and unknown-login page diagnostics under `diagnostics/` | `CONFIG_ERROR_DIAGNOSTICS`            |
 | `ensureStreakProtection`    | boolean | `true`       | Ensure streak protection is enabled                                | `CONFIG_ENSURE_STREAK_PROTECTION`     |
@@ -433,6 +433,12 @@ session saving, so authentication SVGs, QR codes, and videos cannot be blocked b
 
 Run this command directly on a computer with a graphical desktop and a full Patchright Chromium installation. The
 default Docker image contains only the headless browser shell and cannot display this interactive window.
+
+> [!NOTE]
+> `headless: false` needs a display. Over plain SSH (no `DISPLAY`) either keep `"headless": true`
+> in `config.json` (the default) or run with `ssh -X` / `xvfb-run`. `manual-login` and
+> `open-session` always need a visible browser — run them with `ssh -X` or on a desktop, then copy `sessions/sessions.db`
+> to the server.
 
 ### Session management
 

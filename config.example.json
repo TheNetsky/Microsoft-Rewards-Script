@@ -1,6 +1,6 @@
 {
     "sessionPath": "sessions",
-    "headless": false,
+    "headless": true,
     "clusters": 1,
     "errorDiagnostics": false,
     "ensureStreakProtection": true,

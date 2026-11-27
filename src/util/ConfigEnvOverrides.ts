@@ -10,6 +10,7 @@ export interface EnvOverrideEntry {
 
 export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     // General
+    { env: 'CONFIG_HEADLESS', path: 'headless', type: 'bool' },
     { env: 'CONFIG_CLUSTERS', path: 'clusters', type: 'number' },
     { env: 'CONFIG_DEBUG_LOGS', path: 'debugLogs', type: 'bool' },
     { env: 'CONFIG_ERROR_DIAGNOSTICS', path: 'errorDiagnostics', type: 'bool' },
@@ -94,8 +95,6 @@ export const ENV_OVERRIDES: EnvOverrideEntry[] = [
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_LEVELS', path: 'webhook.webhookLogFilter.levels', type: 'array' },
     { env: 'CONFIG_WEBHOOK_LOG_FILTER_KEYWORDS', path: 'webhook.webhookLogFilter.keywords', type: 'array' }
 ]
-
-const FORCED_OVERRIDES: { path: string; value: unknown }[] = [{ path: 'headless', value: true }]
 
 function setDeep(obj: Record<string, unknown>, dottedPath: string, value: unknown): void {
     const parts = dottedPath.split('.')
@@ -183,12 +182,11 @@ export function applyEnvOverrides(configPath: string, env: NodeJS.ProcessEnv = p
     }
 
     const config = readJson(configPath) as Record<string, unknown>
-    for (const { path: p, value } of FORCED_OVERRIDES) setDeep(config, p, value)
     for (const { path: p, value } of applied) setDeep(config, p, value)
 
     writeConfigAtomic(configPath, config, { backup: false })
 
-    return { configPath, forced: FORCED_OVERRIDES, applied, errors: [] }
+    return { configPath, forced: [], applied, errors: [] }
 }
 
 // ── CLI entry point, used by entrypoint.sh ──

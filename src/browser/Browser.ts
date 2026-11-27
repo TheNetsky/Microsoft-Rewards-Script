@@ -9,6 +9,7 @@ import { formatBrowserProxyServer } from '../util/Proxy'
 import { UserAgentManager } from './UserAgent'
 
 import type { Account } from '../interface/Account'
+import { resolveHeadless } from '../util/Headless'
 
 /* Test Stuff
 https://abrahamjuliot.github.io/creepjs/
@@ -48,7 +49,8 @@ class Browser {
     }
 
     async createBrowser(account: Account): Promise<BrowserCreationResult> {
-        const headless = this.bot.config.headless
+        const resolved = resolveHeadless(this.bot.config.headless)
+        const headless = resolved.headless
 
         const hasProxy = Boolean(account.proxy.url)
         const ignoreCertificateErrors = hasProxy && this.bot.config.proxy.ignoreCertificateErrors
@@ -74,6 +76,10 @@ class Browser {
                 ? ['--ignore-certificate-errors', '--ignore-certificate-errors-spki-list', '--ignore-ssl-errors']
                 : []
 
+            // Headless runs have no GPU; these flags avoid needless GPU
+            // process crashes in containers / on servers.
+            const headlessArgs = headless ? ['--disable-gpu', '--disable-software-rasterizer'] : []
+
             if (ignoreCertificateErrors) {
                 this.bot.logger.warn(
                     this.bot.isMobile,
@@ -85,17 +91,22 @@ class Browser {
             this.bot.logger.info(
                 this.bot.isMobile,
                 'BROWSER',
-                `Launching bundled patched Chromium (Edge UA) | headless=${headless} | platform=${process.platform} | proxy=${hasProxy ? 'yes' : 'no'} | tls=${ignoreCertificateErrors ? 'verification-disabled' : 'verified'} | sandbox=${sandboxDisabled ? 'disabled-root' : 'enabled'}`
+                `Launching bundled patched Chromium (Edge UA) | headless=${headless} (${resolved.reason}) | platform=${process.platform} | proxy=${hasProxy ? 'yes' : 'no'} | tls=${ignoreCertificateErrors ? 'verification-disabled' : 'verified'} | sandbox=${sandboxDisabled ? 'disabled-root' : 'enabled'}`
             )
 
             browser = await rebrowser.chromium.launch({
                 headless,
                 ...(proxyConfig && { proxy: proxyConfig }),
-                args: [...Browser.BROWSER_ARGS, ...sandboxArgs, ...certArgs]
+                args: [...Browser.BROWSER_ARGS, ...sandboxArgs, ...certArgs, ...headlessArgs]
             })
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error)
-            this.bot.logger.error(this.bot.isMobile, 'BROWSER', `Browser launch failed: ${errorMessage}`)
+            const hint = this.headlessFailureHint(errorMessage, headless)
+            this.bot.logger.error(
+                this.bot.isMobile,
+                'BROWSER',
+                `Browser launch failed: ${errorMessage}${hint ? ` | Hint: ${hint}` : ''}`
+            )
             throw error
         }
 
@@ -212,6 +223,24 @@ class Browser {
         })
 
         return this.userAgentManager.updateFingerprintUserAgent(fingerPrintData, isMobile)
+    }
+
+    private headlessFailureHint(errorMessage: string, headless: boolean): string | null {
+        const msg = errorMessage.toLowerCase()
+        if (
+            msg.includes('missing x server') ||
+            msg.includes('unable to open x display') ||
+            msg.includes('missing x.') ||
+            msg.includes('host system is missing dependencies') ||
+            msg.includes('libnss3') ||
+            msg.includes('libatk')
+        ) {
+            if (!headless) {
+                return 'headed launch needs an X server; set "headless": true in config.json (or HEADLESS=true / CONFIG_HEADLESS=true), or use `ssh -X` / xvfb-run'
+            }
+            return 'install OS deps via `npx patchright install --with-deps chromium` (needs sudo) and retry'
+        }
+        return null
     }
 }
 

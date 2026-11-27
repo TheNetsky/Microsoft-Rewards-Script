@@ -119,7 +119,21 @@ async function configureMediaBlocking(context) {
     log('INFO', 'Media loading disabled (image/media requests blocked; HTTP cache disabled by routing)')
 }
 
+function hasDisplay() {
+    if (process.platform !== 'linux') return true
+    return Boolean(process.env.DISPLAY?.trim() || process.env.WAYLAND_DISPLAY?.trim())
+}
+
 async function main() {
+    if (!hasDisplay()) {
+        log(
+            'ERROR',
+            'open-session needs a visible browser, but no DISPLAY/WAYLAND_DISPLAY was found (plain SSH session).'
+        )
+        log('ERROR', 'Reconnect with `ssh -X`, run it on a desktop, or use the headless bot (`npm start`) instead.')
+        process.exit(1)
+    }
+
     const { dbPath, exists } = getSessionDbPath(projectRoot, config.sessionPath)
     if (!exists) {
         log('ERROR', `No sessions.db found (looked for ${dbPath})`)

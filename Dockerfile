@@ -33,7 +33,6 @@ WORKDIR /usr/src/microsoft-rewards-script
 ENV NODE_ENV=production \
     TZ=UTC \
     PLAYWRIGHT_BROWSERS_PATH=0 \
-    FORCE_HEADLESS=1 \
     NODE_OPTIONS=--disable-warning=ExperimentalWarning
 
 # Install minimal system libraries required for Chromium headless to run,
@@ -84,7 +83,8 @@ COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
 # Install patchright's stealth-patched Chromium headless shell.
-# The container is headless-only so the full browser isn't needed; then clean up
+# Headed runs (headless=false) need a display and the full browser; the
+# default image stays lean with headless-shell only.
 RUN set -eux; \
     npx patchright install --with-deps --only-shell chromium; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*

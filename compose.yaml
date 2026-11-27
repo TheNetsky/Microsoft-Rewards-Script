@@ -38,6 +38,7 @@ services:
 
             #  ── Configuration ──────────────────────────────────────
             # Uncomment to override defaults, a full list of configuration options are in the README.
+            #CONFIG_HEADLESS: 'true' # false = headed (needs a display / X server)
             #CONFIG_CLUSTERS: '1'
             #CONFIG_ACCOUNT_DELAY_MIN: '1min'
             #CONFIG_ACCOUNT_DELAY_MAX: '3min'
